@@ -9,6 +9,7 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 | `index.html` | Telas de entrada e de jogo |
 | `style.css` | Visual (claro e escuro automático) |
 | `app.js` | Salas, roleta sincronizada, vez, placar |
+| `manifest.webmanifest`, `sw.js`, `icons/` | App na tela inicial (PWA): manifest, service worker (página pela rede, arquivos em cache) e ícones gerados de `icons/icon.svg` |
 | `config.js` | URL e chave anon do Supabase (**preencher**) |
 | `supabase/schema.sql` | Tabela `salas`, políticas RLS e Realtime |
 | `supabase/002_cartas.sql` | Tabela `cartas` (verdades, desafios e prendas), políticas e Realtime |

@@ -34,6 +34,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .primary{background:var(--lamp); color:#2A1F3D; font-weight:800; padding:14px 22px; box-shadow:0 4px 0 #C98F12; width:100%}
 .primary:active:not(:disabled){transform:translateY(2px); box-shadow:0 2px 0 #C98F12}
 .secondary{background:transparent; color:var(--ink); border:1.5px solid var(--line); padding:12px 18px; width:100%}
+.instalar{margin-top:18px}
 .or{color:var(--muted); text-align:center; margin:18px 0}
 .row{display:flex; gap:10px}
 .erro{color:var(--erro); font-weight:600; min-height:1.4em; margin:12px 0 0}

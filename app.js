@@ -28,6 +28,7 @@
   let girando = false;
   let timerCarta = null;
   let ultimoAviso = null;
+  let ultimaVez = null;     // para vibrar quando a vez passa a ser minha
   let timerAviso = null;
   let cartas = [];        // cartas padrão + cartas desta sala, vindas da tabela `cartas`
   let cartasOk = false;   // false até a busca terminar (ou se falhar)
@@ -193,7 +194,7 @@
   }
 
   function abrirSala(c, idx, e) {
-    codigo = c; eu = idx; ultimoGiro = null;
+    codigo = c; eu = idx; ultimoGiro = null; ultimaVez = null;
     salvarLocal("lp-ultima-sala", { codigo: c });
     history.replaceState(null, "", "?sala=" + c);
     $("lobby").hidden = true;
@@ -344,6 +345,7 @@
     if (!e) return;
     estado = normalizar(e);
     mostrarAviso(e.aviso, inicial);
+    avisarMinhaVez(e, inicial);
     const nomes = [e.jogadores[0] || "Pessoa 1", e.jogadores[1] || "…"];
     const completa = !!e.jogadores[1];
     const minhaVez = completa && e.vez === eu;
@@ -411,6 +413,15 @@
       ul.appendChild(li);
     });
   }
+
+  // vibra quando a vez muda para mim (não funciona no iPhone, e tudo bem)
+  function avisarMinhaVez(e, inicial) {
+    const minha = !!e.jogadores[1] && e.vez === eu && e.vencedor === null;
+    if (!inicial && minha && ultimaVez !== eu) vibrar(200);
+    ultimaVez = e.jogadores[1] ? e.vez : null;
+  }
+
+  const vibrar = padrao => { try { navigator.vibrate?.(padrao); } catch (err) {} };
 
   // aviso curto nos dois aparelhos (ex.: "Ana liberou Bia da prenda.")
   function mostrarAviso(a, inicial) {
@@ -663,8 +674,26 @@
     gravar(n => { n.niveis = sel.length ? sel : ["leve"]; });
   }
 
+  // ---------- instalar app (PWA) ----------
+  let pedidoInstalar = null;
+  addEventListener("beforeinstallprompt", ev => {
+    ev.preventDefault();
+    pedidoInstalar = ev;
+    $("instalar").hidden = false;
+  });
+  addEventListener("appinstalled", () => { pedidoInstalar = null; $("instalar").hidden = true; });
+
+  async function instalar() {
+    if (!pedidoInstalar) return;
+    pedidoInstalar.prompt();
+    try { await pedidoInstalar.userChoice; } catch (err) {}
+    pedidoInstalar = null;
+    $("instalar").hidden = true;
+  }
+
   // ---------- início ----------
   function iniciar() {
+    $("instalar").addEventListener("click", instalar);
     desenharRoleta();
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenharRoleta);
 
