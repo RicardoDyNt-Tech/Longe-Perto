@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <main>
@@ -50,6 +50,7 @@
       <label class="chip"><input type="checkbox" value="picante"><span>Picante</span></label>
       <label class="chip"><input type="checkbox" value="pesado"><span>Pesado +18</span></label>
     </div>
+    <button class="linkbtn addcarta" id="abrirCarta" type="button">+ Adicionar carta</button>
 
     <div class="stage" aria-live="polite">
       <p class="turn" id="vez"></p>
@@ -82,34 +83,50 @@
 
     <details class="extras" id="extras">
       <summary>Cartas de vocês <span id="extrasQtd"></span></summary>
-      <p class="extras-sub">Escreva verdades e desafios seus. Entram no sorteio para os dois e ficam guardadas neste celular para as próximas salas.</p>
-      <form id="formExtra">
-        <div class="tipo" role="radiogroup" aria-label="Tipo">
-          <label class="chip"><input type="radio" name="tipoExtra" value="verdade" checked><span>Verdade</span></label>
-          <label class="chip"><input type="radio" name="tipoExtra" value="desafio"><span>Desafio</span></label>
-        </div>
-        <label class="field">Nível
-          <select id="nivelExtra">
-            <option value="leve">Leve</option>
-            <option value="criativo">Criativo</option>
-            <option value="picante">Picante</option>
-            <option value="pesado">Pesado +18</option>
-          </select>
-        </label>
-        <label class="field">Texto
-          <textarea id="textoExtra" maxlength="200" rows="3" placeholder="Ex.: Me conta um sonho que você teve comigo"></textarea>
-        </label>
-        <button class="primary" type="submit">Adicionar carta</button>
-      </form>
+      <p class="extras-sub" id="extrasVazio">Nenhuma carta de vocês ainda. Toque em "Adicionar carta" para criar.</p>
       <ul class="lista-extras" id="listaExtras"></ul>
     </details>
     <p class="erro" id="erroJogo" role="alert"></p>
     <p class="hint">Combinem uma palavra para pular qualquer rodada sem explicação. Fotos e áudios ousados: usem a visualização única do WhatsApp.</p>
   </section>
+
+  <dialog id="dlgCarta" aria-labelledby="dlgTitulo">
+    <form id="formCarta" method="dialog">
+      <h2 id="dlgTitulo">Nova carta</h2>
+      <div class="tipo" role="radiogroup" aria-label="Tipo">
+        <label class="chip"><input type="radio" name="tipoCarta" value="verdade" checked><span>Verdade</span></label>
+        <label class="chip"><input type="radio" name="tipoCarta" value="desafio"><span>Desafio</span></label>
+        <label class="chip"><input type="radio" name="tipoCarta" value="prenda"><span>Prenda</span></label>
+      </div>
+      <label class="field">Nível
+        <select id="nivelCarta">
+          <option value="leve">Leve</option>
+          <option value="criativo">Criativo</option>
+          <option value="picante">Picante</option>
+          <option value="pesado">Pesado +18</option>
+        </select>
+      </label>
+      <label class="field">Texto
+        <textarea id="textoCarta" maxlength="280" rows="4" placeholder="Ex.: Me conta um sonho que você teve comigo"></textarea>
+        <span class="contador" id="contadorCarta">0/280</span>
+      </label>
+      <label class="check"><input type="checkbox" id="temMidia"> Pede foto, vídeo ou áudio</label>
+      <select id="midiaCarta" hidden aria-label="Tipo de mídia">
+        <option value="foto">Foto</option>
+        <option value="video">Vídeo</option>
+        <option value="audio">Áudio</option>
+      </select>
+      <p class="erro" id="erroCarta" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarCarta" type="submit" value="salvar">Salvar carta</button>
+        <button class="secondary" id="cancelarCarta" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="config.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

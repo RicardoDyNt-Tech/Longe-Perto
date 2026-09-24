@@ -8,6 +8,7 @@
   const SEGMENTOS = 8;
   const GIRO_MS = () => matchMedia("(prefers-reduced-motion: reduce)").matches ? 350 : 3300;
   const LEVEL_NAMES = { leve: "Leve", criativo: "Criativo", picante: "Picante", pesado: "Pesado +18" };
+  const TIPO_NOMES = { verdade: "Verdade", desafio: "Desafio", prenda: "Prenda" };
 
   let sb = null;
   let codigo = null;    // sala atual
@@ -60,12 +61,9 @@
 
   // ---------- sorteio ----------
   // chaves antigas em `usados` (de antes das cartas irem para o banco) não batem com nenhum id e são ignoradas
-  function sortear(tipo, niveis, usados, extras) {
+  function sortear(tipo, niveis, usados) {
     const lista = niveis.length ? niveis : ["leve"];
     const pool = cartas.filter(c => c.tipo === tipo && lista.includes(c.nivel)).map(c => ({ ...c, chave: c.id }));
-    (extras || []).forEach(x => {
-      if (x.tipo === tipo && lista.includes(x.nivel)) pool.push({ nivel: x.nivel, texto: x.texto, chave: "x" + x.id, autor: x.autor });
-    });
     if (!pool.length) cartas.filter(c => c.tipo === tipo && c.nivel === "leve").forEach(c => pool.push({ ...c, chave: c.id }));
     if (!pool.length) return null;
     const usadosSet = new Set(usados);
@@ -115,6 +113,7 @@
       cartasOk = true;
     }
     atualizarBotoes();
+    desenharExtras();
   }
 
   async function buscarSala(c) {
@@ -136,8 +135,7 @@
       pontos: [0, 0],
       giro: null,
       carta: null,
-      usados: [],
-      extras: []
+      usados: []
     };
     for (let t = 0; t < 4; t++) {
       const c = gerarCodigo();
@@ -184,13 +182,17 @@
     canal = sb.channel("sala-" + c)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "salas", filter: `codigo=eq.${c}` },
         payload => aplicar(payload.new.estado, false))
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "cartas", filter: `sala=eq.${c}` },
+        payload => juntarCarta(payload.new))
+      // o Realtime não filtra DELETE; tirar pelo id basta (ids de outras salas não estão na lista)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "cartas" },
+        payload => tirarCarta(payload.old && payload.old.id))
       .subscribe(status => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
           erro("erroJogo", "A conexão ao vivo caiu. Recarregue a página se a roleta parar de sincronizar.");
       });
 
     aplicar(e, true);
-    trazerMinhasCartas();
     carregarCartas(c);
   }
 
@@ -198,6 +200,7 @@
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null;
     cartas = []; cartasOk = false;
+    desenharExtras();
     clearTimeout(timerCarta);
     history.replaceState(null, "", location.pathname);
     $("jogo").hidden = true;
@@ -255,23 +258,32 @@
       mostrarCarta(e);
     }
     atualizarBotoes();
-    desenharExtras(e);
   }
 
-  function desenharExtras(e) {
-    const extras = e.extras || [];
+  function desenharExtras() {
+    const extras = cartas.filter(c => c.sala);
     $("extrasQtd").textContent = extras.length ? `(${extras.length})` : "";
+    $("extrasVazio").hidden = extras.length > 0;
     const ul = $("listaExtras");
-    ul.innerHTML = "";
+    ul.textContent = "";
     extras.slice().reverse().forEach(x => {
       const li = document.createElement("li");
-      li.innerHTML = '<div class="info"><span class="tag"></span><span class="t"></span><span class="autor"></span></div><button type="button">Remover</button>';
-      const tag = li.querySelector(".tag");
+      const info = document.createElement("div");
+      info.className = "info";
+      const tag = document.createElement("span");
       tag.className = "tag " + x.tipo;
-      tag.textContent = (x.tipo === "verdade" ? "Verdade" : "Desafio") + " · " + (LEVEL_NAMES[x.nivel] || x.nivel);
-      li.querySelector(".t").textContent = x.texto;
-      li.querySelector(".autor").textContent = "por " + x.autor;
-      li.querySelector("button").addEventListener("click", () => removerExtra(x.id));
+      tag.textContent = (TIPO_NOMES[x.tipo] || x.tipo) + " · " + (LEVEL_NAMES[x.nivel] || x.nivel) + (x.midia ? " · pede " + MIDIA_NOMES[x.midia] : "");
+      const t = document.createElement("span");
+      t.textContent = x.texto;
+      const autor = document.createElement("span");
+      autor.className = "autor";
+      autor.textContent = "por " + x.autor;
+      info.append(tag, t, autor);
+      const apagar = document.createElement("button");
+      apagar.type = "button";
+      apagar.textContent = "Apagar";
+      apagar.addEventListener("click", () => apagarCarta(x));
+      li.append(info, apagar);
       ul.appendChild(li);
     });
   }
@@ -297,8 +309,8 @@
     card.className = "card " + c.tipo;
     card.hidden = false;
     $("kind").textContent = c.tipo === "verdade" ? "Verdade" : "Desafio";
-    $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel) + ", para " + nome
-      + (c.autor ? " · carta de " + c.autor : "");
+    $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
+      + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome;
     $("text").textContent = c.texto;
     $("midia").hidden = !c.midia;
     $("wa").href = "https://wa.me/?text=" + encodeURIComponent(`${$("kind").textContent} para ${nome}: ${c.texto}`);
@@ -315,9 +327,9 @@
     if (delta <= 0) delta += 360;
     const alvo = rotacao + 360 * 5 + delta;
     const tipo = k % 2 === 0 ? "verdade" : "desafio";
-    if (!sortear(tipo, estado.niveis, [], estado.extras)) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
+    if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
-      const carta = sortear(tipo, n.niveis, n.usados || [], n.extras);
+      const carta = sortear(tipo, n.niveis, n.usados || []);
       registrarUso(n, carta);
       n.carta = carta;
       n.giro = { id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), alvo };
@@ -326,9 +338,9 @@
 
   function escolher(tipo) {
     if (!estado || girando || estado.vez !== eu || estado.carta) return;
-    if (!sortear(tipo, estado.niveis, [], estado.extras)) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
+    if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
-      const carta = sortear(tipo, n.niveis, n.usados || [], n.extras);
+      const carta = sortear(tipo, n.niveis, n.usados || []);
       registrarUso(n, carta);
       n.carta = carta;
     });
@@ -344,43 +356,71 @@
   }
 
   // ---------- cartas de vocês ----------
-  const MAX_EXTRAS = 200;
-  const minhasCartas = () => lerLocal("lp-minhas-cartas") || [];
+  const MIDIA_NOMES = { foto: "foto", video: "vídeo", audio: "áudio" };
 
-  function adicionarExtra(ev) {
+  function juntarCarta(c) {
+    if (!c || !c.id || c.sala !== codigo || c.ativa === false) return;
+    if (cartas.some(x => x.id === c.id)) return;
+    cartas.push({ id: c.id, sala: c.sala, tipo: c.tipo, nivel: c.nivel, texto: c.texto, midia: c.midia, autor: c.autor });
+    desenharExtras();
+  }
+
+  function tirarCarta(id) {
+    if (!id || !cartas.some(x => x.id === id)) return;
+    cartas = cartas.filter(x => x.id !== id);
+    desenharExtras();
+  }
+
+  function contarTexto() {
+    $("contadorCarta").textContent = $("textoCarta").value.length + "/280";
+  }
+
+  function abrirDialogo() {
+    if (!estado) return;
+    $("formCarta").reset();
+    $("midiaCarta").hidden = true;
+    erro("erroCarta", "");
+    contarTexto();
+    $("dlgCarta").showModal();
+    $("textoCarta").focus();
+  }
+
+  async function salvarCarta(ev) {
     ev.preventDefault();
-    if (!estado) return;
-    const texto = $("textoExtra").value.replace(/\s+/g, " ").trim().slice(0, 200);
-    if (!texto) return erro("erroJogo", "Escreva o texto da carta.");
-    const extras = estado.extras || [];
-    if (extras.length >= MAX_EXTRAS) return erro("erroJogo", `A sala já tem ${MAX_EXTRAS} cartas de vocês. Remova alguma para adicionar outra.`);
-    const x = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-      tipo: document.querySelector('input[name="tipoExtra"]:checked').value,
-      nivel: $("nivelExtra").value,
-      texto,
-      autor: estado.jogadores[eu] || ""
+    if (!estado || !codigo) return;
+    const texto = $("textoCarta").value.replace(/\s+/g, " ").trim();
+    if (texto.length < 3) return erro("erroCarta", "Escreva pelo menos 3 letras.");
+    const nova = {
+      sala: codigo,
+      tipo: document.querySelector('input[name="tipoCarta"]:checked').value,
+      nivel: $("nivelCarta").value,
+      texto: texto.slice(0, 280),
+      midia: $("temMidia").checked ? $("midiaCarta").value : null,
+      autor: (estado.jogadores[eu] || "").trim().slice(0, 20)
     };
-    gravar(n => { n.extras = (n.extras || []).concat(x); });
-    salvarLocal("lp-minhas-cartas", minhasCartas().concat(x).slice(-MAX_EXTRAS));
-    $("textoExtra").value = "";
+    const btn = $("salvarCarta");
+    btn.disabled = true;
+    const { data, error } = await sb.from("cartas").insert(nova).select("id, sala, tipo, nivel, texto, midia, autor").single();
+    btn.disabled = false;
+    if (error) {
+      const msg = /limite de cartas/.test(error.message || "")
+        ? "A sala chegou a 300 cartas de vocês. Apague alguma para criar outra."
+        : "Não consegui salvar a carta. Confira a internet e tente de novo.";
+      erro("erroCarta", msg);
+      erro("erroJogo", msg);
+      return;
+    }
+    erro("erroJogo", "");
+    juntarCarta(data);
+    $("dlgCarta").close();
   }
 
-  function removerExtra(id) {
-    gravar(n => { n.extras = (n.extras || []).filter(x => x.id !== id); });
-    salvarLocal("lp-minhas-cartas", minhasCartas().filter(x => x.id !== id));
-  }
-
-  // cartas que escrevi em outras salas entram nesta também
-  function trazerMinhasCartas() {
-    if (!estado) return;
-    const ids = new Set((estado.extras || []).map(x => x.id));
-    const faltam = minhasCartas().filter(x => !ids.has(x.id));
-    if (!faltam.length) return;
-    gravar(n => {
-      const tem = new Set((n.extras || []).map(x => x.id));
-      n.extras = (n.extras || []).concat(faltam.filter(x => !tem.has(x.id))).slice(-MAX_EXTRAS);
-    });
+  async function apagarCarta(x) {
+    if (!confirm(`Apagar esta carta?\n\n"${x.texto}"`)) return;
+    const { error } = await sb.from("cartas").delete().eq("id", x.id);
+    if (error) return erro("erroJogo", "Não consegui apagar a carta. Confira a internet e tente de novo.");
+    erro("erroJogo", "");
+    tirarCarta(x.id);
   }
 
   function mudarNiveis() {
@@ -417,7 +457,11 @@
     $("done").addEventListener("click", () => encerrar(true));
     $("skip").addEventListener("click", () => encerrar(false));
     $("niveis").addEventListener("change", mudarNiveis);
-    $("formExtra").addEventListener("submit", adicionarExtra);
+    $("abrirCarta").addEventListener("click", abrirDialogo);
+    $("formCarta").addEventListener("submit", salvarCarta);
+    $("cancelarCarta").addEventListener("click", () => $("dlgCarta").close());
+    $("textoCarta").addEventListener("input", contarTexto);
+    $("temMidia").addEventListener("change", () => { $("midiaCarta").hidden = !$("temMidia").checked; });
     $("copiar").addEventListener("click", async () => {
       try { await navigator.clipboard.writeText(linkSala(codigo)); $("copiar").textContent = "Link copiado"; }
       catch (e) { $("copiar").textContent = "Copie da barra de endereço"; }
