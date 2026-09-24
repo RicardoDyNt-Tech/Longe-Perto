@@ -27,7 +27,16 @@ input[type=text]{
   width:100%; font:inherit; color:var(--ink); background:var(--surface);
   border:1.5px solid var(--line); border-radius:12px; padding:10px 12px;
 }
-#codigo{text-transform:uppercase; letter-spacing:.2em; font-weight:800}
+#codigo{letter-spacing:.08em; font-weight:800}
+.fixa-box{background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px 16px}
+.fixa-box summary{font-weight:800; cursor:pointer}
+.fixa-box .field{margin-top:10px}
+.lista-recentes{list-style:none; padding:0; margin:0; display:grid; gap:8px}
+.lista-recentes button{width:100%; text-align:left; background:var(--surface); color:var(--ink); border:1.5px solid var(--line); padding:10px 14px; display:flex; justify-content:space-between; gap:10px}
+.lista-recentes .cod{font-weight:800; overflow-wrap:anywhere}
+.lista-recentes .quem{color:var(--muted); font-size:.85rem; white-space:nowrap}
+.lista-hist li{display:block}
+.lista-hist .data{display:block; color:var(--muted); font-size:.8rem}
 button{font:inherit; cursor:pointer; border-radius:14px; border:0}
 button:disabled{opacity:.5; cursor:default}
 button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--lamp); outline-offset:2px}
@@ -40,7 +49,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .erro{color:var(--erro); font-weight:600; min-height:1.4em; margin:12px 0 0}
 
 .topbar{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px}
-.sala{font-weight:800; letter-spacing:.15em}
+.sala{font-weight:800; letter-spacing:.15em; overflow-wrap:anywhere}
+.sala.fixa{letter-spacing:.02em}
 .linkbtn{background:transparent; color:var(--muted); text-decoration:underline; padding:4px 0}
 .invite{background:var(--surface); border:2px dashed var(--lamp); border-radius:18px; padding:16px; margin:14px 0}
 .invite p{margin:0 0 10px}

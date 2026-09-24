@@ -29,6 +29,7 @@
   let timerCarta = null;
   let ultimoAviso = null;
   let ultimaVez = null;     // para vibrar quando a vez passa a ser minha
+  let ultimoVencedor = null; // para recarregar o histórico quando a partida acaba
   let timerLocal = null;    // { id, t0 } — início da contagem medido neste aparelho
   let timerTick = null;
   let timerAcabou = null;   // id do timer que já deu "Tempo!" aqui
@@ -41,6 +42,20 @@
   const lerLocal = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
   const mesmoNome = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
   const gerarCodigo = () => Array.from({ length: 5 }, () => ALFABETO[Math.floor(Math.random() * ALFABETO.length)]).join("");
+  const SUFIXO = "abcdefghijkmnpqrstuvwxyz23456789";
+  const gerarSufixo = () => Array.from({ length: 4 }, () => SUFIXO[Math.floor(Math.random() * SUFIXO.length)]).join("");
+
+  // "Rica e Carol" -> "rica-e-carol" (minúsculas, sem acento, espaço vira hífen)
+  const normalizarNomeSala = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 25).replace(/-+$/, "");
+
+  // código digitado ou do link: 5 letras/números (maiúsculas) ou nome de sala fixa (minúsculas com hífens)
+  function lerCodigo(raw) {
+    const s = (raw || "").trim();
+    if (/^[A-Za-z0-9]{5}$/.test(s)) return s.toUpperCase();
+    const f = s.toLowerCase();
+    return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(f) && f.length >= 5 && f.length <= 30 ? f : null;
+  }
   const linkSala = c => location.origin + location.pathname + "?sala=" + c;
   const erro = (onde, msg) => { $(onde).textContent = msg || ""; };
 
@@ -116,10 +131,16 @@
     mudar(novo);
     // o cronômetro pertence à carta: saiu a carta (cumpri, pular, liberar, nova carta), sai o timer
     if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) novo.timer = null;
+    const venceuAgora = estado.vencedor == null && novo.vencedor != null;
     aplicar(novo, false);
-    const { error } = await sb.from("salas").update({ estado: novo }).eq("codigo", codigo);
+    const sala = codigo;
+    const { error } = await sb.from("salas").update({ estado: novo }).eq("codigo", sala);
     if (error) erro("erroJogo", "Não consegui salvar a jogada. Confira a internet e tente de novo.");
-    else erro("erroJogo", "");
+    else {
+      erro("erroJogo", "");
+      // histórico: grava só o aparelho que fez a jogada da vitória (uma linha por partida)
+      if (venceuAgora) registrarPartida(sala, novo);
+    }
   }
 
   async function carregarCartas(c) {
@@ -148,12 +169,15 @@
   }
 
   // ---------- entrar / criar ----------
-  async function criarSala() {
+  async function criarSala(fixa) {
     erro("erroLobby", "");
     const nome = $("nome").value.trim();
     if (!nome) return erro("erroLobby", "Digite seu nome para criar a sala.");
+    const base = fixa ? normalizarNomeSala($("nomeSala").value) : "";
+    if (fixa && !base) return erro("erroLobby", "Digite um nome para a sala fixa (letras ou números).");
     salvarLocal("lp-nome", nome);
     const inicial = {
+      fixa: !!fixa,
       jogadores: [nome, null],
       niveis: ["leve", "criativo"],
       vez: 0,
@@ -168,7 +192,7 @@
       usados: []
     };
     for (let t = 0; t < 4; t++) {
-      const c = gerarCodigo();
+      const c = fixa ? base + "-" + gerarSufixo() : gerarCodigo();
       const { error } = await sb.from("salas").insert({ codigo: c, estado: inicial });
       if (!error) return abrirSala(c, 0, inicial);
       if (error.code !== "23505") return erro("erroLobby", "Não consegui criar a sala: " + error.message);
@@ -178,9 +202,9 @@
 
   async function entrarSala(cRaw) {
     erro("erroLobby", "");
-    const c = (cRaw || "").trim().toUpperCase();
+    const c = lerCodigo(cRaw);
     const nome = $("nome").value.trim();
-    if (!/^[A-Z0-9]{5}$/.test(c)) return erro("erroLobby", "O código tem 5 letras ou números.");
+    if (!c) return erro("erroLobby", "Use o código de 5 letras ou números, ou o nome completo da sala fixa (com o final).");
     if (!nome) return erro("erroLobby", "Digite seu nome para entrar.");
     salvarLocal("lp-nome", nome);
     let e;
@@ -201,6 +225,11 @@
   function abrirSala(c, idx, e) {
     codigo = c; eu = idx; ultimoGiro = null; ultimaVez = null;
     salvarLocal("lp-ultima-sala", { codigo: c });
+    lembrarSala(c, e.jogadores[idx], !!e.fixa);
+    $("salaCodigo").classList.toggle("fixa", !!e.fixa);
+    $("dicaFixa").hidden = !e.fixa;
+    ultimoVencedor = e.vencedor === undefined ? null : e.vencedor;
+    carregarHistorico(c);
     history.replaceState(null, "", "?sala=" + c);
     $("lobby").hidden = true;
     $("jogo").hidden = false;
@@ -226,15 +255,83 @@
     carregarCartas(c);
   }
 
+  // ---------- salas recentes (só neste aparelho) ----------
+  const recentes = () => { const r = lerLocal("lp-salas"); return Array.isArray(r) ? r : []; };
+
+  function lembrarSala(c, nome, fixa) {
+    const lista = recentes().filter(r => r.codigo !== c);
+    lista.unshift({ codigo: c, nome, fixa, quando: Date.now() });
+    salvarLocal("lp-salas", lista.slice(0, 8));
+  }
+
+  function desenharRecentes() {
+    const lista = recentes();
+    $("recentes").hidden = !lista.length;
+    const ul = $("listaRecentes");
+    ul.textContent = "";
+    lista.forEach(r => {
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.type = "button";
+      const cod = document.createElement("span");
+      cod.className = "cod";
+      cod.textContent = r.codigo;
+      const quem = document.createElement("span");
+      quem.className = "quem";
+      quem.textContent = "como " + r.nome;
+      b.append(cod, quem);
+      b.addEventListener("click", () => { $("nome").value = r.nome || $("nome").value; entrarSala(r.codigo); });
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+  }
+
+  // ---------- histórico de partidas ----------
+  function registrarPartida(sala, e) {
+    sb.from("partidas")
+      .insert({ sala, jogadores: e.jogadores, placar: e.placar, vencedor: e.vencedor, meta: e.meta })
+      .then(({ error }) => { if (!error && sala === codigo) carregarHistorico(sala); });
+  }
+
+  async function carregarHistorico(c) {
+    const { data, error } = await sb.from("partidas")
+      .select("jogadores, placar, vencedor, meta, finalizada_em")
+      .eq("sala", c)
+      .order("finalizada_em", { ascending: false })
+      .limit(1000);
+    if (c !== codigo || error || !data) return;
+    const nomes = estado ? estado.jogadores : [];
+    const vitorias = [0, 1].map(i => data.filter(p => mesmoNome((p.jogadores || [])[p.vencedor], nomes[i])).length);
+    $("histQtd").textContent = data.length ? `(${data.length})` : "";
+    $("histResumo").textContent = data.length
+      ? `${nomes[0] || "Pessoa 1"}: ${vitorias[0]} ${vitorias[0] === 1 ? "vitória" : "vitórias"} · ${nomes[1] || "Pessoa 2"}: ${vitorias[1]} ${vitorias[1] === 1 ? "vitória" : "vitórias"} · ${data.length} ${data.length === 1 ? "partida" : "partidas"}`
+      : "Nenhuma partida terminada ainda.";
+    const ul = $("listaHist");
+    ul.textContent = "";
+    data.slice(0, 10).forEach(p => {
+      const li = document.createElement("li");
+      const d = new Date(p.finalizada_em);
+      const data_ = document.createElement("span");
+      data_.className = "data";
+      data_.textContent = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + ` · meta ${p.meta}`;
+      const pts = (p.placar || []).map(x => x && x.pontos);
+      const res = document.createElement("span");
+      res.textContent = `${p.jogadores[0]} ${pts[0]} × ${pts[1]} ${p.jogadores[1]} — venceu ${p.jogadores[p.vencedor]}`;
+      li.append(data_, res);
+      ul.appendChild(li);
+    });
+  }
+
   function sair() {
     if (canal) { sb.removeChannel(canal); canal = null; }
-    codigo = null; estado = null; eu = null;
+    codigo = null; estado = null; eu = null; ultimoVencedor = null;
     cartas = []; cartasOk = false;
     desenharExtras();
     clearTimeout(timerCarta);
     history.replaceState(null, "", location.pathname);
     $("jogo").hidden = true;
     $("lobby").hidden = false;
+    desenharRecentes();
     $("codigo").value = "";
   }
 
@@ -356,6 +453,8 @@
     estado = normalizar(e);
     mostrarAviso(e.aviso, inicial);
     avisarMinhaVez(e, inicial);
+    if (!inicial && e.vencedor !== null && ultimoVencedor === null) setTimeout(() => carregarHistorico(codigo), 1500);
+    ultimoVencedor = e.vencedor;
     const nomes = [e.jogadores[0] || "Pessoa 1", e.jogadores[1] || "…"];
     const completa = !!e.jogadores[1];
     const minhaVez = completa && e.vez === eu;
@@ -857,7 +956,8 @@
     const nome = lerLocal("lp-nome");
     if (nome) $("nome").value = nome;
     const salaUrl = new URLSearchParams(location.search).get("sala");
-    if (salaUrl) $("codigo").value = salaUrl.toUpperCase();
+    if (salaUrl) $("codigo").value = lerCodigo(salaUrl) || salaUrl;
+    desenharRecentes();
 
     if (!configurado() || !window.supabase) {
       erro("erroLobby", !configurado()
@@ -868,7 +968,8 @@
     }
     sb = window.supabase.createClient(window.LP_CONFIG.url, window.LP_CONFIG.anonKey);
 
-    $("criar").addEventListener("click", criarSala);
+    $("criar").addEventListener("click", () => criarSala(false));
+    $("criarFixa").addEventListener("click", () => criarSala(true));
     $("entrar").addEventListener("click", () => entrarSala($("codigo").value));
     $("codigo").addEventListener("keydown", ev => { if (ev.key === "Enter") entrarSala($("codigo").value); });
     $("sair").addEventListener("click", sair);

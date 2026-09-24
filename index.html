@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 <main>
@@ -26,11 +26,27 @@
     </label>
     <button class="primary" id="criar">Criar sala</button>
     <p class="or">ou</p>
-    <label class="field">Código da sala
-      <input type="text" id="codigo" maxlength="5" autocomplete="off" inputmode="text" placeholder="ABC12">
+    <label class="field">Código ou nome da sala
+      <input type="text" id="codigo" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" placeholder="ABC12 ou nome-da-sala">
     </label>
     <button class="secondary" id="entrar">Entrar na sala</button>
     <p class="erro" id="erroLobby" role="alert"></p>
+
+    <div class="recentes" id="recentes" hidden>
+      <p class="or">Salas recentes</p>
+      <ul class="lista-recentes" id="listaRecentes"></ul>
+    </div>
+
+    <p class="or">ou</p>
+    <details class="fixa-box">
+      <summary>Criar sala fixa</summary>
+      <p class="extras-sub">Uma sala só de vocês, que fica guardada: cartas, histórico e configurações continuam lá.</p>
+      <label class="field">Nome da sala
+        <input type="text" id="nomeSala" maxlength="25" autocomplete="off" placeholder="ricaecarol">
+      </label>
+      <p class="extras-sub">Guarde o link: o final aleatório protege a sala de vocês.</p>
+      <button class="secondary" id="criarFixa" type="button">Criar sala fixa</button>
+    </details>
     <button class="secondary instalar" id="instalar" type="button" hidden>Instalar app</button>
   </section>
 
@@ -43,6 +59,7 @@
 
     <div class="invite" id="convite" hidden>
       <p>Mande o link para a outra pessoa entrar. O jogo começa quando ela chegar.</p>
+      <p class="extras-sub" id="dicaFixa" hidden>Guarde o link: o final aleatório protege a sala de vocês.</p>
       <div class="row">
         <a class="wa" id="convidarWa" target="_blank" rel="noopener">Convidar no WhatsApp</a>
         <button class="secondary" id="copiar">Copiar link</button>
@@ -147,6 +164,12 @@
       <table class="score" id="score"></table>
     </div>
 
+    <details class="extras" id="historico">
+      <summary>Histórico <span id="histQtd"></span></summary>
+      <p class="extras-sub" id="histResumo">Nenhuma partida terminada ainda.</p>
+      <ul class="lista-extras lista-hist" id="listaHist"></ul>
+    </details>
+
     <details class="extras" id="extras">
       <summary>Cartas de vocês <span id="extrasQtd"></span></summary>
       <p class="extras-sub" id="extrasVazio">Nenhuma carta de vocês ainda. Toque em "Adicionar carta" para criar.</p>
@@ -192,8 +215,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="config.js?v=13"></script>
+<script src="app.js?v=13"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
