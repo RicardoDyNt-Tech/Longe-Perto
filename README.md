@@ -31,6 +31,7 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 - **Cumprir prenda** vale 0 ponto e devolve pulos do tipo pulado: leve e criativo 1, picante 2, pesado 3 (sem passar do máximo), com aviso nos dois aparelhos.
 - **Liberar da prenda:** com uma prenda na tela, só o adversário vê esse botão. Sem ponto, sem devolver pulos, a vez passa e conta em "Liberadas".
 - **Meta:** 10, 20 ou 30 pontos. Meta e pulos por tipo só mudam com o placar zerado. Quem chegar primeiro vence e quem perdeu recebe a **prenda final** (nível mais alto ligado). **Nova partida** zera o placar e mantém meta, pulos, níveis e cartas de vocês; quem perdeu começa.
+- **Zerar placar:** só quem criou a sala vê esse botão (abaixo do placar). Com confirmação, zera o placar dos dois a qualquer momento e descarta a carta da mesa; mantém meta, pulos por tipo, níveis, vez e cartas de vocês.
 - Qualquer um pode ligar/desligar níveis; muda para os dois.
 - **+ Adicionar carta** (abaixo dos níveis): qualquer um cria verdade, desafio ou prenda, com nível e, se quiser, aviso de foto/vídeo/áudio. A carta vai para a tabela `cartas` com o código da sala, aparece na lista **Cartas de vocês** dos dois, entra no sorteio e mostra "carta de {autor}". Qualquer um pode apagar. Limite de 300 por sala; as cartas ficam na sala (para manter, reusem o mesmo código).
 - Para voltar a uma sala (recarregou, trocou de aba), entre com o **mesmo nome**.
