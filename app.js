@@ -135,7 +135,7 @@
     if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) novo.timer = null;
     if (!novo.carta) novo.musica = null;
     const venceuAgora = estado.vencedor == null && novo.vencedor != null;
-    aplicar(novo, false);
+    aplicar(novo, false, true);   // local: jogada feita neste aparelho
     const sala = codigo;
     const { error } = await sb.from("salas").update({ estado: novo }).eq("codigo", sala);
     if (error) erro("erroJogo", "Não consegui salvar a jogada. Confira a internet e tente de novo.");
@@ -819,11 +819,11 @@
   }
 
   // ---------- render ----------
-  function aplicar(e, inicial) {
+  function aplicar(e, inicial, local) {
     if (!e) return;
     estado = normalizar(e);
     mostrarAviso(e.aviso, inicial);
-    avisarMinhaVez(e, inicial);
+    avisarMinhaVez(e, inicial || local);
     if (!inicial && e.vencedor !== null && ultimoVencedor === null) setTimeout(() => carregarHistorico(codigo), 1500);
     ultimoVencedor = e.vencedor;
     const nomes = [e.jogadores[0] || "Pessoa 1", e.jogadores[1] || "…"];
@@ -898,10 +898,10 @@
     });
   }
 
-  // vibra quando a vez muda para mim (não funciona no iPhone, e tudo bem)
-  function avisarMinhaVez(e, inicial) {
+  // vibra quando a vez muda para mim por jogada do outro aparelho (não funciona no iPhone, e tudo bem)
+  function avisarMinhaVez(e, semVibrar) {
     const minha = !!e.jogadores[1] && e.vez === eu && e.vencedor === null;
-    if (!inicial && minha && ultimaVez !== eu) vibrar(200);
+    if (!semVibrar && minha && ultimaVez !== eu) vibrar(200);
     ultimaVez = e.jogadores[1] ? e.vez : null;
   }
 
