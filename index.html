@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Longe &amp; Perto — verdade ou desafio a distância</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💞</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Longe &amp; Perto</h1>
+
+  <!-- Entrada -->
+  <section id="lobby">
+    <p class="sub">Verdade ou desafio para fazer cada um na sua casa. Um cria a sala, o outro entra pelo link, e a roleta gira igual nos dois celulares.</p>
+    <label class="field">Seu nome
+      <input type="text" id="nome" maxlength="20" autocomplete="given-name">
+    </label>
+    <button class="primary" id="criar">Criar sala</button>
+    <p class="or">ou</p>
+    <label class="field">Código da sala
+      <input type="text" id="codigo" maxlength="5" autocomplete="off" inputmode="text" placeholder="ABC12">
+    </label>
+    <button class="secondary" id="entrar">Entrar na sala</button>
+    <p class="erro" id="erroLobby" role="alert"></p>
+  </section>
+
+  <!-- Jogo -->
+  <section id="jogo" hidden>
+    <div class="topbar">
+      <span>Sala <span class="sala" id="salaCodigo"></span></span>
+      <button class="linkbtn" id="sair">Sair da sala</button>
+    </div>
+
+    <div class="invite" id="convite" hidden>
+      <p>Mande o link para a outra pessoa entrar. O jogo começa quando ela chegar.</p>
+      <div class="row">
+        <a class="wa" id="convidarWa" target="_blank" rel="noopener">Convidar no WhatsApp</a>
+        <button class="secondary" id="copiar">Copiar link</button>
+      </div>
+    </div>
+
+    <div class="chips" id="niveis" aria-label="Níveis">
+      <label class="chip"><input type="checkbox" value="leve"><span>Leve</span></label>
+      <label class="chip"><input type="checkbox" value="criativo"><span>Criativo</span></label>
+      <label class="chip"><input type="checkbox" value="picante"><span>Picante</span></label>
+      <label class="chip"><input type="checkbox" value="pesado"><span>Pesado +18</span></label>
+    </div>
+
+    <div class="stage" aria-live="polite">
+      <p class="turn" id="vez"></p>
+      <div class="wheel-wrap">
+        <div class="pointer" aria-hidden="true"></div>
+        <svg id="wheel" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
+        <div class="hub" aria-hidden="true">💞</div>
+      </div>
+      <button class="primary" id="spin">Girar roleta</button>
+      <div class="direct">
+        <button id="pickV">Escolher verdade</button>
+        <button id="pickD">Escolher desafio</button>
+      </div>
+    </div>
+
+    <article class="card" id="card" hidden aria-live="polite">
+      <p class="kind" id="kind"></p>
+      <p class="level" id="level"></p>
+      <p class="text" id="text"></p>
+      <div class="actions">
+        <button class="done" id="done">Cumpri</button>
+        <button class="skip" id="skip">Pular</button>
+        <p class="wait" id="aguardando" hidden></p>
+        <a class="wa" id="wa" target="_blank" rel="noopener">Mandar no WhatsApp</a>
+      </div>
+    </article>
+
+    <div class="score" id="score"></div>
+    <p class="erro" id="erroJogo" role="alert"></p>
+    <p class="hint">Combinem uma palavra para pular qualquer rodada sem explicação. Fotos e áudios ousados: usem a visualização única do WhatsApp.</p>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="conteudo.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
