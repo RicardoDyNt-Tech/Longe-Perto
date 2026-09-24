@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 <main>
@@ -52,6 +52,27 @@
     </div>
     <button class="linkbtn addcarta" id="abrirCarta" type="button">+ Adicionar carta</button>
 
+    <div class="config">
+      <label>Meta
+        <select id="meta">
+          <option value="10">10 pontos</option>
+          <option value="20">20 pontos</option>
+          <option value="30">30 pontos</option>
+        </select>
+      </label>
+      <label>Pulos por tipo
+        <select id="pulosMax">
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="5">5</option>
+          <option value="10">10</option>
+        </select>
+      </label>
+    </div>
+    <p class="config-dica" id="configDica"></p>
+
     <div class="stage" aria-live="polite">
       <p class="turn" id="vez"></p>
       <div class="wheel-wrap">
@@ -88,15 +109,7 @@
     </div>
 
     <div class="placar">
-      <div class="meta">
-        <label for="meta">Meta</label>
-        <select id="meta">
-          <option value="10">10 pontos</option>
-          <option value="20">20 pontos</option>
-          <option value="30">30 pontos</option>
-        </select>
-        <span class="meta-dica" id="metaDica"></span>
-      </div>
+      <p class="meta" id="metaTexto"></p>
       <table class="score" id="score"></table>
     </div>
 
@@ -145,7 +158,7 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script src="config.js?v=9"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

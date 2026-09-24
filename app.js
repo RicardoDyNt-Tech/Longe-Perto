@@ -14,8 +14,9 @@
     verdade: { leve: 1, criativo: 1, picante: 2, pesado: 3 },
     desafio: { leve: 2, criativo: 2, picante: 3, pesado: 4 }
   };
-  const MAX_PULOS = 3;
   const METAS = [10, 20, 30];
+  const PULOS_OPCOES = [0, 1, 2, 3, 5, 10];
+  const DEVOLVE = { leve: 1, criativo: 1, picante: 2, pesado: 3 };   // pulos devolvidos ao cumprir prenda por pulo
 
   let sb = null;
   let codigo = null;    // sala atual
@@ -151,8 +152,10 @@
       niveis: ["leve", "criativo"],
       vez: 0,
       pontos: [0, 0],
-      placar: [placarVazio(), placarVazio()],
+      placar: [placarVazio(0, 3), placarVazio(0, 3)],
       meta: 20,
+      pulosMax: 3,
+      aviso: null,
       vencedor: null,
       giro: null,
       carta: null,
@@ -230,20 +233,33 @@
   }
 
   // ---------- placar ----------
-  const placarVazio = pontos => ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, pulosV: 0, pulosD: 0 });
-  // "2/3" enquanto houver grátis; depois "3/3 +1" (pulos pagos com prenda)
-  const mostrarPulos = n => n > MAX_PULOS ? `${MAX_PULOS}/${MAX_PULOS} +${n - MAX_PULOS}` : `${n}/${MAX_PULOS}`;
+  const placarVazio = (pontos, pulosMax) =>
+    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, livresV: pulosMax, livresD: pulosMax });
 
-  // salas antigas: cria o placar a partir de `pontos` e completa campos que faltarem
+  const novoAviso = texto => ({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto });
+
+  // salas antigas: cria o placar a partir de `pontos` e completa o que faltar.
+  // pulosV/pulosD (versão intermediária, pulos usados) viram livres = max(0, pulosMax - pulos).
   function normalizar(e) {
-    if (!Array.isArray(e.placar)) e.placar = [0, 1].map(i => placarVazio((e.pontos || [])[i]));
-    e.placar = e.placar.map(p => Object.assign(placarVazio(), p));
+    if (!PULOS_OPCOES.includes(e.pulosMax)) e.pulosMax = 3;
     if (!METAS.includes(e.meta)) e.meta = 20;
+    if (!Array.isArray(e.placar)) e.placar = [0, 1].map(i => placarVazio((e.pontos || [])[i], e.pulosMax));
+    e.placar = e.placar.map(p => {
+      const q = Object.assign(placarVazio(0, e.pulosMax), p);
+      if (p.livresV === undefined && typeof p.pulosV === "number") q.livresV = Math.max(0, e.pulosMax - p.pulosV);
+      if (p.livresD === undefined && typeof p.pulosD === "number") q.livresD = Math.max(0, e.pulosMax - p.pulosD);
+      delete q.pulosV; delete q.pulosD;
+      return q;
+    });
     if (e.vencedor !== 0 && e.vencedor !== 1) e.vencedor = null;
+    if (e.aviso === undefined) e.aviso = null;
     return e;
   }
 
-  const placarZerado = e => e.placar.every(p => Object.values(p).every(v => v === 0));
+  // "zerado" = antes da primeira jogada ou logo depois de "Nova partida"
+  const placarZerado = e => e.placar.every(p =>
+    p.pontos === 0 && p.verdades === 0 && p.desafios === 0 && p.prendas === 0 && p.liberadas === 0 &&
+    p.livresV === e.pulosMax && p.livresD === e.pulosMax);
 
   function nivelMaisAlto(niveis) {
     const ativos = ORDEM_NIVEIS.filter(n => niveis.includes(n));
@@ -265,8 +281,12 @@
     if (!carta) return null;
     registrarUso(n, carta);
     carta.motivo = motivo;
+    if (motivo === "pulo") carta.origem = pulada.tipo;
     return carta;
   }
+
+  const ehPulo = c => c && c.tipo === "prenda" && /^pulo/.test(c.motivo || "");
+  const origemDe = c => c.origem || (c.motivo === "pulo-d" ? "desafio" : "verdade");
 
   function desenharPlacar(e, nomes) {
     const t = $("score");
@@ -276,7 +296,7 @@
     nomes.forEach((n, i) => {
       const th = document.createElement("th");
       th.textContent = n;
-      if (i === eu) th.className = "me";
+      th.className = (i === eu ? "me " : "") + (i === e.vez && e.jogadores[1] ? "vez" : "");
       thead.appendChild(th);
     });
     const tb = t.createTBody();
@@ -286,15 +306,16 @@
       ["Desafios", p => p.desafios],
       ["Prendas", p => p.prendas],
       ["Liberadas", p => p.liberadas],
-      ["Pulos de verdade", p => mostrarPulos(p.pulosV)],
-      ["Pulos de desafio", p => mostrarPulos(p.pulosD)]
+      ["Pulos grátis de verdade", p => `${p.livresV}/${e.pulosMax}`],
+      ["Pulos grátis de desafio", p => `${p.livresD}/${e.pulosMax}`]
     ];
     linhas.forEach(([rotulo, valor, cls]) => {
       const tr = tb.insertRow();
       if (cls) tr.className = cls;
       tr.insertCell().textContent = rotulo;
-      e.placar.forEach(p => {
+      e.placar.forEach((p, i) => {
         const td = tr.insertCell();
+        if (i === e.vez && e.jogadores[1]) td.className = "vez";
         td.textContent = valor(p);
         if (cls === "pontos") {
           const barra = document.createElement("div");
@@ -306,10 +327,12 @@
         }
       });
     });
+    $("metaTexto").textContent = `Meta: ${e.meta} pontos`;
     $("meta").value = String(e.meta);
+    $("pulosMax").value = String(e.pulosMax);
     const zerado = placarZerado(e);
-    $("meta").disabled = !zerado;
-    $("metaDica").textContent = zerado ? `Quem chegar a ${e.meta} pontos vence.` : `Meta: ${e.meta} pontos. Muda só com o placar zerado.`;
+    $("meta").disabled = $("pulosMax").disabled = !zerado;
+    $("configDica").textContent = zerado ? "" : "Meta e pulos só mudam com o placar zerado (em Nova partida).";
 
     const fim = $("fim");
     fim.hidden = e.vencedor === null;
@@ -416,7 +439,7 @@
     $("done").hidden = !minhaVez;
     $("skip").hidden = !minhaVez || !c || c.tipo === "prenda";
     if (c && c.tipo !== "prenda") {
-      const restam = MAX_PULOS - (c.tipo === "verdade" ? p.pulosV : p.pulosD);
+      const restam = c.tipo === "verdade" ? p.livresV : p.livresD;
       $("skip").textContent = restam > 0 ? `Pular (${restam} grátis)` : "Pular (paga prenda)";
     }
     // Liberar da prenda: só o adversário de quem está pagando
@@ -437,9 +460,8 @@
     const nome = e.jogadores[e.vez] || "";
     card.className = "card " + c.tipo;
     card.hidden = false;
-    $("kind").textContent = c.motivo === "pulo" || c.motivo === "pulo-v" ? "Prenda por pular a verdade"
-      : c.motivo === "pulo-d" ? "Prenda por pular o desafio"
-      : c.motivo === "final" ? "Prenda final de quem perdeu"
+    $("kind").textContent = ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
+      : c.motivo === "final" ? "Prenda final"
       : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
       + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome;
@@ -486,6 +508,14 @@
       n.carta = null;
       if (c.tipo === "prenda") {
         p.prendas++;
+        if (ehPulo(c)) {
+          // devolve pulos ao contador do tipo pulado, sem passar de pulosMax
+          const campo = origemDe(c) === "desafio" ? "livresD" : "livresV";
+          const antes = p[campo];
+          p[campo] = Math.min(n.pulosMax, antes + (DEVOLVE[c.nivel] || 0));
+          const volta = p[campo] - antes;
+          if (volta > 0) n.aviso = novoAviso(`${n.jogadores[n.vez]} recuperou ${volta} ${volta === 1 ? "pulo" : "pulos"} de ${origemDe(c)}.`);
+        }
         if (c.motivo !== "final") n.vez = 1 - n.vez;   // depois da prenda final a partida já acabou
       } else {
         p.pontos += (PONTOS[c.tipo] || {})[c.nivel] || 0;
@@ -502,15 +532,19 @@
     });
   }
 
-  // Pular: os 3 primeiros de cada tipo são grátis (descarta e passa a vez);
-  // do 4º em diante a carta vira prenda para a mesma pessoa, na mesma vez.
+  // Pular: com pulos livres do tipo, gasta um, descarta e passa a vez;
+  // com o contador em 0, a carta vira prenda para a mesma pessoa, na mesma vez.
   function pular() {
     if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo === "prenda") return;
     gravar(n => {
       const q = n.placar[n.vez];
-      const verdade = n.carta.tipo === "verdade";
-      const usados = verdade ? ++q.pulosV : ++q.pulosD;
-      n.carta = usados > MAX_PULOS ? prendaPara(n, verdade ? "pulo-v" : "pulo-d", n.carta) : null;
+      const campo = n.carta.tipo === "verdade" ? "livresV" : "livresD";
+      if (q[campo] > 0) {
+        q[campo]--;
+        n.carta = null;
+      } else {
+        n.carta = prendaPara(n, "pulo", n.carta);
+      }
       if (!n.carta) n.vez = 1 - n.vez;                 // pulo grátis (ou sem prendas carregadas): passa a vez
     });
   }
@@ -522,7 +556,7 @@
       if (!n.carta || n.carta.tipo !== "prenda") return;
       const final = n.carta.motivo === "final";
       n.placar[n.vez].liberadas++;
-      n.aviso = { id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto: `${n.jogadores[eu]} liberou ${n.jogadores[n.vez]} da prenda.` };
+      n.aviso = novoAviso(`${n.jogadores[eu]} liberou ${n.jogadores[n.vez]} da prenda.`);
       n.carta = null;
       if (!final) n.vez = 1 - n.vez;                    // na prenda final a partida já acabou: fica o "Nova partida"
     });
@@ -532,7 +566,7 @@
     if (!estado || estado.vencedor === null) return;
     gravar(n => {
       n.vez = 1 - n.vencedor;                           // quem perdeu começa
-      n.placar = [placarVazio(), placarVazio()];
+      n.placar = [placarVazio(0, n.pulosMax), placarVazio(0, n.pulosMax)];
       n.pontos = [0, 0];
       n.vencedor = null;
       n.usados = [];
@@ -544,6 +578,16 @@
     const m = Number($("meta").value);
     if (!estado || !METAS.includes(m) || !placarZerado(estado)) return;
     gravar(n => { if (placarZerado(n)) n.meta = m; });
+  }
+
+  function mudarPulosMax() {
+    const m = Number($("pulosMax").value);
+    if (!estado || !PULOS_OPCOES.includes(m) || !placarZerado(estado)) return;
+    gravar(n => {
+      if (!placarZerado(n)) return;
+      n.pulosMax = m;
+      n.placar.forEach(p => { p.livresV = m; p.livresD = m; });
+    });
   }
 
   // ---------- cartas de vocês ----------
@@ -650,6 +694,7 @@
     $("liberar").addEventListener("click", liberar);
     $("novaPartida").addEventListener("click", novaPartida);
     $("meta").addEventListener("change", mudarMeta);
+    $("pulosMax").addEventListener("change", mudarPulosMax);
     $("niveis").addEventListener("change", mudarNiveis);
     $("abrirCarta").addEventListener("click", abrirDialogo);
     $("formCarta").addEventListener("submit", salvarCarta);

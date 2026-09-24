@@ -27,16 +27,17 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 - Pessoa 2 abre o link, digita o nome e entra.
 - Na sua vez: gire (ou escolha verdade/desafio), cumpra na chamada de vídeo e toque em **Cumpri** ou **Pular**. A vez passa sozinha.
 - **Pontos:** verdade vale 1 (leve e criativo), 2 (picante) ou 3 (pesado); desafio vale 2, 2, 3 ou 4. Prenda vale 0.
-- **Pulos:** cada pessoa tem 3 pulos grátis de verdade e 3 de desafio por partida (o botão mostra "Pular (2 grátis)"). Pulo grátis descarta a carta, sem ponto, e passa a vez. Do 4º em diante ("Pular (paga prenda)"), a carta vira uma **prenda** obrigatória para a mesma pessoa: desafio pulado dá prenda um nível acima (pesado fica pesado), verdade pulada dá prenda do mesmo nível, nunca acima do nível mais alto ligado. A prenda final de quem perde sai do nível mais alto ligado. Prenda vale 0 e não pode ser pulada.
-- **Liberar da prenda:** com uma prenda na tela (por pulo ou a final), o adversário pode tocar em **Liberar da prenda**: sem ponto, a vez passa e conta em "Liberadas". Os dois veem o aviso "{fulano} liberou {ciclano} da prenda."
-- **Meta:** 10, 20 ou 30 pontos (só muda com o placar zerado). Quem chegar primeiro vence, e quem perdeu cumpre uma **prenda final**. **Nova partida** zera o placar e mantém níveis e cartas de vocês.
+- **Pulos:** cada pessoa tem N pulos grátis de verdade e N de desafio por partida ("Pulos por tipo": 0, 1, 2, 3, 5 ou 10). O botão mostra "Pular (2 grátis)"; pulo grátis descarta a carta, sem ponto, e passa a vez. Com o contador em 0 ("Pular (paga prenda)"), a carta vira uma **prenda** obrigatória para a mesma pessoa: desafio pulado dá prenda um nível acima (pesado fica pesado), verdade pulada dá prenda do mesmo nível, nunca acima do nível mais alto ligado.
+- **Cumprir prenda** vale 0 ponto e devolve pulos do tipo pulado: leve e criativo 1, picante 2, pesado 3 (sem passar do máximo), com aviso nos dois aparelhos.
+- **Liberar da prenda:** com uma prenda na tela, só o adversário vê esse botão. Sem ponto, sem devolver pulos, a vez passa e conta em "Liberadas".
+- **Meta:** 10, 20 ou 30 pontos. Meta e pulos por tipo só mudam com o placar zerado. Quem chegar primeiro vence e quem perdeu recebe a **prenda final** (nível mais alto ligado). **Nova partida** zera o placar e mantém meta, pulos, níveis e cartas de vocês; quem perdeu começa.
 - Qualquer um pode ligar/desligar níveis; muda para os dois.
 - **+ Adicionar carta** (abaixo dos níveis): qualquer um cria verdade, desafio ou prenda, com nível e, se quiser, aviso de foto/vídeo/áudio. A carta vai para a tabela `cartas` com o código da sala, aparece na lista **Cartas de vocês** dos dois, entra no sorteio e mostra "carta de {autor}". Qualquer um pode apagar. Limite de 300 por sala; as cartas ficam na sala (para manter, reusem o mesmo código).
 - Para voltar a uma sala (recarregou, trocou de aba), entre com o **mesmo nome**.
 
 ## Como funciona
 
-Cada sala é uma linha em `public.salas` com o estado do jogo em `estado` (jsonb): jogadores, níveis, vez, placar (pontos, verdades, desafios, prendas e pulos de cada um), meta, vencedor, último giro e carta atual. As cartas (padrão e de vocês) ficam na tabela `cartas`, que também é sincronizada pelo Realtime. Cada ação grava o estado e os dois aparelhos recebem o `UPDATE` pelo Realtime. As cartas não se repetem até acabar o nível escolhido.
+Cada sala é uma linha em `public.salas` com o estado do jogo em `estado` (jsonb): jogadores, níveis, vez, placar (pontos, verdades, desafios, prendas, liberadas e pulos grátis restantes de cada um), meta, pulos por tipo, vencedor, aviso, último giro e carta atual. As cartas (padrão e de vocês) ficam na tabela `cartas`, que também é sincronizada pelo Realtime. Cada ação grava o estado e os dois aparelhos recebem o `UPDATE` pelo Realtime. As cartas não se repetem até acabar o nível escolhido.
 
 ## Observações
 
