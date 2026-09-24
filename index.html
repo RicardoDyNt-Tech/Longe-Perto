@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 <main>
@@ -109,7 +109,10 @@
       <label class="chip"><input type="checkbox" value="picante"><span>Picante</span></label>
       <label class="chip"><input type="checkbox" value="pesado"><span>Pesado +18</span></label>
     </div>
-    <button class="linkbtn addcarta" id="abrirCarta" type="button">+ Adicionar carta</button>
+    <div class="adicionar">
+      <button class="linkbtn addcarta" id="abrirCarta" type="button">+ Adicionar carta</button>
+      <button class="linkbtn addcarta" id="abrirMusica" type="button">+ Adicionar música</button>
+    </div>
 
     <div class="config">
       <label>Meta
@@ -192,6 +195,17 @@
       </div>
     </article>
 
+    <section class="trilha" id="trilha" hidden aria-label="Trilha da rodada">
+      <p class="trilha-titulo" id="trilhaTitulo">Trilha da rodada</p>
+      <p class="trilha-nome"><strong id="trilhaNome"></strong> <span id="trilhaArtista"></span></p>
+      <div class="trilha-acoes">
+        <a class="spotify" id="trilhaAbrir" target="_blank" rel="noopener">Abrir no Spotify</a>
+        <button class="secondary" id="trilhaTocar" type="button">Tocar aqui</button>
+        <button class="secondary" id="trilhaOutra" type="button">Outra música</button>
+      </div>
+      <div class="trilha-player" id="trilhaPlayer" hidden></div>
+    </section>
+
     <div class="fim" id="fim" hidden aria-live="polite">
       <p class="venceu" id="venceu"></p>
       <button class="primary" id="novaPartida" type="button">Nova partida</button>
@@ -220,6 +234,12 @@
       <ul class="lista-extras lista-cofre" id="listaCofre"></ul>
     </details>
 
+    <details class="extras" id="musicas">
+      <summary>Músicas de vocês <span id="musicasQtd"></span></summary>
+      <p class="extras-sub" id="musicasVazio">Nenhuma música ainda. Toque em "Adicionar música" e cole um link do Spotify.</p>
+      <ul class="lista-extras" id="listaMusicas"></ul>
+    </details>
+
     <details class="extras" id="extras">
       <summary>Cartas de vocês <span id="extrasQtd"></span></summary>
       <p class="extras-sub" id="extrasVazio">Nenhuma carta de vocês ainda. Toque em "Adicionar carta" para criar.</p>
@@ -228,6 +248,34 @@
     <p class="erro" id="erroJogo" role="alert"></p>
     <p class="hint">Combinem uma palavra para pular qualquer rodada sem explicação. Fotos e áudios ousados: usem a visualização única do WhatsApp.</p>
   </section>
+
+  <dialog id="dlgMusica" aria-labelledby="dlgMusicaTitulo">
+    <form id="formMusica" method="dialog">
+      <h2 id="dlgMusicaTitulo">Nova música</h2>
+      <label class="field">Link do Spotify
+        <input type="url" id="linkMusica" autocomplete="off" placeholder="https://open.spotify.com/track/…">
+      </label>
+      <label class="field">Título
+        <input type="text" id="tituloMusica" maxlength="120" autocomplete="off">
+      </label>
+      <label class="field">Artista
+        <input type="text" id="artistaMusica" maxlength="120" autocomplete="off">
+      </label>
+      <label class="field">Nível
+        <select id="nivelMusica">
+          <option value="leve">Leve</option>
+          <option value="criativo">Criativo</option>
+          <option value="picante">Picante</option>
+          <option value="pesado">Pesado +18</option>
+        </select>
+      </label>
+      <p class="erro" id="erroMusica" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarMusica" type="submit">Salvar música</button>
+        <button class="secondary" id="cancelarMusica" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="dlgCofre" aria-labelledby="dlgCofreTitulo">
     <form id="formCofre" method="dialog">
@@ -280,8 +328,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=15"></script>
-<script src="app.js?v=15"></script>
+<script src="config.js?v=16"></script>
+<script src="app.js?v=16"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

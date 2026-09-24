@@ -14,10 +14,11 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 | `supabase/schema.sql` | Tabela `salas`, políticas RLS e Realtime |
 | `supabase/002_cartas.sql` | Tabela `cartas` (verdades, desafios e prendas), políticas e Realtime |
 | `supabase/003_seed_cartas.sql` | As 376 cartas padrão do jogo |
+| `supabase/004_v3.sql` | v3: nomes de sala fixa, tabelas `partidas`, `cofre` e `musicas` (RLS, limite e Realtime) |
 
 ## Colocar no ar (uma vez)
 
-1. **Supabase (conta pessoal):** crie um projeto → SQL Editor → cole e rode, nesta ordem, `supabase/schema.sql`, `supabase/002_cartas.sql` e `supabase/003_seed_cartas.sql`. O último mostra a contagem de cartas por tipo e nível.
+1. **Supabase (conta pessoal):** crie um projeto → SQL Editor → cole e rode, nesta ordem, `supabase/schema.sql`, `supabase/002_cartas.sql`, `supabase/003_seed_cartas.sql` e `supabase/004_v3.sql`. O último mostra a contagem de cartas por tipo e nível.
 2. **Chaves:** Project Settings → API → copie a *Project URL* e a chave *anon* (ou *publishable*) para o `config.js`.
 3. **GitHub:** suba os arquivos para a branch `main` deste repositório.
 4. **GitHub Pages:** Settings → Pages → Source: *Deploy from a branch* → `main` / `(root)` → Save. Em 1–2 minutos o site fica em `https://ricardodynt-tech.github.io/Longe-Perto/`.
@@ -35,6 +36,14 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 - Qualquer um pode ligar/desligar níveis; muda para os dois.
 - **+ Adicionar carta** (abaixo dos níveis): qualquer um cria verdade, desafio ou prenda, com nível e, se quiser, aviso de foto/vídeo/áudio. A carta vai para a tabela `cartas` com o código da sala, aparece na lista **Cartas de vocês** dos dois, entra no sorteio e mostra "carta de {autor}". Qualquer um pode apagar. Limite de 300 por sala; as cartas ficam na sala (para manter, reusem o mesmo código).
 - Para voltar a uma sala (recarregou, trocou de aba), entre com o **mesmo nome**.
+
+- **App no celular:** no Chrome do Android, "Instalar app" no início (ou "Adicionar à tela inicial"). O aparelho vibra quando chega a sua vez.
+- **Cronômetro:** carta com tempo ("20 segundos") mostra "Iniciar 20s"; as outras, "Cronômetro". A contagem aparece nos dois; qualquer um pausa ou cancela.
+- **Nota do adversário:** desafio cumprido recebe ★ a ★★★ do outro; cada estrela vale +1 ponto (pode desligar com o placar zerado).
+- **Sala fixa:** "Criar sala fixa" gera um nome com final aleatório (ex.: `rica-e-carol-7k2p`). Guardem o link; a sala aparece em "Salas recentes". O **Histórico** registra cada partida terminada.
+- **Reencontro:** data com contagem regressiva e **Cofre** para guardar cartas e combinados ("Guardar para o reencontro" na carta).
+- **Desafio do dia** (sala fixa): um desafio por pessoa por dia, igual nos dois aparelhos, com sequência de dias.
+- **Trilha da rodada:** cadastrem músicas com o link do Spotify ("+ Adicionar música"); a cada giro sai uma do nível da carta, com "Abrir no Spotify" e "Tocar aqui".
 
 ## Como funciona
 

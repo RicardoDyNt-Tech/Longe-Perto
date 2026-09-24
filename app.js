@@ -37,6 +37,7 @@
   let cartas = [];        // cartas padrão + cartas desta sala, vindas da tabela `cartas`
   let cartasOk = false;   // false até a busca terminar (ou se falhar)
   let cofre = [];         // itens do cofre do reencontro desta sala
+  let musicas = [];       // músicas padrão + músicas desta sala (tabela `musicas`)
 
   // ---------- util ----------
   const salvarLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
@@ -132,6 +133,7 @@
     mudar(novo);
     // o cronômetro pertence à carta: saiu a carta (cumpri, pular, liberar, nova carta), sai o timer
     if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) novo.timer = null;
+    if (!novo.carta) novo.musica = null;
     const venceuAgora = estado.vencedor == null && novo.vencedor != null;
     aplicar(novo, false);
     const sala = codigo;
@@ -255,6 +257,10 @@
       // DELETE não é filtrável no Realtime: tira pelo id (itens de outras salas não estão na lista)
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "cofre" },
         payload => tirarCofre(payload.old && payload.old.id))
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "musicas", filter: `sala=eq.${c}` },
+        payload => juntarMusica(payload.new))
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "musicas" },
+        payload => tirarMusica(payload.old && payload.old.id))
       .subscribe(status => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
           erro("erroJogo", "A conexão ao vivo caiu. Recarregue a página se a roleta parar de sincronizar.");
@@ -263,6 +269,7 @@
     aplicar(e, true);
     carregarCartas(c);
     carregarCofre(c);
+    carregarMusicas(c);
   }
 
   // ---------- reencontro e cofre ----------
@@ -472,6 +479,149 @@
     });
   }
 
+  // ---------- trilha da rodada (Spotify, só links e player embutido) ----------
+  const RE_SPOTIFY = /^https:\/\/open\.spotify\.com\/(intl-[a-z-]+\/)?track\/([A-Za-z0-9]+)/;
+  const idFaixa = url => { const m = RE_SPOTIFY.exec((url || "").trim()); return m ? m[2] : null; };
+  let tocandoUrl = null;   // player carregado neste aparelho (nunca automático)
+
+  async function carregarMusicas(c) {
+    const { data, error } = await sb.from("musicas")
+      .select("id, sala, nivel, titulo, artista, url, autor")
+      .or("sala.is.null,sala.eq." + c)
+      .eq("ativa", true);
+    if (c !== codigo) return;
+    musicas = error || !data ? [] : data;
+    desenharMusicas();
+  }
+
+  // música do nível da carta; sem música nesse nível, desce até achar; sem nenhuma, null
+  function sortearMusica(nivel, evitarUrl) {
+    for (let i = Math.max(0, ORDEM_NIVEIS.indexOf(nivel)); i >= 0; i--) {
+      let pool = musicas.filter(m => m.nivel === ORDEM_NIVEIS[i]);
+      if (pool.length > 1 && evitarUrl) pool = pool.filter(m => m.url !== evitarUrl);
+      if (pool.length) {
+        const m = pool[Math.floor(Math.random() * pool.length)];
+        return { titulo: m.titulo, artista: m.artista, url: m.url };
+      }
+    }
+    return null;
+  }
+
+  function desenharTrilha(e) {
+    const m = e.musica, c = e.carta;
+    const box = $("trilha");
+    const visivel = !!(m && c && !$("card").hidden);
+    box.hidden = !visivel;
+    if (!visivel) return;
+    $("trilhaTitulo").textContent = /m[úu]sica que eu escolher/i.test(c.texto || "") ? "Sugestão para este desafio" : "Trilha da rodada";
+    $("trilhaNome").textContent = m.titulo;
+    $("trilhaArtista").textContent = m.artista;
+    $("trilhaAbrir").href = m.url;
+    $("trilhaOutra").disabled = musicas.length < 2;
+    if (tocandoUrl !== m.url) { $("trilhaPlayer").textContent = ""; $("trilhaPlayer").hidden = true; $("trilhaTocar").hidden = false; tocandoUrl = null; }
+  }
+
+  function tocarAqui() {
+    const m = estado && estado.musica;
+    const id = m && idFaixa(m.url);
+    if (!id) return;
+    const f = document.createElement("iframe");
+    f.src = "https://open.spotify.com/embed/track/" + encodeURIComponent(id);
+    f.width = "100%";
+    f.height = "80";
+    f.loading = "lazy";
+    f.allow = "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
+    f.title = "Player do Spotify";
+    $("trilhaPlayer").textContent = "";
+    $("trilhaPlayer").appendChild(f);
+    $("trilhaPlayer").hidden = false;
+    $("trilhaTocar").hidden = true;
+    tocandoUrl = m.url;
+  }
+
+  function outraMusica() {
+    if (!estado || !estado.carta) return;
+    gravar(n => { n.musica = sortearMusica(n.carta.nivel, n.musica && n.musica.url) || n.musica; });
+  }
+
+  function juntarMusica(m) {
+    if (!m || !m.id || m.sala !== codigo || m.ativa === false || musicas.some(x => x.id === m.id)) return;
+    musicas.push({ id: m.id, sala: m.sala, nivel: m.nivel, titulo: m.titulo, artista: m.artista, url: m.url, autor: m.autor });
+    desenharMusicas();
+  }
+
+  function tirarMusica(id) {
+    if (!id || !musicas.some(x => x.id === id)) return;
+    musicas = musicas.filter(x => x.id !== id);
+    desenharMusicas();
+  }
+
+  function desenharMusicas() {
+    if (estado) desenharTrilha(estado);   // "Outra música" depende de quantas músicas existem
+    const nossas = musicas.filter(m => m.sala);
+    $("musicasQtd").textContent = nossas.length ? `(${nossas.length})` : "";
+    $("musicasVazio").hidden = nossas.length > 0;
+    const ul = $("listaMusicas");
+    ul.textContent = "";
+    nossas.slice().reverse().forEach(m => {
+      const li = document.createElement("li");
+      const info = document.createElement("div");
+      info.className = "info";
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = LEVEL_NAMES[m.nivel] || m.nivel;
+      const t = document.createElement("span");
+      t.textContent = `${m.titulo} — ${m.artista}`;
+      const autor = document.createElement("span");
+      autor.className = "autor";
+      autor.textContent = "por " + m.autor;
+      info.append(tag, t, autor);
+      const apagar = document.createElement("button");
+      apagar.type = "button";
+      apagar.textContent = "Apagar";
+      apagar.addEventListener("click", () => apagarMusica(m));
+      li.append(info, apagar);
+      ul.appendChild(li);
+    });
+  }
+
+  function abrirMusica() {
+    if (!estado) return;
+    $("formMusica").reset();
+    erro("erroMusica", "");
+    $("dlgMusica").showModal();
+    $("linkMusica").focus();
+  }
+
+  async function salvarMusica(ev) {
+    ev.preventDefault();
+    if (!estado || !codigo) return;
+    const id = idFaixa($("linkMusica").value);
+    if (!id) return erro("erroMusica", "Cole o link de uma música do Spotify (open.spotify.com/track/…).");
+    const titulo = $("tituloMusica").value.trim().slice(0, 120);
+    const artista = $("artistaMusica").value.trim().slice(0, 120);
+    if (!titulo || !artista) return erro("erroMusica", "Preencha o título e o artista.");
+    $("salvarMusica").disabled = true;
+    const { data, error } = await sb.from("musicas")
+      .insert({ sala: codigo, nivel: $("nivelMusica").value, titulo, artista, url: "https://open.spotify.com/track/" + id, autor: (estado.jogadores[eu] || "").trim().slice(0, 20) })
+      .select("id, sala, nivel, titulo, artista, url, autor").single();
+    $("salvarMusica").disabled = false;
+    if (error) {
+      return erro("erroMusica", /limite/.test(error.message || "")
+        ? "A sala chegou a 300 músicas. Apague alguma para adicionar outra."
+        : "Não consegui salvar a música. Confira o link e a internet.");
+    }
+    juntarMusica(data);
+    $("dlgMusica").close();
+  }
+
+  async function apagarMusica(m) {
+    if (!confirm(`Apagar esta música?\n\n${m.titulo} — ${m.artista}`)) return;
+    const { error } = await sb.from("musicas").delete().eq("id", m.id);
+    if (error) return erro("erroJogo", "Não consegui apagar a música. Confira a internet e tente de novo.");
+    tirarMusica(m.id);
+  }
+
   // ---------- salas recentes (só neste aparelho) ----------
   const recentes = () => { const r = lerLocal("lp-salas"); return Array.isArray(r) ? r : []; };
 
@@ -542,7 +692,7 @@
   function sair() {
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null; ultimoVencedor = null;
-    cartas = []; cartasOk = false; cofre = [];
+    cartas = []; cartasOk = false; cofre = []; musicas = []; tocandoUrl = null;
     desenharExtras();
     clearTimeout(timerCarta);
     history.replaceState(null, "", location.pathname);
@@ -574,6 +724,7 @@
     if (e.vencedor !== 0 && e.vencedor !== 1) e.vencedor = null;
     if (e.aviso === undefined) e.aviso = null;
     if (e.timer === undefined) e.timer = null;
+    if (!e.musica || !idFaixa(e.musica.url)) e.musica = null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(e.reencontro || "")) e.reencontro = null;
     if (!LEVEL_NAMES[e.nivelDiario]) e.nivelDiario = "leve";
     if (!e.diario || typeof e.diario !== "object" || Array.isArray(e.diario)) e.diario = {};
@@ -709,13 +860,14 @@
         girando = true;
         $("card").hidden = true;
         requestAnimationFrame(() => posicionarRoleta(g.alvo, true));
-        timerCarta = setTimeout(() => { girando = false; mostrarCarta(estado); atualizarBotoes(); }, GIRO_MS());
+        timerCarta = setTimeout(() => { girando = false; mostrarCarta(estado); atualizarBotoes(); desenharTimer(estado, false); desenharTrilha(estado); }, GIRO_MS());
       }
     } else if (!girando) {
       mostrarCarta(e);
     }
     atualizarBotoes();
     desenharTimer(e, inicial);
+    desenharTrilha(e);
   }
 
   function desenharExtras() {
@@ -943,6 +1095,7 @@
       const carta = sortear(tipo, n.niveis, n.usados || []);
       registrarUso(n, carta);
       n.carta = carta;
+      n.musica = sortearMusica(carta.nivel);
       n.giro = { id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), alvo };
     });
   }
@@ -954,6 +1107,7 @@
       const carta = sortear(tipo, n.niveis, n.usados || []);
       registrarUso(n, carta);
       n.carta = carta;
+      n.musica = sortearMusica(carta.nivel);
     });
   }
 
@@ -1195,6 +1349,11 @@
     $("reencontroSalvar").addEventListener("click", salvarReencontro);
     $("reencontroMudar").addEventListener("click", () => { editandoData = true; desenharReencontro(estado); $("reencontroData").focus(); });
     $("guardar").addEventListener("click", abrirGuardar);
+    $("abrirMusica").addEventListener("click", abrirMusica);
+    $("formMusica").addEventListener("submit", salvarMusica);
+    $("cancelarMusica").addEventListener("click", () => $("dlgMusica").close());
+    $("trilhaTocar").addEventListener("click", tocarAqui);
+    $("trilhaOutra").addEventListener("click", outraMusica);
     $("diarioCumpri").addEventListener("click", cumpriHoje);
     $("nivelDiario").addEventListener("change", () => { const v = $("nivelDiario").value; gravar(n => { n.nivelDiario = v; }); });
     setInterval(desenharDiario, 60000);   // vira o dia sozinho
