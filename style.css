@@ -139,6 +139,17 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .lista-cofre label{display:flex; align-items:center; gap:4px; font-size:.85rem; white-space:nowrap}
 .lista-cofre .acoes{display:flex; flex-direction:column; align-items:flex-end; gap:4px}
 .cofre-carta{background:var(--bg); border-radius:12px; padding:10px 12px; margin:0 0 12px}
+.diario{margin:12px 0 0; padding:14px 16px; border-radius:18px; background:var(--surface); border:2px solid var(--desafio)}
+.diario-topo{display:flex; justify-content:space-between; align-items:center; gap:10px}
+.diario h2{margin:0; font-size:1.1rem}
+.diario-topo label{font-size:.85rem; font-weight:600; display:flex; align-items:center; gap:6px}
+.diario-topo select{width:auto; margin:0; padding:4px 8px}
+.diario-quem{margin:12px 0 2px; font-weight:800; color:var(--desafio)}
+.diario-texto{margin:0 0 4px; overflow-wrap:anywhere}
+.diario-seq{margin:0 0 10px; color:var(--muted); font-size:.9rem}
+.diario .row > *{flex:1}
+.diario-outro{border-top:1px solid var(--line); margin-top:12px}
+.diario-outro .diario-quem{color:var(--muted)}
 .fim{margin-top:22px; text-align:center; background:var(--surface); border:2px solid var(--lamp); border-radius:20px; padding:18px}
 .venceu{font-size:1.5rem; font-weight:800; margin:0 0 12px}
 .card.prenda{border-color:var(--lamp)}

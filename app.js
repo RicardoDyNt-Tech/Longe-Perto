@@ -161,6 +161,7 @@
     }
     atualizarBotoes();
     desenharExtras();
+    desenharDiario();
   }
 
   async function buscarSala(c) {
@@ -406,6 +407,71 @@
     tirarCofre(x.id);
   }
 
+  // ---------- desafio do dia (só em sala fixa) ----------
+  // Sorteio determinístico: mesma sala + mesmo dia + mesmo jogador = mesmo desafio nos dois aparelhos, sem gravar nada.
+  function fnv1a(s) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return h >>> 0;
+  }
+
+  function desafioDoDia(dia, jogador) {
+    // só as cartas padrão, em ordem fixa, para os dois aparelhos terem exatamente a mesma lista
+    const pool = cartas.filter(c => !c.sala && c.tipo === "desafio" && c.nivel === estado.nivelDiario)
+      .sort((a, b) => (a.id < b.id ? -1 : 1));
+    if (!pool.length) return null;
+    return pool[fnv1a(`${codigo}|${dia}|${jogador}`) % pool.length];
+  }
+
+  const diaAnterior = iso => { const [a, m, d] = iso.split("-").map(Number); return new Date(Date.UTC(a, m - 1, d - 1)).toISOString().slice(0, 10); };
+  const cumpriuNoDia = (dia, jogador) => !!(estado.diario[dia] && estado.diario[dia][jogador]);
+
+  // dias seguidos até hoje (ou até ontem, se hoje ainda não cumpriu)
+  function sequencia(jogador) {
+    let dia = hojeISO();
+    if (!cumpriuNoDia(dia, jogador)) dia = diaAnterior(dia);
+    let n = 0;
+    while (cumpriuNoDia(dia, jogador) && n < 60) { n++; dia = diaAnterior(dia); }
+    return n;
+  }
+
+  const textoSeq = n => n ? `🔥 ${n} ${n === 1 ? "dia seguido" : "dias seguidos"}` : "Ainda sem sequência";
+
+  function desenharDiario() {
+    const box = $("diario");
+    if (!estado || !estado.fixa) { box.hidden = true; return; }
+    box.hidden = false;
+    const hoje = hojeISO();
+    const nomes = estado.jogadores;
+    $("nivelDiario").value = estado.nivelDiario;
+    const meu = cartasOk ? desafioDoDia(hoje, eu) : null;
+    $("diarioMeuTitulo").textContent = `Desafio do dia de ${nomes[eu]}`;
+    $("diarioMeuTexto").textContent = !cartasOk ? "Carregando…" : meu ? meu.texto : "Sem desafios neste nível.";
+    $("diarioMeuSeq").textContent = textoSeq(sequencia(eu));
+    const feito = cumpriuNoDia(hoje, eu);
+    $("diarioCumpri").textContent = feito ? "Cumprido hoje ✓" : "Cumpri hoje";
+    $("diarioCumpri").disabled = feito || !meu;
+    $("diarioWa").href = "https://wa.me/?text=" + encodeURIComponent(meu ? `Meu desafio do dia: ${meu.texto}` : "");
+    const outro = 1 - eu;
+    $("diarioOutro").hidden = !nomes[outro];
+    if (nomes[outro]) {
+      const dele = cartasOk ? desafioDoDia(hoje, outro) : null;
+      $("diarioOutroTitulo").textContent = `Desafio do dia de ${nomes[outro]}` + (cumpriuNoDia(hoje, outro) ? " · cumprido ✓" : "");
+      $("diarioOutroTexto").textContent = !cartasOk ? "Carregando…" : dele ? dele.texto : "Sem desafios neste nível.";
+      $("diarioOutroSeq").textContent = textoSeq(sequencia(outro));
+    }
+  }
+
+  function cumpriHoje() {
+    if (!estado || !estado.fixa) return;
+    const hoje = hojeISO();
+    gravar(n => {
+      n.diario[hoje] = Object.assign({}, n.diario[hoje], { [eu]: true });
+      // guarda só os últimos 60 dias
+      Object.keys(n.diario).sort().slice(0, -60).forEach(d => { delete n.diario[d]; });
+    });
+  }
+
   // ---------- salas recentes (só neste aparelho) ----------
   const recentes = () => { const r = lerLocal("lp-salas"); return Array.isArray(r) ? r : []; };
 
@@ -509,6 +575,8 @@
     if (e.aviso === undefined) e.aviso = null;
     if (e.timer === undefined) e.timer = null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(e.reencontro || "")) e.reencontro = null;
+    if (!LEVEL_NAMES[e.nivelDiario]) e.nivelDiario = "leve";
+    if (!e.diario || typeof e.diario !== "object" || Array.isArray(e.diario)) e.diario = {};
     if (typeof e.notaAdversario !== "boolean") e.notaAdversario = true;
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
@@ -626,6 +694,7 @@
 
     desenharPlacar(e, nomes);
     desenharReencontro(e);
+    desenharDiario();
 
     // giro novo? anima nos dois celulares
     const g = e.giro;
@@ -1126,6 +1195,9 @@
     $("reencontroSalvar").addEventListener("click", salvarReencontro);
     $("reencontroMudar").addEventListener("click", () => { editandoData = true; desenharReencontro(estado); $("reencontroData").focus(); });
     $("guardar").addEventListener("click", abrirGuardar);
+    $("diarioCumpri").addEventListener("click", cumpriHoje);
+    $("nivelDiario").addEventListener("change", () => { const v = $("nivelDiario").value; gravar(n => { n.nivelDiario = v; }); });
+    setInterval(desenharDiario, 60000);   // vira o dia sozinho
     $("formCofre").addEventListener("submit", salvarCofre);
     $("cancelarCofre").addEventListener("click", () => $("dlgCofre").close());
     document.querySelectorAll('input[name="filtroCofre"]').forEach(r => r.addEventListener("change", desenharCofre));
