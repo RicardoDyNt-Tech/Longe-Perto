@@ -304,7 +304,9 @@
     if (salaUrl) $("codigo").value = salaUrl.toUpperCase();
 
     if (!configurado() || !window.supabase) {
-      erro("erroLobby", "Falta configurar o Supabase no arquivo config.js.");
+      erro("erroLobby", !configurado()
+        ? "Falta configurar o Supabase no arquivo config.js."
+        : "Não foi possível carregar o Supabase. Confira a internet ou desative bloqueadores e recarregue a página.");
       $("criar").disabled = $("entrar").disabled = true;
       return;
     }
