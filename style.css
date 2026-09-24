@@ -85,4 +85,24 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .score{display:flex; justify-content:center; gap:28px; margin-top:24px; color:var(--muted)}
 .score b{color:var(--ink); font-size:1.3rem}
 .score .me span{text-decoration:underline; text-decoration-color:var(--lamp); text-decoration-thickness:3px}
+.extras{margin-top:24px; background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px 16px}
+.extras summary{font-weight:800; cursor:pointer}
+.extras summary span{color:var(--muted); font-weight:600}
+.extras-sub{color:var(--muted); font-size:.9rem; margin:8px 0 14px}
+.extras .tipo{display:flex; gap:8px; margin-bottom:14px}
+select,textarea{
+  width:100%; font:inherit; color:var(--ink); background:var(--bg);
+  border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:6px;
+}
+textarea{resize:vertical}
+label.field select,label.field textarea{font-weight:400}
+select:focus-visible,textarea:focus-visible{outline:3px solid var(--lamp); outline-offset:2px}
+.lista-extras{list-style:none; padding:0; margin:16px 0 0}
+.lista-extras li{display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-top:1px solid var(--line)}
+.lista-extras .info{flex:1; min-width:0; overflow-wrap:anywhere}
+.lista-extras .tag{display:block; font-size:.8rem; font-weight:800}
+.lista-extras .tag.verdade{color:var(--verdade)}
+.lista-extras .tag.desafio{color:var(--desafio)}
+.lista-extras .autor{display:block; color:var(--muted); font-size:.8rem}
+.lista-extras button{background:transparent; color:var(--muted); text-decoration:underline; padding:2px 0; font-size:.85rem}
 .hint{color:var(--muted); font-size:.85rem; margin:24px 0 0}

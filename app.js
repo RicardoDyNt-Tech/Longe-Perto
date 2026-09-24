@@ -56,18 +56,23 @@
   }
 
   // ---------- sorteio ----------
-  function sortear(tipo, niveis, usados) {
+  function sortear(tipo, niveis, usados, extras) {
     const banco = tipo === "verdade" ? window.VERDADES : window.DESAFIOS;
     const lista = niveis.length ? niveis : ["leve"];
     const pool = [];
     lista.forEach(n => (banco[n] || []).forEach((t, i) => pool.push({ nivel: n, texto: t, chave: tipo[0] + n + i })));
+    (extras || []).forEach(x => {
+      if (x.tipo === tipo && lista.includes(x.nivel)) pool.push({ nivel: x.nivel, texto: x.texto, chave: "x" + x.id, autor: x.autor });
+    });
     if (!pool.length) (banco.leve || []).forEach((t, i) => pool.push({ nivel: "leve", texto: t, chave: tipo[0] + "leve" + i }));
     const usadosSet = new Set(usados);
     let livres = pool.filter(p => !usadosSet.has(p.chave));
     let reset = false;
     if (!livres.length) { livres = pool; reset = true; }
     const p = livres[Math.floor(Math.random() * livres.length)];
-    return { tipo, nivel: p.nivel, texto: p.texto, chave: p.chave, reset, doPool: pool.map(x => x.chave) };
+    const carta = { tipo, nivel: p.nivel, texto: p.texto, chave: p.chave, reset, doPool: pool.map(x => x.chave) };
+    if (p.autor) carta.autor = p.autor;
+    return carta;
   }
 
   function registrarUso(novo, carta) {
@@ -108,7 +113,8 @@
       pontos: [0, 0],
       giro: null,
       carta: null,
-      usados: []
+      usados: [],
+      extras: []
     };
     for (let t = 0; t < 4; t++) {
       const c = gerarCodigo();
@@ -161,6 +167,7 @@
       });
 
     aplicar(e, true);
+    trazerMinhasCartas();
   }
 
   function sair() {
@@ -223,6 +230,25 @@
       mostrarCarta(e);
     }
     atualizarBotoes();
+    desenharExtras(e);
+  }
+
+  function desenharExtras(e) {
+    const extras = e.extras || [];
+    $("extrasQtd").textContent = extras.length ? `(${extras.length})` : "";
+    const ul = $("listaExtras");
+    ul.innerHTML = "";
+    extras.slice().reverse().forEach(x => {
+      const li = document.createElement("li");
+      li.innerHTML = '<div class="info"><span class="tag"></span><span class="t"></span><span class="autor"></span></div><button type="button">Remover</button>';
+      const tag = li.querySelector(".tag");
+      tag.className = "tag " + x.tipo;
+      tag.textContent = (x.tipo === "verdade" ? "Verdade" : "Desafio") + " · " + (window.LEVEL_NAMES[x.nivel] || x.nivel);
+      li.querySelector(".t").textContent = x.texto;
+      li.querySelector(".autor").textContent = "por " + x.autor;
+      li.querySelector("button").addEventListener("click", () => removerExtra(x.id));
+      ul.appendChild(li);
+    });
   }
 
   function atualizarBotoes() {
@@ -246,7 +272,8 @@
     card.className = "card " + c.tipo;
     card.hidden = false;
     $("kind").textContent = c.tipo === "verdade" ? "Verdade" : "Desafio";
-    $("level").textContent = "Nível " + (window.LEVEL_NAMES[c.nivel] || c.nivel) + ", para " + nome;
+    $("level").textContent = "Nível " + (window.LEVEL_NAMES[c.nivel] || c.nivel) + ", para " + nome
+      + (c.autor ? " · carta de " + c.autor : "");
     $("text").textContent = c.texto;
     $("wa").href = "https://wa.me/?text=" + encodeURIComponent(`${$("kind").textContent} para ${nome}: ${c.texto}`);
   }
@@ -263,7 +290,7 @@
     const alvo = rotacao + 360 * 5 + delta;
     const tipo = k % 2 === 0 ? "verdade" : "desafio";
     gravar(n => {
-      const carta = sortear(tipo, n.niveis, n.usados || []);
+      const carta = sortear(tipo, n.niveis, n.usados || [], n.extras);
       registrarUso(n, carta);
       n.carta = carta;
       n.giro = { id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), alvo };
@@ -273,7 +300,7 @@
   function escolher(tipo) {
     if (!estado || girando || estado.vez !== eu || estado.carta) return;
     gravar(n => {
-      const carta = sortear(tipo, n.niveis, n.usados || []);
+      const carta = sortear(tipo, n.niveis, n.usados || [], n.extras);
       registrarUso(n, carta);
       n.carta = carta;
     });
@@ -285,6 +312,46 @@
       if (ponto) n.pontos[n.vez]++;
       n.vez = 1 - n.vez;
       n.carta = null;
+    });
+  }
+
+  // ---------- cartas de vocês ----------
+  const MAX_EXTRAS = 200;
+  const minhasCartas = () => lerLocal("lp-minhas-cartas") || [];
+
+  function adicionarExtra(ev) {
+    ev.preventDefault();
+    if (!estado) return;
+    const texto = $("textoExtra").value.replace(/\s+/g, " ").trim().slice(0, 200);
+    if (!texto) return erro("erroJogo", "Escreva o texto da carta.");
+    const extras = estado.extras || [];
+    if (extras.length >= MAX_EXTRAS) return erro("erroJogo", `A sala já tem ${MAX_EXTRAS} cartas de vocês. Remova alguma para adicionar outra.`);
+    const x = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      tipo: document.querySelector('input[name="tipoExtra"]:checked').value,
+      nivel: $("nivelExtra").value,
+      texto,
+      autor: estado.jogadores[eu] || ""
+    };
+    gravar(n => { n.extras = (n.extras || []).concat(x); });
+    salvarLocal("lp-minhas-cartas", minhasCartas().concat(x).slice(-MAX_EXTRAS));
+    $("textoExtra").value = "";
+  }
+
+  function removerExtra(id) {
+    gravar(n => { n.extras = (n.extras || []).filter(x => x.id !== id); });
+    salvarLocal("lp-minhas-cartas", minhasCartas().filter(x => x.id !== id));
+  }
+
+  // cartas que escrevi em outras salas entram nesta também
+  function trazerMinhasCartas() {
+    if (!estado) return;
+    const ids = new Set((estado.extras || []).map(x => x.id));
+    const faltam = minhasCartas().filter(x => !ids.has(x.id));
+    if (!faltam.length) return;
+    gravar(n => {
+      const tem = new Set((n.extras || []).map(x => x.id));
+      n.extras = (n.extras || []).concat(faltam.filter(x => !tem.has(x.id))).slice(-MAX_EXTRAS);
     });
   }
 
@@ -322,6 +389,7 @@
     $("done").addEventListener("click", () => encerrar(true));
     $("skip").addEventListener("click", () => encerrar(false));
     $("niveis").addEventListener("change", mudarNiveis);
+    $("formExtra").addEventListener("submit", adicionarExtra);
     $("copiar").addEventListener("click", async () => {
       try { await navigator.clipboard.writeText(linkSala(codigo)); $("copiar").textContent = "Link copiado"; }
       catch (e) { $("copiar").textContent = "Copie da barra de endereço"; }

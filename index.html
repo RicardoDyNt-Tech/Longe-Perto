@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <main>
@@ -78,14 +78,38 @@
     </article>
 
     <div class="score" id="score"></div>
+
+    <details class="extras" id="extras">
+      <summary>Cartas de vocês <span id="extrasQtd"></span></summary>
+      <p class="extras-sub">Escreva verdades e desafios seus. Entram no sorteio para os dois e ficam guardadas neste celular para as próximas salas.</p>
+      <form id="formExtra">
+        <div class="tipo" role="radiogroup" aria-label="Tipo">
+          <label class="chip"><input type="radio" name="tipoExtra" value="verdade" checked><span>Verdade</span></label>
+          <label class="chip"><input type="radio" name="tipoExtra" value="desafio"><span>Desafio</span></label>
+        </div>
+        <label class="field">Nível
+          <select id="nivelExtra">
+            <option value="leve">Leve</option>
+            <option value="criativo">Criativo</option>
+            <option value="picante">Picante</option>
+            <option value="pesado">Pesado +18</option>
+          </select>
+        </label>
+        <label class="field">Texto
+          <textarea id="textoExtra" maxlength="200" rows="3" placeholder="Ex.: Me conta um sonho que você teve comigo"></textarea>
+        </label>
+        <button class="primary" type="submit">Adicionar carta</button>
+      </form>
+      <ul class="lista-extras" id="listaExtras"></ul>
+    </details>
     <p class="erro" id="erroJogo" role="alert"></p>
     <p class="hint">Combinem uma palavra para pular qualquer rodada sem explicação. Fotos e áudios ousados: usem a visualização única do WhatsApp.</p>
   </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=2"></script>
-<script src="conteudo.js?v=2"></script>
-<script src="app.js?v=2"></script>
+<script src="config.js?v=3"></script>
+<script src="conteudo.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

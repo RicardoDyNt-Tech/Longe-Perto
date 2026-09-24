@@ -26,11 +26,12 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 - Pessoa 2 abre o link, digita o nome e entra.
 - Na sua vez: gire (ou escolha verdade/desafio), cumpra na chamada de vídeo e toque em **Cumpri** (ganha ponto) ou **Pular**. A vez passa sozinha.
 - Qualquer um pode ligar/desligar níveis; muda para os dois.
+- Em **Cartas de vocês**, qualquer um escreve verdades e desafios próprios (tipo + nível). Elas entram no sorteio para os dois, aparecem com "carta de …" e ficam guardadas no celular de quem escreveu, voltando automaticamente nas próximas salas. Dá para remover pela lista.
 - Para voltar a uma sala (recarregou, trocou de aba), entre com o **mesmo nome**.
 
 ## Como funciona
 
-Cada sala é uma linha em `public.salas` com o estado do jogo em `estado` (jsonb): jogadores, níveis, vez, placar, último giro e carta atual. Cada ação grava o estado e os dois aparelhos recebem o `UPDATE` pelo Realtime. As cartas não se repetem até acabar o nível escolhido.
+Cada sala é uma linha em `public.salas` com o estado do jogo em `estado` (jsonb): jogadores, níveis, vez, placar, último giro, carta atual e as cartas criadas por vocês (`extras`). Cada ação grava o estado e os dois aparelhos recebem o `UPDATE` pelo Realtime. As cartas não se repetem até acabar o nível escolhido.
 
 ## Observações
 
