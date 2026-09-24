@@ -9,13 +9,14 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 | `index.html` | Telas de entrada e de jogo |
 | `style.css` | Visual (claro e escuro automático) |
 | `app.js` | Salas, roleta sincronizada, vez, placar |
-| `conteudo.js` | As 46 verdades e 100 desafios por nível — edite aqui para adicionar |
 | `config.js` | URL e chave anon do Supabase (**preencher**) |
 | `supabase/schema.sql` | Tabela `salas`, políticas RLS e Realtime |
+| `supabase/002_cartas.sql` | Tabela `cartas` (verdades, desafios e prendas), políticas e Realtime |
+| `supabase/003_seed_cartas.sql` | As 376 cartas padrão do jogo |
 
 ## Colocar no ar (uma vez)
 
-1. **Supabase (conta pessoal):** crie um projeto → SQL Editor → cole e rode `supabase/schema.sql`.
+1. **Supabase (conta pessoal):** crie um projeto → SQL Editor → cole e rode, nesta ordem, `supabase/schema.sql`, `supabase/002_cartas.sql` e `supabase/003_seed_cartas.sql`. O último mostra a contagem de cartas por tipo e nível.
 2. **Chaves:** Project Settings → API → copie a *Project URL* e a chave *anon* (ou *publishable*) para o `config.js`.
 3. **GitHub:** suba os arquivos para a branch `main` deste repositório.
 4. **GitHub Pages:** Settings → Pages → Source: *Deploy from a branch* → `main` / `(root)` → Save. Em 1–2 minutos o site fica em `https://ricardodynt-tech.github.io/Longe-Perto/`.
@@ -38,3 +39,4 @@ Cada sala é uma linha em `public.salas` com o estado do jogo em `estado` (jsonb
 - A chave anon fica pública no site; isso é normal no Supabase. As políticas deixam qualquer pessoa com o código ler e jogar numa sala — adequado para um jogo entre vocês dois, não guarde nada sensível ali.
 - Limpeza opcional de salas paradas: a última linha comentada do `schema.sql`.
 - Se o Realtime não sincronizar, confira em *Database → Publications* se `salas` está em `supabase_realtime`.
+- **Cartas padrão:** ficam na tabela `cartas` (com `sala` vazia). Para editar, use o Table Editor do Supabase; para tirar uma do jogo sem apagar, marque `ativa = false`.

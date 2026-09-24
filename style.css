@@ -76,6 +76,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .desafio .kind{color:var(--desafio)}
 .level{color:var(--muted); font-size:.9rem; margin:2px 0 12px}
 .text{font-size:1.25rem; line-height:1.4; margin:0 0 18px}
+.midia{color:var(--muted); font-size:.95rem; font-weight:600; margin:-8px 0 18px}
 .actions{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .actions .wa{grid-column:1/-1}
 .done{background:var(--ink); color:var(--bg); font-weight:600; padding:12px}

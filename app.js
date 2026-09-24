@@ -7,6 +7,7 @@
   const ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   const SEGMENTOS = 8;
   const GIRO_MS = () => matchMedia("(prefers-reduced-motion: reduce)").matches ? 350 : 3300;
+  const LEVEL_NAMES = { leve: "Leve", criativo: "Criativo", picante: "Picante", pesado: "Pesado +18" };
 
   let sb = null;
   let codigo = null;    // sala atual
@@ -17,6 +18,8 @@
   let rotacao = 0;
   let girando = false;
   let timerCarta = null;
+  let cartas = [];        // cartas padrão + cartas desta sala, vindas da tabela `cartas`
+  let cartasOk = false;   // false até a busca terminar (ou se falhar)
 
   // ---------- util ----------
   const salvarLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
@@ -56,21 +59,23 @@
   }
 
   // ---------- sorteio ----------
+  // chaves antigas em `usados` (de antes das cartas irem para o banco) não batem com nenhum id e são ignoradas
   function sortear(tipo, niveis, usados, extras) {
-    const banco = tipo === "verdade" ? window.VERDADES : window.DESAFIOS;
     const lista = niveis.length ? niveis : ["leve"];
-    const pool = [];
-    lista.forEach(n => (banco[n] || []).forEach((t, i) => pool.push({ nivel: n, texto: t, chave: tipo[0] + n + i })));
+    const pool = cartas.filter(c => c.tipo === tipo && lista.includes(c.nivel)).map(c => ({ ...c, chave: c.id }));
     (extras || []).forEach(x => {
       if (x.tipo === tipo && lista.includes(x.nivel)) pool.push({ nivel: x.nivel, texto: x.texto, chave: "x" + x.id, autor: x.autor });
     });
-    if (!pool.length) (banco.leve || []).forEach((t, i) => pool.push({ nivel: "leve", texto: t, chave: tipo[0] + "leve" + i }));
+    if (!pool.length) cartas.filter(c => c.tipo === tipo && c.nivel === "leve").forEach(c => pool.push({ ...c, chave: c.id }));
+    if (!pool.length) return null;
     const usadosSet = new Set(usados);
     let livres = pool.filter(p => !usadosSet.has(p.chave));
     let reset = false;
     if (!livres.length) { livres = pool; reset = true; }
     const p = livres[Math.floor(Math.random() * livres.length)];
     const carta = { tipo, nivel: p.nivel, texto: p.texto, chave: p.chave, reset, doPool: pool.map(x => x.chave) };
+    if (p.id) carta.id = p.id;
+    if (p.midia) carta.midia = p.midia;
     if (p.autor) carta.autor = p.autor;
     return carta;
   }
@@ -92,6 +97,24 @@
     const { error } = await sb.from("salas").update({ estado: novo }).eq("codigo", codigo);
     if (error) erro("erroJogo", "Não consegui salvar a jogada. Confira a internet e tente de novo.");
     else erro("erroJogo", "");
+  }
+
+  async function carregarCartas(c) {
+    cartasOk = false;
+    atualizarBotoes();
+    const { data, error } = await sb.from("cartas")
+      .select("id, sala, tipo, nivel, texto, midia, autor")
+      .or("sala.is.null,sala.eq." + c)
+      .eq("ativa", true);
+    if (c !== codigo) return;   // saiu da sala enquanto carregava
+    if (error || !data || !data.length) {
+      cartas = [];
+      erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
+    } else {
+      cartas = data;
+      cartasOk = true;
+    }
+    atualizarBotoes();
   }
 
   async function buscarSala(c) {
@@ -168,11 +191,13 @@
 
     aplicar(e, true);
     trazerMinhasCartas();
+    carregarCartas(c);
   }
 
   function sair() {
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null;
+    cartas = []; cartasOk = false;
     clearTimeout(timerCarta);
     history.replaceState(null, "", location.pathname);
     $("jogo").hidden = true;
@@ -243,7 +268,7 @@
       li.innerHTML = '<div class="info"><span class="tag"></span><span class="t"></span><span class="autor"></span></div><button type="button">Remover</button>';
       const tag = li.querySelector(".tag");
       tag.className = "tag " + x.tipo;
-      tag.textContent = (x.tipo === "verdade" ? "Verdade" : "Desafio") + " · " + (window.LEVEL_NAMES[x.nivel] || x.nivel);
+      tag.textContent = (x.tipo === "verdade" ? "Verdade" : "Desafio") + " · " + (LEVEL_NAMES[x.nivel] || x.nivel);
       li.querySelector(".t").textContent = x.texto;
       li.querySelector(".autor").textContent = "por " + x.autor;
       li.querySelector("button").addEventListener("click", () => removerExtra(x.id));
@@ -256,8 +281,8 @@
     const completa = !!estado.jogadores[1];
     const minhaVez = completa && estado.vez === eu;
     const temCarta = !!estado.carta;
-    $("spin").disabled = !minhaVez || girando || temCarta;
-    $("pickV").disabled = $("pickD").disabled = !minhaVez || girando || temCarta;
+    $("spin").disabled = !minhaVez || girando || temCarta || !cartasOk;
+    $("pickV").disabled = $("pickD").disabled = !minhaVez || girando || temCarta || !cartasOk;
     $("done").hidden = $("skip").hidden = !minhaVez;
     const ag = $("aguardando");
     ag.hidden = minhaVez;
@@ -272,9 +297,10 @@
     card.className = "card " + c.tipo;
     card.hidden = false;
     $("kind").textContent = c.tipo === "verdade" ? "Verdade" : "Desafio";
-    $("level").textContent = "Nível " + (window.LEVEL_NAMES[c.nivel] || c.nivel) + ", para " + nome
+    $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel) + ", para " + nome
       + (c.autor ? " · carta de " + c.autor : "");
     $("text").textContent = c.texto;
+    $("midia").hidden = !c.midia;
     $("wa").href = "https://wa.me/?text=" + encodeURIComponent(`${$("kind").textContent} para ${nome}: ${c.texto}`);
   }
 
@@ -289,6 +315,7 @@
     if (delta <= 0) delta += 360;
     const alvo = rotacao + 360 * 5 + delta;
     const tipo = k % 2 === 0 ? "verdade" : "desafio";
+    if (!sortear(tipo, estado.niveis, [], estado.extras)) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
       const carta = sortear(tipo, n.niveis, n.usados || [], n.extras);
       registrarUso(n, carta);
@@ -299,6 +326,7 @@
 
   function escolher(tipo) {
     if (!estado || girando || estado.vez !== eu || estado.carta) return;
+    if (!sortear(tipo, estado.niveis, [], estado.extras)) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
       const carta = sortear(tipo, n.niveis, n.usados || [], n.extras);
       registrarUso(n, carta);
