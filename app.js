@@ -328,7 +328,6 @@
       });
     });
     $("metaTexto").textContent = `Meta: ${e.meta} pontos`;
-    $("zerar").hidden = eu !== 0;
     $("meta").value = String(e.meta);
     $("pulosMax").value = String(e.pulosMax);
     const zerado = placarZerado(e);
@@ -575,21 +574,6 @@
     });
   }
 
-  // Zerar placar: só para quem criou a sala (jogador 0). Recomeça a partida a qualquer momento,
-  // mantendo meta, pulos por tipo, níveis, vez e cartas de vocês.
-  function zerarPlacar() {
-    if (!estado || eu !== 0) return;
-    if (!confirm("Zerar o placar dos dois e recomeçar a partida?")) return;
-    gravar(n => {
-      n.placar = [placarVazio(0, n.pulosMax), placarVazio(0, n.pulosMax)];
-      n.pontos = [0, 0];
-      n.vencedor = null;
-      n.usados = [];
-      n.carta = null;
-      n.aviso = novoAviso(`${n.jogadores[0]} zerou o placar.`);
-    });
-  }
-
   function mudarMeta() {
     const m = Number($("meta").value);
     if (!estado || !METAS.includes(m) || !placarZerado(estado)) return;
@@ -709,7 +693,6 @@
     $("skip").addEventListener("click", pular);
     $("liberar").addEventListener("click", liberar);
     $("novaPartida").addEventListener("click", novaPartida);
-    $("zerar").addEventListener("click", zerarPlacar);
     $("meta").addEventListener("change", mudarMeta);
     $("pulosMax").addEventListener("change", mudarPulosMax);
     $("niveis").addEventListener("change", mudarNiveis);
