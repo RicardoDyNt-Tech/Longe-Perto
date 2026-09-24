@@ -4,11 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Longe &amp; Perto — verdade ou desafio a distância</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FBF3F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17132A" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💞</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 <main>
@@ -22,11 +26,28 @@
     </label>
     <button class="primary" id="criar">Criar sala</button>
     <p class="or">ou</p>
-    <label class="field">Código da sala
-      <input type="text" id="codigo" maxlength="5" autocomplete="off" inputmode="text" placeholder="ABC12">
+    <label class="field">Código ou nome da sala
+      <input type="text" id="codigo" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" placeholder="ABC12 ou nome-da-sala">
     </label>
     <button class="secondary" id="entrar">Entrar na sala</button>
     <p class="erro" id="erroLobby" role="alert"></p>
+
+    <div class="recentes" id="recentes" hidden>
+      <p class="or">Salas recentes</p>
+      <ul class="lista-recentes" id="listaRecentes"></ul>
+    </div>
+
+    <p class="or">ou</p>
+    <details class="fixa-box">
+      <summary>Criar sala fixa</summary>
+      <p class="extras-sub">Uma sala só de vocês, que fica guardada: cartas, histórico e configurações continuam lá.</p>
+      <label class="field">Nome da sala
+        <input type="text" id="nomeSala" maxlength="25" autocomplete="off" placeholder="ricaecarol">
+      </label>
+      <p class="extras-sub">Guarde o link: o final aleatório protege a sala de vocês.</p>
+      <button class="secondary" id="criarFixa" type="button">Criar sala fixa</button>
+    </details>
+    <button class="secondary instalar" id="instalar" type="button" hidden>Instalar app</button>
   </section>
 
   <!-- Jogo -->
@@ -36,8 +57,46 @@
       <button class="linkbtn" id="sair">Sair da sala</button>
     </div>
 
+    <div class="reencontro" id="reencontro">
+      <p class="reencontro-txt" id="reencontroTxt"></p>
+      <div class="reencontro-form" id="reencontroForm" hidden>
+        <input type="date" id="reencontroData" aria-label="Data do reencontro">
+        <button class="secondary" id="reencontroSalvar" type="button">Salvar data</button>
+      </div>
+      <button class="linkbtn" id="reencontroMudar" type="button" hidden>mudar data</button>
+    </div>
+
+    <section class="diario" id="diario" hidden aria-label="Desafio do dia">
+      <div class="diario-topo">
+        <h2>Desafio do dia</h2>
+        <label>Nível
+          <select id="nivelDiario">
+            <option value="leve">Leve</option>
+            <option value="criativo">Criativo</option>
+            <option value="picante">Picante</option>
+            <option value="pesado">Pesado +18</option>
+          </select>
+        </label>
+      </div>
+      <div class="diario-meu">
+        <p class="diario-quem" id="diarioMeuTitulo"></p>
+        <p class="diario-texto" id="diarioMeuTexto"></p>
+        <p class="diario-seq" id="diarioMeuSeq"></p>
+        <div class="row">
+          <a class="wa" id="diarioWa" target="_blank" rel="noopener">Mandar no WhatsApp</a>
+          <button class="secondary" id="diarioCumpri" type="button">Cumpri hoje</button>
+        </div>
+      </div>
+      <div class="diario-outro" id="diarioOutro" hidden>
+        <p class="diario-quem" id="diarioOutroTitulo"></p>
+        <p class="diario-texto" id="diarioOutroTexto"></p>
+        <p class="diario-seq" id="diarioOutroSeq"></p>
+      </div>
+    </section>
+
     <div class="invite" id="convite" hidden>
       <p>Mande o link para a outra pessoa entrar. O jogo começa quando ela chegar.</p>
+      <p class="extras-sub" id="dicaFixa" hidden>Guarde o link: o final aleatório protege a sala de vocês.</p>
       <div class="row">
         <a class="wa" id="convidarWa" target="_blank" rel="noopener">Convidar no WhatsApp</a>
         <button class="secondary" id="copiar">Copiar link</button>
@@ -50,6 +109,32 @@
       <label class="chip"><input type="checkbox" value="picante"><span>Picante</span></label>
       <label class="chip"><input type="checkbox" value="pesado"><span>Pesado +18</span></label>
     </div>
+    <div class="adicionar">
+      <button class="linkbtn addcarta" id="abrirCarta" type="button">+ Adicionar carta</button>
+      <button class="linkbtn addcarta" id="abrirMusica" type="button">+ Adicionar música</button>
+    </div>
+
+    <div class="config">
+      <label>Meta
+        <select id="meta">
+          <option value="10">10 pontos</option>
+          <option value="20">20 pontos</option>
+          <option value="30">30 pontos</option>
+        </select>
+      </label>
+      <label>Pulos por tipo
+        <select id="pulosMax">
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="5">5</option>
+          <option value="10">10</option>
+        </select>
+      </label>
+    </div>
+    <label class="check nota-cfg"><input type="checkbox" id="notaAdv"> Nota do adversário (★ valem pontos nos desafios)</label>
+    <p class="config-dica" id="configDica"></p>
 
     <div class="stage" aria-live="polite">
       <p class="turn" id="vez"></p>
@@ -65,51 +150,191 @@
       </div>
     </div>
 
+    <p class="aviso" id="aviso" role="status" hidden></p>
+
     <article class="card" id="card" hidden aria-live="polite">
       <p class="kind" id="kind"></p>
       <p class="level" id="level"></p>
       <p class="text" id="text"></p>
+      <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
+      <div class="timer" id="timer">
+        <div class="timer-parado" id="timerParado">
+          <button class="secondary" id="timerIniciar" type="button" hidden></button>
+          <button class="secondary" id="timerAbrir" type="button" hidden>Cronômetro</button>
+          <div class="timer-opcoes" id="timerOpcoes" hidden>
+            <button type="button" data-seg="15">15s</button>
+            <button type="button" data-seg="30">30s</button>
+            <button type="button" data-seg="60">60s</button>
+            <button type="button" data-seg="120">2min</button>
+          </div>
+        </div>
+        <div class="timer-vivo" id="timerVivo" hidden>
+          <p class="timer-num" id="timerNum" aria-live="off"></p>
+          <div class="timer-barra"><i id="timerBarra"></i></div>
+          <div class="row">
+            <button class="secondary" id="timerPausar" type="button">Pausar</button>
+            <button class="secondary" id="timerCancelar" type="button">Cancelar</button>
+          </div>
+        </div>
+      </div>
       <div class="actions">
         <button class="done" id="done">Cumpri</button>
         <button class="skip" id="skip">Pular</button>
+        <button class="secondary liberar" id="liberar" type="button" hidden>Liberar da prenda</button>
+        <div class="avaliar" id="avaliar" hidden>
+          <p>Como foi?</p>
+          <div class="estrelas">
+            <button type="button" data-n="1" aria-label="1 estrela">★</button>
+            <button type="button" data-n="2" aria-label="2 estrelas">★★</button>
+            <button type="button" data-n="3" aria-label="3 estrelas">★★★</button>
+          </div>
+        </div>
         <p class="wait" id="aguardando" hidden></p>
         <a class="wa" id="wa" target="_blank" rel="noopener">Mandar no WhatsApp</a>
+        <button class="linkbtn guardar" id="guardar" type="button">Guardar para o reencontro 💞</button>
       </div>
     </article>
 
-    <div class="score" id="score"></div>
+    <section class="trilha" id="trilha" hidden aria-label="Trilha da rodada">
+      <p class="trilha-titulo" id="trilhaTitulo">Trilha da rodada</p>
+      <p class="trilha-nome"><strong id="trilhaNome"></strong> <span id="trilhaArtista"></span></p>
+      <p class="trilha-playlist" id="trilhaPlaylist" hidden></p>
+      <div class="trilha-acoes">
+        <a class="spotify" id="trilhaAbrir" target="_blank" rel="noopener">Abrir no Spotify</a>
+        <button class="secondary" id="trilhaTocar" type="button">Tocar aqui</button>
+        <button class="secondary" id="trilhaOutra" type="button">Outra música</button>
+      </div>
+      <div class="trilha-player" id="trilhaPlayer" hidden></div>
+    </section>
+
+    <div class="fim" id="fim" hidden aria-live="polite">
+      <p class="venceu" id="venceu"></p>
+      <button class="primary" id="novaPartida" type="button">Nova partida</button>
+    </div>
+
+    <div class="placar">
+      <p class="meta" id="metaTexto"></p>
+      <table class="score" id="score"></table>
+    </div>
+
+    <details class="extras" id="historico">
+      <summary>Histórico <span id="histQtd"></span></summary>
+      <p class="extras-sub" id="histResumo">Nenhuma partida terminada ainda.</p>
+      <ul class="lista-extras lista-hist" id="listaHist"></ul>
+    </details>
+
+    <details class="extras" id="cofre">
+      <summary>Cofre do reencontro <span id="cofreQtd"></span></summary>
+      <p class="extras-sub" id="cofreDica" hidden>Use uma sala fixa para o cofre durar.</p>
+      <div class="filtro" role="radiogroup" aria-label="Filtro do cofre">
+        <label class="chip"><input type="radio" name="filtroCofre" value="todos" checked><span>Todos</span></label>
+        <label class="chip"><input type="radio" name="filtroCofre" value="pendentes"><span>Pendentes</span></label>
+        <label class="chip"><input type="radio" name="filtroCofre" value="feitos"><span>Feitos</span></label>
+      </div>
+      <p class="extras-sub" id="cofreVazio">Nada guardado ainda. Toque em "Guardar para o reencontro" numa carta.</p>
+      <ul class="lista-extras lista-cofre" id="listaCofre"></ul>
+    </details>
+
+    <details class="extras" id="musicas">
+      <summary>Músicas de vocês <span id="musicasQtd"></span></summary>
+      <p class="extras-sub" id="musicasVazio">Nenhuma música ainda. Toque em "Adicionar música" e cole um link do Spotify.</p>
+      <ul class="lista-extras" id="listaMusicas"></ul>
+    </details>
 
     <details class="extras" id="extras">
       <summary>Cartas de vocês <span id="extrasQtd"></span></summary>
-      <p class="extras-sub">Escreva verdades e desafios seus. Entram no sorteio para os dois e ficam guardadas neste celular para as próximas salas.</p>
-      <form id="formExtra">
-        <div class="tipo" role="radiogroup" aria-label="Tipo">
-          <label class="chip"><input type="radio" name="tipoExtra" value="verdade" checked><span>Verdade</span></label>
-          <label class="chip"><input type="radio" name="tipoExtra" value="desafio"><span>Desafio</span></label>
-        </div>
-        <label class="field">Nível
-          <select id="nivelExtra">
-            <option value="leve">Leve</option>
-            <option value="criativo">Criativo</option>
-            <option value="picante">Picante</option>
-            <option value="pesado">Pesado +18</option>
-          </select>
-        </label>
-        <label class="field">Texto
-          <textarea id="textoExtra" maxlength="200" rows="3" placeholder="Ex.: Me conta um sonho que você teve comigo"></textarea>
-        </label>
-        <button class="primary" type="submit">Adicionar carta</button>
-      </form>
+      <p class="extras-sub" id="extrasVazio">Nenhuma carta de vocês ainda. Toque em "Adicionar carta" para criar.</p>
       <ul class="lista-extras" id="listaExtras"></ul>
     </details>
     <p class="erro" id="erroJogo" role="alert"></p>
     <p class="hint">Combinem uma palavra para pular qualquer rodada sem explicação. Fotos e áudios ousados: usem a visualização única do WhatsApp.</p>
   </section>
+
+  <dialog id="dlgMusica" aria-labelledby="dlgMusicaTitulo">
+    <form id="formMusica" method="dialog">
+      <h2 id="dlgMusicaTitulo">Nova música</h2>
+      <label class="field">Link do Spotify
+        <input type="url" id="linkMusica" autocomplete="off" placeholder="https://open.spotify.com/track/…">
+      </label>
+      <label class="field">Título
+        <input type="text" id="tituloMusica" maxlength="200" autocomplete="off">
+      </label>
+      <label class="field">Artista
+        <input type="text" id="artistaMusica" maxlength="200" autocomplete="off">
+      </label>
+      <label class="field">Nível
+        <select id="nivelMusica">
+          <option value="leve">Leve</option>
+          <option value="criativo">Criativo</option>
+          <option value="picante">Picante</option>
+          <option value="pesado">Pesado +18</option>
+        </select>
+      </label>
+      <p class="erro" id="erroMusica" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarMusica" type="submit">Salvar música</button>
+        <button class="secondary" id="cancelarMusica" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgCofre" aria-labelledby="dlgCofreTitulo">
+    <form id="formCofre" method="dialog">
+      <h2 id="dlgCofreTitulo">Guardar para o reencontro</h2>
+      <p class="cofre-carta" id="cofreCarta"></p>
+      <label class="field">Resposta / combinado (opcional)
+        <textarea id="cofreNota" maxlength="500" rows="3" placeholder="Ex.: no reencontro você me leva para dançar"></textarea>
+      </label>
+      <p class="erro" id="erroCofre" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarCofre" type="submit">Guardar</button>
+        <button class="secondary" id="cancelarCofre" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgCarta" aria-labelledby="dlgTitulo">
+    <form id="formCarta" method="dialog">
+      <h2 id="dlgTitulo">Nova carta</h2>
+      <div class="tipo" role="radiogroup" aria-label="Tipo">
+        <label class="chip"><input type="radio" name="tipoCarta" value="verdade" checked><span>Verdade</span></label>
+        <label class="chip"><input type="radio" name="tipoCarta" value="desafio"><span>Desafio</span></label>
+        <label class="chip"><input type="radio" name="tipoCarta" value="prenda"><span>Prenda</span></label>
+      </div>
+      <label class="field">Nível
+        <select id="nivelCarta">
+          <option value="leve">Leve</option>
+          <option value="criativo">Criativo</option>
+          <option value="picante">Picante</option>
+          <option value="pesado">Pesado +18</option>
+        </select>
+      </label>
+      <label class="field">Texto
+        <textarea id="textoCarta" maxlength="280" rows="4" placeholder="Ex.: Me conta um sonho que você teve comigo"></textarea>
+        <span class="contador" id="contadorCarta">0/280</span>
+      </label>
+      <label class="check"><input type="checkbox" id="temMidia"> Pede foto, vídeo ou áudio</label>
+      <select id="midiaCarta" hidden aria-label="Tipo de mídia">
+        <option value="foto">Foto</option>
+        <option value="video">Vídeo</option>
+        <option value="audio">Áudio</option>
+      </select>
+      <p class="erro" id="erroCarta" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarCarta" type="submit" value="salvar">Salvar carta</button>
+        <button class="secondary" id="cancelarCarta" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=3"></script>
-<script src="conteudo.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="config.js?v=17"></script>
+<script src="app.js?v=17"></script>
+<script>
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
+  }
+</script>
 </body>
 </html>

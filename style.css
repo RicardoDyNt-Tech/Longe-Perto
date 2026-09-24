@@ -27,19 +27,30 @@ input[type=text]{
   width:100%; font:inherit; color:var(--ink); background:var(--surface);
   border:1.5px solid var(--line); border-radius:12px; padding:10px 12px;
 }
-#codigo{text-transform:uppercase; letter-spacing:.2em; font-weight:800}
+#codigo{letter-spacing:.08em; font-weight:800}
+.fixa-box{background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px 16px}
+.fixa-box summary{font-weight:800; cursor:pointer}
+.fixa-box .field{margin-top:10px}
+.lista-recentes{list-style:none; padding:0; margin:0; display:grid; gap:8px}
+.lista-recentes button{width:100%; text-align:left; background:var(--surface); color:var(--ink); border:1.5px solid var(--line); padding:10px 14px; display:flex; justify-content:space-between; gap:10px}
+.lista-recentes .cod{font-weight:800; overflow-wrap:anywhere}
+.lista-recentes .quem{color:var(--muted); font-size:.85rem; white-space:nowrap}
+.lista-hist li{display:block}
+.lista-hist .data{display:block; color:var(--muted); font-size:.8rem}
 button{font:inherit; cursor:pointer; border-radius:14px; border:0}
 button:disabled{opacity:.5; cursor:default}
 button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--lamp); outline-offset:2px}
 .primary{background:var(--lamp); color:#2A1F3D; font-weight:800; padding:14px 22px; box-shadow:0 4px 0 #C98F12; width:100%}
 .primary:active:not(:disabled){transform:translateY(2px); box-shadow:0 2px 0 #C98F12}
 .secondary{background:transparent; color:var(--ink); border:1.5px solid var(--line); padding:12px 18px; width:100%}
+.instalar{margin-top:18px}
 .or{color:var(--muted); text-align:center; margin:18px 0}
 .row{display:flex; gap:10px}
 .erro{color:var(--erro); font-weight:600; min-height:1.4em; margin:12px 0 0}
 
 .topbar{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px}
-.sala{font-weight:800; letter-spacing:.15em}
+.sala{font-weight:800; letter-spacing:.15em; overflow-wrap:anywhere}
+.sala.fixa{letter-spacing:.02em}
 .linkbtn{background:transparent; color:var(--muted); text-decoration:underline; padding:4px 0}
 .invite{background:var(--surface); border:2px dashed var(--lamp); border-radius:18px; padding:16px; margin:14px 0}
 .invite p{margin:0 0 10px}
@@ -76,20 +87,103 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .desafio .kind{color:var(--desafio)}
 .level{color:var(--muted); font-size:.9rem; margin:2px 0 12px}
 .text{font-size:1.25rem; line-height:1.4; margin:0 0 18px}
+.midia{color:var(--muted); font-size:.95rem; font-weight:600; margin:-8px 0 18px}
+.timer{margin:0 0 16px}
+.timer-parado > button{width:100%}
+.timer-opcoes{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:8px}
+.timer-opcoes button{background:transparent; color:var(--ink); border:1.5px solid var(--line); padding:10px 0; font-weight:600}
+.timer-num{font-size:3rem; font-weight:800; line-height:1; text-align:center; margin:4px 0 10px; font-variant-numeric:tabular-nums}
+.timer-num.fim{color:var(--desafio); animation:pulsar .5s ease-in-out infinite alternate}
+.timer-num.tempo{color:var(--desafio)}
+@keyframes pulsar{to{transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.timer-num.fim{animation:none}}
+.timer-barra{height:8px; border-radius:99px; background:var(--line); overflow:hidden; margin-bottom:12px}
+.timer-barra i{display:block; height:100%; width:100%; background:var(--lamp); transition:width .25s linear}
+.timer-vivo .row button{flex:1; width:auto}
+.nota-cfg{margin-top:10px; font-size:.9rem}
+.avaliar{grid-column:1/-1; text-align:center}
+.avaliar p{margin:0 0 8px; font-weight:800; font-size:1.1rem}
+.estrelas{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+.estrelas button{background:var(--lamp); color:#2A1F3D; font-size:1.2rem; padding:12px 0; letter-spacing:.05em}
 .actions{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .actions .wa{grid-column:1/-1}
 .done{background:var(--ink); color:var(--bg); font-weight:600; padding:12px}
 .skip{background:transparent; color:var(--ink); border:1.5px solid var(--line); padding:12px}
 .wait{color:var(--muted); text-align:center; margin:0; grid-column:1/-1}
 
-.score{display:flex; justify-content:center; gap:28px; margin-top:24px; color:var(--muted)}
-.score b{color:var(--ink); font-size:1.3rem}
-.score .me span{text-decoration:underline; text-decoration-color:var(--lamp); text-decoration-thickness:3px}
+.placar{margin-top:24px}
+.meta{margin:0 0 8px; font-weight:600}
+.config{display:flex; gap:12px; margin:14px 0 0}
+.config label{flex:1; font-weight:600; font-size:.9rem}
+.config select{margin-top:4px; background:var(--surface)}
+.config-dica{color:var(--muted); font-size:.8rem; margin:6px 0 0; min-height:1em}
+.score{width:100%; border-collapse:collapse; font-size:.95rem; font-variant-numeric:tabular-nums}
+.score th,.score td{padding:6px 8px; border-bottom:1px solid var(--line); text-align:center}
+.score th:first-child,.score td:first-child{text-align:left; color:var(--muted); font-weight:400}
+.score thead th{font-weight:800; overflow-wrap:anywhere}
+.score thead th.me{text-decoration:underline; text-decoration-color:var(--lamp); text-decoration-thickness:3px}
+.score .vez{background:color-mix(in srgb, var(--lamp) 22%, transparent)}
+.score tr.pontos td{font-size:1.25rem; font-weight:800; color:var(--ink)}
+.score tr.pontos td:first-child{font-size:.95rem; font-weight:400; color:var(--muted)}
+.barra{height:6px; border-radius:99px; background:var(--line); overflow:hidden; margin-top:4px}
+.barra i{display:block; height:100%; background:var(--lamp)}
+.reencontro{margin:10px 0 0; padding:10px 14px; border-radius:14px; background:var(--surface); border:1.5px solid var(--line); display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
+.reencontro-txt{margin:0; font-weight:700; flex:1 1 auto}
+.reencontro-form{display:flex; gap:8px; flex:1 1 100%}
+.reencontro-form input{flex:1; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:8px 10px}
+.reencontro-form button{width:auto; padding:8px 14px}
+.guardar{grid-column:1/-1; justify-self:center; font-size:.9rem}
+.filtro{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0}
+.lista-cofre li.feito .t{text-decoration:line-through; color:var(--muted)}
+.lista-cofre .nota{display:block; font-size:.9rem; margin-top:2px}
+.lista-cofre label{display:flex; align-items:center; gap:4px; font-size:.85rem; white-space:nowrap}
+.lista-cofre .acoes{display:flex; flex-direction:column; align-items:flex-end; gap:4px}
+.cofre-carta{background:var(--bg); border-radius:12px; padding:10px 12px; margin:0 0 12px}
+.diario{margin:12px 0 0; padding:14px 16px; border-radius:18px; background:var(--surface); border:2px solid var(--desafio)}
+.diario-topo{display:flex; justify-content:space-between; align-items:center; gap:10px}
+.diario h2{margin:0; font-size:1.1rem}
+.diario-topo label{font-size:.85rem; font-weight:600; display:flex; align-items:center; gap:6px}
+.diario-topo select{width:auto; margin:0; padding:4px 8px}
+.diario-quem{margin:12px 0 2px; font-weight:800; color:var(--desafio)}
+.diario-texto{margin:0 0 4px; overflow-wrap:anywhere}
+.diario-seq{margin:0 0 10px; color:var(--muted); font-size:.9rem}
+.diario .row > *{flex:1}
+.diario-outro{border-top:1px solid var(--line); margin-top:12px}
+.diario-outro .diario-quem{color:var(--muted)}
+.fim{margin-top:22px; text-align:center; background:var(--surface); border:2px solid var(--lamp); border-radius:20px; padding:18px}
+.venceu{font-size:1.5rem; font-weight:800; margin:0 0 12px}
+.card.prenda{border-color:var(--lamp)}
+.actions .liberar{grid-column:1/-1}
+.aviso{margin:18px 0 0; padding:12px 14px; border-radius:14px; background:var(--lamp); color:#2A1F3D; font-weight:700; text-align:center}
+.prenda .kind{color:var(--ink)}
 .extras{margin-top:24px; background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px 16px}
 .extras summary{font-weight:800; cursor:pointer}
 .extras summary span{color:var(--muted); font-weight:600}
 .extras-sub{color:var(--muted); font-size:.9rem; margin:8px 0 14px}
-.extras .tipo{display:flex; gap:8px; margin-bottom:14px}
+.addcarta{display:block; margin:10px 0 0; font-weight:600}
+.adicionar{display:flex; flex-wrap:wrap; gap:0 18px}
+input[type=url]{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:6px}
+.trilha{margin-top:14px; background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px 16px}
+.trilha-titulo{margin:0; font-size:.8rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--muted)}
+.trilha-nome{margin:4px 0 10px; overflow-wrap:anywhere}
+.trilha-nome span{color:var(--muted)}
+.trilha-nome{margin-bottom:2px}
+.trilha-playlist{margin:0 0 10px; color:var(--muted); font-size:.8rem; overflow-wrap:anywhere}
+.trilha-acoes{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.trilha-acoes .spotify{grid-column:1/-1; display:block; text-align:center; text-decoration:none; font-weight:600; padding:12px; border-radius:14px; background:#1DB954; color:#0B0B0B}
+.trilha-acoes button{width:auto}
+.trilha-player{margin-top:10px; border-radius:12px; overflow:hidden}
+.trilha-player iframe{display:block; width:100%; height:80px; border:0}
+dialog{border:0; border-radius:20px; padding:20px; width:min(92vw,460px); background:var(--surface); color:var(--ink)}
+dialog::backdrop{background:rgba(10,6,20,.55)}
+dialog h2{margin:0 0 14px; font-size:1.3rem}
+dialog .tipo{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px}
+dialog .row{margin-top:14px}
+dialog .row button{flex:1; width:auto}
+.contador{display:block; text-align:right; color:var(--muted); font-size:.8rem; font-weight:400; margin-top:4px}
+label.check{display:flex; gap:8px; align-items:center; font-weight:600}
+label.check input{width:18px; height:18px; accent-color:var(--lamp)}
+#midiaCarta{margin-top:8px}
 select,textarea{
   width:100%; font:inherit; color:var(--ink); background:var(--bg);
   border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:6px;
@@ -103,6 +197,7 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--lamp); outli
 .lista-extras .tag{display:block; font-size:.8rem; font-weight:800}
 .lista-extras .tag.verdade{color:var(--verdade)}
 .lista-extras .tag.desafio{color:var(--desafio)}
+.lista-extras .tag.prenda{color:var(--muted)}
 .lista-extras .autor{display:block; color:var(--muted); font-size:.8rem}
 .lista-extras button{background:transparent; color:var(--muted); text-decoration:underline; padding:2px 0; font-size:.85rem}
 .hint{color:var(--muted); font-size:.85rem; margin:24px 0 0}
