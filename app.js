@@ -29,6 +29,9 @@
   let timerCarta = null;
   let ultimoAviso = null;
   let ultimaVez = null;     // para vibrar quando a vez passa a ser minha
+  let timerLocal = null;    // { id, t0 } — início da contagem medido neste aparelho
+  let timerTick = null;
+  let timerAcabou = null;   // id do timer que já deu "Tempo!" aqui
   let timerAviso = null;
   let cartas = [];        // cartas padrão + cartas desta sala, vindas da tabela `cartas`
   let cartasOk = false;   // false até a busca terminar (ou se falhar)
@@ -111,6 +114,8 @@
     if (!estado) return;
     const novo = structuredClone(estado);
     mudar(novo);
+    // o cronômetro pertence à carta: saiu a carta (cumpri, pular, liberar, nova carta), sai o timer
+    if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) novo.timer = null;
     aplicar(novo, false);
     const { error } = await sb.from("salas").update({ estado: novo }).eq("codigo", codigo);
     if (error) erro("erroJogo", "Não consegui salvar a jogada. Confira a internet e tente de novo.");
@@ -254,6 +259,7 @@
     });
     if (e.vencedor !== 0 && e.vencedor !== 1) e.vencedor = null;
     if (e.aviso === undefined) e.aviso = null;
+    if (e.timer === undefined) e.timer = null;
     return e;
   }
 
@@ -384,6 +390,7 @@
       mostrarCarta(e);
     }
     atualizarBotoes();
+    desenharTimer(e, inicial);
   }
 
   function desenharExtras() {
@@ -479,6 +486,115 @@
     $("text").textContent = c.texto;
     $("midia").hidden = !c.midia;
     $("wa").href = "https://wa.me/?text=" + encodeURIComponent(`${$("kind").textContent} para ${nome}: ${c.texto}`);
+  }
+
+  // ---------- cronômetro ----------
+  // Tempo escrito na carta: o primeiro "N segundos" ou "N minutos" do texto.
+  function tempoDaCarta(texto) {
+    const m = /(\d+)\s*(segundo|minuto)s?/i.exec(texto || "");
+    if (!m) return 0;
+    return Number(m[1]) * (/^minuto/i.test(m[2]) ? 60 : 1);
+  }
+
+  const rotuloTempo = s => s >= 60 && s % 60 === 0 ? `${s / 60}min` : `${s}s`;
+  const relogio = s => s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : String(s);
+
+  // segundos que faltam, medidos pelo relógio deste aparelho a partir de quando recebeu o timer
+  function restante(t) {
+    if (!t) return 0;
+    if (t.pausado) return t.segundos;
+    const passou = (performance.now() - timerLocal.t0) / 1000;
+    return Math.max(0, t.segundos - passou);
+  }
+
+  function desenharTimer(e, inicial) {
+    const t = e.timer;
+    const c = e.carta;
+    const temCarta = !!c && !$("card").hidden;
+    if (t && (!timerLocal || timerLocal.id !== t.id)) {
+      // timer novo: conta a partir de agora; quem abre a sala no meio usa `inicio` como estimativa
+      const atraso = inicial && !t.pausado ? Math.max(0, (Date.now() - t.inicio) / 1000) : 0;
+      timerLocal = { id: t.id, t0: performance.now() - atraso * 1000 };
+    }
+    if (!t) timerLocal = null;
+    $("timerVivo").hidden = !t;
+    $("timerParado").hidden = !!t;
+    if (!t && temCarta) {
+      const s = tempoDaCarta(c.texto);
+      $("timerIniciar").hidden = !s;
+      $("timerAbrir").hidden = !!s;
+      if (s) { $("timerIniciar").textContent = `Iniciar ${rotuloTempo(s)}`; $("timerIniciar").dataset.seg = s; }
+      else $("timerOpcoes").hidden = true;
+    }
+    clearInterval(timerTick);
+    if (t) {
+      $("timerPausar").hidden = false;
+      $("timerPausar").textContent = t.pausado ? "Continuar" : "Pausar";
+      atualizarTimer();
+      if (!t.pausado) timerTick = setInterval(atualizarTimer, 200);
+    }
+  }
+
+  function atualizarTimer() {
+    const t = estado && estado.timer;
+    if (!t || !timerLocal) { clearInterval(timerTick); return; }
+    const r = restante(t);
+    const num = $("timerNum");
+    const s = Math.ceil(r);
+    $("timerBarra").style.width = (t.total ? Math.max(0, r / t.total * 100) : 0) + "%";
+    num.classList.toggle("fim", r > 0 && s <= 5);
+    num.classList.toggle("tempo", r <= 0);
+    if (r > 0) { num.textContent = relogio(s); return; }
+    num.textContent = "Tempo!";
+    $("timerPausar").hidden = true;
+    clearInterval(timerTick);
+    if (timerAcabou !== t.id) {
+      timerAcabou = t.id;
+      vibrar([200, 100, 200]);
+      bipe();
+    }
+  }
+
+  // bipe curto; o navegador só deixa tocar som depois de um toque na página
+  let audio = null;
+  addEventListener("pointerdown", () => {
+    if (audio) return;
+    try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (err) {}
+  }, { once: true });
+  function bipe() {
+    if (!audio) return;
+    try {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.2, audio.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.35);
+      o.connect(g).connect(audio.destination);
+      o.start(); o.stop(audio.currentTime + 0.35);
+    } catch (err) {}
+  }
+
+  const idTimer = () => Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+
+  function iniciarTimer(seg) {
+    if (!estado || !estado.carta || !seg) return;
+    gravar(n => { n.timer = { id: idTimer(), total: seg, segundos: seg, inicio: Date.now(), pausado: false }; });
+  }
+
+  function pausarTimer() {
+    const t = estado && estado.timer;
+    if (!t || restante(t) <= 0) return;
+    const r = Math.round(restante(t) * 10) / 10;
+    gravar(n => {
+      if (!n.timer) return;
+      n.timer = t.pausado
+        ? { ...t, id: idTimer(), inicio: Date.now(), pausado: false }       // continuar do ponto em que parou
+        : { ...t, id: idTimer(), segundos: r, inicio: Date.now(), pausado: true };
+    });
+  }
+
+  function cancelarTimer() {
+    if (!estado || !estado.timer) return;
+    gravar(n => { n.timer = null; });
   }
 
   // ---------- ações ----------
@@ -721,6 +837,11 @@
     $("done").addEventListener("click", cumprir);
     $("skip").addEventListener("click", pular);
     $("liberar").addEventListener("click", liberar);
+    $("timerIniciar").addEventListener("click", () => iniciarTimer(Number($("timerIniciar").dataset.seg)));
+    $("timerAbrir").addEventListener("click", () => { $("timerOpcoes").hidden = !$("timerOpcoes").hidden; });
+    $("timerOpcoes").addEventListener("click", ev => { const s = Number(ev.target.dataset && ev.target.dataset.seg); if (s) iniciarTimer(s); });
+    $("timerPausar").addEventListener("click", pausarTimer);
+    $("timerCancelar").addEventListener("click", cancelarTimer);
     $("novaPartida").addEventListener("click", novaPartida);
     $("meta").addEventListener("change", mudarMeta);
     $("pulosMax").addEventListener("change", mudarPulosMax);

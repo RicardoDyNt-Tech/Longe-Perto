@@ -78,6 +78,18 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .level{color:var(--muted); font-size:.9rem; margin:2px 0 12px}
 .text{font-size:1.25rem; line-height:1.4; margin:0 0 18px}
 .midia{color:var(--muted); font-size:.95rem; font-weight:600; margin:-8px 0 18px}
+.timer{margin:0 0 16px}
+.timer-parado > button{width:100%}
+.timer-opcoes{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:8px}
+.timer-opcoes button{background:transparent; color:var(--ink); border:1.5px solid var(--line); padding:10px 0; font-weight:600}
+.timer-num{font-size:3rem; font-weight:800; line-height:1; text-align:center; margin:4px 0 10px; font-variant-numeric:tabular-nums}
+.timer-num.fim{color:var(--desafio); animation:pulsar .5s ease-in-out infinite alternate}
+.timer-num.tempo{color:var(--desafio)}
+@keyframes pulsar{to{transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.timer-num.fim{animation:none}}
+.timer-barra{height:8px; border-radius:99px; background:var(--line); overflow:hidden; margin-bottom:12px}
+.timer-barra i{display:block; height:100%; width:100%; background:var(--lamp); transition:width .25s linear}
+.timer-vivo .row button{flex:1; width:auto}
 .actions{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .actions .wa{grid-column:1/-1}
 .done{background:var(--ink); color:var(--bg); font-weight:600; padding:12px}

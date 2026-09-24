@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 <main>
@@ -99,6 +99,26 @@
       <p class="level" id="level"></p>
       <p class="text" id="text"></p>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
+      <div class="timer" id="timer">
+        <div class="timer-parado" id="timerParado">
+          <button class="secondary" id="timerIniciar" type="button" hidden></button>
+          <button class="secondary" id="timerAbrir" type="button" hidden>Cronômetro</button>
+          <div class="timer-opcoes" id="timerOpcoes" hidden>
+            <button type="button" data-seg="15">15s</button>
+            <button type="button" data-seg="30">30s</button>
+            <button type="button" data-seg="60">60s</button>
+            <button type="button" data-seg="120">2min</button>
+          </div>
+        </div>
+        <div class="timer-vivo" id="timerVivo" hidden>
+          <p class="timer-num" id="timerNum" aria-live="off"></p>
+          <div class="timer-barra"><i id="timerBarra"></i></div>
+          <div class="row">
+            <button class="secondary" id="timerPausar" type="button">Pausar</button>
+            <button class="secondary" id="timerCancelar" type="button">Cancelar</button>
+          </div>
+        </div>
+      </div>
       <div class="actions">
         <button class="done" id="done">Cumpri</button>
         <button class="skip" id="skip">Pular</button>
@@ -163,8 +183,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="config.js?v=11"></script>
+<script src="app.js?v=11"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
