@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 <main>
@@ -198,6 +198,7 @@
     <section class="trilha" id="trilha" hidden aria-label="Trilha da rodada">
       <p class="trilha-titulo" id="trilhaTitulo">Trilha da rodada</p>
       <p class="trilha-nome"><strong id="trilhaNome"></strong> <span id="trilhaArtista"></span></p>
+      <p class="trilha-playlist" id="trilhaPlaylist" hidden></p>
       <div class="trilha-acoes">
         <a class="spotify" id="trilhaAbrir" target="_blank" rel="noopener">Abrir no Spotify</a>
         <button class="secondary" id="trilhaTocar" type="button">Tocar aqui</button>
@@ -256,10 +257,10 @@
         <input type="url" id="linkMusica" autocomplete="off" placeholder="https://open.spotify.com/track/…">
       </label>
       <label class="field">Título
-        <input type="text" id="tituloMusica" maxlength="120" autocomplete="off">
+        <input type="text" id="tituloMusica" maxlength="200" autocomplete="off">
       </label>
       <label class="field">Artista
-        <input type="text" id="artistaMusica" maxlength="120" autocomplete="off">
+        <input type="text" id="artistaMusica" maxlength="200" autocomplete="off">
       </label>
       <label class="field">Nível
         <select id="nivelMusica">
@@ -328,8 +329,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="config.js?v=17"></script>
+<script src="app.js?v=17"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

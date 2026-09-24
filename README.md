@@ -15,10 +15,11 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 | `supabase/002_cartas.sql` | Tabela `cartas` (verdades, desafios e prendas), políticas e Realtime |
 | `supabase/003_seed_cartas.sql` | As 376 cartas padrão do jogo |
 | `supabase/004_v3.sql` | v3: nomes de sala fixa, tabelas `partidas`, `cofre` e `musicas` (RLS, limite e Realtime) |
+| `supabase/005_seed_musicas.sql` | Ajuste da tabela `musicas` (coluna `playlist`, até 200 caracteres) e as 2.127 músicas padrão das playlists |
 
 ## Colocar no ar (uma vez)
 
-1. **Supabase (conta pessoal):** crie um projeto → SQL Editor → cole e rode, nesta ordem, `supabase/schema.sql`, `supabase/002_cartas.sql`, `supabase/003_seed_cartas.sql` e `supabase/004_v3.sql`. O último mostra a contagem de cartas por tipo e nível.
+1. **Supabase (conta pessoal):** crie um projeto → SQL Editor → cole e rode, nesta ordem, `supabase/schema.sql`, `supabase/002_cartas.sql`, `supabase/003_seed_cartas.sql`, `supabase/004_v3.sql` e `supabase/005_seed_musicas.sql`. O `003` mostra a contagem de cartas por tipo e nível, e o `005` a de músicas por nível.
 2. **Chaves:** Project Settings → API → copie a *Project URL* e a chave *anon* (ou *publishable*) para o `config.js`.
 3. **GitHub:** suba os arquivos para a branch `main` deste repositório.
 4. **GitHub Pages:** Settings → Pages → Source: *Deploy from a branch* → `main` / `(root)` → Save. Em 1–2 minutos o site fica em `https://ricardodynt-tech.github.io/Longe-Perto/`.

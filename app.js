@@ -484,13 +484,23 @@
   const idFaixa = url => { const m = RE_SPOTIFY.exec((url || "").trim()); return m ? m[2] : null; };
   let tocandoUrl = null;   // player carregado neste aparelho (nunca automático)
 
+  // o Supabase devolve no máximo 1.000 linhas por consulta: busca em páginas
   async function carregarMusicas(c) {
-    const { data, error } = await sb.from("musicas")
-      .select("id, sala, nivel, titulo, artista, url, autor")
-      .or("sala.is.null,sala.eq." + c)
-      .eq("ativa", true);
-    if (c !== codigo) return;
-    musicas = error || !data ? [] : data;
+    const PAGINA = 1000;
+    let todas = [];
+    for (let de = 0; ; de += PAGINA) {
+      const { data, error } = await sb.from("musicas")
+        .select("id, sala, nivel, titulo, artista, url, autor, playlist")
+        .or("sala.is.null,sala.eq." + c)
+        .eq("ativa", true)
+        .order("id", { ascending: true })
+        .range(de, de + PAGINA - 1);
+      if (c !== codigo) return;
+      if (error || !data) break;
+      todas = todas.concat(data);
+      if (data.length < PAGINA) break;
+    }
+    musicas = todas;
     desenharMusicas();
   }
 
@@ -501,7 +511,7 @@
       if (pool.length > 1 && evitarUrl) pool = pool.filter(m => m.url !== evitarUrl);
       if (pool.length) {
         const m = pool[Math.floor(Math.random() * pool.length)];
-        return { titulo: m.titulo, artista: m.artista, url: m.url };
+        return m.playlist ? { titulo: m.titulo, artista: m.artista, url: m.url, playlist: m.playlist } : { titulo: m.titulo, artista: m.artista, url: m.url };
       }
     }
     return null;
@@ -516,6 +526,8 @@
     $("trilhaTitulo").textContent = /m[úu]sica que eu escolher/i.test(c.texto || "") ? "Sugestão para este desafio" : "Trilha da rodada";
     $("trilhaNome").textContent = m.titulo;
     $("trilhaArtista").textContent = m.artista;
+    $("trilhaPlaylist").hidden = !m.playlist;
+    $("trilhaPlaylist").textContent = m.playlist ? "da playlist " + m.playlist : "";
     $("trilhaAbrir").href = m.url;
     $("trilhaOutra").disabled = musicas.length < 2;
     if (tocandoUrl !== m.url) { $("trilhaPlayer").textContent = ""; $("trilhaPlayer").hidden = true; $("trilhaTocar").hidden = false; tocandoUrl = null; }
@@ -546,7 +558,7 @@
 
   function juntarMusica(m) {
     if (!m || !m.id || m.sala !== codigo || m.ativa === false || musicas.some(x => x.id === m.id)) return;
-    musicas.push({ id: m.id, sala: m.sala, nivel: m.nivel, titulo: m.titulo, artista: m.artista, url: m.url, autor: m.autor });
+    musicas.push({ id: m.id, sala: m.sala, nivel: m.nivel, titulo: m.titulo, artista: m.artista, url: m.url, autor: m.autor, playlist: m.playlist || null });
     desenharMusicas();
   }
 
@@ -598,8 +610,8 @@
     if (!estado || !codigo) return;
     const id = idFaixa($("linkMusica").value);
     if (!id) return erro("erroMusica", "Cole o link de uma música do Spotify (open.spotify.com/track/…).");
-    const titulo = $("tituloMusica").value.trim().slice(0, 120);
-    const artista = $("artistaMusica").value.trim().slice(0, 120);
+    const titulo = $("tituloMusica").value.trim().slice(0, 200);
+    const artista = $("artistaMusica").value.trim().slice(0, 200);
     if (!titulo || !artista) return erro("erroMusica", "Preencha o título e o artista.");
     $("salvarMusica").disabled = true;
     const { data, error } = await sb.from("musicas")
