@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <main>
@@ -74,12 +74,29 @@
       <div class="actions">
         <button class="done" id="done">Cumpri</button>
         <button class="skip" id="skip">Pular</button>
+        <p class="wait" id="semPulos" hidden></p>
         <p class="wait" id="aguardando" hidden></p>
         <a class="wa" id="wa" target="_blank" rel="noopener">Mandar no WhatsApp</a>
       </div>
     </article>
 
-    <div class="score" id="score"></div>
+    <div class="fim" id="fim" hidden aria-live="polite">
+      <p class="venceu" id="venceu"></p>
+      <button class="primary" id="novaPartida" type="button">Nova partida</button>
+    </div>
+
+    <div class="placar">
+      <div class="meta">
+        <label for="meta">Meta</label>
+        <select id="meta">
+          <option value="10">10 pontos</option>
+          <option value="20">20 pontos</option>
+          <option value="30">30 pontos</option>
+        </select>
+        <span class="meta-dica" id="metaDica"></span>
+      </div>
+      <table class="score" id="score"></table>
+    </div>
 
     <details class="extras" id="extras">
       <summary>Cartas de vocês <span id="extrasQtd"></span></summary>
@@ -126,7 +143,7 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="config.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

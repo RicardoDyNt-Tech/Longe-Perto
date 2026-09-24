@@ -83,9 +83,23 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .skip{background:transparent; color:var(--ink); border:1.5px solid var(--line); padding:12px}
 .wait{color:var(--muted); text-align:center; margin:0; grid-column:1/-1}
 
-.score{display:flex; justify-content:center; gap:28px; margin-top:24px; color:var(--muted)}
-.score b{color:var(--ink); font-size:1.3rem}
-.score .me span{text-decoration:underline; text-decoration-color:var(--lamp); text-decoration-thickness:3px}
+.placar{margin-top:24px}
+.meta{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; font-weight:600}
+.meta select{width:auto; margin:0; padding:6px 10px; background:var(--surface)}
+.meta-dica{color:var(--muted); font-weight:400; font-size:.85rem}
+.score{width:100%; border-collapse:collapse; font-size:.95rem; font-variant-numeric:tabular-nums}
+.score th,.score td{padding:6px 8px; border-bottom:1px solid var(--line); text-align:center}
+.score th:first-child,.score td:first-child{text-align:left; color:var(--muted); font-weight:400}
+.score thead th{font-weight:800; overflow-wrap:anywhere}
+.score thead th.me{text-decoration:underline; text-decoration-color:var(--lamp); text-decoration-thickness:3px}
+.score tr.pontos td{font-size:1.25rem; font-weight:800; color:var(--ink)}
+.score tr.pontos td:first-child{font-size:.95rem; font-weight:400; color:var(--muted)}
+.barra{height:6px; border-radius:99px; background:var(--line); overflow:hidden; margin-top:4px}
+.barra i{display:block; height:100%; background:var(--lamp)}
+.fim{margin-top:22px; text-align:center; background:var(--surface); border:2px solid var(--lamp); border-radius:20px; padding:18px}
+.venceu{font-size:1.5rem; font-weight:800; margin:0 0 12px}
+.card.prenda{border-color:var(--lamp)}
+.prenda .kind{color:var(--ink)}
 .extras{margin-top:24px; background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px 16px}
 .extras summary{font-weight:800; cursor:pointer}
 .extras summary span{color:var(--muted); font-weight:600}

@@ -9,6 +9,13 @@
   const GIRO_MS = () => matchMedia("(prefers-reduced-motion: reduce)").matches ? 350 : 3300;
   const LEVEL_NAMES = { leve: "Leve", criativo: "Criativo", picante: "Picante", pesado: "Pesado +18" };
   const TIPO_NOMES = { verdade: "Verdade", desafio: "Desafio", prenda: "Prenda" };
+  const ORDEM_NIVEIS = ["leve", "criativo", "picante", "pesado"];
+  const PONTOS = {
+    verdade: { leve: 1, criativo: 1, picante: 2, pesado: 3 },
+    desafio: { leve: 2, criativo: 2, picante: 3, pesado: 4 }
+  };
+  const MAX_PULOS = 3;
+  const METAS = [10, 20, 30];
 
   let sb = null;
   let codigo = null;    // sala atual
@@ -133,6 +140,9 @@
       niveis: ["leve", "criativo"],
       vez: 0,
       pontos: [0, 0],
+      placar: [placarVazio(), placarVazio()],
+      meta: 20,
+      vencedor: null,
       giro: null,
       carta: null,
       usados: []
@@ -181,7 +191,7 @@
     if (canal) sb.removeChannel(canal);
     canal = sb.channel("sala-" + c)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "salas", filter: `codigo=eq.${c}` },
-        payload => aplicar(payload.new.estado, false))
+        payload => { if (payload.new.codigo === c && codigo === c) aplicar(payload.new.estado, false); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "cartas", filter: `sala=eq.${c}` },
         payload => juntarCarta(payload.new))
       // o Realtime não filtra DELETE; tirar pelo id basta (ids de outras salas não estão na lista)
@@ -208,10 +218,85 @@
     $("codigo").value = "";
   }
 
+  // ---------- placar ----------
+  const placarVazio = pontos => ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, pulosV: 0, pulosD: 0 });
+
+  // salas antigas: cria o placar a partir de `pontos` e completa campos que faltarem
+  function normalizar(e) {
+    if (!Array.isArray(e.placar)) e.placar = [0, 1].map(i => placarVazio((e.pontos || [])[i]));
+    e.placar = e.placar.map(p => Object.assign(placarVazio(), p));
+    if (!METAS.includes(e.meta)) e.meta = 20;
+    if (e.vencedor !== 0 && e.vencedor !== 1) e.vencedor = null;
+    return e;
+  }
+
+  const placarZerado = e => e.placar.every(p => Object.values(p).every(v => v === 0));
+
+  function nivelMaisAlto(niveis) {
+    const ativos = ORDEM_NIVEIS.filter(n => niveis.includes(n));
+    return ativos.length ? ativos[ativos.length - 1] : "leve";
+  }
+
+  // sorteia uma prenda do nível mais alto ativo, marca como usada e devolve
+  function prendaPara(n, motivo) {
+    const carta = sortear("prenda", [nivelMaisAlto(n.niveis)], n.usados || []);
+    if (!carta) return null;
+    registrarUso(n, carta);
+    carta.motivo = motivo;
+    return carta;
+  }
+
+  function desenharPlacar(e, nomes) {
+    const t = $("score");
+    t.textContent = "";
+    const thead = t.createTHead().insertRow();
+    thead.appendChild(document.createElement("th"));
+    nomes.forEach((n, i) => {
+      const th = document.createElement("th");
+      th.textContent = n;
+      if (i === eu) th.className = "me";
+      thead.appendChild(th);
+    });
+    const tb = t.createTBody();
+    const linhas = [
+      ["Pontos", p => p.pontos, "pontos"],
+      ["Verdades", p => p.verdades],
+      ["Desafios", p => p.desafios],
+      ["Prendas", p => p.prendas],
+      ["Pulos de verdade", p => `${p.pulosV}/${MAX_PULOS}`],
+      ["Pulos de desafio", p => `${p.pulosD}/${MAX_PULOS}`]
+    ];
+    linhas.forEach(([rotulo, valor, cls]) => {
+      const tr = tb.insertRow();
+      if (cls) tr.className = cls;
+      tr.insertCell().textContent = rotulo;
+      e.placar.forEach(p => {
+        const td = tr.insertCell();
+        td.textContent = valor(p);
+        if (cls === "pontos") {
+          const barra = document.createElement("div");
+          barra.className = "barra";
+          const i = document.createElement("i");
+          i.style.width = Math.min(100, Math.round(p.pontos / e.meta * 100)) + "%";
+          barra.appendChild(i);
+          td.appendChild(barra);
+        }
+      });
+    });
+    $("meta").value = String(e.meta);
+    const zerado = placarZerado(e);
+    $("meta").disabled = !zerado;
+    $("metaDica").textContent = zerado ? `Quem chegar a ${e.meta} pontos vence.` : `Meta: ${e.meta} pontos. Muda só com o placar zerado.`;
+
+    const fim = $("fim");
+    fim.hidden = e.vencedor === null;
+    if (e.vencedor !== null) $("venceu").textContent = `${nomes[e.vencedor]} venceu!`;
+  }
+
   // ---------- render ----------
   function aplicar(e, inicial) {
     if (!e) return;
-    estado = e;
+    estado = normalizar(e);
     const nomes = [e.jogadores[0] || "Pessoa 1", e.jogadores[1] || "…"];
     const completa = !!e.jogadores[1];
     const minhaVez = completa && e.vez === eu;
@@ -223,21 +308,13 @@
     const vez = $("vez");
     vez.innerHTML = "";
     if (!completa) vez.textContent = "Esperando a outra pessoa entrar";
+    else if (e.vencedor !== null && !e.carta) vez.textContent = "Partida encerrada";
     else if (minhaVez) vez.innerHTML = "Sua vez, <strong></strong>";
     else vez.innerHTML = "Vez de <strong></strong>";
     const s = vez.querySelector("strong");
     if (s) s.textContent = nomes[e.vez];
 
-    const score = $("score");
-    score.innerHTML = "";
-    nomes.forEach((n, i) => {
-      const d = document.createElement("div");
-      if (i === eu) d.className = "me";
-      d.innerHTML = "<span></span>: <b></b>";
-      d.querySelector("span").textContent = n;
-      d.querySelector("b").textContent = e.pontos[i];
-      score.appendChild(d);
-    });
+    desenharPlacar(e, nomes);
 
     // giro novo? anima nos dois celulares
     const g = e.giro;
@@ -292,13 +369,27 @@
     if (!estado) return;
     const completa = !!estado.jogadores[1];
     const minhaVez = completa && estado.vez === eu;
-    const temCarta = !!estado.carta;
-    $("spin").disabled = !minhaVez || girando || temCarta || !cartasOk;
-    $("pickV").disabled = $("pickD").disabled = !minhaVez || girando || temCarta || !cartasOk;
-    $("done").hidden = $("skip").hidden = !minhaVez;
+    const c = estado.carta;
+    const acabou = estado.vencedor !== null;
+    const travado = !minhaVez || girando || !!c || !cartasOk || acabou;
+    $("spin").disabled = travado;
+    $("pickV").disabled = $("pickD").disabled = travado;
+
+    // Pular: só em verdade/desafio, e enquanto houver pulos daquele tipo
+    const p = estado.placar[estado.vez];
+    const esgotou = c && ((c.tipo === "verdade" && p.pulosV >= MAX_PULOS) || (c.tipo === "desafio" && p.pulosD >= MAX_PULOS));
+    $("done").hidden = !minhaVez;
+    $("skip").hidden = !minhaVez || !c || c.tipo === "prenda" || esgotou;
+    const sp = $("semPulos");
+    sp.hidden = !minhaVez || !esgotou;
+    if (esgotou) sp.textContent = c.tipo === "verdade" ? "Sem pulos de verdade" : "Sem pulos de desafio";
+
     const ag = $("aguardando");
     ag.hidden = minhaVez;
-    if (!minhaVez && completa) ag.textContent = `Aguardando ${estado.jogadores[estado.vez]} cumprir ou pular.`;
+    if (!minhaVez && completa) {
+      const quem = estado.jogadores[estado.vez];
+      ag.textContent = c && c.tipo === "prenda" ? `Aguardando ${quem} cumprir a prenda.` : `Aguardando ${quem} cumprir ou pular.`;
+    }
   }
 
   function mostrarCarta(e) {
@@ -308,7 +399,9 @@
     const nome = e.jogadores[e.vez] || "";
     card.className = "card " + c.tipo;
     card.hidden = false;
-    $("kind").textContent = c.tipo === "verdade" ? "Verdade" : "Desafio";
+    $("kind").textContent = c.motivo === "pulo" ? "Prenda por pular a verdade"
+      : c.motivo === "final" ? "Prenda final de quem perdeu"
+      : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
       + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome;
     $("text").textContent = c.texto;
@@ -318,7 +411,7 @@
 
   // ---------- ações ----------
   function girar() {
-    if (!estado || girando || estado.vez !== eu || estado.carta) return;
+    if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null) return;
     const k = Math.floor(Math.random() * SEGMENTOS);
     const passo = 360 / SEGMENTOS;
     const alvoSeg = k * passo + passo / 2;
@@ -337,7 +430,7 @@
   }
 
   function escolher(tipo) {
-    if (!estado || girando || estado.vez !== eu || estado.carta) return;
+    if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null) return;
     if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
       const carta = sortear(tipo, n.niveis, n.usados || []);
@@ -346,13 +439,69 @@
     });
   }
 
-  function encerrar(ponto) {
-    if (!estado || estado.vez !== eu) return;
+  // Cumpri: soma pontos/contadores; prenda vale 0. Bater a meta encerra a partida com prenda final.
+  function cumprir() {
+    if (!estado || estado.vez !== eu || !estado.carta) return;
     gravar(n => {
-      if (ponto) n.pontos[n.vez]++;
-      n.vez = 1 - n.vez;
+      const c = n.carta, p = n.placar[n.vez];
+      n.carta = null;
+      if (c.tipo === "prenda") {
+        p.prendas++;
+        if (c.motivo !== "final") n.vez = 1 - n.vez;   // depois da prenda final a partida já acabou
+      } else {
+        p.pontos += (PONTOS[c.tipo] || {})[c.nivel] || 0;
+        if (c.tipo === "verdade") p.verdades++; else p.desafios++;
+        if (n.vencedor === null && p.pontos >= n.meta) {
+          n.vencedor = n.vez;
+          n.vez = 1 - n.vez;                              // quem perdeu cumpre a prenda final
+          n.carta = prendaPara(n, "final");
+        } else {
+          n.vez = 1 - n.vez;
+        }
+      }
+      n.pontos = n.placar.map(x => x.pontos);
+    });
+  }
+
+  // Pular verdade: vira prenda para a mesma pessoa. Pular desafio: -1 ponto e passa a vez.
+  function pular() {
+    if (!estado || estado.vez !== eu || !estado.carta) return;
+    const c = estado.carta, p = estado.placar[estado.vez];
+    if (c.tipo === "prenda") return;
+    if (c.tipo === "verdade" && p.pulosV >= MAX_PULOS) return;
+    if (c.tipo === "desafio" && p.pulosD >= MAX_PULOS) return;
+    gravar(n => {
+      const q = n.placar[n.vez];
+      if (n.carta.tipo === "verdade") {
+        q.pulosV++;
+        n.carta = prendaPara(n, "pulo");
+        if (!n.carta) n.vez = 1 - n.vez;               // sem prendas carregadas: só passa a vez
+      } else {
+        q.pulosD++;
+        q.pontos = Math.max(0, q.pontos - 1);
+        n.carta = null;
+        n.vez = 1 - n.vez;
+      }
+      n.pontos = n.placar.map(x => x.pontos);
+    });
+  }
+
+  function novaPartida() {
+    if (!estado || estado.vencedor === null) return;
+    gravar(n => {
+      n.vez = 1 - n.vencedor;                           // quem perdeu começa
+      n.placar = [placarVazio(), placarVazio()];
+      n.pontos = [0, 0];
+      n.vencedor = null;
+      n.usados = [];
       n.carta = null;
     });
+  }
+
+  function mudarMeta() {
+    const m = Number($("meta").value);
+    if (!estado || !METAS.includes(m) || !placarZerado(estado)) return;
+    gravar(n => { if (placarZerado(n)) n.meta = m; });
   }
 
   // ---------- cartas de vocês ----------
@@ -454,8 +603,10 @@
     $("spin").addEventListener("click", girar);
     $("pickV").addEventListener("click", () => escolher("verdade"));
     $("pickD").addEventListener("click", () => escolher("desafio"));
-    $("done").addEventListener("click", () => encerrar(true));
-    $("skip").addEventListener("click", () => encerrar(false));
+    $("done").addEventListener("click", cumprir);
+    $("skip").addEventListener("click", pular);
+    $("novaPartida").addEventListener("click", novaPartida);
+    $("meta").addEventListener("change", mudarMeta);
     $("niveis").addEventListener("change", mudarNiveis);
     $("abrirCarta").addEventListener("click", abrirDialogo);
     $("formCarta").addEventListener("submit", salvarCarta);
