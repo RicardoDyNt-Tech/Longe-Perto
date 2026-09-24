@@ -87,6 +87,15 @@
     return carta;
   }
 
+  // prenda do nível pedido; se não houver prenda nesse nível, desce um nível até encontrar
+  function sortearPrenda(nivel, usados) {
+    for (let i = ORDEM_NIVEIS.indexOf(nivel); i >= 0; i--) {
+      const n = ORDEM_NIVEIS[i];
+      if (cartas.some(c => c.tipo === "prenda" && c.nivel === n)) return sortear("prenda", [n], usados);
+    }
+    return null;
+  }
+
   function registrarUso(novo, carta) {
     let usados = novo.usados || [];
     if (carta.reset) { const tirar = new Set(carta.doPool); usados = usados.filter(k => !tirar.has(k)); }
@@ -242,21 +251,17 @@
   }
 
   // Nível da prenda. Final: o mais alto ativo. Por pulo: desafio sobe um nível, verdade fica no mesmo.
-  // Nunca acima do mais alto ativo; se não houver prenda no nível, desce até achar.
+  // Nunca acima do mais alto ativo (a descida quando falta prenda fica no sortearPrenda).
   function nivelDaPrenda(n, motivo, pulada) {
     const teto = ORDEM_NIVEIS.indexOf(nivelMaisAlto(n.niveis));
-    let i = teto;
-    if (motivo !== "final" && pulada) {
-      const base = Math.max(0, ORDEM_NIVEIS.indexOf(pulada.nivel));
-      i = Math.min(base + (pulada.tipo === "desafio" ? 1 : 0), ORDEM_NIVEIS.length - 1, teto);
-    }
-    for (; i > 0; i--) if (cartas.some(c => c.tipo === "prenda" && c.nivel === ORDEM_NIVEIS[i])) break;
-    return ORDEM_NIVEIS[i];
+    if (motivo === "final" || !pulada) return ORDEM_NIVEIS[teto];
+    const base = Math.max(0, ORDEM_NIVEIS.indexOf(pulada.nivel));
+    return ORDEM_NIVEIS[Math.min(base + (pulada.tipo === "desafio" ? 1 : 0), ORDEM_NIVEIS.length - 1, teto)];
   }
 
   // sorteia a prenda, marca como usada e devolve
   function prendaPara(n, motivo, pulada) {
-    const carta = sortear("prenda", [nivelDaPrenda(n, motivo, pulada)], n.usados || []);
+    const carta = sortearPrenda(nivelDaPrenda(n, motivo, pulada), n.usados || []);
     if (!carta) return null;
     registrarUso(n, carta);
     carta.motivo = motivo;
