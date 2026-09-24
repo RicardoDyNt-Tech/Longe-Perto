@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 <main>
@@ -55,6 +55,15 @@
     <div class="topbar">
       <span>Sala <span class="sala" id="salaCodigo"></span></span>
       <button class="linkbtn" id="sair">Sair da sala</button>
+    </div>
+
+    <div class="reencontro" id="reencontro">
+      <p class="reencontro-txt" id="reencontroTxt"></p>
+      <div class="reencontro-form" id="reencontroForm" hidden>
+        <input type="date" id="reencontroData" aria-label="Data do reencontro">
+        <button class="secondary" id="reencontroSalvar" type="button">Salvar data</button>
+      </div>
+      <button class="linkbtn" id="reencontroMudar" type="button" hidden>mudar data</button>
     </div>
 
     <div class="invite" id="convite" hidden>
@@ -151,6 +160,7 @@
         </div>
         <p class="wait" id="aguardando" hidden></p>
         <a class="wa" id="wa" target="_blank" rel="noopener">Mandar no WhatsApp</a>
+        <button class="linkbtn guardar" id="guardar" type="button">Guardar para o reencontro 💞</button>
       </div>
     </article>
 
@@ -170,6 +180,18 @@
       <ul class="lista-extras lista-hist" id="listaHist"></ul>
     </details>
 
+    <details class="extras" id="cofre">
+      <summary>Cofre do reencontro <span id="cofreQtd"></span></summary>
+      <p class="extras-sub" id="cofreDica" hidden>Use uma sala fixa para o cofre durar.</p>
+      <div class="filtro" role="radiogroup" aria-label="Filtro do cofre">
+        <label class="chip"><input type="radio" name="filtroCofre" value="todos" checked><span>Todos</span></label>
+        <label class="chip"><input type="radio" name="filtroCofre" value="pendentes"><span>Pendentes</span></label>
+        <label class="chip"><input type="radio" name="filtroCofre" value="feitos"><span>Feitos</span></label>
+      </div>
+      <p class="extras-sub" id="cofreVazio">Nada guardado ainda. Toque em "Guardar para o reencontro" numa carta.</p>
+      <ul class="lista-extras lista-cofre" id="listaCofre"></ul>
+    </details>
+
     <details class="extras" id="extras">
       <summary>Cartas de vocês <span id="extrasQtd"></span></summary>
       <p class="extras-sub" id="extrasVazio">Nenhuma carta de vocês ainda. Toque em "Adicionar carta" para criar.</p>
@@ -178,6 +200,21 @@
     <p class="erro" id="erroJogo" role="alert"></p>
     <p class="hint">Combinem uma palavra para pular qualquer rodada sem explicação. Fotos e áudios ousados: usem a visualização única do WhatsApp.</p>
   </section>
+
+  <dialog id="dlgCofre" aria-labelledby="dlgCofreTitulo">
+    <form id="formCofre" method="dialog">
+      <h2 id="dlgCofreTitulo">Guardar para o reencontro</h2>
+      <p class="cofre-carta" id="cofreCarta"></p>
+      <label class="field">Resposta / combinado (opcional)
+        <textarea id="cofreNota" maxlength="500" rows="3" placeholder="Ex.: no reencontro você me leva para dançar"></textarea>
+      </label>
+      <p class="erro" id="erroCofre" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarCofre" type="submit">Guardar</button>
+        <button class="secondary" id="cancelarCofre" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="dlgCarta" aria-labelledby="dlgTitulo">
     <form id="formCarta" method="dialog">
@@ -215,8 +252,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="config.js?v=14"></script>
+<script src="app.js?v=14"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

@@ -36,6 +36,7 @@
   let timerAviso = null;
   let cartas = [];        // cartas padrão + cartas desta sala, vindas da tabela `cartas`
   let cartasOk = false;   // false até a busca terminar (ou se falhar)
+  let cofre = [];         // itens do cofre do reencontro desta sala
 
   // ---------- util ----------
   const salvarLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
@@ -246,6 +247,13 @@
       // o Realtime não filtra DELETE; tirar pelo id basta (ids de outras salas não estão na lista)
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "cartas" },
         payload => tirarCarta(payload.old && payload.old.id))
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "cofre", filter: `sala=eq.${c}` },
+        payload => juntarCofre(payload.new))
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "cofre", filter: `sala=eq.${c}` },
+        payload => juntarCofre(payload.new))
+      // DELETE não é filtrável no Realtime: tira pelo id (itens de outras salas não estão na lista)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "cofre" },
+        payload => tirarCofre(payload.old && payload.old.id))
       .subscribe(status => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
           erro("erroJogo", "A conexão ao vivo caiu. Recarregue a página se a roleta parar de sincronizar.");
@@ -253,6 +261,149 @@
 
     aplicar(e, true);
     carregarCartas(c);
+    carregarCofre(c);
+  }
+
+  // ---------- reencontro e cofre ----------
+  // "hoje" no fuso do casal, como AAAA-MM-DD
+  const hojeISO = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bahia" }).format(d);
+  const diasAte = iso => {
+    const [a, m, d] = iso.split("-").map(Number), [ha, hm, hd] = hojeISO().split("-").map(Number);
+    return Math.round((Date.UTC(a, m - 1, d) - Date.UTC(ha, hm - 1, hd)) / 86400000);
+  };
+  const dataBR = iso => iso.split("-").reverse().join("/");
+  let editandoData = false;
+
+  function desenharReencontro(e) {
+    const r = e.reencontro;
+    const dias = r ? diasAte(r) : null;
+    const txt = !r ? "Quando é o reencontro? 💞"
+      : dias > 1 ? `Faltam ${dias} dias para o reencontro 💞`
+      : dias === 1 ? "Falta 1 dia para o reencontro 💞"
+      : dias === 0 ? "É hoje! 💞"
+      : `O reencontro foi em ${dataBR(r)}. Marcar uma nova data?`;
+    $("reencontroTxt").textContent = txt;
+    const mostrarForm = !r || dias < 0 || editandoData;
+    $("reencontroForm").hidden = !mostrarForm;
+    $("reencontroMudar").hidden = mostrarForm;
+    if (mostrarForm && document.activeElement !== $("reencontroData")) $("reencontroData").value = r && dias >= 0 ? r : "";
+  }
+
+  function salvarReencontro() {
+    const v = $("reencontroData").value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
+    editandoData = false;
+    gravar(n => { n.reencontro = v; });
+  }
+
+  async function carregarCofre(c) {
+    const { data, error } = await sb.from("cofre")
+      .select("id, sala, carta, nota, autor, feito, criada_em")
+      .eq("sala", c)
+      .order("criada_em", { ascending: true });
+    if (c !== codigo) return;
+    cofre = error || !data ? [] : data;
+    desenharCofre();
+  }
+
+  function juntarCofre(x) {
+    if (!x || !x.id || x.sala !== codigo) return;
+    const i = cofre.findIndex(y => y.id === x.id);
+    if (i >= 0) cofre[i] = Object.assign(cofre[i], x); else cofre.push(x);
+    cofre.sort((a, b) => (a.criada_em > b.criada_em ? 1 : -1));
+    desenharCofre();
+  }
+
+  function tirarCofre(id) {
+    if (!id || !cofre.some(x => x.id === id)) return;
+    cofre = cofre.filter(x => x.id !== id);
+    desenharCofre();
+  }
+
+  function desenharCofre() {
+    const filtro = (document.querySelector('input[name="filtroCofre"]:checked') || {}).value || "todos";
+    const pend = cofre.filter(x => !x.feito).length;
+    $("cofreQtd").textContent = cofre.length ? `(${pend} ${pend === 1 ? "pendente" : "pendentes"} de ${cofre.length})` : "";
+    $("cofreDica").hidden = !estado || !!estado.fixa;
+    const itens = cofre.filter(x => filtro === "todos" || (filtro === "feitos") === !!x.feito);
+    $("cofreVazio").hidden = cofre.length > 0;
+    const ul = $("listaCofre");
+    ul.textContent = "";
+    itens.forEach(x => {
+      const li = document.createElement("li");
+      if (x.feito) li.className = "feito";
+      const info = document.createElement("div");
+      info.className = "info";
+      const t = document.createElement("span");
+      t.className = "t";
+      t.textContent = x.carta;
+      info.appendChild(t);
+      if (x.nota) {
+        const nota = document.createElement("span");
+        nota.className = "nota";
+        nota.textContent = "↳ " + x.nota;
+        info.appendChild(nota);
+      }
+      const autor = document.createElement("span");
+      autor.className = "autor";
+      autor.textContent = `por ${x.autor} · ${new Date(x.criada_em).toLocaleDateString("pt-BR")}`;
+      info.appendChild(autor);
+      const acoes = document.createElement("div");
+      acoes.className = "acoes";
+      const lab = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!x.feito;
+      cb.addEventListener("change", () => marcarCofre(x, cb.checked));
+      lab.append(cb, document.createTextNode("Feito ✓"));
+      const apagar = document.createElement("button");
+      apagar.type = "button";
+      apagar.textContent = "Apagar";
+      apagar.addEventListener("click", () => apagarCofre(x));
+      acoes.append(lab, apagar);
+      li.append(info, acoes);
+      ul.appendChild(li);
+    });
+  }
+
+  function abrirGuardar() {
+    if (!estado || !estado.carta) return;
+    $("cofreCarta").textContent = estado.carta.texto;
+    $("cofreNota").value = "";
+    erro("erroCofre", "");
+    $("dlgCofre").showModal();
+  }
+
+  async function salvarCofre(ev) {
+    ev.preventDefault();
+    const carta = ($("cofreCarta").textContent || "").trim().slice(0, 280);
+    if (!codigo || carta.length < 3) return;
+    const nota = $("cofreNota").value.trim().slice(0, 500) || null;
+    $("salvarCofre").disabled = true;
+    const { data, error } = await sb.from("cofre")
+      .insert({ sala: codigo, carta, nota, autor: (estado.jogadores[eu] || "").trim().slice(0, 20) })
+      .select("id, sala, carta, nota, autor, feito, criada_em").single();
+    $("salvarCofre").disabled = false;
+    if (error) {
+      return erro("erroCofre", /limite/.test(error.message || "")
+        ? "O cofre desta sala chegou a 300 itens. Apague algum para guardar outro."
+        : "Não consegui guardar. Confira a internet e tente de novo.");
+    }
+    juntarCofre(data);
+    $("dlgCofre").close();
+  }
+
+  async function marcarCofre(x, feito) {
+    const { error } = await sb.from("cofre").update({ feito }).eq("id", x.id);
+    if (error) { erro("erroJogo", "Não consegui marcar. Confira a internet e tente de novo."); return desenharCofre(); }
+    juntarCofre({ ...x, feito });
+  }
+
+  async function apagarCofre(x) {
+    if (!confirm(`Apagar do cofre?\n\n"${x.carta}"`)) return;
+    const { error } = await sb.from("cofre").delete().eq("id", x.id);
+    if (error) return erro("erroJogo", "Não consegui apagar. Confira a internet e tente de novo.");
+    tirarCofre(x.id);
   }
 
   // ---------- salas recentes (só neste aparelho) ----------
@@ -325,7 +476,7 @@
   function sair() {
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null; ultimoVencedor = null;
-    cartas = []; cartasOk = false;
+    cartas = []; cartasOk = false; cofre = [];
     desenharExtras();
     clearTimeout(timerCarta);
     history.replaceState(null, "", location.pathname);
@@ -357,6 +508,7 @@
     if (e.vencedor !== 0 && e.vencedor !== 1) e.vencedor = null;
     if (e.aviso === undefined) e.aviso = null;
     if (e.timer === undefined) e.timer = null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(e.reencontro || "")) e.reencontro = null;
     if (typeof e.notaAdversario !== "boolean") e.notaAdversario = true;
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
@@ -473,6 +625,7 @@
     if (s) s.textContent = nomes[e.vez];
 
     desenharPlacar(e, nomes);
+    desenharReencontro(e);
 
     // giro novo? anima nos dois celulares
     const g = e.giro;
@@ -970,6 +1123,12 @@
 
     $("criar").addEventListener("click", () => criarSala(false));
     $("criarFixa").addEventListener("click", () => criarSala(true));
+    $("reencontroSalvar").addEventListener("click", salvarReencontro);
+    $("reencontroMudar").addEventListener("click", () => { editandoData = true; desenharReencontro(estado); $("reencontroData").focus(); });
+    $("guardar").addEventListener("click", abrirGuardar);
+    $("formCofre").addEventListener("submit", salvarCofre);
+    $("cancelarCofre").addEventListener("click", () => $("dlgCofre").close());
+    document.querySelectorAll('input[name="filtroCofre"]').forEach(r => r.addEventListener("change", desenharCofre));
     $("entrar").addEventListener("click", () => entrarSala($("codigo").value));
     $("codigo").addEventListener("keydown", ev => { if (ev.key === "Enter") entrarSala($("codigo").value); });
     $("sair").addEventListener("click", sair);
