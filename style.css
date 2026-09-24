@@ -99,6 +99,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .fim{margin-top:22px; text-align:center; background:var(--surface); border:2px solid var(--lamp); border-radius:20px; padding:18px}
 .venceu{font-size:1.5rem; font-weight:800; margin:0 0 12px}
 .card.prenda{border-color:var(--lamp)}
+.actions .liberar{grid-column:1/-1}
+.aviso{margin:18px 0 0; padding:12px 14px; border-radius:14px; background:var(--lamp); color:#2A1F3D; font-weight:700; text-align:center}
 .prenda .kind{color:var(--ink)}
 .extras{margin-top:24px; background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px 16px}
 .extras summary{font-weight:800; cursor:pointer}

@@ -26,6 +26,8 @@
   let rotacao = 0;
   let girando = false;
   let timerCarta = null;
+  let ultimoAviso = null;
+  let timerAviso = null;
   let cartas = [];        // cartas padrão + cartas desta sala, vindas da tabela `cartas`
   let cartasOk = false;   // false até a busca terminar (ou se falhar)
 
@@ -219,7 +221,9 @@
   }
 
   // ---------- placar ----------
-  const placarVazio = pontos => ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, pulosV: 0, pulosD: 0 });
+  const placarVazio = pontos => ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, pulosV: 0, pulosD: 0 });
+  // "2/3" enquanto houver grátis; depois "3/3 +1" (pulos pagos com prenda)
+  const mostrarPulos = n => n > MAX_PULOS ? `${MAX_PULOS}/${MAX_PULOS} +${n - MAX_PULOS}` : `${n}/${MAX_PULOS}`;
 
   // salas antigas: cria o placar a partir de `pontos` e completa campos que faltarem
   function normalizar(e) {
@@ -263,8 +267,9 @@
       ["Verdades", p => p.verdades],
       ["Desafios", p => p.desafios],
       ["Prendas", p => p.prendas],
-      ["Pulos de verdade", p => `${p.pulosV}/${MAX_PULOS}`],
-      ["Pulos de desafio", p => `${p.pulosD}/${MAX_PULOS}`]
+      ["Liberadas", p => p.liberadas],
+      ["Pulos de verdade", p => mostrarPulos(p.pulosV)],
+      ["Pulos de desafio", p => mostrarPulos(p.pulosD)]
     ];
     linhas.forEach(([rotulo, valor, cls]) => {
       const tr = tb.insertRow();
@@ -297,6 +302,7 @@
   function aplicar(e, inicial) {
     if (!e) return;
     estado = normalizar(e);
+    mostrarAviso(e.aviso, inicial);
     const nomes = [e.jogadores[0] || "Pessoa 1", e.jogadores[1] || "…"];
     const completa = !!e.jogadores[1];
     const minhaVez = completa && e.vez === eu;
@@ -365,6 +371,18 @@
     });
   }
 
+  // aviso curto nos dois aparelhos (ex.: "Ana liberou Bia da prenda.")
+  function mostrarAviso(a, inicial) {
+    if (!a || a.id === ultimoAviso) return;
+    ultimoAviso = a.id;
+    if (inicial) return;                                // ao abrir a sala não repete aviso velho
+    const el = $("aviso");
+    el.textContent = a.texto;
+    el.hidden = false;
+    clearTimeout(timerAviso);
+    timerAviso = setTimeout(() => { el.hidden = true; }, 4000);
+  }
+
   function atualizarBotoes() {
     if (!estado) return;
     const completa = !!estado.jogadores[1];
@@ -375,14 +393,16 @@
     $("spin").disabled = travado;
     $("pickV").disabled = $("pickD").disabled = travado;
 
-    // Pular: só em verdade/desafio, e enquanto houver pulos daquele tipo
+    // Pular: só em verdade/desafio; mostra quantos pulos grátis restam daquele tipo
     const p = estado.placar[estado.vez];
-    const esgotou = c && ((c.tipo === "verdade" && p.pulosV >= MAX_PULOS) || (c.tipo === "desafio" && p.pulosD >= MAX_PULOS));
     $("done").hidden = !minhaVez;
-    $("skip").hidden = !minhaVez || !c || c.tipo === "prenda" || esgotou;
-    const sp = $("semPulos");
-    sp.hidden = !minhaVez || !esgotou;
-    if (esgotou) sp.textContent = c.tipo === "verdade" ? "Sem pulos de verdade" : "Sem pulos de desafio";
+    $("skip").hidden = !minhaVez || !c || c.tipo === "prenda";
+    if (c && c.tipo !== "prenda") {
+      const restam = MAX_PULOS - (c.tipo === "verdade" ? p.pulosV : p.pulosD);
+      $("skip").textContent = restam > 0 ? `Pular (${restam} grátis)` : "Pular (paga prenda)";
+    }
+    // Liberar da prenda: só o adversário de quem está pagando
+    $("liberar").hidden = !completa || minhaVez || !c || c.tipo !== "prenda";
 
     const ag = $("aguardando");
     ag.hidden = minhaVez;
@@ -399,7 +419,8 @@
     const nome = e.jogadores[e.vez] || "";
     card.className = "card " + c.tipo;
     card.hidden = false;
-    $("kind").textContent = c.motivo === "pulo" ? "Prenda por pular a verdade"
+    $("kind").textContent = c.motivo === "pulo" || c.motivo === "pulo-v" ? "Prenda por pular a verdade"
+      : c.motivo === "pulo-d" ? "Prenda por pular o desafio"
       : c.motivo === "final" ? "Prenda final de quem perdeu"
       : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
@@ -463,26 +484,29 @@
     });
   }
 
-  // Pular verdade: vira prenda para a mesma pessoa. Pular desafio: -1 ponto e passa a vez.
+  // Pular: os 3 primeiros de cada tipo são grátis (descarta e passa a vez);
+  // do 4º em diante a carta vira prenda para a mesma pessoa, na mesma vez.
   function pular() {
-    if (!estado || estado.vez !== eu || !estado.carta) return;
-    const c = estado.carta, p = estado.placar[estado.vez];
-    if (c.tipo === "prenda") return;
-    if (c.tipo === "verdade" && p.pulosV >= MAX_PULOS) return;
-    if (c.tipo === "desafio" && p.pulosD >= MAX_PULOS) return;
+    if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo === "prenda") return;
     gravar(n => {
       const q = n.placar[n.vez];
-      if (n.carta.tipo === "verdade") {
-        q.pulosV++;
-        n.carta = prendaPara(n, "pulo");
-        if (!n.carta) n.vez = 1 - n.vez;               // sem prendas carregadas: só passa a vez
-      } else {
-        q.pulosD++;
-        q.pontos = Math.max(0, q.pontos - 1);
-        n.carta = null;
-        n.vez = 1 - n.vez;
-      }
-      n.pontos = n.placar.map(x => x.pontos);
+      const verdade = n.carta.tipo === "verdade";
+      const usados = verdade ? ++q.pulosV : ++q.pulosD;
+      n.carta = usados > MAX_PULOS ? prendaPara(n, verdade ? "pulo-v" : "pulo-d") : null;
+      if (!n.carta) n.vez = 1 - n.vez;                 // pulo grátis (ou sem prendas carregadas): passa a vez
+    });
+  }
+
+  // Liberar da prenda: o adversário perdoa; sem ponto, passa a vez, soma `liberadas`.
+  function liberar() {
+    if (!estado || estado.vez === eu || !estado.carta || estado.carta.tipo !== "prenda") return;
+    gravar(n => {
+      if (!n.carta || n.carta.tipo !== "prenda") return;
+      const final = n.carta.motivo === "final";
+      n.placar[n.vez].liberadas++;
+      n.aviso = { id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto: `${n.jogadores[eu]} liberou ${n.jogadores[n.vez]} da prenda.` };
+      n.carta = null;
+      if (!final) n.vez = 1 - n.vez;                    // na prenda final a partida já acabou: fica o "Nova partida"
     });
   }
 
@@ -605,6 +629,7 @@
     $("pickD").addEventListener("click", () => escolher("desafio"));
     $("done").addEventListener("click", cumprir);
     $("skip").addEventListener("click", pular);
+    $("liberar").addEventListener("click", liberar);
     $("novaPartida").addEventListener("click", novaPartida);
     $("meta").addEventListener("change", mudarMeta);
     $("niveis").addEventListener("change", mudarNiveis);

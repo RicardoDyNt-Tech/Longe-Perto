@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <main>
@@ -66,6 +66,8 @@
       </div>
     </div>
 
+    <p class="aviso" id="aviso" role="status" hidden></p>
+
     <article class="card" id="card" hidden aria-live="polite">
       <p class="kind" id="kind"></p>
       <p class="level" id="level"></p>
@@ -74,7 +76,7 @@
       <div class="actions">
         <button class="done" id="done">Cumpri</button>
         <button class="skip" id="skip">Pular</button>
-        <p class="wait" id="semPulos" hidden></p>
+        <button class="secondary liberar" id="liberar" type="button" hidden>Liberar da prenda</button>
         <p class="wait" id="aguardando" hidden></p>
         <a class="wa" id="wa" target="_blank" rel="noopener">Mandar no WhatsApp</a>
       </div>
@@ -143,7 +145,7 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="config.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
