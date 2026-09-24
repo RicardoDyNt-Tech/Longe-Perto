@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 <main>
@@ -76,6 +76,7 @@
         </select>
       </label>
     </div>
+    <label class="check nota-cfg"><input type="checkbox" id="notaAdv"> Nota do adversário (★ valem pontos nos desafios)</label>
     <p class="config-dica" id="configDica"></p>
 
     <div class="stage" aria-live="polite">
@@ -123,6 +124,14 @@
         <button class="done" id="done">Cumpri</button>
         <button class="skip" id="skip">Pular</button>
         <button class="secondary liberar" id="liberar" type="button" hidden>Liberar da prenda</button>
+        <div class="avaliar" id="avaliar" hidden>
+          <p>Como foi?</p>
+          <div class="estrelas">
+            <button type="button" data-n="1" aria-label="1 estrela">★</button>
+            <button type="button" data-n="2" aria-label="2 estrelas">★★</button>
+            <button type="button" data-n="3" aria-label="3 estrelas">★★★</button>
+          </div>
+        </div>
         <p class="wait" id="aguardando" hidden></p>
         <a class="wa" id="wa" target="_blank" rel="noopener">Mandar no WhatsApp</a>
       </div>
@@ -183,8 +192,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=11"></script>
-<script src="app.js?v=11"></script>
+<script src="config.js?v=12"></script>
+<script src="app.js?v=12"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

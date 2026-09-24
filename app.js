@@ -240,7 +240,7 @@
 
   // ---------- placar ----------
   const placarVazio = (pontos, pulosMax) =>
-    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, livresV: pulosMax, livresD: pulosMax });
+    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, livresV: pulosMax, livresD: pulosMax });
 
   const novoAviso = texto => ({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto });
 
@@ -260,12 +260,14 @@
     if (e.vencedor !== 0 && e.vencedor !== 1) e.vencedor = null;
     if (e.aviso === undefined) e.aviso = null;
     if (e.timer === undefined) e.timer = null;
+    if (typeof e.notaAdversario !== "boolean") e.notaAdversario = true;
+    if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
   }
 
   // "zerado" = antes da primeira jogada ou logo depois de "Nova partida"
   const placarZerado = e => e.placar.every(p =>
-    p.pontos === 0 && p.verdades === 0 && p.desafios === 0 && p.prendas === 0 && p.liberadas === 0 &&
+    p.pontos === 0 && p.verdades === 0 && p.desafios === 0 && p.prendas === 0 && p.liberadas === 0 && p.estrelas === 0 &&
     p.livresV === e.pulosMax && p.livresD === e.pulosMax);
 
   function nivelMaisAlto(niveis) {
@@ -313,6 +315,7 @@
       ["Desafios", p => p.desafios],
       ["Prendas", p => p.prendas],
       ["Liberadas", p => p.liberadas],
+      ["Estrelas", p => p.estrelas],
       ["Pulos grátis de verdade", p => `${p.livresV}/${e.pulosMax}`],
       ["Pulos grátis de desafio", p => `${p.livresD}/${e.pulosMax}`]
     ];
@@ -338,8 +341,9 @@
     $("meta").value = String(e.meta);
     $("pulosMax").value = String(e.pulosMax);
     const zerado = placarZerado(e);
-    $("meta").disabled = $("pulosMax").disabled = !zerado;
-    $("configDica").textContent = zerado ? "" : "Meta e pulos só mudam com o placar zerado (em Nova partida).";
+    $("notaAdv").checked = e.notaAdversario;
+    $("meta").disabled = $("pulosMax").disabled = $("notaAdv").disabled = !zerado;
+    $("configDica").textContent = zerado ? "" : "Meta, pulos e nota só mudam com o placar zerado (em Nova partida).";
 
     const fim = $("fim");
     fim.hidden = e.vencedor === null;
@@ -454,8 +458,11 @@
 
     // Pular: só em verdade/desafio; mostra quantos pulos grátis restam daquele tipo
     const p = estado.placar[estado.vez];
-    $("done").hidden = !minhaVez;
-    $("skip").hidden = !minhaVez || !c || c.tipo === "prenda";
+    const avaliando = !!estado.avaliacao;
+    $("done").hidden = !minhaVez || avaliando;
+    $("skip").hidden = !minhaVez || !c || c.tipo === "prenda" || avaliando;
+    // Nota do adversário: quem não cumpriu dá as estrelas
+    $("avaliar").hidden = !completa || minhaVez || !avaliando;
     if (c && c.tipo !== "prenda") {
       const restam = c.tipo === "verdade" ? p.livresV : p.livresD;
       $("skip").textContent = restam > 0 ? `Pular (${restam} grátis)` : "Pular (paga prenda)";
@@ -464,8 +471,10 @@
     $("liberar").hidden = !completa || minhaVez || !c || c.tipo !== "prenda";
 
     const ag = $("aguardando");
-    ag.hidden = minhaVez;
-    if (!minhaVez && completa) {
+    ag.hidden = avaliando ? !minhaVez : minhaVez;
+    if (avaliando) {
+      ag.textContent = `Aguardando a nota de ${estado.jogadores[1 - estado.vez]}.`;
+    } else if (!minhaVez && completa) {
       const quem = estado.jogadores[estado.vez];
       ag.textContent = c && c.tipo === "prenda" ? `Aguardando ${quem} cumprir a prenda.` : `Aguardando ${quem} cumprir ou pular.`;
     }
@@ -629,9 +638,14 @@
 
   // Cumpri: soma pontos/contadores; prenda vale 0. Bater a meta encerra a partida com prenda final.
   function cumprir() {
-    if (!estado || estado.vez !== eu || !estado.carta) return;
+    if (!estado || estado.vez !== eu || !estado.carta || estado.avaliacao) return;
     gravar(n => {
       const c = n.carta, p = n.placar[n.vez];
+      // desafio com "Nota do adversário": a carta fica na tela esperando as estrelas
+      if (c.tipo === "desafio" && n.notaAdversario && n.jogadores[1]) {
+        n.avaliacao = { chave: c.chave, cartaId: c.id || c.chave, de: n.vez };
+        return;
+      }
       n.carta = null;
       if (c.tipo === "prenda") {
         p.prendas++;
@@ -645,24 +659,51 @@
         }
         if (c.motivo !== "final") n.vez = 1 - n.vez;   // depois da prenda final a partida já acabou
       } else {
-        p.pontos += (PONTOS[c.tipo] || {})[c.nivel] || 0;
-        if (c.tipo === "verdade") p.verdades++; else p.desafios++;
-        if (n.vencedor === null && p.pontos >= n.meta) {
-          n.vencedor = n.vez;
-          n.vez = 1 - n.vez;                              // quem perdeu cumpre a prenda final
-          n.carta = prendaPara(n, "final");
-        } else {
-          n.vez = 1 - n.vez;
-        }
+        pontuar(n, c, 0);
       }
       n.pontos = n.placar.map(x => x.pontos);
     });
   }
 
+  // soma pontos da tabela (+ estrelas), conta o tipo e só então confere a meta
+  function pontuar(n, c, estrelas) {
+    const p = n.placar[n.vez];
+    p.pontos += ((PONTOS[c.tipo] || {})[c.nivel] || 0) + estrelas;
+    p.estrelas += estrelas;
+    if (c.tipo === "verdade") p.verdades++; else p.desafios++;
+    if (n.vencedor === null && p.pontos >= n.meta) {
+      n.vencedor = n.vez;
+      n.vez = 1 - n.vez;                                // quem perdeu cumpre a prenda final
+      n.carta = prendaPara(n, "final");
+    } else {
+      n.vez = 1 - n.vez;
+    }
+  }
+
+  // Nota do adversário: cada estrela vale +1 ponto
+  function avaliar(estrelas) {
+    if (!estado || !estado.avaliacao || estado.vez === eu || ![1, 2, 3].includes(estrelas)) return;
+    gravar(n => {
+      if (!n.avaliacao || !n.carta) return;
+      const c = n.carta, quem = n.vez;
+      n.carta = null;
+      n.avaliacao = null;
+      n.aviso = novoAviso(`${n.jogadores[quem]} ganhou ${"★".repeat(estrelas)} de ${n.jogadores[1 - quem]}`);
+      pontuar(n, c, estrelas);
+      n.pontos = n.placar.map(x => x.pontos);
+    });
+  }
+
+  function mudarNota() {
+    const v = $("notaAdv").checked;
+    if (!estado || !placarZerado(estado)) return;
+    gravar(n => { if (placarZerado(n)) n.notaAdversario = v; });
+  }
+
   // Pular: com pulos livres do tipo, gasta um, descarta e passa a vez;
   // com o contador em 0, a carta vira prenda para a mesma pessoa, na mesma vez.
   function pular() {
-    if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo === "prenda") return;
+    if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo === "prenda" || estado.avaliacao) return;
     gravar(n => {
       const q = n.placar[n.vez];
       const campo = n.carta.tipo === "verdade" ? "livresV" : "livresD";
@@ -837,6 +878,8 @@
     $("done").addEventListener("click", cumprir);
     $("skip").addEventListener("click", pular);
     $("liberar").addEventListener("click", liberar);
+    $("avaliar").addEventListener("click", ev => { const k = Number(ev.target.dataset && ev.target.dataset.n); if (k) avaliar(k); });
+    $("notaAdv").addEventListener("change", mudarNota);
     $("timerIniciar").addEventListener("click", () => iniciarTimer(Number($("timerIniciar").dataset.seg)));
     $("timerAbrir").addEventListener("click", () => { $("timerOpcoes").hidden = !$("timerOpcoes").hidden; });
     $("timerOpcoes").addEventListener("click", ev => { const s = Number(ev.target.dataset && ev.target.dataset.seg); if (s) iniciarTimer(s); });
