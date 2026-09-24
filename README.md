@@ -27,7 +27,7 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 - Pessoa 2 abre o link, digita o nome e entra.
 - Na sua vez: gire (ou escolha verdade/desafio), cumpra na chamada de vídeo e toque em **Cumpri** ou **Pular**. A vez passa sozinha.
 - **Pontos:** verdade vale 1 (leve e criativo), 2 (picante) ou 3 (pesado); desafio vale 2, 2, 3 ou 4. Prenda vale 0.
-- **Pulos:** cada pessoa tem 3 pulos grátis de verdade e 3 de desafio por partida (o botão mostra "Pular (2 grátis)"). Pulo grátis descarta a carta, sem ponto, e passa a vez. Do 4º em diante ("Pular (paga prenda)"), a carta vira uma **prenda** obrigatória do nível mais alto ligado, para a mesma pessoa. Prenda vale 0 e não pode ser pulada.
+- **Pulos:** cada pessoa tem 3 pulos grátis de verdade e 3 de desafio por partida (o botão mostra "Pular (2 grátis)"). Pulo grátis descarta a carta, sem ponto, e passa a vez. Do 4º em diante ("Pular (paga prenda)"), a carta vira uma **prenda** obrigatória para a mesma pessoa: desafio pulado dá prenda um nível acima (pesado fica pesado), verdade pulada dá prenda do mesmo nível, nunca acima do nível mais alto ligado. A prenda final de quem perde sai do nível mais alto ligado. Prenda vale 0 e não pode ser pulada.
 - **Liberar da prenda:** com uma prenda na tela (por pulo ou a final), o adversário pode tocar em **Liberar da prenda**: sem ponto, a vez passa e conta em "Liberadas". Os dois veem o aviso "{fulano} liberou {ciclano} da prenda."
 - **Meta:** 10, 20 ou 30 pontos (só muda com o placar zerado). Quem chegar primeiro vence, e quem perdeu cumpre uma **prenda final**. **Nova partida** zera o placar e mantém níveis e cartas de vocês.
 - Qualquer um pode ligar/desligar níveis; muda para os dois.
