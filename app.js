@@ -16,6 +16,7 @@
   const CHANCE_EVENTO = { desligado: 0, raro: 0.10, normal: 0.20, frequente: 0.35 };
   const PESOS_EVENTO = [["efeito", 35], ["duelo", 30], ["sintonia", 20], ["missao_dupla", 15]];
   const PARA_OS_DOIS = ["duelo", "missao_dupla"];
+  const OS_DOIS_JOGAM = ["duelo", "missao_dupla", "sintonia"];   // eventos em que os dois agem ao mesmo tempo
   const PONTOS_EFEITO = { leve: 1, criativo: 1, picante: 2, pesado: 3 };   // quem aguenta o efeito até o fim
   const MAX_EFEITOS = 2;                                                     // por pessoa
   // tipos de evento com tratamento próprio (as fases seguintes registram aqui); os demais usam "Concluir evento"
@@ -169,6 +170,25 @@
     if (!estado || !codigo) return;
     try { const e = await buscarSala(codigo); if (e) estado = normalizar(e); } catch (err) {}
     return gravar(mudar);
+  }
+
+  // Jogadas simultâneas: se os dois gravam no mesmo instante, a última gravação pode apagar a outra.
+  // Cada aparelho guarda a própria jogada como pendente e, se um estado chegar sem ela, grava de novo.
+  const pendentes = new Map();   // nome -> { obsoleto(e), presente(e), refazer(), t }
+  function pendente(nome, obsoleto, presente, refazer) {
+    const antes = pendentes.get(nome);
+    if (antes) clearTimeout(antes.t);
+    pendentes.set(nome, { obsoleto, presente, refazer, t: null });
+  }
+  function conferirPendentes(e) {
+    pendentes.forEach((p, nome) => {
+      if (p.obsoleto(e)) { clearTimeout(p.t); pendentes.delete(nome); return; }
+      if (p.presente(e) || p.t) return;
+      p.t = setTimeout(() => {
+        p.t = null;
+        if (estado && !p.obsoleto(estado) && !p.presente(estado)) p.refazer();
+      }, 250 + Math.random() * 450);
+    });
   }
 
   async function carregarCartas(c) {
@@ -730,6 +750,7 @@
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null; ultimoVencedor = null;
     cartas = []; cartasOk = false; cofre = []; musicas = []; tocandoUrl = null;
+    pendentes.forEach(p => clearTimeout(p.t)); pendentes.clear();
     desenharExtras();
     clearTimeout(timerCarta);
     history.replaceState(null, "", location.pathname);
@@ -741,7 +762,7 @@
 
   // ---------- placar ----------
   const placarVazio = (pontos, pulosMax) =>
-    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, livresV: pulosMax, livresD: pulosMax });
+    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, livresV: pulosMax, livresD: pulosMax });
 
   const novoAviso = texto => ({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto });
 
@@ -770,6 +791,7 @@
     if (!Array.isArray(e.efeitos)) e.efeitos = [];
     if (!e.prendaPendente || ![0, 1].includes(e.prendaPendente.dono)) e.prendaPendente = null;
     if (!e.duelo || !e.carta || e.duelo.chave !== e.carta.chave) e.duelo = null;
+    if (!e.sintonia || !e.carta || e.sintonia.chave !== e.carta.chave) e.sintonia = null;
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
   }
@@ -777,7 +799,7 @@
   // "zerado" = antes da primeira jogada ou logo depois de "Nova partida"
   const placarZerado = e => e.placar.every(p =>
     p.pontos === 0 && p.verdades === 0 && p.desafios === 0 && p.prendas === 0 && p.liberadas === 0 && p.estrelas === 0 &&
-    !p.duelos &&
+    !p.duelos && !p.sintonias &&
     p.livresV === e.pulosMax && p.livresD === e.pulosMax);
 
   function nivelMaisAlto(niveis) {
@@ -874,6 +896,7 @@
       ["Liberadas", p => p.liberadas],
       ["Estrelas", p => p.estrelas],
       ["Duelos vencidos", p => p.duelos],
+      ["Sintonias certeiras", p => p.sintonias],
       ["Pulos grátis de verdade", p => `${p.livresV}/${e.pulosMax}`],
       ["Pulos grátis de desafio", p => `${p.livresD}/${e.pulosMax}`]
     ];
@@ -960,6 +983,7 @@
     atualizarBotoes();
     desenharTimer(e, inicial);
     desenharTrilha(e);
+    if (!local) conferirPendentes(e);
   }
 
   function desenharExtras() {
@@ -1030,6 +1054,7 @@
     $("eventoFim").hidden = !evento || !minhaVez || EVENTOS_TRATADOS.has(c.tipo);
     $("efeitoAcoes").hidden = !(evento && c.tipo === "efeito" && minhaVez);
     desenharDuelo(estado);
+    desenharSintonia(estado);
     // Nota do adversário: quem não cumpriu dá as estrelas
     $("avaliar").hidden = !completa || minhaVez || !avaliando;
     if (c && !evento && c.tipo !== "prenda") {
@@ -1040,7 +1065,7 @@
     $("liberar").hidden = !completa || minhaVez || !c || c.tipo !== "prenda";
 
     const ag = $("aguardando");
-    ag.hidden = (avaliando ? !minhaVez : minhaVez) || (evento && PARA_OS_DOIS.includes(c.tipo));
+    ag.hidden = (avaliando ? !minhaVez : minhaVez) || (evento && OS_DOIS_JOGAM.includes(c.tipo));
     if (avaliando) {
       ag.textContent = `Aguardando a nota de ${estado.jogadores[1 - estado.vez]}.`;
     } else if (!minhaVez && completa) {
@@ -1338,7 +1363,7 @@
       const c = n.carta;
       if (!c || c.tipo !== "duelo" || (n.duelo && n.duelo.iniciado)) return;
       const total = 3 + (c.segundos || 0);
-      n.duelo = { chave: c.chave, cartaId: c.id || c.chave, iniciado: true, votos: [null, null] };
+      n.duelo = { chave: c.chave, cartaId: c.id || c.chave, iniciado: true, votos: [null, null], rodada: 1 };
       n.timer = { id: idTimer(), total, segundos: total, inicio: Date.now(), pausado: false, preparo: 3 };
     });
   }
@@ -1347,13 +1372,21 @@
   function votarDuelo(v) {
     if (!estado || !estado.duelo) return;
     const voto = v === "eu" ? eu : v === "outro" ? 1 - eu : "empate";
+    const { chave, rodada } = estado.duelo;
+    pendente("duelo", e => !e.duelo || e.duelo.chave !== chave || e.duelo.rodada !== rodada,
+      e => e.duelo.votos[eu] === voto, () => gravarVotoDuelo(voto, chave, rodada));
+    gravarVotoDuelo(voto, chave, rodada);
+  }
+
+  function gravarVotoDuelo(voto, chave, rodada) {
     gravarFresco(n => {
       const d = n.duelo, c = n.carta;
-      if (!d || !c || c.tipo !== "duelo") return;
+      if (!d || !c || c.tipo !== "duelo" || d.chave !== chave || d.rodada !== rodada) return;   // voto de outra rodada
       d.votos[eu] = voto;
       if (d.votos[0] === null || d.votos[1] === null) return;
       if (d.votos[0] !== d.votos[1]) {
         d.votos = [null, null];
+        d.rodada = (d.rodada || 1) + 1;
         n.aviso = novoAviso("Vocês discordaram, escolham de novo.");
         return;
       }
@@ -1405,6 +1438,83 @@
     $("dueloStatus").textContent = !iniciado ? "Qualquer um dos dois pode começar."
       : meu === null ? (dele === null ? "Quem ganhou? Os dois escolhem." : `${e.jogadores[1 - eu]} já escolheu. Sua vez de escolher.`)
       : dele === null ? `Você escolheu "${rotulo(meu)}". Esperando ${e.jogadores[1 - eu]}…` : "";
+  }
+
+  // ---------- modo sintonia ----------
+  // O alvo (quem girou) responde sobre si; o outro tenta adivinhar. Nada aparece antes das duas respostas.
+  EVENTOS_TRATADOS.add("sintonia");
+  const PONTOS_SINTONIA = { acertou: 2, quase: 1, errou: 0 };
+  let sintoniaCarta = null;   // para limpar o rascunho quando muda a carta
+
+  const alvoDe = (e, c) => (c.de === 0 || c.de === 1 ? c.de : e.vez);
+
+  function enviarSintonia() {
+    const txt = $("sintoniaTexto").value.replace(/\s+/g, " ").trim().slice(0, 140);
+    if (!estado || !estado.carta || estado.carta.tipo !== "sintonia") return;
+    if (!txt) return erro("erroJogo", "Escreva a sua resposta antes de enviar.");
+    erro("erroJogo", "");
+    const chave = estado.carta.chave;
+    pendente("sintonia", e => !e.carta || e.carta.chave !== chave || !!(e.sintonia && e.sintonia.revelado),
+      e => !!(e.sintonia && e.sintonia.respostas[eu] !== null), () => gravarSintonia(txt, chave));
+    gravarSintonia(txt, chave);
+  }
+
+  function gravarSintonia(txt, chave) {
+    gravarFresco(n => {
+      const c = n.carta;
+      if (!c || c.tipo !== "sintonia" || c.chave !== chave) return;   // resposta de outra carta
+      const s = n.sintonia || { chave: c.chave, cartaId: c.id || c.chave, alvo: alvoDe(n, c), respostas: [null, null], revelado: false };
+      if (s.revelado) return;
+      s.respostas[eu] = txt;
+      s.revelado = s.respostas[0] !== null && s.respostas[1] !== null;
+      n.sintonia = s;
+    });
+  }
+
+  function julgarSintonia(j) {
+    const s = estado && estado.sintonia;
+    if (!s || !s.revelado || s.alvo !== eu || !(j in PONTOS_SINTONIA)) return;
+    gravar(n => {
+      const s2 = n.sintonia;
+      if (!s2 || !s2.revelado) return;
+      const alvo = s2.alvo, palpite = 1 - alvo;
+      n.placar[palpite].pontos += PONTOS_SINTONIA[j];
+      n.placar[alvo].pontos += 1;
+      if (j === "acertou") n.placar.forEach(p => { p.sintonias = (p.sintonias || 0) + 1; });
+      n.pontos = n.placar.map(x => x.pontos);
+      const frase = { acertou: "acertou", quase: "quase acertou", errou: "errou" }[j];
+      n.aviso = novoAviso(`${n.jogadores[palpite]} ${frase} a resposta de ${n.jogadores[alvo]}! +${PONTOS_SINTONIA[j]} e +1`);
+      n.sintonia = null;
+      n.carta = null;
+      n.vez = 1 - alvo;
+      conferirMeta(n);
+    });
+  }
+
+  function desenharSintonia(e) {
+    const c = e.carta;
+    const ativo = !!(c && c.tipo === "sintonia" && e.jogadores[1]);
+    $("sintoniaBox").hidden = !ativo;
+    if (!ativo) { sintoniaCarta = null; return; }
+    if (sintoniaCarta !== c.chave) { sintoniaCarta = c.chave; $("sintoniaTexto").value = ""; }
+    const s = e.sintonia;
+    const alvo = s ? s.alvo : alvoDe(e, c), outro = 1 - alvo;
+    const minha = s ? s.respostas[eu] : null, dele = s ? s.respostas[1 - eu] : null;
+    const revelado = !!(s && s.revelado);
+    $("sintoniaResponder").hidden = revelado || minha !== null;
+    $("sintoniaPapel").textContent = eu === alvo ? "Responda sobre você" : `O que ${e.jogadores[alvo]} vai responder?`;
+    $("sintoniaReveal").hidden = !revelado;
+    $("sintoniaJulgar").hidden = !revelado || eu !== alvo;
+    if (revelado) {
+      $("sintoniaQuemA").textContent = `${e.jogadores[alvo]} respondeu`;
+      $("sintoniaRespA").textContent = s.respostas[alvo];
+      $("sintoniaQuemB").textContent = `${e.jogadores[outro]} achou`;
+      $("sintoniaRespB").textContent = s.respostas[outro];
+      $("sintoniaStatus").textContent = eu === alvo ? "Julgue o palpite:" : `Aguardando ${e.jogadores[alvo]} julgar.`;
+    } else {
+      $("sintoniaStatus").textContent = minha !== null ? `Resposta enviada ✓ Esperando ${e.jogadores[1 - eu]}…`
+        : dele !== null ? `${e.jogadores[1 - eu]} já respondeu ✓` : "";
+    }
   }
 
   // "Concluir evento": saída genérica para tipos de evento sem tratamento próprio
@@ -1521,6 +1631,7 @@
       n.efeitos = [];
       n.prendaPendente = null;
       n.duelo = null;
+      n.sintonia = null;
     });
   }
 
@@ -1690,6 +1801,8 @@
     $("efeitoAceitar").addEventListener("click", aceitarEfeito);
     $("efeitoRecusar").addEventListener("click", recusarEfeito);
     $("dueloComecar").addEventListener("click", comecarDuelo);
+    $("sintoniaEnviar").addEventListener("click", enviarSintonia);
+    $("sintoniaJulgar").addEventListener("click", ev => { const j = ev.target.dataset && ev.target.dataset.j; if (j) julgarSintonia(j); });
     $("dueloVotos").addEventListener("click", ev => { const v = ev.target.dataset && ev.target.dataset.v; if (v) votarDuelo(v); });
     $("pulosMax").addEventListener("change", mudarPulosMax);
     $("niveis").addEventListener("change", mudarNiveis);

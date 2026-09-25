@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 <main>
@@ -168,6 +168,23 @@
       <p class="level" id="level"></p>
       <p class="text" id="text"></p>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
+      <div class="sintonia" id="sintoniaBox" hidden>
+        <div id="sintoniaResponder">
+          <label class="field" for="sintoniaTexto" id="sintoniaPapel"></label>
+          <textarea id="sintoniaTexto" maxlength="140" rows="2"></textarea>
+          <button class="primary" id="sintoniaEnviar" type="button">Enviar</button>
+        </div>
+        <p class="wait" id="sintoniaStatus"></p>
+        <div class="sintonia-reveal" id="sintoniaReveal" hidden>
+          <div><span class="quem" id="sintoniaQuemA"></span><p id="sintoniaRespA"></p></div>
+          <div><span class="quem" id="sintoniaQuemB"></span><p id="sintoniaRespB"></p></div>
+        </div>
+        <div class="votos" id="sintoniaJulgar" hidden>
+          <button type="button" data-j="acertou">Acertou</button>
+          <button type="button" data-j="quase">Quase</button>
+          <button type="button" data-j="errou">Errou</button>
+        </div>
+      </div>
       <div class="timer" id="timer">
         <div class="timer-parado" id="timerParado">
           <button class="secondary" id="timerIniciar" type="button" hidden></button>
@@ -354,8 +371,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<script src="config.js?v=21"></script>
+<script src="app.js?v=21"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
