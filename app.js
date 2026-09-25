@@ -146,7 +146,8 @@
     const novo = structuredClone(estado);
     mudar(novo);
     // começou uma vez nova (sem carta na mesa): conta as rodadas dos efeitos e traz a prenda pendente
-    if (novo.vez !== estado.vez && novo.vencedor == null && !novo.carta && novo.jogadores[1]) inicioDaVez(novo);
+    const novaVez = novo.vez !== estado.vez || (estado.carta && estado.carta.novaVez && !novo.carta);
+    if (novaVez && novo.vencedor == null && !novo.carta && novo.jogadores[1]) inicioDaVez(novo);
     // o cronômetro pertence à carta: saiu a carta (cumpri, pular, liberar, nova carta), sai o timer
     if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) novo.timer = null;
     if (!novo.carta) novo.musica = null;
@@ -160,6 +161,14 @@
       // histórico: grava só o aparelho que fez a jogada da vitória (uma linha por partida)
       if (venceuAgora) registrarPartida(sala, novo);
     }
+  }
+
+  // Para jogadas que os dois podem fazer ao mesmo tempo (votos, respostas): relê a sala antes de gravar,
+  // para uma não apagar a outra.
+  async function gravarFresco(mudar) {
+    if (!estado || !codigo) return;
+    try { const e = await buscarSala(codigo); if (e) estado = normalizar(e); } catch (err) {}
+    return gravar(mudar);
   }
 
   async function carregarCartas(c) {
@@ -732,7 +741,7 @@
 
   // ---------- placar ----------
   const placarVazio = (pontos, pulosMax) =>
-    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, livresV: pulosMax, livresD: pulosMax });
+    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, livresV: pulosMax, livresD: pulosMax });
 
   const novoAviso = texto => ({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto });
 
@@ -760,6 +769,7 @@
     if (!(e.eventos in CHANCE_EVENTO)) e.eventos = "normal";
     if (!Array.isArray(e.efeitos)) e.efeitos = [];
     if (!e.prendaPendente || ![0, 1].includes(e.prendaPendente.dono)) e.prendaPendente = null;
+    if (!e.duelo || !e.carta || e.duelo.chave !== e.carta.chave) e.duelo = null;
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
   }
@@ -767,6 +777,7 @@
   // "zerado" = antes da primeira jogada ou logo depois de "Nova partida"
   const placarZerado = e => e.placar.every(p =>
     p.pontos === 0 && p.verdades === 0 && p.desafios === 0 && p.prendas === 0 && p.liberadas === 0 && p.estrelas === 0 &&
+    !p.duelos &&
     p.livresV === e.pulosMax && p.livresD === e.pulosMax);
 
   function nivelMaisAlto(niveis) {
@@ -862,6 +873,7 @@
       ["Prendas", p => p.prendas],
       ["Liberadas", p => p.liberadas],
       ["Estrelas", p => p.estrelas],
+      ["Duelos vencidos", p => p.duelos],
       ["Pulos grátis de verdade", p => `${p.livresV}/${e.pulosMax}`],
       ["Pulos grátis de desafio", p => `${p.livresD}/${e.pulosMax}`]
     ];
@@ -1017,6 +1029,7 @@
     $("skip").hidden = !minhaVez || !c || c.tipo === "prenda" || avaliando || evento;
     $("eventoFim").hidden = !evento || !minhaVez || EVENTOS_TRATADOS.has(c.tipo);
     $("efeitoAcoes").hidden = !(evento && c.tipo === "efeito" && minhaVez);
+    desenharDuelo(estado);
     // Nota do adversário: quem não cumpriu dá as estrelas
     $("avaliar").hidden = !completa || minhaVez || !avaliando;
     if (c && !evento && c.tipo !== "prenda") {
@@ -1027,7 +1040,7 @@
     $("liberar").hidden = !completa || minhaVez || !c || c.tipo !== "prenda";
 
     const ag = $("aguardando");
-    ag.hidden = avaliando ? !minhaVez : minhaVez;
+    ag.hidden = (avaliando ? !minhaVez : minhaVez) || (evento && PARA_OS_DOIS.includes(c.tipo));
     if (avaliando) {
       ag.textContent = `Aguardando a nota de ${estado.jogadores[1 - estado.vez]}.`;
     } else if (!minhaVez && completa) {
@@ -1049,6 +1062,7 @@
     $("selo").hidden = !c.evento;
     $("selo").textContent = c.evento ? "⚡ Evento especial" : "";
     $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
+      : c.motivo === "duelo" ? "Prenda por perder o duelo"
       : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
       : ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
       : c.motivo === "final" ? "Prenda final"
@@ -1115,6 +1129,17 @@
     const num = $("timerNum");
     const s = Math.ceil(r);
     $("timerBarra").style.width = (t.total ? Math.max(0, r / t.total * 100) : 0) + "%";
+    if (t.preparo) {
+      // contagem de largada sincronizada: 3, 2, 1, VALENDO! (depois, o tempo da carta, se houver)
+      const passou = t.total - r;
+      num.classList.remove("fim", "tempo");
+      if (passou < t.preparo) { num.textContent = String(Math.ceil(t.preparo - passou)); return; }
+      if (t.total <= t.preparo || passou < t.preparo + 0.9) {
+        num.textContent = "VALENDO!";
+        if (t.total <= t.preparo) { $("timerPausar").hidden = true; clearInterval(timerTick); }
+        return;
+      }
+    }
     num.classList.toggle("fim", r > 0 && s <= 5);
     num.classList.toggle("tempo", r <= 0);
     if (r > 0) { num.textContent = relogio(s); return; }
@@ -1304,6 +1329,84 @@
     });
   }
 
+  // ---------- duelo na câmera ----------
+  EVENTOS_TRATADOS.add("duelo");
+
+  function comecarDuelo() {
+    if (!estado || !estado.carta || estado.carta.tipo !== "duelo") return;
+    gravarFresco(n => {
+      const c = n.carta;
+      if (!c || c.tipo !== "duelo" || (n.duelo && n.duelo.iniciado)) return;
+      const total = 3 + (c.segundos || 0);
+      n.duelo = { chave: c.chave, cartaId: c.id || c.chave, iniciado: true, votos: [null, null] };
+      n.timer = { id: idTimer(), total, segundos: total, inicio: Date.now(), pausado: false, preparo: 3 };
+    });
+  }
+
+  // voto: "eu" (eu ganhei), "outro" ou "empate" -> gravado como índice do vencedor ou "empate"
+  function votarDuelo(v) {
+    if (!estado || !estado.duelo) return;
+    const voto = v === "eu" ? eu : v === "outro" ? 1 - eu : "empate";
+    gravarFresco(n => {
+      const d = n.duelo, c = n.carta;
+      if (!d || !c || c.tipo !== "duelo") return;
+      d.votos[eu] = voto;
+      if (d.votos[0] === null || d.votos[1] === null) return;
+      if (d.votos[0] !== d.votos[1]) {
+        d.votos = [null, null];
+        n.aviso = novoAviso("Vocês discordaram, escolham de novo.");
+        return;
+      }
+      const girou = c.de === 0 || c.de === 1 ? c.de : n.vez;
+      const res = d.votos[0];
+      n.duelo = null;
+      n.carta = null;
+      if (res === "empate") {
+        n.aviso = novoAviso("Empate no duelo!");
+        n.vez = 1 - girou;
+        return;
+      }
+      const venc = res, perd = 1 - res;
+      n.placar[venc].pontos += 2;
+      n.placar[venc].duelos = (n.placar[venc].duelos || 0) + 1;
+      n.pontos = n.placar.map(x => x.pontos);
+      n.aviso = novoAviso(`${n.jogadores[venc]} venceu o duelo! +2`);
+      if (conferirMeta(n)) return;
+      // o perdedor paga uma prenda na hora; depois a vez segue a partir de quem girou
+      const prenda = sortearPrenda(c.nivel, n.usados || []);
+      if (prenda) {
+        registrarUso(n, prenda);
+        prenda.motivo = "duelo";
+        prenda.proxVez = 1 - girou;
+        prenda.novaVez = true;
+        n.carta = prenda;
+        n.vez = perd;
+      } else {
+        n.vez = 1 - girou;
+      }
+    });
+  }
+
+  function desenharDuelo(e) {
+    const c = e.carta, d = e.duelo;
+    const ativo = !!(c && c.tipo === "duelo" && e.jogadores[1]);
+    $("dueloAcoes").hidden = !ativo;
+    if (!ativo) return;
+    const iniciado = !!(d && d.iniciado);
+    $("dueloComecar").hidden = iniciado;
+    $("dueloVotos").hidden = !iniciado;
+    $("dueloOutro").textContent = `${e.jogadores[1 - eu]} ganhou`;
+    const meu = d ? d.votos[eu] : null, dele = d ? d.votos[1 - eu] : null;
+    const rotulo = v => v === "empate" ? "Empate" : v === eu ? "Eu ganhei" : `${e.jogadores[1 - eu]} ganhou`;
+    document.querySelectorAll("#dueloVotos button").forEach(b => {
+      const v = b.dataset.v === "eu" ? eu : b.dataset.v === "outro" ? 1 - eu : "empate";
+      b.classList.toggle("meu", meu !== null && meu === v);
+    });
+    $("dueloStatus").textContent = !iniciado ? "Qualquer um dos dois pode começar."
+      : meu === null ? (dele === null ? "Quem ganhou? Os dois escolhem." : `${e.jogadores[1 - eu]} já escolheu. Sua vez de escolher.`)
+      : dele === null ? `Você escolheu "${rotulo(meu)}". Esperando ${e.jogadores[1 - eu]}…` : "";
+  }
+
   // "Concluir evento": saída genérica para tipos de evento sem tratamento próprio
   function concluirEvento() {
     if (!estado || !estado.carta || !estado.carta.evento || estado.vez !== eu) return;
@@ -1417,6 +1520,7 @@
       n.carta = null;
       n.efeitos = [];
       n.prendaPendente = null;
+      n.duelo = null;
     });
   }
 
@@ -1585,6 +1689,8 @@
     $("eventoFim").addEventListener("click", concluirEvento);
     $("efeitoAceitar").addEventListener("click", aceitarEfeito);
     $("efeitoRecusar").addEventListener("click", recusarEfeito);
+    $("dueloComecar").addEventListener("click", comecarDuelo);
+    $("dueloVotos").addEventListener("click", ev => { const v = ev.target.dataset && ev.target.dataset.v; if (v) votarDuelo(v); });
     $("pulosMax").addEventListener("change", mudarPulosMax);
     $("niveis").addEventListener("change", mudarNiveis);
     $("abrirCarta").addEventListener("click", abrirDialogo);
