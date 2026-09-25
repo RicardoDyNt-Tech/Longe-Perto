@@ -9,21 +9,23 @@ const NIVEIS = ["leve", "criativo", "picante", "pesado"];
 const MIDIAS = ["foto", "video", "audio"];
 const MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions";
 
-const SISTEMA = `Você cria cartas para um jogo de verdade ou desafio de um casal adulto que namora a distância. Os dois jogam juntos em chamada de vídeo pelo WhatsApp, cada um na sua casa, e combinaram entre si os limites do jogo.
+const SISTEMA = `Você cria cartas para um jogo de verdade ou desafio de um casal adulto que namora a distância. Os dois jogam juntos em chamada de vídeo pelo WhatsApp, cada um na sua casa, e combinaram entre si os limites do jogo, inclusive nudez e conteúdo sexual nos níveis mais altos.
 
 Regras para toda carta:
-- Escreva em português do Brasil, com frases curtas e diretas, falando com quem vai cumprir ("você"). Quando for sobre a outra pessoa, use "eu/mim" (quem lê a carta).
-- A carta tem de ser possível de cumprir a distância: pela câmera, por mensagem, por áudio, ou por foto ou vídeo enviados pelo WhatsApp.
+- Português do Brasil. Imperativo com "você": "Passe", "Mostre", "Tire" (nunca "Passa", "Mostra", "Tira"). Quando for sobre a outra pessoa, use "eu/mim".
+- Não suponha o gênero de quem lê: use linguagem neutra ou a forma com (a), como "deitado(a)", e prefira "roupa íntima" a "lingerie" ou "cueca".
+- No máximo 200 caracteres. Uma ação clara. Sem dicas, conselhos ou frases de enfeite.
+- Tem de ser possível cumprir a distância: ao vivo pela câmera, falando, por mensagem, ou enviando foto, vídeo ou áudio pelo WhatsApp.
 - Nada envolvendo menores de idade, terceiros sem consentimento, exposição em público, violência, coerção, algo ilegal ou risco à saúde.
-- Nunca repita nem parafraseie de perto os exemplos fornecidos.
-- Se a carta pedir foto, vídeo ou áudio, preencha "midia" com "foto", "video" ou "audio"; caso contrário, null.
-- Responda somente com JSON no formato { "cartas": [ { "texto": "…", "midia": null } ] }, sem nenhum texto fora do JSON.
+- Nunca repita nem parafraseie de perto os exemplos da mensagem do usuário.
+- "midia": use "foto", "video" ou "audio" SÓ quando a carta pede para ENVIAR esse arquivo pelo WhatsApp. O que é feito ao vivo na câmera ou falado na chamada é null.
+- Responda somente com JSON no formato {"cartas":[{"texto":"...","midia":null}]}, sem nenhum texto fora do JSON.
 
-Níveis:
-- leve: carinhoso e divertido, nada sexual.
-- criativo: imaginação, desenho, histórias, imitação, movimento.
-- picante: sensual e provocante, sem ser explícito.
-- pesado: ousado e sexual entre adultos que consentem: nudez, provocação, fantasias, posições, fotos e vídeos íntimos enviados em visualização única. Direto, sem ser gráfico demais.
+Níveis, com exemplos do tom certo:
+- leve: carinhoso e divertido, nada sexual. Ex.: "Imite meu jeito de falar quando acabo de acordar."
+- criativo: imaginação, desenho, histórias, imitação, movimento. Ex.: "Desenhe o caminho da sua casa até a minha, com monstros no meio."
+- picante: sensual e provocante, sem nudez. Ex.: "Deixe a alça da roupa cair do ombro e segure por 5 segundos." / "Mostre a sua boca bem de perto pela câmera por 3 segundos. Depois, descreva o beijo que vai me dar no reencontro."
+- pesado: ousado e sexual, com nudez e fantasias explícitas entre adultos que consentem. Deve ser claramente mais intenso que o picante. Ex.: "Escolha uma peça íntima sua e mostre ela pela câmera, mas apenas por 3 segundos. Depois, descreva em detalhes como seria se eu tirasse ela de você." / "Tire tudo e se mostre pela câmera por 3 segundos, no ângulo que você quiser." / "Mande um nude, com o enquadramento que você escolher."
 
 Tipos:
 - verdade: pergunta.
@@ -81,6 +83,19 @@ async function pedirMistral(user: string): Promise<Carta[] | null> {
   }
 }
 
+// o modelo às vezes marca mídia em ações ao vivo: só vale com pedido de envio no texto
+const semAcento = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const PEDE_ENVIO = /\b(envie|mande|me manda|grave|tire uma foto)\b|\bfilme\b.*\be me envie\b/;
+function corrigirMidia(texto: string, midia: unknown): string | null {
+  const t = semAcento(texto);
+  if (!PEDE_ENVIO.test(t)) return null;
+  if (typeof midia === "string" && MIDIAS.includes(midia)) return midia;
+  if (/\b(fotos?|nudes?)\b/.test(t)) return "foto";
+  if (/\b(videos?|filme)\b/.test(t)) return "video";
+  if (/\baudios?\b/.test(t)) return "audio";
+  return null;
+}
+
 function limpar(lista: unknown[], exemplos: string[], quantidade: number): Carta[] {
   const vistos = new Set(exemplos.map(normal));
   const out: Carta[] = [];
@@ -91,7 +106,7 @@ function limpar(lista: unknown[], exemplos: string[], quantidade: number): Carta
     const n = normal(texto);
     if (texto.length < 3 || vistos.has(n)) continue;
     vistos.add(n);
-    out.push({ texto, midia: typeof x.midia === "string" && MIDIAS.includes(x.midia) ? x.midia : null });
+    out.push({ texto, midia: corrigirMidia(texto, x.midia) });
     if (out.length >= quantidade) break;
   }
   return out;

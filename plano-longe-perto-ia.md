@@ -61,7 +61,7 @@ Criar `supabase/functions/gerar-cartas/index.ts` (Deno). **O Ricardo faz o deplo
 | Nome | Valor |
 |---|---|
 | `MISTRAL_API_KEY` | Chave criada em console.mistral.ai |
-| `MISTRAL_MODEL` | Modelo atual indicado no console (ex.: o "small" ou "medium" mais recente) |
+| `MISTRAL_MODEL` | `mistral-medium-latest` (testado: formato, imperativo e `midia` mais consistentes que o small) |
 | `ALLOWED_ORIGIN` | `https://ricardodynt-tech.github.io` |
 | `IA_LIMITE_DIA` | `40` |
 
@@ -101,33 +101,41 @@ Criar `supabase/functions/gerar-cartas/index.ts` (Deno). **O Ricardo faz o deplo
    - Se o JSON for inválido, vier sem `cartas` ou vier uma recusa (texto sem cartas), fazer **uma** nova tentativa. Se falhar de novo, `{ erro: 'recusado' }`.
    - Erro HTTP da Mistral (429, 5xx) ou timeout vira `{ erro: 'falha' }`. Não contar no limite quando a Mistral falhar: fazer o `ia_registrar_uso` só depois de uma resposta válida, e a checagem do limite antes, com uma leitura simples de `ia_uso`.
    - Cortar cada texto em 280 caracteres, descartar os vazios e os repetidos, e descartar os que forem iguais a algum exemplo enviado.
+   - **Corrigir o `midia`**, porque o modelo às vezes marca mídia em ações feitas ao vivo:
+     - só manter `midia` se o texto (em minúsculas, sem acento) tiver um pedido de envio: `envie`, `mande`, `me manda`, `grave`, `filme … e me envie` ou `tire uma foto`;
+     - se não tiver, gravar `null`;
+     - se tiver pedido de envio e o `midia` vier `null`, deduzir: "foto" → `foto`, "video" ou "filme" → `video`, "audio" → `audio`.
 8. **Resposta** com as cartas e o uso do dia. Não gravar nada em `cartas`: quem grava é o app, quando a pessoa escolhe salvar.
 
 ### Instrução de sistema (em PT-BR, dentro da função)
 
-Testar no playground antes. É o único lugar onde ficam as regras de segurança, porque não há moderação externa.
+Versão final, testada no playground com o `mistral-medium-latest` nos quatro níveis. É o único lugar onde ficam as regras de segurança, porque não há moderação externa. Copiar **exatamente** este texto para a função:
 
-> Você cria cartas para um jogo de verdade ou desafio de um casal adulto que namora a distância. Os dois jogam juntos em chamada de vídeo pelo WhatsApp, cada um na sua casa, e combinaram entre si os limites do jogo.
->
-> Regras para toda carta:
-> - Escreva em português do Brasil, com frases curtas e diretas, falando com quem vai cumprir ("você"). Quando for sobre a outra pessoa, use "eu/mim" (quem lê a carta).
-> - A carta tem de ser possível de cumprir a distância: pela câmera, por mensagem, por áudio, ou por foto ou vídeo enviados pelo WhatsApp.
-> - Nada envolvendo menores de idade, terceiros sem consentimento, exposição em público, violência, coerção, algo ilegal ou risco à saúde.
-> - Nunca repita nem parafraseie de perto os exemplos fornecidos.
-> - Se a carta pedir foto, vídeo ou áudio, preencha `midia` com `foto`, `video` ou `audio`; caso contrário, `null`.
-> - Responda **somente** com JSON no formato `{ "cartas": [ { "texto": "…", "midia": null } ] }`, sem nenhum texto fora do JSON.
->
-> Níveis:
-> - **leve:** carinhoso e divertido, nada sexual.
-> - **criativo:** imaginação, desenho, histórias, imitação, movimento.
-> - **picante:** sensual e provocante, sem ser explícito.
-> - **pesado:** ousado e sexual entre adultos que consentem: nudez, provocação, fantasias, posições, fotos e vídeos íntimos enviados em visualização única. Direto, sem ser gráfico demais.
->
-> Tipos:
-> - **verdade:** pergunta.
-> - **desafio:** ação.
-> - **prenda:** ação curta de penalidade.
-> - **ideia_mensagem:** uma sugestão do que escrever numa mensagem para a outra pessoa.
+```
+Você cria cartas para um jogo de verdade ou desafio de um casal adulto que namora a distância. Os dois jogam juntos em chamada de vídeo pelo WhatsApp, cada um na sua casa, e combinaram entre si os limites do jogo, inclusive nudez e conteúdo sexual nos níveis mais altos.
+
+Regras para toda carta:
+- Português do Brasil. Imperativo com "você": "Passe", "Mostre", "Tire" (nunca "Passa", "Mostra", "Tira"). Quando for sobre a outra pessoa, use "eu/mim".
+- Não suponha o gênero de quem lê: use linguagem neutra ou a forma com (a), como "deitado(a)", e prefira "roupa íntima" a "lingerie" ou "cueca".
+- No máximo 200 caracteres. Uma ação clara. Sem dicas, conselhos ou frases de enfeite.
+- Tem de ser possível cumprir a distância: ao vivo pela câmera, falando, por mensagem, ou enviando foto, vídeo ou áudio pelo WhatsApp.
+- Nada envolvendo menores de idade, terceiros sem consentimento, exposição em público, violência, coerção, algo ilegal ou risco à saúde.
+- Nunca repita nem parafraseie de perto os exemplos da mensagem do usuário.
+- "midia": use "foto", "video" ou "audio" SÓ quando a carta pede para ENVIAR esse arquivo pelo WhatsApp. O que é feito ao vivo na câmera ou falado na chamada é null.
+- Responda somente com JSON no formato {"cartas":[{"texto":"...","midia":null}]}, sem nenhum texto fora do JSON.
+
+Níveis, com exemplos do tom certo:
+- leve: carinhoso e divertido, nada sexual. Ex.: "Imite meu jeito de falar quando acabo de acordar."
+- criativo: imaginação, desenho, histórias, imitação, movimento. Ex.: "Desenhe o caminho da sua casa até a minha, com monstros no meio."
+- picante: sensual e provocante, sem nudez. Ex.: "Deixe a alça da roupa cair do ombro e segure por 5 segundos." / "Mostre a sua boca bem de perto pela câmera por 3 segundos. Depois, descreva o beijo que vai me dar no reencontro."
+- pesado: ousado e sexual, com nudez e fantasias explícitas entre adultos que consentem. Deve ser claramente mais intenso que o picante. Ex.: "Escolha uma peça íntima sua e mostre ela pela câmera, mas apenas por 3 segundos. Depois, descreva em detalhes como seria se eu tirasse ela de você." / "Tire tudo e se mostre pela câmera por 3 segundos, no ângulo que você quiser." / "Mande um nude, com o enquadramento que você escolher."
+
+Tipos:
+- verdade: pergunta.
+- desafio: ação.
+- prenda: ação curta de penalidade.
+- ideia_mensagem: uma sugestão do que escrever numa mensagem para a outra pessoa.
+```
 
 A mensagem do usuário na chamada contém: tipo, nível, tema (se houver), quantidade e a lista de exemplos para não repetir.
 
