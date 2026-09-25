@@ -1094,7 +1094,45 @@
     $("poseComo").hidden = !r;
     $("poseComo").textContent = r ? r.como : "";
   }
+  // ✨ Ideias da IA no guia de poses: sugestões só na tela (somem ao fechar), "Usar esta" grava em estado.pose
   let iaPose = null;
+  function painelIAPose() {
+    let pedido = 0;
+    const api = {
+      limpar() {
+        pedido++;
+        $("poseIaBotao").hidden = !(estado && estado.fixa);
+        $("poseIaPainel").hidden = true;
+        $("poseIaTema").value = "";
+        $("poseIaStatus").textContent = "";
+        $("poseIaLista").textContent = "";
+        $("poseIaGerar").textContent = "Gerar";
+        $("poseIaGerar").disabled = false;
+      }
+    };
+    $("poseIaBotao").addEventListener("click", () => { $("poseIaPainel").hidden = !$("poseIaPainel").hidden; });
+    $("poseIaGerar").addEventListener("click", async () => {
+      if (!estado || !estado.fixa) return;
+      const formato = $("poseFiltroTipo").value || "foto";
+      const escolhido = $("poseFiltroNivel").value;
+      const nivel = poseTeto && POSE_NIVEIS.indexOf(escolhido) > POSE_NIVEIS.indexOf(poseTeto) ? poseTeto : escolhido;
+      const tema = $("poseIaTema").value.replace(/[\r\n]+/g, " ").trim().slice(0, 60);
+      const meu = ++pedido;
+      $("poseIaGerar").disabled = true;
+      $("poseIaStatus").textContent = "Pensando…";
+      $("poseIaLista").textContent = "";
+      const r = await gerarIdeias("pose", nivel, tema, { formato });
+      if (meu !== pedido) return;
+      $("poseIaGerar").disabled = false;
+      if (typeof r.usadasHoje === "number" && typeof r.limite === "number") $("poseIaUso").textContent = `${r.usadasHoje} de ${r.limite} hoje`;
+      const lista = Array.isArray(r.poses) ? r.poses.filter(p => p && typeof p.nome === "string" && typeof p.como === "string" && p.nome.trim()) : [];
+      if (r.erro || !lista.length) { $("poseIaStatus").textContent = IA_ERROS[r.erro] || IA_ERROS.falha; return; }
+      $("poseIaStatus").textContent = "";
+      $("poseIaGerar").textContent = "Gerar outras";
+      lista.forEach(p => $("poseIaLista").appendChild(cartaoPose({ nome: p.nome.slice(0, 40), como: p.como.slice(0, 200), enquadramento: POSE_ENQ[p.enquadramento] ? p.enquadramento : "meio", tipo: formato, nivel }, true)));
+    });
+    return api;
+  }
 
   function comTabelasV5(ch, c) {
     ch = comPosicoes(ch, c);
@@ -3280,8 +3318,8 @@
     recusado: "A IA não conseguiu criar essa. Tente outro tema ou escreva a sua.",
     falha: "Não deu para gerar agora. Tente de novo."
   };
-  async function gerarIdeias(tipo, nivel, tema) {
-    const corpo = { sala: codigo, tipo, nivel, tema, quantidade: 3 };
+  async function gerarIdeias(tipo, nivel, tema, extra) {
+    const corpo = { sala: codigo, tipo, nivel, tema, quantidade: 3, ...(extra || {}) };
     const tempo = new Promise(res => setTimeout(() => res({ data: { erro: "falha" } }), 20000));
     try {
       const { data, error } = await Promise.race([sb.functions.invoke("gerar-cartas", { body: corpo }), tempo]);
@@ -3436,6 +3474,8 @@
     $("abrirPoses").addEventListener("click", () => abrirPoses(true));
     $("cardPoses").addEventListener("click", () => abrirPoses(false));
     $("fecharPoses").addEventListener("click", () => $("dlgPoses").close());
+    iaPose = painelIAPose();
+    $("dlgPoses").addEventListener("close", () => iaPose.limpar());
     $("sortearPose").addEventListener("click", sortearPose);
     ["poseFiltroTipo", "poseFiltroNivel", "poseFiltroEnq"].forEach(id => $(id).addEventListener("change", desenharPoses));
     $("montarCardapio").addEventListener("click", () => abrirGuia("cardapio"));

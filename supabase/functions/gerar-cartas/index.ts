@@ -4,7 +4,9 @@
 // Para a Mistral vai só: tipo, nível, tema e exemplos de cartas PADRÃO. Nada de nomes, cartas de vocês ou envelopes.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const TIPOS = ["verdade", "desafio", "prenda", "ideia_mensagem"];
+const TIPOS = ["verdade", "desafio", "prenda", "ideia_mensagem", "pose"];
+const FORMATOS = ["foto", "video"];
+const ENQUADRAMENTOS = ["close", "meio", "inteiro", "espelho", "silhueta"];
 const NIVEIS = ["leve", "criativo", "picante", "pesado"];
 const MIDIAS = ["foto", "video", "audio"];
 const MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions";
@@ -31,7 +33,16 @@ Tipos:
 - verdade: pergunta.
 - desafio: ação.
 - prenda: ação curta de penalidade.
-- ideia_mensagem: uma sugestão do que escrever numa mensagem para a outra pessoa.`;
+- ideia_mensagem: uma sugestão do que escrever numa mensagem para a outra pessoa.
+
+Modo pose (quando o tipo for "pose"):
+- Em vez de cartas, sugira poses para a pessoa tirar uma foto ou gravar um vídeo curto sozinha, em casa, para mandar à outra pessoa pelo WhatsApp em visualização única.
+- Cada pose tem: "nome" (até 40 caracteres), "como" (até 200 caracteres, dizendo posição do corpo, ângulo da câmera e luz) e "enquadramento" (um de: close, meio, inteiro, espelho, silhueta).
+- Tem de ser possível fazer sozinho(a), com o celular na mão, apoiado ou no espelho.
+- leve: fotos carinhosas e bonitas, sem nada sexual. picante: sensual, com roupa ou roupa íntima, sem nudez. pesado: nudez artística ou ousada.
+- Nas poses picantes e pesadas, prefira enquadramentos sem o rosto.
+- Para vídeo, descreva um movimento curto, de 5 a 15 segundos.
+- Responda somente com JSON no formato {"poses":[{"nome":"...","como":"...","enquadramento":"meio"}]}.`;
 
 const hojeBahia = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bahia" }).format(new Date());
 const normal = (t: string) => t.toLowerCase().replace(/\s+/g, " ").replace(/[.!?…]+$/, "").trim();
@@ -48,7 +59,7 @@ function cors(origem: string) {
 type Carta = { texto: string; midia: string | null };
 
 // chama a Mistral; devolve as cartas do JSON, null se veio sem cartas/recusa, ou lança "falha"
-async function pedirMistral(user: string): Promise<Carta[] | null> {
+async function pedirMistral(user: string, chave = "cartas"): Promise<unknown[] | null> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 15000);
   let r: Response;
@@ -77,7 +88,7 @@ async function pedirMistral(user: string): Promise<Carta[] | null> {
     conteudo = j?.choices?.[0]?.message?.content;
     if (typeof conteudo !== "string") return null;
     const dados = JSON.parse(conteudo);
-    return Array.isArray(dados?.cartas) ? dados.cartas : null;
+    return Array.isArray(dados?.[chave]) ? dados[chave] : null;
   } catch (_) {
     return null;   // JSON inválido ou texto de recusa
   }
@@ -94,6 +105,25 @@ function corrigirMidia(texto: string, midia: unknown): string | null {
   if (/\b(videos?|filme)\b/.test(t)) return "video";
   if (/\baudios?\b/.test(t)) return "audio";
   return null;
+}
+
+// modo pose: nome até 40, como até 200, enquadramento da lista (senão "meio"); sem vazias nem nomes dos exemplos
+type Pose = { nome: string; como: string; enquadramento: string };
+function limparPoses(lista: unknown[], nomesExemplo: string[], quantidade: number): Pose[] {
+  const vistos = new Set(nomesExemplo.map(normal));
+  const out: Pose[] = [];
+  for (const p of lista) {
+    const x = p as { nome?: unknown; como?: unknown; enquadramento?: unknown };
+    if (typeof x?.nome !== "string" || typeof x?.como !== "string") continue;
+    const nome = x.nome.replace(/\s+/g, " ").trim().slice(0, 40).trim();
+    const como = x.como.replace(/\s+/g, " ").trim().slice(0, 200).trim();
+    if (nome.length < 2 || como.length < 5 || vistos.has(normal(nome))) continue;
+    vistos.add(normal(nome));
+    const enquadramento = typeof x.enquadramento === "string" && ENQUADRAMENTOS.includes(x.enquadramento) ? x.enquadramento : "meio";
+    out.push({ nome, como, enquadramento });
+    if (out.length >= quantidade) break;
+  }
+  return out;
 }
 
 function limpar(lista: unknown[], exemplos: string[], quantidade: number): Carta[] {
@@ -126,10 +156,14 @@ Deno.serve(async (req) => {
   let entrada: Record<string, unknown>;
   try { entrada = await req.json(); } catch (_) { return new Response(JSON.stringify({ erro: "entrada" }), { status: 400, headers: h }); }
   const sala = typeof entrada.sala === "string" ? entrada.sala : "";
-  const tipo = String(entrada.tipo ?? ""), nivel = String(entrada.nivel ?? "");
+  const tipo = String(entrada.tipo ?? "");
+  const pose = tipo === "pose";
+  const formato = String(entrada.formato ?? "");
+  // no modo pose, "criativo" vale como "leve"
+  const nivel = pose && entrada.nivel === "criativo" ? "leve" : String(entrada.nivel ?? "");
   const tema = typeof entrada.tema === "string" ? entrada.tema.trim() : "";
   const quantidade = Number(entrada.quantidade ?? 3);
-  if (!sala || sala.length > 30 || !TIPOS.includes(tipo) || !NIVEIS.includes(nivel) || tema.length > 60 || /[\r\n]/.test(tema)
+  if (!sala || sala.length > 30 || !TIPOS.includes(tipo) || !NIVEIS.includes(nivel) || (pose && (!FORMATOS.includes(formato) || nivel === "criativo")) || tema.length > 60 || /[\r\n]/.test(tema)
     || !Number.isInteger(quantidade) || quantidade < 1 || quantidade > 5) {
     return new Response(JSON.stringify({ erro: "entrada" }), { status: 400, headers: h });
   }
@@ -146,19 +180,38 @@ Deno.serve(async (req) => {
     const u = await db.from("ia_uso").select("qtd").eq("sala", sala).eq("dia", dia).maybeSingle();
     if (u.error) return responder({ erro: "falha" });
     if ((u.data?.qtd ?? 0) >= limite) return responder({ erro: "limite", usadasHoje: u.data?.qtd ?? 0, limite });
-    // até 15 cartas padrão do mesmo tipo e nível, para não repetir
-    const ex = await db.from("cartas").select("texto").is("sala", null).eq("tipo", tipo).eq("nivel", nivel).eq("ativa", true).limit(200);
-    const exemplos = (ex.data ?? []).map((x: { texto: string }) => x.texto).sort(() => Math.random() - 0.5).slice(0, 15);
+    // até 15 exemplos do mesmo tipo e nível, para não repetir (cartas padrão; no modo pose, o guia de poses)
+    let exemplos: string[] = [], nomesExemplo: string[] = [];
+    if (pose) {
+      const ex = await db.from("poses").select("nome, como").eq("tipo", formato).eq("nivel", nivel).eq("ativa", true).limit(200);
+      const lista = ((ex.data ?? []) as { nome: string; como: string }[]).sort(() => Math.random() - 0.5).slice(0, 15);
+      nomesExemplo = lista.map(x => x.nome);
+      exemplos = lista.map(x => `${x.nome}: ${x.como}`);
+    } else {
+      const ex = await db.from("cartas").select("texto").is("sala", null).eq("tipo", tipo).eq("nivel", nivel).eq("ativa", true).limit(200);
+      exemplos = (ex.data ?? []).map((x: { texto: string }) => x.texto).sort(() => Math.random() - 0.5).slice(0, 15);
+    }
 
     const user = [
       `Tipo: ${tipo}`,
+      pose ? `Formato: ${formato}` : "",
       `Nível: ${nivel}`,
       tema ? `Tema: ${tema}` : "Tema: livre",
       `Quantidade: ${quantidade}`,
       exemplos.length ? `Exemplos para NÃO repetir:\n${exemplos.map((t: string) => `- ${t}`).join("\n")}` : "",
     ].filter(Boolean).join("\n");
 
-    // uma nova tentativa se vier JSON inválido, sem cartas ou recusa
+    // uma nova tentativa se vier JSON inválido, sem cartas/poses ou recusa
+    if (pose) {
+      let poses: Pose[] = [];
+      for (let tentativa = 0; tentativa < 2 && !poses.length; tentativa++) {
+        const bruto = await pedirMistral(user, "poses");
+        if (bruto) poses = limparPoses(bruto, nomesExemplo, quantidade);
+      }
+      if (!poses.length) return responder({ erro: "recusado" });
+      const r = await db.rpc("ia_registrar_uso", { p_sala: sala, p_dia: dia });
+      return responder({ poses, usadasHoje: typeof r.data === "number" ? r.data : (u.data?.qtd ?? 0) + 1, limite });
+    }
     let cartas: Carta[] = [];
     for (let tentativa = 0; tentativa < 2 && !cartas.length; tentativa++) {
       const bruto = await pedirMistral(user);
