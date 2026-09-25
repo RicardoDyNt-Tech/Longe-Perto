@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=26">
+<link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 <main>
@@ -102,6 +102,7 @@
       <div class="casa-grade" id="casaGrade">
         <button type="button" class="casa-card" data-abre="jogo"><span class="ic">🎲</span><b>Jogar</b><span class="sub" id="cardJogoSub">Roleta, cartas e placar</span></button>
         <button type="button" class="casa-card" data-abre="vDiario"><span class="ic">🔥</span><b>Desafio do dia</b><span class="sub" id="cardDiarioSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vEnvelopes" id="cardEnv"><span class="ic">💌</span><b>Envelopes</b><span class="sub" id="cardEnvSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -133,6 +134,19 @@
             <p class="diario-seq" id="diarioOutroSeq"></p>
           </div>
         </section>
+      </section>
+      <section class="casa-vista" id="vEnvelopes" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <h2>Envelopes</h2>
+        <p class="extras-sub">Uma mensagem fechada ou um desafio surpresa. A mensagem só abre com os dois aqui; o desafio vira a primeira carta da próxima partida.</p>
+        <button class="primary" id="novoEnvelope" type="button">Novo envelope</button>
+        <h3 class="casa-h3">Esperando</h3>
+        <p class="extras-sub" id="envVazio">Nenhum envelope esperando.</p>
+        <ul class="lista-extras lista-env" id="listaEnvFechados"></ul>
+        <details class="extras">
+          <summary>Já abertos <span id="envAbertosQtd"></span></summary>
+          <ul class="lista-extras" id="listaEnvAbertos"></ul>
+        </details>
       </section>
       <section class="casa-vista" id="vCofre" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
@@ -364,6 +378,41 @@
     </div>
   </section>
 
+  <dialog id="dlgEnvelope" aria-labelledby="dlgEnvTitulo">
+    <form id="formEnvelope" method="dialog">
+      <h2 id="dlgEnvTitulo">Novo envelope</h2>
+      <div class="tipo" role="radiogroup" aria-label="Tipo de envelope">
+        <label class="chip"><input type="radio" name="envTipo" value="mensagem" checked><span>💌 Mensagem</span></label>
+        <label class="chip"><input type="radio" name="envTipo" value="desafio"><span>🎲 Desafio surpresa</span></label>
+      </div>
+      <label class="field">Texto
+        <textarea id="envTexto" maxlength="500" rows="5"></textarea>
+        <span class="contador" id="envContador">0/500</span>
+      </label>
+      <label class="field" id="envNivelLinha" hidden>Nível do desafio
+        <select id="envNivel">
+          <option value="leve">Leve</option>
+          <option value="criativo">Criativo</option>
+          <option value="picante">Picante</option>
+          <option value="pesado">Pesado +18</option>
+        </select>
+      </label>
+      <p class="erro" id="erroEnvelope" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarEnvelope" type="submit">Guardar envelope</button>
+        <button class="secondary" id="cancelarEnvelope" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="env-abrindo" id="envAbrindo" hidden role="dialog" aria-label="Envelope aberto">
+    <div class="env-papel">
+      <p class="env-de" id="envAbrindoDe"></p>
+      <p class="env-texto" id="envAbrindoTexto"></p>
+      <button class="primary" id="envFechar" type="button">Guardar no coração</button>
+    </div>
+  </div>
+
   <dialog id="dlgMusica" aria-labelledby="dlgMusicaTitulo">
     <form id="formMusica" method="dialog">
       <h2 id="dlgMusicaTitulo">Nova música</h2>
@@ -443,8 +492,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=26"></script>
-<script src="app.js?v=26"></script>
+<script src="config.js?v=27"></script>
+<script src="app.js?v=27"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

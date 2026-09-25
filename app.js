@@ -313,6 +313,8 @@
         payload => juntarMusica(payload.new))
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "musicas" },
         payload => tirarMusica(payload.old && payload.old.id))
+      ;
+    canal = comTabelasV5(canal, c)
       .subscribe(status => {
         if (status === "SUBSCRIBED" && canal) canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {});
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
@@ -330,6 +332,8 @@
     carregarCartas(c);
     carregarCofre(c);
     carregarMusicas(c);
+    Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
+    if (fixa) carregarV5(c);
   }
 
   // ---------- reencontro e cofre ----------
@@ -754,6 +758,197 @@
     el.classList.toggle("on", on);
   }
 
+  // ---------- tabelas da v5 (só em sala fixa): carga, Realtime e redesenho ----------
+  const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em" };
+  const dados = {};
+  Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
+  const aoMudar = {};                 // tabela -> [fn(evento, linha, antes)]
+  const aoDesenhar = {};              // tabela -> [fn()]
+  const escutar = (t, f) => (aoMudar[t] = aoMudar[t] || []).push(f);
+  const redesenhar = (t, f) => (aoDesenhar[t] = aoDesenhar[t] || []).push(f);
+  const redesenharV5 = t => { (aoDesenhar[t] || []).forEach(f => f()); if (estado) desenharCasa(estado); };
+
+  function comTabelasV5(ch, c) {
+    Object.keys(TABELAS_V5).forEach(t => {
+      ch = ch
+        .on("postgres_changes", { event: "*", schema: "public", table: t, filter: `sala=eq.${c}` },
+          p => linhaV5(t, p.eventType, p.eventType === "DELETE" ? p.old : p.new))
+        // DELETE não é filtrável no Realtime: tira pelo id (linhas de outras salas não estão na lista)
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: t }, p => linhaV5(t, "DELETE", p.old));
+    });
+    return ch;
+  }
+
+  async function carregarTabela(t, c) {
+    const { data, error } = await sb.from(t).select("*").eq("sala", c).order(TABELAS_V5[t], { ascending: true });
+    if (c !== codigo) return;
+    dados[t] = error || !data ? [] : data;
+    redesenharV5(t);
+  }
+
+  function carregarV5(c) { Object.keys(TABELAS_V5).forEach(t => carregarTabela(t, c)); }
+
+  function linhaV5(t, ev, row) {
+    if (!row || !row.id) return;
+    const i = dados[t].findIndex(x => x.id === row.id);
+    const antes = i >= 0 ? { ...dados[t][i] } : null;
+    if (ev === "DELETE") {
+      if (i < 0) return;
+      dados[t].splice(i, 1);
+    } else {
+      if (row.sala !== codigo) return;
+      if (i >= 0) dados[t][i] = { ...dados[t][i], ...row }; else dados[t].push(row);
+    }
+    (aoMudar[t] || []).forEach(f => f(ev, row, antes));
+    redesenharV5(t);
+  }
+
+  const nomeDe = i => (estado && estado.jogadores[i]) || "";
+  const dataCurta = iso => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  function el(tag, classe, texto) { const x = document.createElement(tag); if (classe) x.className = classe; if (texto !== undefined) x.textContent = texto; return x; }
+
+  // ---------- envelopes ----------
+  const envelopesAnimados = new Set();
+  const surpresasEmAndamento = new Set();
+
+  function contarEnvelopes() { return dados.envelopes.filter(x => !x.aberto_em).length; }
+
+  function desenharEnvelopes() {
+    if (!estado || !estado.fixa) return;
+    const outro = 1 - eu, nOutro = nomeDe(outro);
+    const fechados = dados.envelopes.filter(x => !x.aberto_em);
+    const abertos = dados.envelopes.filter(x => x.aberto_em).sort((a, b) => (a.aberto_em < b.aberto_em ? 1 : -1));
+    $("envVazio").hidden = fechados.length > 0;
+    const ul = $("listaEnvFechados");
+    ul.textContent = "";
+    fechados.forEach(x => {
+      const li = el("li");
+      const info = el("div", "info");
+      const meu = x.de === eu;
+      const nivel = x.nivel ? ` · ${LEVEL_NAMES[x.nivel]}` : "";
+      if (meu) {
+        info.append(el("span", "tag", x.tipo === "mensagem" ? `💌 Mensagem para ${nOutro}` : `🎲 Desafio surpresa para ${nOutro}${nivel}`),
+          el("span", "t", x.texto), el("span", "autor", `escrito em ${dataCurta(x.criada_em)} · só você vê o texto`));
+      } else {
+        info.append(el("span", "tag", x.tipo === "mensagem" ? `💌 1 envelope de ${nomeDe(x.de)}` : `🎲 1 desafio surpresa de ${nomeDe(x.de)}`),
+          el("span", "autor", x.tipo === "mensagem" ? `chegou em ${dataCurta(x.criada_em)}`
+            : "Vai aparecer como a sua primeira carta na próxima partida com vocês dois aqui."));
+      }
+      const acoes = el("div", "acoes");
+      if (x.tipo === "mensagem") {
+        const juntos = ambosPresentes();
+        const b = el("button", "secondary abrir-env", juntos ? "Abrir juntos" : `Espere ${nOutro} entrar para abrir`);
+        b.type = "button";
+        b.disabled = !juntos;
+        b.addEventListener("click", () => abrirEnvelope(x));
+        acoes.appendChild(b);
+      }
+      if (meu) {
+        const ap = el("button", "linkbtn", "Apagar");
+        ap.type = "button";
+        ap.addEventListener("click", () => apagarEnvelope(x));
+        acoes.appendChild(ap);
+      }
+      li.append(info, acoes);
+      ul.appendChild(li);
+    });
+    $("envAbertosQtd").textContent = abertos.length ? `(${abertos.length})` : "";
+    const ua = $("listaEnvAbertos");
+    ua.textContent = "";
+    abertos.forEach(x => {
+      const li = el("li");
+      const info = el("div", "info");
+      info.append(el("span", "tag", (x.tipo === "mensagem" ? `💌 De ${nomeDe(x.de)}` : `🎲 Desafio surpresa de ${nomeDe(x.de)}`) + ` · aberto em ${dataCurta(x.aberto_em)}`),
+        el("span", "t", x.texto));
+      li.appendChild(info);
+      ua.appendChild(li);
+    });
+  }
+
+  function abrirNovoEnvelope() {
+    if (!estado || !estado.fixa) return;
+    $("formEnvelope").reset();
+    $("envNivelLinha").hidden = true;
+    erro("erroEnvelope", "");
+    $("envContador").textContent = "0/500";
+    $("dlgEnvelope").showModal();
+  }
+
+  async function salvarEnvelope(ev) {
+    ev.preventDefault();
+    const tipo = document.querySelector('input[name="envTipo"]:checked').value;
+    const texto = $("envTexto").value.trim().slice(0, 500);
+    if (texto.length < 3) return erro("erroEnvelope", "Escreva pelo menos 3 letras.");
+    const linha = { sala: codigo, tipo, de: eu, texto, nivel: tipo === "desafio" ? $("envNivel").value : null };
+    $("salvarEnvelope").disabled = true;
+    const { data, error } = await sb.from("envelopes").insert(linha).select("*").single();
+    $("salvarEnvelope").disabled = false;
+    if (error) return erro("erroEnvelope", "Não consegui guardar o envelope. Confira a internet e tente de novo.");
+    linhaV5("envelopes", "INSERT", data);
+    $("dlgEnvelope").close();
+  }
+
+  async function apagarEnvelope(x) {
+    if (x.aberto_em || x.de !== eu || !confirm("Apagar este envelope? Ele ainda não foi aberto.")) return;
+    const { error } = await sb.from("envelopes").delete().eq("id", x.id);
+    if (error) return erro("erroJogo", "Não consegui apagar o envelope. Confira a internet e tente de novo.");
+    linhaV5("envelopes", "DELETE", { id: x.id });
+  }
+
+  // "Abrir juntos": só com os dois na sala; quem tocar abre para os dois
+  async function abrirEnvelope(x) {
+    if (!ambosPresentes() || x.aberto_em) return;
+    const agora = new Date().toISOString();
+    const { data, error } = await sb.from("envelopes").update({ aberto_em: agora }).eq("id", x.id).select("*").single();
+    if (error) return erro("erroJogo", "Não consegui abrir o envelope. Confira a internet e tente de novo.");
+    linhaV5("envelopes", "UPDATE", data || { ...x, aberto_em: agora });
+    depoisDeAcao();
+  }
+
+  // envelope de mensagem que acabou de abrir: animação nos dois aparelhos
+  escutar("envelopes", (ev, row, antes) => {
+    if (ev !== "UPDATE" || row.tipo !== "mensagem" || !row.aberto_em || (antes && antes.aberto_em) || envelopesAnimados.has(row.id)) return;
+    envelopesAnimados.add(row.id);
+    $("envAbrindoDe").textContent = `💌 De ${nomeDe(row.de)} para ${nomeDe(1 - row.de)}`;
+    $("envAbrindoTexto").textContent = row.texto;
+    const ov = $("envAbrindo");
+    ov.hidden = false;
+    ov.classList.remove("anima"); void ov.offsetWidth; ov.classList.add("anima");
+    vibrar([80, 40, 80]);
+  });
+
+  // Desafio surpresa: vira a primeira carta da próxima vez de quem recebe (quando a vez chega), com os dois presentes
+  async function talvezSurpresa() {
+    const e = estado;
+    if (!e || !e.fixa || !e.jogadores[1] || e.vez !== eu || e.carta || e.vencedor !== null || girando || !ambosPresentes()) return;
+    const env = dados.envelopes.filter(x => x.tipo === "desafio" && !x.aberto_em && x.de === 1 - eu && !surpresasEmAndamento.has(x.id))
+      .sort((a, b) => (a.criada_em < b.criada_em ? -1 : 1))[0];
+    if (!env) return;
+    surpresasEmAndamento.add(env.id);
+    const agora = new Date().toISOString();
+    const { error } = await sb.from("envelopes").update({ aberto_em: agora }).eq("id", env.id);
+    if (error) { surpresasEmAndamento.delete(env.id); return; }
+    linhaV5("envelopes", "UPDATE", { ...env, aberto_em: agora });
+    gravar(n => {
+      if (n.carta || n.vez !== eu || n.vencedor != null) return;
+      if (!n.secretas.length) n.secretas = sortearSecretas(n);
+      n.carta = { tipo: "desafio", nivel: env.nivel || "leve", texto: env.texto, chave: "env-" + env.id, surpresa: true, surpresaDe: env.de };
+      n.musica = sortearMusica(n.carta.nivel);
+    });
+    depoisDeAcao();
+  }
+  presencaMudou.push(desenharEnvelopes);
+  redesenhar("envelopes", desenharEnvelopes);
+  extrasDaCasa.push(() => {
+    const n = contarEnvelopes();
+    $("cardEnvSub").textContent = n ? `${n} esperando` : "Nenhum esperando";
+    $("cardEnv").classList.toggle("destaque", dados.envelopes.some(x => !x.aberto_em && x.de !== eu && x.tipo === "mensagem"));
+  });
+
+  // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
+  const aposAcao = [];
+  function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
+
   // ---------- salas recentes (só neste aparelho) ----------
   const recentes = () => { const r = lerLocal("lp-salas"); return Array.isArray(r) ? r : []; };
 
@@ -1017,6 +1212,7 @@
   // ---------- render ----------
   function aplicar(e, inicial, local) {
     if (!e) return;
+    const vezAntes = estado ? estado.vez : null;
     estado = normalizar(e);
     mostrarAviso(e.aviso, inicial);
     avisarMinhaVez(e, inicial || local);
@@ -1074,6 +1270,8 @@
     desenharTrilha(e);
     revelarCarta(e, inicial);
     if (!local) conferirPendentes(e);
+    // começou a minha vez: se houver desafio surpresa para mim (e os dois aqui), ele entra no lugar do giro
+    if (!inicial && vezAntes !== null && vezAntes !== e.vez && e.vez === eu) setTimeout(talvezSurpresa, 0);
   }
 
   function desenharExtras() {
@@ -1188,6 +1386,7 @@
       : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
       : ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
       : c.motivo === "final" ? "Prenda final"
+      : c.surpresa ? `🎲 Desafio surpresa de ${e.jogadores[c.surpresaDe] || ""}`
       : c.reversa ? `🔄 Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
       : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
@@ -2066,6 +2265,12 @@
     $("instalar").addEventListener("click", instalar);
     desenharAjustes();
     $("som").addEventListener("click", trocarSom);
+    $("novoEnvelope").addEventListener("click", abrirNovoEnvelope);
+    $("formEnvelope").addEventListener("submit", salvarEnvelope);
+    $("cancelarEnvelope").addEventListener("click", () => $("dlgEnvelope").close());
+    $("envTexto").addEventListener("input", () => { $("envContador").textContent = $("envTexto").value.length + "/500"; });
+    document.querySelectorAll('input[name="envTipo"]').forEach(r => r.addEventListener("change", () => { $("envNivelLinha").hidden = r.value !== "desafio" || !r.checked; }));
+    $("envFechar").addEventListener("click", () => { $("envAbrindo").hidden = true; });
     // Casa do casal: qualquer elemento com data-abre troca de vista
     document.addEventListener("click", ev => {
       const b = ev.target.closest && ev.target.closest("[data-abre]");
