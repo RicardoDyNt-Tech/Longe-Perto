@@ -765,7 +765,7 @@
 
   // ---------- placar ----------
   const placarVazio = (pontos, pulosMax) =>
-    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, duplas: 0, livresV: pulosMax, livresD: pulosMax });
+    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, duplas: 0, reverso: true, livresV: pulosMax, livresD: pulosMax });
 
   const novoAviso = texto => ({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto });
 
@@ -804,7 +804,7 @@
   // "zerado" = antes da primeira jogada ou logo depois de "Nova partida"
   const placarZerado = e => e.placar.every(p =>
     p.pontos === 0 && p.verdades === 0 && p.desafios === 0 && p.prendas === 0 && p.liberadas === 0 && p.estrelas === 0 &&
-    !p.duelos && !p.sintonias && !p.duplas &&
+    !p.duelos && !p.sintonias && !p.duplas && p.reverso !== false &&
     p.livresV === e.pulosMax && p.livresD === e.pulosMax);
 
   function nivelMaisAlto(niveis) {
@@ -903,6 +903,7 @@
       ["Duelos vencidos", p => p.duelos],
       ["Sintonias certeiras", p => p.sintonias],
       ["Missões em dupla", p => p.duplas],
+      ["Reverso", p => p.reverso === false ? "Usado" : "Disponível"],
       ["Pulos grátis de verdade", p => `${p.livresV}/${e.pulosMax}`],
       ["Pulos grátis de desafio", p => `${p.livresD}/${e.pulosMax}`]
     ];
@@ -1059,6 +1060,7 @@
     $("done").hidden = !minhaVez || avaliando || evento;
     $("skip").hidden = !minhaVez || !c || c.tipo === "prenda" || avaliando || evento;
     $("eventoFim").hidden = !evento || !minhaVez || EVENTOS_TRATADOS.has(c.tipo);
+    $("reverso").hidden = !podeReverter(estado);
     $("efeitoAcoes").hidden = !(evento && c.tipo === "efeito" && minhaVez);
     desenharDuelo(estado);
     desenharSintonia(estado);
@@ -1090,7 +1092,7 @@
     const card = $("card");
     if (!c) { card.hidden = true; return; }
     const nome = PARA_OS_DOIS.includes(c.tipo) ? "os dois" : e.jogadores[e.vez] || "";
-    card.className = "card " + c.tipo + (c.evento ? " evento" : "");
+    card.className = "card " + c.tipo + (c.evento ? " evento" : "") + (c.reversa ? " reversa" : "");
     card.hidden = false;
     $("selo").hidden = !c.evento;
     $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "⚡ Evento especial · 🤝 Missão em dupla" : "⚡ Evento especial";
@@ -1099,6 +1101,7 @@
       : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
       : ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
       : c.motivo === "final" ? "Prenda final"
+      : c.reversa ? `🔄 Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
       : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
       + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome
@@ -1725,15 +1728,42 @@
   function pular() {
     if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo === "prenda" || estado.carta.evento || estado.avaliacao) return;
     gravar(n => {
+      const c = n.carta;
       const q = n.placar[n.vez];
-      const campo = n.carta.tipo === "verdade" ? "livresV" : "livresD";
+      const campo = c.tipo === "verdade" ? "livresV" : "livresD";
       if (q[campo] > 0) {
         q[campo]--;
         n.carta = null;
       } else {
-        n.carta = prendaPara(n, "pulo", n.carta);
+        n.carta = prendaPara(n, "pulo", c);
+        // prenda de uma carta reversa: resolvida, a vez continua com quem recebeu o reverso
+        if (n.carta && c.reversa) { n.carta.proxVez = c.proxVez; n.carta.novaVez = true; }
       }
-      if (!n.carta) n.vez = 1 - n.vez;                 // pulo grátis (ou sem prendas carregadas): passa a vez
+      if (!n.carta) passarVez(n, c);                    // pulo grátis (ou sem prendas carregadas): passa a vez
+    });
+  }
+
+  // Reverso: uma vez por partida, quem está na vez passa a verdade/desafio para o outro.
+  // O outro resolve com as próprias regras e pontos, e depois a vez continua com ele (joga duas seguidas).
+  function podeReverter(e) {
+    const c = e && e.carta;
+    return !!(c && e.jogadores[1] && e.vez === eu && !c.evento && !c.reversa && !e.avaliacao && e.vencedor === null
+      && (c.tipo === "verdade" || c.tipo === "desafio") && e.placar[e.vez].reverso !== false);
+  }
+
+  function usarReverso() {
+    if (!podeReverter(estado)) return;
+    gravar(n => {
+      const c = n.carta;
+      if (!c || c.reversa || n.placar[n.vez].reverso === false) return;
+      const de = n.vez, para = 1 - de;
+      n.placar[de].reverso = false;
+      c.reversa = true;
+      c.revertidaPor = de;
+      c.proxVez = para;
+      c.novaVez = true;
+      n.vez = para;
+      n.aviso = novoAviso(`${n.jogadores[de]} usou o Reverso! A carta foi para ${n.jogadores[para]}.`);
     });
   }
 
@@ -1933,6 +1963,7 @@
     $("meta").addEventListener("change", mudarMeta);
     $("eventos").addEventListener("change", mudarEventos);
     $("eventoFim").addEventListener("click", concluirEvento);
+    $("reverso").addEventListener("click", usarReverso);
     $("efeitoAceitar").addEventListener("click", aceitarEfeito);
     $("efeitoRecusar").addEventListener("click", recusarEfeito);
     $("dueloComecar").addEventListener("click", comecarDuelo);

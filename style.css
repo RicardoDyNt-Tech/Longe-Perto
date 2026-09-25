@@ -109,6 +109,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .card.evento{border-color:var(--lamp); box-shadow:0 0 0 3px color-mix(in srgb, var(--lamp) 25%, transparent)}
 .evento .kind{color:var(--ink)}
 .evento-fim{grid-column:1/-1}
+.reverso{grid-column:1/-1}
+.card.reversa{border-style:dashed}
 .evento-acoes{grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .duelo-acoes{grid-template-columns:1fr}
 .votos{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
