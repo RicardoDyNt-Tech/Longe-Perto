@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=34">
+<link rel="stylesheet" href="style.css?v=35">
 </head>
 <body>
 <main>
@@ -486,17 +486,21 @@
         <label class="chip"><input type="radio" name="envTipo" value="mensagem" checked><span>💌 Mensagem</span></label>
         <label class="chip"><input type="radio" name="envTipo" value="desafio"><span>🎲 Desafio surpresa</span></label>
       </div>
-      <label class="field">Texto
-        <textarea id="envTexto" maxlength="500" rows="5"></textarea>
-        <span class="contador" id="envContador">0/500</span>
-      </label>
-      <label class="field" id="envNivelLinha" hidden>Nível do desafio
+      <label class="field"><span id="envNivelRotulo">Nível da sugestão</span>
         <select id="envNivel">
           <option value="leve">Leve</option>
           <option value="criativo">Criativo</option>
           <option value="picante">Picante</option>
           <option value="pesado">Pesado +18</option>
         </select>
+      </label>
+      <div class="env-sugerir">
+        <button class="secondary" id="envSugerir" type="button">🎲 Sugerir</button>
+      </div>
+      <p class="env-ideia" id="envIdeia" hidden aria-live="polite"></p>
+      <label class="field">Texto
+        <textarea id="envTexto" maxlength="500" rows="5"></textarea>
+        <span class="contador" id="envContador">0/500</span>
       </label>
       <p class="erro" id="erroEnvelope" role="alert"></p>
       <div class="row">
@@ -671,9 +675,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=34"></script>
-<script src="conquistas.js?v=34"></script>
-<script src="app.js?v=34"></script>
+<script src="config.js?v=35"></script>
+<script src="conquistas.js?v=35"></script>
+<script src="app.js?v=35"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

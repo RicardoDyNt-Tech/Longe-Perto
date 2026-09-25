@@ -1089,10 +1089,38 @@
   function abrirNovoEnvelope() {
     if (!estado || !estado.fixa) return;
     $("formEnvelope").reset();
-    $("envNivelLinha").hidden = true;
+    tipoDoEnvelope();
     erro("erroEnvelope", "");
     $("envContador").textContent = "0/500";
     $("dlgEnvelope").showModal();
+  }
+
+  // "🎲 Sugerir": desafio do banco (com o peso do baralho) no campo; na mensagem, só uma ideia acima do campo
+  const sugeridas = { desafio: [], ideia_mensagem: [] };   // últimas 5 de cada, para não repetir
+  function tipoDoEnvelope() {
+    const desafio = document.querySelector('input[name="envTipo"]:checked').value === "desafio";
+    $("envNivelRotulo").textContent = desafio ? "Nível do desafio" : "Nível da sugestão";
+    $("envIdeia").hidden = true;
+    $("envIdeia").textContent = "";
+  }
+  function sugerirEnvelope() {
+    const desafio = document.querySelector('input[name="envTipo"]:checked').value === "desafio";
+    const tipo = desafio ? "desafio" : "ideia_mensagem", nivel = $("envNivel").value;
+    const pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === nivel));
+    if (!pool.length) return erro("erroEnvelope", desafio ? "Não há desafios desse nível." : "Ainda não há ideias desse nível.");
+    erro("erroEnvelope", "");
+    const recentes = sugeridas[tipo];
+    const livres = pool.filter(c => !recentes.includes(c.id));
+    const c = sorteioComPeso(livres.length ? livres : pool);
+    recentes.push(c.id);
+    if (recentes.length > 5) recentes.shift();
+    if (desafio) {
+      $("envTexto").value = c.texto.slice(0, 500);
+      $("envContador").textContent = `${$("envTexto").value.length}/500`;
+    } else {
+      $("envIdeia").textContent = `💡 Ideia: ${c.texto}`;
+      $("envIdeia").hidden = false;
+    }
   }
 
   async function salvarEnvelope(ev) {
@@ -1671,11 +1699,14 @@
     if (!baralhoAtivo()) return { p: livres[Math.floor(Math.random() * livres.length)] };
     const rep = pool.find(p => temMarca(p.id, "repetir"));
     if (rep) return { p: rep, repetir: true };
-    const peso = p => Math.max(0.2, 1 / (1 + (vistas.get(p.id) || 0))) * (temMarca(p.id, "favorita") ? 3 : 1);
-    const total = livres.reduce((s, p) => s + peso(p), 0);
+    return { p: sorteioComPeso(livres) };
+  }
+  const pesoCarta = p => Math.max(0.2, 1 / (1 + (vistas.get(p.id) || 0))) * (temMarca(p.id, "favorita") ? 3 : 1);
+  function sorteioComPeso(lista) {
+    const total = lista.reduce((s, p) => s + pesoCarta(p), 0);
     let r = Math.random() * total;
-    for (const p of livres) { if ((r -= peso(p)) < 0) return { p }; }
-    return { p: livres[livres.length - 1] };
+    for (const p of lista) { if ((r -= pesoCarta(p)) < 0) return p; }
+    return lista[lista.length - 1];
   }
 
   async function marcarCarta(id, marca) {
@@ -3214,7 +3245,8 @@
     $("formEnvelope").addEventListener("submit", salvarEnvelope);
     $("cancelarEnvelope").addEventListener("click", () => $("dlgEnvelope").close());
     $("envTexto").addEventListener("input", () => { $("envContador").textContent = $("envTexto").value.length + "/500"; });
-    document.querySelectorAll('input[name="envTipo"]').forEach(r => r.addEventListener("change", () => { $("envNivelLinha").hidden = r.value !== "desafio" || !r.checked; }));
+    document.querySelectorAll('input[name="envTipo"]').forEach(r => r.addEventListener("change", tipoDoEnvelope));
+    $("envSugerir").addEventListener("click", sugerirEnvelope);
     $("envFechar").addEventListener("click", () => { $("envAbrindo").hidden = true; });
     $("novaCapsula").addEventListener("click", abrirNovaCapsula);
     $("nivelSemana").addEventListener("change", () => { const v = $("nivelSemana").value; if (LEVEL_NAMES[v]) gravar(n => { n.nivelSemana = v; }); });
