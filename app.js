@@ -155,7 +155,10 @@
     const novaVez = novo.vez !== estado.vez || (estado.carta && estado.carta.novaVez && !novo.carta);
     if (novaVez && novo.vencedor == null && !novo.carta && novo.jogadores[1]) inicioDaVez(novo);
     // o cronômetro pertence à carta: saiu a carta (cumpri, pular, liberar, nova carta), sai o timer
-    if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) novo.timer = null;
+    if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) {
+      novo.timer = null;
+      if (novo.fixa && estado.carta) guardarNoHistorico(novo, estado);
+    }
     if (!novo.carta) novo.musica = null;
     const venceuAgora = estado.vencedor == null && novo.vencedor != null;
     aplicar(novo, false, true);   // local: jogada feita neste aparelho
@@ -712,6 +715,7 @@
     $("abaJogo").setAttribute("aria-current", naCasa ? "false" : "page");
     if (estado) desenharCasa(estado);
     if (nome === "vSemana") desenharSemana();
+    if (nome === "vAlbum") desenharAlbum();
     window.scrollTo(0, 0);
   }
 
@@ -1293,6 +1297,125 @@
     if (vista === "vSemana") desenharSemana();
   });
 
+  // ---------- álbum de momentos ----------
+  // estado.historico: as últimas 50 cartas resolvidas da partida (zera em "Nova partida"); só em sala fixa
+  const CONTAM = ["verdades", "desafios", "prendas", "duelos", "sintonias", "duplas", "estrelas"];
+  function guardarNoHistorico(n, antes) {
+    const c = antes.carta;
+    if (!c || !c.texto) return;
+    const soma = (p, k) => (p[0][k] || 0) + (p[1][k] || 0);
+    const pa = antes.placar, pn = n.placar;
+    let r = "passou";
+    if (n.carta && n.carta.reversa) r = "revertida";
+    else if (soma(pn, "liberadas") > soma(pa, "liberadas")) r = "liberado";
+    else if (CONTAM.some(k => soma(pn, k) > soma(pa, k))) r = "cumpriu";
+    else if (pn.some((p, i) => p.livresV < pa[i].livresV || p.livresD < pa[i].livresD || p.pontos < pa[i].pontos)) r = "pulou";
+    else if (c.tipo === "efeito" && n.efeitos.length > antes.efeitos.length) r = "em jogo";
+    const jogador = PARA_OS_DOIS.includes(c.tipo) || c.tipo === "sintonia" ? null : antes.vez;
+    n.historico = [...(n.historico || []), { texto: c.texto, tipo: c.tipo, nivel: c.nivel, jogador, resultado: r }].slice(-50);
+  }
+  const RESULTADO_HIST = { cumpriu: "✓ cumpriu", pulou: "⏭ pulou", liberado: "🕊 liberado", revertida: "🔄 revertida", "em jogo": "✨ efeito em jogo", passou: "" };
+
+  function desenharRodadas(e) {
+    const lista = e && e.fixa ? (e.historico || []).slice().reverse() : [];
+    $("rodadas").hidden = !lista.length;
+    $("rodadasQtd").textContent = lista.length ? `(${lista.length})` : "";
+    [$("fimRodadas"), $("listaRodadas")].forEach(ul => {
+      ul.textContent = "";
+      lista.forEach(h => {
+        const li = el("li");
+        const info = el("div", "info");
+        const quem = h.jogador === null ? "os dois" : nomeDe(h.jogador);
+        info.append(el("span", "tag", [TIPO_NOMES[h.tipo] || h.tipo, LEVEL_NAMES[h.nivel] || h.nivel, quem, RESULTADO_HIST[h.resultado]].filter(Boolean).join(" · ")),
+          el("span", "t", h.texto));
+        const guardado = (dados.momentos || []).some(m => m.carta_texto === h.texto);
+        const b = el("button", "linkbtn", guardado ? "📸 No álbum ✓" : "📸 Guardar no álbum");
+        b.type = "button";
+        b.disabled = guardado;
+        b.addEventListener("click", () => abrirMomento(h));
+        li.append(info, b);
+        ul.appendChild(li);
+      });
+    });
+    $("fimRodadasBox").hidden = !lista.length;
+  }
+
+  let momentoAtual = null;
+  function abrirMomento(h) {
+    momentoAtual = h;
+    erro("erroMomento", "");
+    $("momentoCarta").textContent = h.texto;
+    $("momentoFrase").value = "";
+    $("dlgMomento").showModal();
+  }
+
+  async function salvarMomento(ev) {
+    ev.preventDefault();
+    const h = momentoAtual;
+    if (!h || !estado || !estado.fixa) return;
+    const frase = $("momentoFrase").value.replace(/\s+/g, " ").trim().slice(0, 200);
+    $("salvarMomento").disabled = true;
+    const { data, error } = await sb.from("momentos")
+      .insert({ sala: codigo, carta_texto: h.texto.slice(0, 500), carta_tipo: h.tipo, frase: frase || null, autor: nomeDe(eu) }).select("*").single();
+    $("salvarMomento").disabled = false;
+    if (error) return erro("erroMomento", "Não consegui guardar. Confira a internet e tente de novo.");
+    linhaV5("momentos", "INSERT", data);
+    $("dlgMomento").close();
+    depoisDeAcao();
+  }
+
+  let filtroAlbum = "todos";
+  function desenharAlbum() {
+    if (!$("listaAlbum")) return;
+    document.querySelectorAll("#albumFiltro [data-filtro]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.filtro === filtroAlbum)));
+    const todos = dados.momentos.slice().sort((a, b) => (a.criada_em < b.criada_em ? 1 : -1));
+    const lista = filtroAlbum === "favoritos" ? todos.filter(m => m.favorito) : todos;
+    $("albumVazio").textContent = todos.length ? (lista.length ? "" : "Nenhum favorito ainda. Toque na estrela de um momento.")
+      : "O álbum está vazio. No fim de uma partida, toque em \"📸 Guardar no álbum\" numa carta que marcou.";
+    $("albumVazio").hidden = !!lista.length;
+    const ul = $("listaAlbum");
+    ul.textContent = "";
+    lista.forEach(m => {
+      const li = el("li", "momento");
+      const info = el("div", "info");
+      info.append(el("span", "tag", [TIPO_NOMES[m.carta_tipo] || "", `guardado por ${m.autor}`, dataCurta(m.criada_em)].filter(Boolean).join(" · ")),
+        el("span", "t", m.carta_texto));
+      if (m.frase) info.appendChild(el("span", "frase", `“${m.frase}”`));
+      const acoes = el("div", "acoes");
+      const fav = el("button", "estrela" + (m.favorito ? " on" : ""), m.favorito ? "★" : "☆");
+      fav.type = "button";
+      fav.setAttribute("aria-label", m.favorito ? "Tirar dos favoritos" : "Favoritar");
+      fav.setAttribute("aria-pressed", String(!!m.favorito));
+      fav.addEventListener("click", () => favoritarMomento(m));
+      const ap = el("button", "linkbtn", "Apagar");
+      ap.type = "button";
+      ap.addEventListener("click", () => apagarMomento(m));
+      acoes.append(fav, ap);
+      li.append(info, acoes);
+      ul.appendChild(li);
+    });
+  }
+
+  async function favoritarMomento(m) {
+    const favorito = !m.favorito;
+    const { error } = await sb.from("momentos").update({ favorito }).eq("id", m.id);
+    if (error) return erro("erroJogo", "Não consegui salvar. Confira a internet e tente de novo.");
+    linhaV5("momentos", "UPDATE", { ...m, favorito });
+  }
+
+  async function apagarMomento(m) {
+    if (!confirm("Apagar este momento do álbum?")) return;
+    const { error } = await sb.from("momentos").delete().eq("id", m.id);
+    if (error) return erro("erroJogo", "Não consegui apagar. Confira a internet e tente de novo.");
+    linhaV5("momentos", "DELETE", m);
+  }
+
+  redesenhar("momentos", () => { desenharAlbum(); if (estado) desenharRodadas(estado); });
+  extrasDaCasa.push(() => {
+    const n = dados.momentos.length, f = dados.momentos.filter(m => m.favorito).length;
+    $("cardAlbumSub").textContent = n ? `${n} ${n === 1 ? "momento" : "momentos"}${f ? ` · ${f} ★` : ""}` : "Guarde as cartas que marcaram";
+  });
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -1417,6 +1540,7 @@
     if (!Array.isArray(e.secretas)) e.secretas = [];
     if (!LEVEL_NAMES[e.nivelSemana]) e.nivelSemana = "leve";
     if (!Array.isArray(e.obsPedida) || e.obsPedida.length !== 2) e.obsPedida = [null, null];
+    if (!Array.isArray(e.historico)) e.historico = [];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
   }
@@ -1557,6 +1681,7 @@
     const fim = $("fim");
     fim.hidden = e.vencedor === null;
     if (e.vencedor !== null) $("venceu").textContent = `${nomes[e.vencedor]} venceu!`;
+    desenharRodadas(e);
   }
 
   // ---------- render ----------
@@ -2500,6 +2625,7 @@
       n.sintonia = null;
       n.dupla = null;
       n.secretas = sortearSecretas(n);
+      n.historico = [];
     });
     missaoAberta = false;
   }
@@ -2626,6 +2752,9 @@
     $("capOutra").addEventListener("click", outraPergunta);
     $("formCapsula").addEventListener("submit", salvarCapsula);
     $("cancelarCapsula").addEventListener("click", () => $("dlgCapsula").close());
+    $("formMomento").addEventListener("submit", salvarMomento);
+    $("cancelarMomento").addEventListener("click", () => $("dlgMomento").close());
+    document.querySelectorAll("#albumFiltro [data-filtro]").forEach(b => b.addEventListener("click", () => { filtroAlbum = b.dataset.filtro; desenharAlbum(); }));
     $("capAtalhos").addEventListener("click", ev => { const m = Number(ev.target.dataset && ev.target.dataset.meses); if (m) $("capData").value = somarMeses(hojeISO(), m); });
     // Casa do casal: qualquer elemento com data-abre troca de vista
     document.addEventListener("click", ev => {

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=30">
+<link rel="stylesheet" href="style.css?v=31">
 </head>
 <body>
 <main>
@@ -105,6 +105,7 @@
         <button type="button" class="casa-card" data-abre="vEnvelopes" id="cardEnv"><span class="ic">💌</span><b>Envelopes</b><span class="sub" id="cardEnvSub"></span></button>
         <button type="button" class="casa-card" data-abre="vSemana" id="cardSemana"><span class="ic">📅</span><b>Semana</b><span class="sub" id="cardSemanaSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCapsulas" id="cardCap"><span class="ic">⏳</span><b>Cápsulas</b><span class="sub" id="cardCapSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vAlbum" id="cardAlbum"><span class="ic">📸</span><b>Álbum</b><span class="sub" id="cardAlbumSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -184,6 +185,16 @@
         <div id="capGrupo-respondendo" hidden><h3 class="casa-h3">Esperando respostas</h3><ul class="lista-extras" id="capRespondendo"></ul></div>
         <div id="capGrupo-selada" hidden><h3 class="casa-h3">Seladas</h3><ul class="lista-extras" id="capSeladas"></ul></div>
         <div id="capGrupo-aberta" hidden><h3 class="casa-h3">Abertas</h3><ul class="lista-extras" id="capAbertas"></ul></div>
+      </section>
+      <section class="casa-vista" id="vAlbum" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <h2>Álbum de momentos</h2>
+        <div class="filtro" id="albumFiltro" role="group" aria-label="Filtro do álbum">
+          <button type="button" data-filtro="todos" aria-pressed="true">Todos</button>
+          <button type="button" data-filtro="favoritos" aria-pressed="false">★ Favoritos</button>
+        </div>
+        <p class="extras-sub" id="albumVazio"></p>
+        <ul class="lista-extras" id="listaAlbum"></ul>
       </section>
       <section class="casa-vista" id="vCofre" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
@@ -325,6 +336,10 @@
     <div class="fim" id="fim" hidden aria-live="polite">
       <p class="venceu" id="venceu"></p>
       <ul class="missoes-reveladas" id="missoesReveladas"></ul>
+      <div class="fim-rodadas" id="fimRodadasBox" hidden>
+        <p class="extras-sub">Alguma carta marcou? Guarde no álbum.</p>
+        <ul class="lista-extras" id="fimRodadas"></ul>
+      </div>
       <button class="primary" id="novaPartida" type="button">Nova partida</button>
     </div>
 
@@ -355,6 +370,11 @@
       <summary>Músicas de vocês <span id="musicasQtd"></span></summary>
       <p class="extras-sub" id="musicasVazio">Nenhuma música ainda. Toque em "Adicionar música" e cole um link do Spotify.</p>
       <ul class="lista-extras" id="listaMusicas"></ul>
+    </details>
+
+    <details class="extras" id="rodadas" hidden>
+      <summary>Rodadas desta partida <span id="rodadasQtd"></span></summary>
+      <ul class="lista-extras" id="listaRodadas"></ul>
     </details>
 
     <details class="extras" id="extras">
@@ -437,6 +457,21 @@
       <div class="row">
         <button class="primary" id="salvarEnvelope" type="submit">Guardar envelope</button>
         <button class="secondary" id="cancelarEnvelope" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgMomento" aria-labelledby="dlgMomentoTitulo">
+    <form id="formMomento" method="dialog">
+      <h2 id="dlgMomentoTitulo">📸 Guardar no álbum</h2>
+      <p class="momento-carta" id="momentoCarta"></p>
+      <label class="field">Uma frase sobre esse momento (opcional)
+        <textarea id="momentoFrase" maxlength="200" rows="2"></textarea>
+      </label>
+      <p class="erro" id="erroMomento" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarMomento" type="submit">Guardar</button>
+        <button class="secondary" id="cancelarMomento" type="button">Cancelar</button>
       </div>
     </form>
   </dialog>
@@ -552,8 +587,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=30"></script>
-<script src="app.js?v=30"></script>
+<script src="config.js?v=31"></script>
+<script src="app.js?v=31"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
