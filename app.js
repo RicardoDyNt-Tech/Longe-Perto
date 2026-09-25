@@ -8,7 +8,16 @@
   const SEGMENTOS = 8;
   const GIRO_MS = () => matchMedia("(prefers-reduced-motion: reduce)").matches ? 350 : 3300;
   const LEVEL_NAMES = { leve: "Leve", criativo: "Criativo", picante: "Picante", pesado: "Pesado +18" };
-  const TIPO_NOMES = { verdade: "Verdade", desafio: "Desafio", prenda: "Prenda" };
+  const TIPO_NOMES = {
+    verdade: "Verdade", desafio: "Desafio", prenda: "Prenda",
+    efeito: "Efeito contínuo", duelo: "Duelo", sintonia: "Sintonia", missao_dupla: "Missão em dupla", missao_secreta: "Missão secreta"
+  };
+  // Eventos especiais: chance de um giro virar evento e peso de cada tipo
+  const CHANCE_EVENTO = { desligado: 0, raro: 0.10, normal: 0.20, frequente: 0.35 };
+  const PESOS_EVENTO = [["efeito", 35], ["duelo", 30], ["sintonia", 20], ["missao_dupla", 15]];
+  const PARA_OS_DOIS = ["duelo", "missao_dupla"];
+  // tipos de evento com tratamento próprio (as fases seguintes registram aqui); os demais usam "Concluir evento"
+  const EVENTOS_TRATADOS = new Set();
   const ORDEM_NIVEIS = ["leve", "criativo", "picante", "pesado"];
   const PONTOS = {
     verdade: { leve: 1, criativo: 1, picante: 2, pesado: 3 },
@@ -106,6 +115,8 @@
     if (p.id) carta.id = p.id;
     if (p.midia) carta.midia = p.midia;
     if (p.autor) carta.autor = p.autor;
+    if (p.rodadas) carta.rodadas = p.rodadas;
+    if (p.segundos) carta.segundos = p.segundos;
     return carta;
   }
 
@@ -150,7 +161,7 @@
     cartasOk = false;
     atualizarBotoes();
     const { data, error } = await sb.from("cartas")
-      .select("id, sala, tipo, nivel, texto, midia, autor")
+      .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos")
       .or("sala.is.null,sala.eq." + c)
       .eq("ativa", true);
     if (c !== codigo) return;   // saiu da sala enquanto carregava
@@ -741,6 +752,7 @@
     if (!LEVEL_NAMES[e.nivelDiario]) e.nivelDiario = "leve";
     if (!e.diario || typeof e.diario !== "object" || Array.isArray(e.diario)) e.diario = {};
     if (typeof e.notaAdversario !== "boolean") e.notaAdversario = true;
+    if (!(e.eventos in CHANCE_EVENTO)) e.eventos = "normal";
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
   }
@@ -822,8 +834,9 @@
     $("pulosMax").value = String(e.pulosMax);
     const zerado = placarZerado(e);
     $("notaAdv").checked = e.notaAdversario;
-    $("meta").disabled = $("pulosMax").disabled = $("notaAdv").disabled = !zerado;
-    $("configDica").textContent = zerado ? "" : "Meta, pulos e nota só mudam com o placar zerado (em Nova partida).";
+    $("eventos").value = e.eventos;
+    $("meta").disabled = $("pulosMax").disabled = $("notaAdv").disabled = $("eventos").disabled = !zerado;
+    $("configDica").textContent = zerado ? "" : "Meta, pulos, eventos e nota só mudam com o placar zerado (em Nova partida).";
 
     const fim = $("fim");
     fim.hidden = e.vencedor === null;
@@ -944,11 +957,13 @@
     // Pular: só em verdade/desafio; mostra quantos pulos grátis restam daquele tipo
     const p = estado.placar[estado.vez];
     const avaliando = !!estado.avaliacao;
-    $("done").hidden = !minhaVez || avaliando;
-    $("skip").hidden = !minhaVez || !c || c.tipo === "prenda" || avaliando;
+    const evento = !!(c && c.evento);
+    $("done").hidden = !minhaVez || avaliando || evento;
+    $("skip").hidden = !minhaVez || !c || c.tipo === "prenda" || avaliando || evento;
+    $("eventoFim").hidden = !evento || !minhaVez || EVENTOS_TRATADOS.has(c.tipo);
     // Nota do adversário: quem não cumpriu dá as estrelas
     $("avaliar").hidden = !completa || minhaVez || !avaliando;
-    if (c && c.tipo !== "prenda") {
+    if (c && !evento && c.tipo !== "prenda") {
       const restam = c.tipo === "verdade" ? p.livresV : p.livresD;
       $("skip").textContent = restam > 0 ? `Pular (${restam} grátis)` : "Pular (paga prenda)";
     }
@@ -961,7 +976,9 @@
       ag.textContent = `Aguardando a nota de ${estado.jogadores[1 - estado.vez]}.`;
     } else if (!minhaVez && completa) {
       const quem = estado.jogadores[estado.vez];
-      ag.textContent = c && c.tipo === "prenda" ? `Aguardando ${quem} cumprir a prenda.` : `Aguardando ${quem} cumprir ou pular.`;
+      ag.textContent = c && c.tipo === "prenda" ? `Aguardando ${quem} cumprir a prenda.`
+        : evento ? `Aguardando ${quem} concluir o evento.`
+        : `Aguardando ${quem} cumprir ou pular.`;
     }
   }
 
@@ -969,9 +986,11 @@
     const c = e && e.carta;
     const card = $("card");
     if (!c) { card.hidden = true; return; }
-    const nome = e.jogadores[e.vez] || "";
-    card.className = "card " + c.tipo;
+    const nome = PARA_OS_DOIS.includes(c.tipo) ? "os dois" : e.jogadores[e.vez] || "";
+    card.className = "card " + c.tipo + (c.evento ? " evento" : "");
     card.hidden = false;
+    $("selo").hidden = !c.evento;
+    $("selo").textContent = c.evento ? "⚡ Evento especial" : "";
     $("kind").textContent = ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
       : c.motivo === "final" ? "Prenda final"
       : TIPO_NOMES[c.tipo] || c.tipo;
@@ -1014,7 +1033,7 @@
     $("timerVivo").hidden = !t;
     $("timerParado").hidden = !!t;
     if (!t && temCarta) {
-      const s = tempoDaCarta(c.texto);
+      const s = c.segundos || tempoDaCarta(c.texto);
       $("timerIniciar").hidden = !s;
       $("timerAbrir").hidden = !!s;
       if (s) { $("timerIniciar").textContent = `Iniciar ${rotuloTempo(s)}`; $("timerIniciar").dataset.seg = s; }
@@ -1104,7 +1123,9 @@
     const tipo = k % 2 === 0 ? "verdade" : "desafio";
     if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
-      const carta = sortear(tipo, n.niveis, n.usados || []);
+      let carta = sortear(tipo, n.niveis, n.usados || []);
+      // com a chance configurada, o giro vira um evento especial (a roleta continua mostrando Verdade/Desafio)
+      if (Math.random() < CHANCE_EVENTO[n.eventos]) carta = sortearEvento(n) || carta;
       registrarUso(n, carta);
       n.carta = carta;
       n.musica = sortearMusica(carta.nivel);
@@ -1123,9 +1144,39 @@
     });
   }
 
+  // ---------- eventos especiais ----------
+  // Tipo pelos pesos; nível entre os ativos que têm carta daquele tipo; sem carta, tenta outro tipo.
+  function sortearEvento(n) {
+    let tipos = PESOS_EVENTO.filter(([t]) => t !== "efeito" || (n.efeitos || []).filter(x => x.dono === n.vez).length < 2);
+    while (tipos.length) {
+      const total = tipos.reduce((s, [, w]) => s + w, 0);
+      let r = Math.random() * total, tipo = tipos[tipos.length - 1][0];
+      for (const [t, w] of tipos) { if ((r -= w) < 0) { tipo = t; break; } }
+      const niveis = n.niveis.filter(nv => cartas.some(c => c.tipo === tipo && c.nivel === nv));
+      if (niveis.length) {
+        const carta = sortear(tipo, [niveis[Math.floor(Math.random() * niveis.length)]], n.usados || []);
+        if (carta) { carta.evento = true; carta.de = n.vez; return carta; }
+      }
+      tipos = tipos.filter(([t]) => t !== tipo);
+    }
+    return null;
+  }
+
+  // "Concluir evento": saída genérica para tipos de evento sem tratamento próprio
+  function concluirEvento() {
+    if (!estado || !estado.carta || !estado.carta.evento || estado.vez !== eu) return;
+    gravar(n => { if (n.carta && n.carta.evento) { n.carta = null; n.vez = 1 - n.vez; } });
+  }
+
+  function mudarEventos() {
+    const v = $("eventos").value;
+    if (!estado || !(v in CHANCE_EVENTO) || !placarZerado(estado)) return;
+    gravar(n => { if (placarZerado(n)) n.eventos = v; });
+  }
+
   // Cumpri: soma pontos/contadores; prenda vale 0. Bater a meta encerra a partida com prenda final.
   function cumprir() {
-    if (!estado || estado.vez !== eu || !estado.carta || estado.avaliacao) return;
+    if (!estado || estado.vez !== eu || !estado.carta || estado.carta.evento || estado.avaliacao) return;
     gravar(n => {
       const c = n.carta, p = n.placar[n.vez];
       // desafio com "Nota do adversário": a carta fica na tela esperando as estrelas
@@ -1190,7 +1241,7 @@
   // Pular: com pulos livres do tipo, gasta um, descarta e passa a vez;
   // com o contador em 0, a carta vira prenda para a mesma pessoa, na mesma vez.
   function pular() {
-    if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo === "prenda" || estado.avaliacao) return;
+    if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo === "prenda" || estado.carta.evento || estado.avaliacao) return;
     gravar(n => {
       const q = n.placar[n.vez];
       const campo = n.carta.tipo === "verdade" ? "livresV" : "livresD";
@@ -1390,6 +1441,8 @@
     $("timerCancelar").addEventListener("click", cancelarTimer);
     $("novaPartida").addEventListener("click", novaPartida);
     $("meta").addEventListener("change", mudarMeta);
+    $("eventos").addEventListener("change", mudarEventos);
+    $("eventoFim").addEventListener("click", concluirEvento);
     $("pulosMax").addEventListener("change", mudarPulosMax);
     $("niveis").addEventListener("change", mudarNiveis);
     $("abrirCarta").addEventListener("click", abrirDialogo);

@@ -105,6 +105,10 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .avaliar p{margin:0 0 8px; font-weight:800; font-size:1.1rem}
 .estrelas{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
 .estrelas button{background:var(--lamp); color:#2A1F3D; font-size:1.2rem; padding:12px 0; letter-spacing:.05em}
+.selo{margin:0 0 4px; font-size:.8rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--lamp)}
+.card.evento{border-color:var(--lamp); box-shadow:0 0 0 3px color-mix(in srgb, var(--lamp) 25%, transparent)}
+.evento .kind{color:var(--ink)}
+.evento-fim{grid-column:1/-1}
 .actions{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .actions .wa{grid-column:1/-1}
 .done{background:var(--ink); color:var(--bg); font-weight:600; padding:12px}
@@ -114,7 +118,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .placar{margin-top:24px}
 .meta{margin:0 0 8px; font-weight:600}
 .config{display:flex; gap:12px; margin:14px 0 0}
-.config label{flex:1; font-weight:600; font-size:.9rem}
+.config label{flex:1; font-weight:600; font-size:.9rem; min-width:0}
+.config{flex-wrap:wrap}
+.config label{flex:1 1 30%}
 .config select{margin-top:4px; background:var(--surface)}
 .config-dica{color:var(--muted); font-size:.8rem; margin:6px 0 0; min-height:1em}
 .score{width:100%; border-collapse:collapse; font-size:.95rem; font-variant-numeric:tabular-nums}

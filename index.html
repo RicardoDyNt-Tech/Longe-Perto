@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=17">
+<link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 <main>
@@ -132,6 +132,14 @@
           <option value="10">10</option>
         </select>
       </label>
+      <label>Eventos especiais
+        <select id="eventos">
+          <option value="desligado">Desligado</option>
+          <option value="raro">Raro</option>
+          <option value="normal">Normal</option>
+          <option value="frequente">Frequente</option>
+        </select>
+      </label>
     </div>
     <label class="check nota-cfg"><input type="checkbox" id="notaAdv"> Nota do adversário (★ valem pontos nos desafios)</label>
     <p class="config-dica" id="configDica"></p>
@@ -153,6 +161,7 @@
     <p class="aviso" id="aviso" role="status" hidden></p>
 
     <article class="card" id="card" hidden aria-live="polite">
+      <p class="selo" id="selo" hidden></p>
       <p class="kind" id="kind"></p>
       <p class="level" id="level"></p>
       <p class="text" id="text"></p>
@@ -181,6 +190,7 @@
         <button class="done" id="done">Cumpri</button>
         <button class="skip" id="skip">Pular</button>
         <button class="secondary liberar" id="liberar" type="button" hidden>Liberar da prenda</button>
+        <button class="done evento-fim" id="eventoFim" type="button" hidden>Concluir evento</button>
         <div class="avaliar" id="avaliar" hidden>
           <p>Como foi?</p>
           <div class="estrelas">
@@ -329,8 +339,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=17"></script>
-<script src="app.js?v=17"></script>
+<script src="config.js?v=18"></script>
+<script src="app.js?v=18"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
