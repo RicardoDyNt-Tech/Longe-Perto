@@ -8,6 +8,7 @@ const ARQUIVOS = [
   "index.html",
   "style.css",
   "app.js",
+  "conquistas.js",
   "config.js",
   "manifest.webmanifest",
   "icons/icon.svg",

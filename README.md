@@ -16,10 +16,11 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 | `supabase/003_seed_cartas.sql` | As 376 cartas padrão do jogo |
 | `supabase/004_v3.sql` | v3: nomes de sala fixa, tabelas `partidas`, `cofre` e `musicas` (RLS, limite e Realtime) |
 | `supabase/005_seed_musicas.sql` | Ajuste da tabela `musicas` (coluna `playlist`, até 200 caracteres) e as 2.127 músicas padrão das playlists |
+| `supabase/006_v4.sql`, `supabase/007_seed_v4.sql` | v4: tipos de carta especiais (efeito, duelo, sintonia, missões) e as 109 cartas especiais |
 
 ## Colocar no ar (uma vez)
 
-1. **Supabase (conta pessoal):** crie um projeto → SQL Editor → cole e rode, nesta ordem, `supabase/schema.sql`, `supabase/002_cartas.sql`, `supabase/003_seed_cartas.sql`, `supabase/004_v3.sql` e `supabase/005_seed_musicas.sql`. O `003` mostra a contagem de cartas por tipo e nível, e o `005` a de músicas por nível.
+1. **Supabase (conta pessoal):** crie um projeto → SQL Editor → cole e rode, nesta ordem, `supabase/schema.sql`, `supabase/002_cartas.sql`, `supabase/003_seed_cartas.sql`, `supabase/004_v3.sql`, `supabase/005_seed_musicas.sql`, `supabase/006_v4.sql` e `supabase/007_seed_v4.sql`. O `003` mostra a contagem de cartas por tipo e nível, e o `005` a de músicas por nível.
 2. **Chaves:** Project Settings → API → copie a *Project URL* e a chave *anon* (ou *publishable*) para o `config.js`.
 3. **GitHub:** suba os arquivos para a branch `main` deste repositório.
 4. **GitHub Pages:** Settings → Pages → Source: *Deploy from a branch* → `main` / `(root)` → Save. Em 1–2 minutos o site fica em `https://ricardodynt-tech.github.io/Longe-Perto/`.
@@ -45,6 +46,11 @@ Verdade ou desafio para casal a distância. Um cria a sala, manda o link pelo Wh
 - **Reencontro:** data com contagem regressiva e **Cofre** para guardar cartas e combinados ("Guardar para o reencontro" na carta).
 - **Desafio do dia** (sala fixa): um desafio por pessoa por dia, igual nos dois aparelhos, com sequência de dias.
 - **Trilha da rodada:** cadastrem músicas com o link do Spotify ("+ Adicionar música"); a cada giro sai uma do nível da carta, com "Abrir no Spotify" e "Tocar aqui".
+
+- **Eventos especiais** (Desligado/Raro/Normal/Frequente): alguns giros viram **efeito contínuo** (regra por N rodadas, com faixa no topo e "Quebrou!" para o outro), **duelo** (3-2-1 juntos, vencedor +2, perdedor paga prenda), **sintonia** (um responde, o outro adivinha, tudo aparece junto) ou **missão em dupla** (+2 para os dois).
+- **Missão secreta:** cada um recebe uma no começo da partida ("🤫 Minha missão"); o outro confirma quando for cumprida.
+- **Reverso:** uma vez por partida, passe a verdade/desafio para o outro.
+- **Para usar com o WhatsApp em janela flutuante:** os botões ficam numa barra embaixo e o ajuste "📷 Câmera do WhatsApp" (Direita/Esquerda/Nenhuma) deixa aquele canto de cima livre. 🔊/🔇 liga ou desliga sons e vibrações.
 
 ## Como funciona
 
