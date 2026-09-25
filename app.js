@@ -735,7 +735,7 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria"];
 
   function mostrarVista(nome) {
     vista = nome;
@@ -752,6 +752,8 @@
     if (nome === "vAlbum") desenharAlbum();
     if (nome === "vBaralho") desenharBaralho();
     if (nome === "vConquistas") desenharConquistas();
+    if (nome === "vMapa") desenharMapa();
+    if (nome === "vHistoria") desenharHistoria();
     window.scrollTo(0, 0);
   }
 
@@ -801,7 +803,7 @@
 
   // ---------- tabelas da v5 (só em sala fixa): carga, Realtime e redesenho ----------
   const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
-    carinhos: "criada_em" };
+    carinhos: "criada_em", marcos: "data" };
   const LIMITE_TABELA = { carinhos: 500 };   // tabelas que crescem sem parar: só as linhas mais novas
   const aoCarregar = {};                     // tabela -> fn() depois da primeira carga
   const dados = {};
@@ -2195,6 +2197,217 @@
   }
   extrasDaCasa.push(() => { desenharCarinhos(); desenharMaos(); });
 
+  // ---------- v6: mapa da saudade (sem mapa de verdade: um desenho em SVG) ----------
+  const cidadeValida = x => !!(x && typeof x.nome === "string" && x.nome.trim());
+  const temCoord = x => cidadeValida(x) && Number.isFinite(x.lat) && Number.isFinite(x.lng);
+  function haversineKm(a, b) {
+    const R = 6371, rad = g => g * Math.PI / 180;
+    const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+  }
+  function distanciaKm(e) {
+    const [a, b] = e.cidades;
+    if (temCoord(a) && temCoord(b)) return haversineKm(a, b);
+    return Number.isFinite(e.distanciaManual) ? e.distanciaManual : null;
+  }
+  const resultadosCidade = [[], []];
+  async function buscarCidade(i) {
+    const q = $("cidadeBusca" + i).value.replace(/\s+/g, " ").trim().slice(0, 80);
+    if (q.length < 2) return;
+    erro("erroMapa", "");
+    $("cidadeBuscar" + i).disabled = true;
+    try {
+      const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 10000);
+      const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=pt-BR&q=" + encodeURIComponent(q), { signal: ctrl.signal });
+      clearTimeout(t);
+      if (!r.ok) throw new Error("http");
+      const lista = await r.json();
+      resultadosCidade[i] = (Array.isArray(lista) ? lista : []).map(x => ({
+        nome: String(x.display_name || "").split(",").slice(0, 2).join(",").trim().slice(0, 60),
+        completo: String(x.display_name || "").slice(0, 160),
+        lat: Number(x.lat), lng: Number(x.lon)
+      })).filter(x => x.nome && Number.isFinite(x.lat) && Number.isFinite(x.lng));
+      if (!resultadosCidade[i].length) erro("erroMapa", "Nenhuma cidade encontrada. Confira o nome ou use só o nome.");
+    } catch (err) {
+      resultadosCidade[i] = [];
+      erro("erroMapa", "Não consegui buscar agora. Use só o nome e, se quiser, a distância em km.");
+    }
+    $("cidadeBuscar" + i).disabled = false;
+    desenharMapa();
+  }
+  function escolherCidade(i, c) {
+    resultadosCidade[i] = [];
+    gravar(n => { n.cidades[i] = c; });
+  }
+  function soNomeCidade(i) {
+    const nome = $("cidadeBusca" + i).value.replace(/\s+/g, " ").trim().slice(0, 60);
+    if (nome.length < 2) return erro("erroMapa", "Digite o nome da cidade.");
+    erro("erroMapa", "");
+    escolherCidade(i, { nome, lat: null, lng: null });
+  }
+  function salvarDistanciaManual() {
+    const v = $("distManual").value.trim();
+    const km = v === "" ? null : Math.round(Number(v));
+    if (km !== null && !(km >= 0 && km <= 40000)) return erro("erroMapa", "Distância entre 0 e 40.000 km.");
+    erro("erroMapa", "");
+    gravar(n => { n.distanciaManual = km; });
+  }
+  const SVGNS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs, texto) {
+    const x = document.createElementNS(SVGNS, tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => x.setAttribute(k, v));
+    if (texto !== undefined) x.textContent = texto;
+    return x;
+  }
+  function desenharMapa() {
+    if (!estado || !estado.fixa || !$("mapaSvg")) return;
+    const e = estado, km = distanciaKm(e);
+    const hoje0 = e.reencontro && diasAte(e.reencontro) === 0;
+    const nomes = [0, 1].map(i => (cidadeValida(e.cidades[i]) ? e.cidades[i].nome : nomeDe(i)).split(",")[0].slice(0, 22));
+    const svg = $("mapaSvg");
+    svg.textContent = "";
+    svg.classList.toggle("juntos", !!hoje0);
+    svg.appendChild(svgEl("line", { x1: 50, y1: 60, x2: 270, y2: 60, class: "mapa-linha" }));
+    const g0 = svgEl("g", { class: "mapa-ponto p0" }), g1 = svgEl("g", { class: "mapa-ponto p1" });
+    g0.append(svgEl("circle", { cx: 50, cy: 60, r: 9 }), svgEl("text", { x: 50, y: 95, "text-anchor": "middle" }, nomes[0]));
+    g1.append(svgEl("circle", { cx: 270, cy: 60, r: 9 }), svgEl("text", { x: 270, y: 95, "text-anchor": "middle" }, nomes[1]));
+    svg.append(g0, g1, svgEl("text", { x: 160, y: 68, "text-anchor": "middle", class: "mapa-coracao" }, "❤"));
+    $("mapaKm").textContent = hoje0 ? "Hoje é 0 km 💞" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Digam as cidades de vocês para ver a distância";
+    const r = e.reencontro ? diasAte(e.reencontro) : null;
+    $("mapaReencontro").textContent = r === null || r < 0 ? "" : r === 0 ? "É hoje! 💞" : r === 1 ? "Falta 1 dia para o reencontro" : `Faltam ${r} dias para o reencontro`;
+    // configuração "Nossas cidades"
+    [0, 1].forEach(i => {
+      $("cidadeRotulo" + i).textContent = `Cidade de ${nomeDe(i)}`;
+      $("cidadeAtual" + i).textContent = cidadeValida(e.cidades[i]) ? `📍 ${e.cidades[i].nome}${temCoord(e.cidades[i]) ? "" : " (só o nome)"}` : "";
+      const ul = $("cidadeOpcoes" + i);
+      ul.textContent = "";
+      resultadosCidade[i].forEach(c => {
+        const li = el("li"), b = el("button", "linkbtn", c.completo);
+        b.type = "button";
+        b.addEventListener("click", () => escolherCidade(i, { nome: c.nome, lat: c.lat, lng: c.lng }));
+        li.appendChild(b); ul.appendChild(li);
+      });
+    });
+    const semCoord = !(temCoord(e.cidades[0]) && temCoord(e.cidades[1]));
+    $("distManualBox").hidden = !semCoord;
+    if (document.activeElement !== $("distManual")) $("distManual").value = Number.isFinite(e.distanciaManual) ? String(e.distanciaManual) : "";
+  }
+
+  // ---------- v6: linha do tempo do casal ----------
+  const SUGESTOES_MARCO = [["💘", "Primeiro encontro"], ["💋", "Primeiro beijo"], ["💍", "Pedido"], ["✈️", "Viagem"], ["🎂", "Aniversário"], ["🏠", "Visita"]];
+  const mesesEntre = (de, ate) => {
+    const [a1, m1, d1] = de.split("-").map(Number), [a2, m2, d2] = ate.split("-").map(Number);
+    return (a2 - a1) * 12 + (m2 - m1) - (d2 < d1 ? 1 : 0);
+  };
+  const principal = () => dados.marcos.find(m => m.principal) || null;
+  let marcoEditando = null;
+  function abrirMarco(m) {
+    marcoEditando = m || null;
+    erro("erroMarco", "");
+    $("dlgMarcoTitulo").textContent = m ? "Editar marco" : "Novo marco";
+    $("marcoTitulo").value = m ? m.titulo : "";
+    $("marcoData").value = m ? m.data : "";
+    $("marcoData").max = hojeISO();
+    $("marcoDescricao").value = m && m.descricao ? m.descricao : "";
+    $("marcoEmoji").value = m && m.emoji ? m.emoji : "";
+    $("marcoPrincipal").checked = !!(m && m.principal);
+    $("dlgMarco").showModal();
+  }
+  async function salvarMarco(ev) {
+    ev.preventDefault();
+    const titulo = $("marcoTitulo").value.replace(/\s+/g, " ").trim().slice(0, 80);
+    const data = $("marcoData").value;
+    const descricao = $("marcoDescricao").value.trim().slice(0, 300) || null;
+    const emoji = [...$("marcoEmoji").value.trim()].slice(0, 4).join("").slice(0, 8) || null;
+    const ehPrincipal = $("marcoPrincipal").checked;
+    if (!titulo) return erro("erroMarco", "Dê um título ao marco.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("erroMarco", "Escolha a data.");
+    $("salvarMarco").disabled = true;
+    // só um principal por sala: desmarca o anterior antes
+    const antigo = principal();
+    if (ehPrincipal && antigo && (!marcoEditando || antigo.id !== marcoEditando.id)) {
+      const r = await sb.from("marcos").update({ principal: false }).eq("id", antigo.id);
+      if (!r.error) linhaV5("marcos", "UPDATE", { ...antigo, principal: false });
+    }
+    const campos = { titulo, data, descricao, emoji, principal: ehPrincipal };
+    const { data: linha, error } = marcoEditando
+      ? await sb.from("marcos").update(campos).eq("id", marcoEditando.id).select("*").single()
+      : await sb.from("marcos").insert({ sala: codigo, autor: nomeDe(eu), ...campos }).select("*").single();
+    $("salvarMarco").disabled = false;
+    if (error || !linha) return erro("erroMarco", "Não consegui salvar. Confira a internet e tente de novo.");
+    linhaV5("marcos", marcoEditando ? "UPDATE" : "INSERT", linha);
+    $("dlgMarco").close();
+  }
+  async function apagarMarco(m) {
+    if (!confirm(`Apagar o marco "${m.titulo}"?`)) return;
+    const { error } = await sb.from("marcos").delete().eq("id", m.id);
+    if (error) return erro("erroJogo", "Não consegui apagar. Confira a internet e tente de novo.");
+    linhaV5("marcos", "DELETE", { id: m.id });
+  }
+  function desenharHistoria() {
+    if (!$("listaMarcos")) return;
+    const ul = $("listaMarcos");
+    ul.textContent = "";
+    const lista = dados.marcos.slice().sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0));
+    $("marcosVazio").hidden = !!lista.length;
+    lista.forEach(m => {
+      const li = el("li", "marco" + (m.principal ? " principal" : ""));
+      li.appendChild(el("span", "marco-emoji", m.emoji || "•"));
+      const info = el("div", "info");
+      info.append(el("span", "tag", dataBR(m.data) + (m.principal ? " · início do namoro" : "")), el("span", "t", m.titulo));
+      if (m.descricao) info.appendChild(el("span", "marco-desc", m.descricao));
+      const acoes = el("div", "acoes");
+      const ed = el("button", "linkbtn", "Editar"); ed.type = "button"; ed.addEventListener("click", () => abrirMarco(m));
+      const ap = el("button", "linkbtn", "Apagar"); ap.type = "button"; ap.addEventListener("click", () => apagarMarco(m));
+      acoes.append(ed, ap);
+      info.appendChild(acoes);
+      li.appendChild(info);
+      ul.appendChild(li);
+    });
+  }
+  // topo da Casa: "Juntos há X dias" e os cartões das datas especiais (só no próprio dia)
+  function desenharJuntosHa() {
+    if (!$("juntosHa")) return;
+    const p = principal(), hoje = hojeISO();
+    let txt = "";
+    if (p && p.data <= hoje) {
+      const dias = -diasAte(p.data), meses = mesesEntre(p.data, hoje);
+      txt = `Juntos há ${dias.toLocaleString("pt-BR")} ${dias === 1 ? "dia" : "dias"}`;
+      if (meses >= 12) {
+        const a = Math.floor(meses / 12), m = meses % 12;
+        txt += ` · ${a} ${a === 1 ? "ano" : "anos"}${m ? ` e ${m} ${m === 1 ? "mês" : "meses"}` : ""}`;
+      }
+    }
+    $("juntosHa").textContent = txt;
+    $("juntosHa").hidden = !txt;
+    const cartoes = [];
+    const [ha, hm, hd] = hoje.split("-").map(Number);
+    dados.marcos.forEach(m => {
+      const [a, mm, d] = m.data.split("-").map(Number);
+      if (m.data >= hoje) return;
+      if (mm === hm && d === hd) {
+        const anos = ha - a;
+        cartoes.push(m.principal ? `Feliz ${anos} ${anos === 1 ? "ano" : "anos"} de namoro! 💞` : `Há ${anos} ${anos === 1 ? "ano" : "anos"}: ${m.titulo}`);
+      } else if (m.principal && d === hd) {
+        const meses = mesesEntre(m.data, hoje);
+        cartoes.push(`Feliz mesversário! 🎉 ${meses} ${meses === 1 ? "mês" : "meses"} juntos`);
+      }
+    });
+    const box = $("datasEspeciais");
+    box.textContent = "";
+    cartoes.forEach(t => box.appendChild(el("p", "data-especial", t)));
+    box.hidden = !cartoes.length;
+  }
+  redesenhar("marcos", () => { desenharHistoria(); desenharJuntosHa(); });
+  extrasDaCasa.push(e => {
+    desenharJuntosHa();
+    const km = distanciaKm(e);
+    $("cardMapaSub").textContent = e.reencontro && diasAte(e.reencontro) === 0 ? "Hoje é 0 km 💞" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Nossas cidades";
+    $("cardHistoriaSub").textContent = dados.marcos.length ? `${dados.marcos.length} ${dados.marcos.length === 1 ? "marco" : "marcos"}` : "Nossa linha do tempo";
+    if (vista === "vMapa") desenharMapa();
+  });
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -2332,6 +2545,9 @@
     if (!e.cardapio || typeof e.cardapio !== "object" || !Array.isArray(e.cardapio.itens)) e.cardapio = null;
     if (!e.pose || typeof e.pose !== "object" || !e.pose.nome) e.pose = null;
     if (!(Number(e.maosTotal) >= 0)) e.maosTotal = 0;
+    if (!Array.isArray(e.cidades) || e.cidades.length !== 2) e.cidades = [null, null];
+    e.cidades = e.cidades.map(x => (x && typeof x.nome === "string" && x.nome.trim() ? { nome: x.nome.slice(0, 60), lat: Number.isFinite(x.lat) ? x.lat : null, lng: Number.isFinite(x.lng) ? x.lng : null } : null));
+    if (!Number.isFinite(e.distanciaManual)) e.distanciaManual = null;
     if (typeof e.mostrarOusadia !== "boolean") e.mostrarOusadia = true;
     if (!Array.isArray(e.titulos) || e.titulos.length !== 2) e.titulos = [null, null];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
@@ -3674,6 +3890,19 @@
       if (b && $("jogo").contains(b)) mostrarVista(b.dataset.abre);
     });
     addEventListener("pagehide", () => { segurar(false); try { if (canal) canal.untrack(); } catch (err) {} });
+    [0, 1].forEach(i => {
+      $("cidadeBuscar" + i).addEventListener("click", () => buscarCidade(i));
+      $("cidadeBusca" + i).addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); buscarCidade(i); } });
+      $("cidadeSoNome" + i).addEventListener("click", () => soNomeCidade(i));
+    });
+    $("distManualSalvar").addEventListener("click", salvarDistanciaManual);
+    $("novoMarco").addEventListener("click", () => abrirMarco(null));
+    $("formMarco").addEventListener("submit", salvarMarco);
+    $("cancelarMarco").addEventListener("click", () => $("dlgMarco").close());
+    document.querySelectorAll("#marcoSugestoes [data-emoji]").forEach(b => b.addEventListener("click", () => {
+      $("marcoEmoji").value = b.dataset.emoji;
+      if (!$("marcoTitulo").value.trim()) $("marcoTitulo").value = b.dataset.titulo;
+    }));
     document.querySelectorAll("#carinhoBotoes [data-carinho]").forEach(b => b.addEventListener("click", () => mandarCarinho(b.dataset.carinho)));
     $("carinhoResumoFechar").addEventListener("click", () => { resumoCarinhos = ""; desenharCarinhos(); });
     const coracao = $("maosCoracao");

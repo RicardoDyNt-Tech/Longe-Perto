@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=39">
+<link rel="stylesheet" href="style.css?v=40">
 </head>
 <body>
 <main>
@@ -101,6 +101,8 @@
     <section class="casa" id="telaCasa" hidden aria-label="Casa do casal">
       <p class="casa-convite" id="casaConvite" hidden>Crie uma sala fixa para guardar envelopes, álbum e conquistas. No início, toque em "Criar sala fixa".</p>
       <div class="casa-grade" id="casaGrade">
+        <p class="juntos-ha" id="juntosHa" hidden></p>
+        <div class="datas-especiais" id="datasEspeciais" hidden></div>
         <div class="casa-bloco carinhos" id="casaCarinhos">
           <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo">✕</button></p>
           <div class="carinho-botoes" id="carinhoBotoes">
@@ -127,6 +129,8 @@
         <button type="button" class="casa-card" data-abre="vConquistas" id="cardConq"><span class="ic">🏆</span><b>Conquistas</b><span class="sub" id="cardConqSub"></span></button>
         <button type="button" class="casa-card" id="cardPoses" hidden><span class="ic">📸</span><b>Poses</b><span class="sub">Ideias para fotos e vídeos</span></button>
         <button type="button" class="casa-card" id="cardPosicoes" hidden><span class="ic">📖</span><b>Posições</b><span class="sub">Guia para escolher e sortear</span></button>
+        <button type="button" class="casa-card" data-abre="vMapa" id="cardMapa"><span class="ic">🗺️</span><b>Mapa da saudade</b><span class="sub" id="cardMapaSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vHistoria" id="cardHistoria"><span class="ic">📜</span><b>Nossa história</b><span class="sub" id="cardHistoriaSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -240,6 +244,45 @@
         <h3 class="casa-h3">Ousadia</h3>
         <label class="toggle"><input type="checkbox" id="mostrarOusadia"> Mostrar conquistas de ousadia</label>
         <div class="conq-grade" id="conqOusadia"></div>
+      </section>
+      <section class="casa-vista" id="vMapa" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <h2>Mapa da saudade</h2>
+        <svg class="mapa-svg" id="mapaSvg" viewBox="0 0 320 110" role="img" aria-label="Distância entre as cidades de vocês"></svg>
+        <p class="mapa-km" id="mapaKm"></p>
+        <p class="extras-sub" id="mapaReencontro"></p>
+        <h3 class="casa-h3">Nossas cidades</h3>
+        <div class="cidade-campo">
+          <label class="field"><span id="cidadeRotulo0">Cidade</span>
+            <input type="text" id="cidadeBusca0" maxlength="80" placeholder="Ex.: Salvador">
+          </label>
+          <div class="row"><button class="secondary" id="cidadeBuscar0" type="button">Buscar</button><button class="linkbtn" id="cidadeSoNome0" type="button">Usar só o nome</button></div>
+          <p class="cidade-atual" id="cidadeAtual0"></p>
+          <ul class="cidade-opcoes" id="cidadeOpcoes0"></ul>
+        </div>
+        <div class="cidade-campo">
+          <label class="field"><span id="cidadeRotulo1">Cidade</span>
+            <input type="text" id="cidadeBusca1" maxlength="80" placeholder="Ex.: Curitiba">
+          </label>
+          <div class="row"><button class="secondary" id="cidadeBuscar1" type="button">Buscar</button><button class="linkbtn" id="cidadeSoNome1" type="button">Usar só o nome</button></div>
+          <p class="cidade-atual" id="cidadeAtual1"></p>
+          <ul class="cidade-opcoes" id="cidadeOpcoes1"></ul>
+        </div>
+        <div id="distManualBox" hidden>
+          <label class="field">Distância em km (se a busca não funcionar)
+            <input type="number" id="distManual" min="0" max="40000" inputmode="numeric">
+          </label>
+          <button class="secondary" id="distManualSalvar" type="button">Salvar distância</button>
+        </div>
+        <p class="erro" id="erroMapa" role="alert"></p>
+        <p class="osm-credito">Busca de cidades: © OpenStreetMap</p>
+      </section>
+      <section class="casa-vista" id="vHistoria" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <h2>Nossa história</h2>
+        <button class="secondary" id="novoMarco" type="button">+ Novo marco</button>
+        <p class="extras-sub" id="marcosVazio">Nenhum marco ainda. Comece pelo primeiro encontro.</p>
+        <ul class="linha-tempo" id="listaMarcos"></ul>
       </section>
       <section class="casa-vista" id="vCofre" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
@@ -649,6 +692,38 @@
     <ul class="pos-lista" id="posLista"></ul>
   </dialog>
 
+  <dialog id="dlgMarco" aria-labelledby="dlgMarcoTitulo">
+    <form id="formMarco" method="dialog">
+      <h2 id="dlgMarcoTitulo">Novo marco</h2>
+      <div class="marco-sugestoes" id="marcoSugestoes">
+        <button type="button" data-emoji="💘" data-titulo="Primeiro encontro">💘 primeiro encontro</button>
+        <button type="button" data-emoji="💋" data-titulo="Primeiro beijo">💋 primeiro beijo</button>
+        <button type="button" data-emoji="💍" data-titulo="Pedido">💍 pedido</button>
+        <button type="button" data-emoji="✈️" data-titulo="Viagem">✈️ viagem</button>
+        <button type="button" data-emoji="🎂" data-titulo="Aniversário">🎂 aniversário</button>
+        <button type="button" data-emoji="🏠" data-titulo="Visita">🏠 visita</button>
+      </div>
+      <label class="field">Título
+        <input type="text" id="marcoTitulo" maxlength="80">
+      </label>
+      <label class="field">Data
+        <input type="date" id="marcoData">
+      </label>
+      <label class="field">Emoji
+        <input type="text" id="marcoEmoji" maxlength="8" class="marco-emoji-campo">
+      </label>
+      <label class="field">Descrição (opcional)
+        <textarea id="marcoDescricao" maxlength="300" rows="3"></textarea>
+      </label>
+      <label class="check"><input type="checkbox" id="marcoPrincipal"> Este é o início do namoro</label>
+      <p class="erro" id="erroMarco" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarMarco" type="submit">Salvar</button>
+        <button class="secondary" id="cancelarMarco" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="dlgMomento" aria-labelledby="dlgMomentoTitulo">
     <form id="formMomento" method="dialog">
       <h2 id="dlgMomentoTitulo">📸 Guardar no álbum</h2>
@@ -797,9 +872,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=39"></script>
-<script src="conquistas.js?v=39"></script>
-<script src="app.js?v=39"></script>
+<script src="config.js?v=40"></script>
+<script src="conquistas.js?v=40"></script>
+<script src="app.js?v=40"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

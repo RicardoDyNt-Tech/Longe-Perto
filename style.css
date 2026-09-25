@@ -430,3 +430,42 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--lamp); outli
 .carinho-anim.anima{animation:somePouco 2.2s ease-in forwards}
 @keyframes flutua{from{transform:translateY(40px) scale(.6)} 30%{transform:translateY(0) scale(1.1)} to{transform:translateY(-60px) scale(1)}}
 @keyframes somePouco{0%,70%{opacity:1} to{opacity:0}}
+
+/* v6 · mapa da saudade e linha do tempo */
+.juntos-ha{grid-column:1 / -1; margin:0; text-align:center; font-weight:800; font-size:1.1rem}
+.datas-especiais{grid-column:1 / -1; display:grid; gap:8px}
+.data-especial{margin:0; padding:12px 14px; border-radius:16px; border:1.5px solid var(--lamp); background:var(--surface); font-weight:800; text-align:center; overflow-wrap:anywhere}
+.mapa-svg{width:100%; max-width:420px; display:block; margin:6px auto 0; overflow:visible}
+.mapa-svg .mapa-linha{stroke:var(--muted); stroke-width:2.5; stroke-dasharray:6 7; animation:tracejado 1.2s linear infinite}
+@keyframes tracejado{to{stroke-dashoffset:-26}}
+.mapa-svg circle{fill:#e0457b}
+.mapa-svg text{font:600 11px system-ui, sans-serif; fill:var(--ink)}
+.mapa-svg .mapa-coracao{font-size:22px; fill:#e0457b}
+.mapa-svg .mapa-ponto{transition:transform 1.2s ease-in-out}
+.mapa-svg.juntos .p0{transform:translateX(100px)}
+.mapa-svg.juntos .p1{transform:translateX(-100px)}
+.mapa-svg.juntos .mapa-linha{opacity:0}
+.mapa-km{margin:6px 0 0; text-align:center; font-weight:800; font-size:1.3rem}
+#mapaReencontro{text-align:center}
+.cidade-campo{margin-bottom:10px}
+.cidade-campo .row{display:flex; gap:10px; align-items:center}
+.cidade-campo .row button{width:auto}
+.cidade-atual{margin:6px 0 0; font-weight:700}
+.cidade-atual:empty{display:none}
+.cidade-opcoes{list-style:none; padding:0; margin:6px 0 0; display:grid; gap:4px}
+.cidade-opcoes button{text-align:left; width:100%}
+#distManualBox button{width:auto; margin-top:6px}
+input[type=number]{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:6px}
+.osm-credito{font-size:.75rem; color:var(--muted); margin-top:12px}
+#novoMarco{width:auto; margin:6px 0 10px}
+.linha-tempo{list-style:none; padding:0 0 0 8px; margin:0; border-left:2px solid var(--line)}
+.marco{display:flex; gap:10px; padding:8px 0 14px 10px; position:relative}
+.marco-emoji{font-size:1.5rem; flex:none; width:32px; text-align:center}
+.marco.principal .t{color:#e0457b}
+.marco .t{font-weight:700; overflow-wrap:anywhere}
+.marco .info{display:flex; flex-direction:column; min-width:0}
+.marco-desc{color:var(--muted); font-size:.9rem; overflow-wrap:anywhere}
+.marco .acoes{display:flex; gap:12px}
+.marco-sugestoes{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px}
+.marco-sugestoes button{width:auto; padding:5px 10px; border-radius:999px; border:1.5px solid var(--line); background:var(--surface); color:inherit; font-size:.8rem}
+.marco-emoji-campo{max-width:90px}
