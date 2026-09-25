@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 <main>
@@ -146,6 +146,23 @@
     <label class="check nota-cfg"><input type="checkbox" id="notaAdv"> Nota do adversário (★ valem pontos nos desafios)</label>
     <p class="config-dica" id="configDica"></p>
 
+    <div class="secretas" id="secretasBox" hidden>
+      <button class="linkbtn" id="minhaMissaoBtn" type="button" aria-expanded="false">🤫 Minha missão</button>
+      <div class="minha-missao" id="minhaMissao" hidden>
+        <p class="mm-texto" id="mmTexto"></p>
+        <p class="mm-info" id="mmInfo"></p>
+        <button class="secondary" id="mmCumpri" type="button">Cumpri a missão!</button>
+      </div>
+      <p class="missao-outro" id="missaoOutro"></p>
+      <div class="confirmar-missao" id="confirmarMissao" hidden>
+        <p id="cmTexto"></p>
+        <div class="row">
+          <button class="done" id="cmSim" type="button">Confirmar</button>
+          <button class="secondary" id="cmNao" type="button">Ainda não</button>
+        </div>
+      </div>
+    </div>
+
     <div class="stage" aria-live="polite">
       <p class="turn" id="vez"></p>
       <div class="wheel-wrap">
@@ -258,6 +275,7 @@
 
     <div class="fim" id="fim" hidden aria-live="polite">
       <p class="venceu" id="venceu"></p>
+      <ul class="missoes-reveladas" id="missoesReveladas"></ul>
       <button class="primary" id="novaPartida" type="button">Nova partida</button>
     </div>
 
@@ -378,8 +396,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=22"></script>
-<script src="app.js?v=22"></script>
+<script src="config.js?v=23"></script>
+<script src="app.js?v=23"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

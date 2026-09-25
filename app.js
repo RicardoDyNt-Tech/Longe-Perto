@@ -19,6 +19,7 @@
   const OS_DOIS_JOGAM = ["duelo", "missao_dupla", "sintonia"];   // eventos em que os dois agem ao mesmo tempo
   const PONTOS_EFEITO = { leve: 1, criativo: 1, picante: 2, pesado: 3 };   // quem aguenta o efeito até o fim
   const MAX_EFEITOS = 2;                                                     // por pessoa
+  const PONTOS_MISSAO = { leve: 2, criativo: 2, picante: 3, pesado: 4 };    // missão secreta confirmada
   // tipos de evento com tratamento próprio (as fases seguintes registram aqui); os demais usam "Concluir evento"
   const EVENTOS_TRATADOS = new Set();
   const ORDEM_NIVEIS = ["leve", "criativo", "picante", "pesado"];
@@ -46,6 +47,7 @@
   let timerTick = null;
   let timerAcabou = null;   // id do timer que já deu "Tempo!" aqui
   const efeitosAbertos = new Set();   // efeitos com o texto completo aberto neste aparelho
+  let missaoAberta = false;           // "🤫 Minha missão" aberta neste aparelho
   let timerAviso = null;
   let cartas = [];        // cartas padrão + cartas desta sala, vindas da tabela `cartas`
   let cartasOk = false;   // false até a busca terminar (ou se falhar)
@@ -749,6 +751,7 @@
   function sair() {
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null; ultimoVencedor = null;
+    missaoAberta = false;
     cartas = []; cartasOk = false; cofre = []; musicas = []; tocandoUrl = null;
     pendentes.forEach(p => clearTimeout(p.t)); pendentes.clear();
     desenharExtras();
@@ -793,6 +796,7 @@
     if (!e.duelo || !e.carta || e.duelo.chave !== e.carta.chave) e.duelo = null;
     if (!e.sintonia || !e.carta || e.sintonia.chave !== e.carta.chave) e.sintonia = null;
     if (!e.dupla || !e.carta || e.dupla.chave !== e.carta.chave) e.dupla = null;
+    if (!Array.isArray(e.secretas)) e.secretas = [];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
   }
@@ -961,6 +965,7 @@
 
     desenharPlacar(e, nomes);
     desenharEfeitos(e);
+    desenharSecretas(e);
     desenharReencontro(e);
     desenharDiario();
 
@@ -1236,6 +1241,7 @@
     const tipo = k % 2 === 0 ? "verdade" : "desafio";
     if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
+      if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
       let carta = sortear(tipo, n.niveis, n.usados || []);
       // com a chance configurada, o giro vira um evento especial (a roleta continua mostrando Verdade/Desafio)
       if (Math.random() < CHANCE_EVENTO[n.eventos]) carta = sortearEvento(n) || carta;
@@ -1250,6 +1256,7 @@
     if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null) return;
     if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
+      if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
       const carta = sortear(tipo, n.niveis, n.usados || []);
       registrarUso(n, carta);
       n.carta = carta;
@@ -1575,6 +1582,73 @@
       : dele === null ? `Você votou "${meu === "sim" ? "Conseguimos" : "Não deu"}". Esperando ${outro}…` : "";
   }
 
+  // ---------- missão secreta da partida ----------
+  // Duas missões diferentes, dos níveis ativos (se faltar, de qualquer nível). Cada um vê só a sua.
+  function sortearSecretas(n) {
+    let pool = cartas.filter(c => c.tipo === "missao_secreta" && n.niveis.includes(c.nivel));
+    if (pool.length < 2) pool = cartas.filter(c => c.tipo === "missao_secreta");
+    if (pool.length < 2) return [];
+    const i = Math.floor(Math.random() * pool.length);
+    let j = Math.floor(Math.random() * (pool.length - 1));
+    if (j >= i) j++;
+    return [pool[i], pool[j]].map(c => ({ id: c.id, texto: c.texto, nivel: c.nivel, status: "ativa" }));
+  }
+
+  function pedirMissao() {
+    const s = estado && estado.secretas[eu];
+    if (!s || s.status !== "ativa" || estado.vencedor !== null) return;
+    gravarFresco(n => { const m = n.secretas[eu]; if (m && m.status === "ativa" && n.vencedor == null) m.status = "pedida"; });
+  }
+
+  function julgarMissao(confirma) {
+    const dono = 1 - eu;
+    const s = estado && estado.secretas[dono];
+    if (!s || s.status !== "pedida") return;
+    gravarFresco(n => {
+      const m = n.secretas[dono];
+      if (!m || m.status !== "pedida") return;
+      if (!confirma) {
+        m.status = "ativa";
+        n.aviso = novoAviso(`${n.jogadores[eu]} disse que a missão de ${n.jogadores[dono]} ainda não foi cumprida.`);
+        return;
+      }
+      m.status = "cumprida";
+      const pts = PONTOS_MISSAO[m.nivel] || 2;
+      n.placar[dono].pontos += pts;
+      n.pontos = n.placar.map(x => x.pontos);
+      n.aviso = novoAviso(`${n.jogadores[dono]} cumpriu a missão secreta: ${m.texto} (+${pts})`);
+      conferirMeta(n);
+    });
+  }
+
+  function desenharSecretas(e) {
+    const box = $("secretasBox");
+    const ms = e.secretas;
+    box.hidden = !e.jogadores[1] || ms.length < 2;
+    const lista = $("missoesReveladas");
+    lista.textContent = "";
+    if (box.hidden) return;
+    const minha = ms[eu], dele = ms[1 - eu], outro = e.jogadores[1 - eu];
+    const acabou = e.vencedor !== null;
+    $("minhaMissaoBtn").setAttribute("aria-expanded", String(missaoAberta));
+    $("minhaMissao").hidden = !missaoAberta;
+    $("mmTexto").textContent = minha.texto;
+    $("mmInfo").textContent = `Nível ${LEVEL_NAMES[minha.nivel] || minha.nivel} · vale ${PONTOS_MISSAO[minha.nivel] || 2} pontos · `
+      + (minha.status === "cumprida" ? "cumprida ✓" : minha.status === "pedida" ? `esperando ${outro} confirmar` : "ninguém mais vê");
+    $("mmCumpri").hidden = minha.status !== "ativa" || acabou;
+    $("missaoOutro").textContent = dele.status === "cumprida" ? `${outro} cumpriu a missão: ${dele.texto}` : `${outro} tem uma missão secreta`;
+    const pedindo = dele.status === "pedida" && !acabou;
+    $("confirmarMissao").hidden = !pedindo;
+    if (pedindo) $("cmTexto").textContent = `${outro} diz que cumpriu a missão secreta: “${dele.texto}”`;
+    // no fim da partida, as missões não cumpridas são reveladas
+    if (acabou) ms.forEach((m, i) => {
+      if (m.status === "cumprida") return;
+      const li = document.createElement("li");
+      li.textContent = `A missão de ${e.jogadores[i]} era: ${m.texto}`;
+      lista.appendChild(li);
+    });
+  }
+
   // "Concluir evento": saída genérica para tipos de evento sem tratamento próprio
   function concluirEvento() {
     if (!estado || !estado.carta || !estado.carta.evento || estado.vez !== eu) return;
@@ -1691,7 +1765,9 @@
       n.duelo = null;
       n.sintonia = null;
       n.dupla = null;
+      n.secretas = sortearSecretas(n);
     });
+    missaoAberta = false;
   }
 
   function mudarMeta() {
@@ -1861,6 +1937,10 @@
     $("efeitoRecusar").addEventListener("click", recusarEfeito);
     $("dueloComecar").addEventListener("click", comecarDuelo);
     $("sintoniaEnviar").addEventListener("click", enviarSintonia);
+    $("minhaMissaoBtn").addEventListener("click", () => { missaoAberta = !missaoAberta; if (estado) desenharSecretas(estado); });
+    $("mmCumpri").addEventListener("click", pedirMissao);
+    $("cmSim").addEventListener("click", () => julgarMissao(true));
+    $("cmNao").addEventListener("click", () => julgarMissao(false));
     $("duplaVotos").addEventListener("click", ev => { const v = ev.target.dataset && ev.target.dataset.v; if (v) votarDupla(v); });
     $("sintoniaJulgar").addEventListener("click", ev => { const j = ev.target.dataset && ev.target.dataset.j; if (j) julgarSintonia(j); });
     $("dueloVotos").addEventListener("click", ev => { const v = ev.target.dataset && ev.target.dataset.v; if (v) votarDuelo(v); });

@@ -116,6 +116,16 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .votos-2{grid-template-columns:1fr 1fr}
 .votos button.meu{background:var(--ink); color:var(--bg); border-color:var(--ink)}
 .duelo-acoes .wait{margin:0}
+.secretas{margin:14px 0 0; font-size:.95rem}
+.minha-missao,.confirmar-missao{background:var(--surface); border:1.5px dashed var(--muted); border-radius:14px; padding:12px 14px; margin:8px 0}
+.mm-texto{margin:0; font-weight:700; overflow-wrap:anywhere}
+.mm-info{margin:4px 0 10px; color:var(--muted); font-size:.85rem}
+.missao-outro{margin:6px 0 0; color:var(--muted)}
+.confirmar-missao{border-style:solid; border-color:var(--lamp)}
+.confirmar-missao p{margin:0 0 10px; overflow-wrap:anywhere}
+.confirmar-missao .row button{flex:1; width:auto}
+.missoes-reveladas{list-style:none; padding:0; margin:0 0 12px; text-align:left}
+.missoes-reveladas li{padding:6px 0; border-top:1px solid var(--line); overflow-wrap:anywhere}
 .sintonia{margin:0 0 16px}
 .sintonia textarea{margin:6px 0 10px}
 .sintonia .wait{text-align:left; margin:8px 0 0}
