@@ -48,6 +48,9 @@
   let timerAcabou = null;   // id do timer que já deu "Tempo!" aqui
   const efeitosAbertos = new Set();   // efeitos com o texto completo aberto neste aparelho
   let missaoAberta = false;           // "🤫 Minha missão" aberta neste aparelho
+  let vista = "jogo";                 // "casa", "jogo" ou uma vista da Casa (vEnvelopes, vCofre...)
+  let presentes = new Set();          // jogadores com o app aberto agora (Presence do Realtime)
+  let presencaPronta = false;
   let timerAviso = null;
   let cartas = [];        // cartas padrão + cartas desta sala, vindas da tabela `cartas`
   let cartasOk = false;   // false até a busca terminar (ou se falhar)
@@ -289,7 +292,9 @@
     $("convidarWa").href = "https://wa.me/?text=" + encodeURIComponent(convite);
 
     if (canal) sb.removeChannel(canal);
-    canal = sb.channel("sala-" + c)
+    presentes = new Set(); presencaPronta = false;
+    canal = sb.channel("sala-" + c, { config: { presence: { key: String(idx) } } })
+      .on("presence", { event: "sync" }, () => sincronizarPresenca(c))
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "salas", filter: `codigo=eq.${c}` },
         payload => { if (payload.new.codigo === c && codigo === c) aplicar(payload.new.estado, false); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "cartas", filter: `sala=eq.${c}` },
@@ -309,11 +314,19 @@
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "musicas" },
         payload => tirarMusica(payload.old && payload.old.id))
       .subscribe(status => {
+        if (status === "SUBSCRIBED" && canal) canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {});
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
           erro("erroJogo", "A conexão ao vivo caiu. Recarregue a página se a roleta parar de sincronizar.");
       });
 
+    // sala fixa: Casa do casal (cofre e desafio do dia moram lá); sala comum: cofre no jogo
+    const fixa = !!e.fixa;
+    if (fixa) $("lugarCofre").appendChild($("cofre")); else $("musicas").before($("cofre"));
+    $("cofre").open = fixa;
+    $("casaConvite").hidden = fixa;
+    $("casaGrade").hidden = !fixa;
     aplicar(e, true);
+    mostrarVista(fixa ? "casa" : "jogo");
     carregarCartas(c);
     carregarCofre(c);
     carregarMusicas(c);
@@ -377,6 +390,7 @@
 
   function desenharCofre() {
     const filtro = (document.querySelector('input[name="filtroCofre"]:checked') || {}).value || "todos";
+    if (estado) desenharCasa(estado);
     const pend = cofre.filter(x => !x.feito).length;
     $("cofreQtd").textContent = cofre.length ? `(${pend} ${pend === 1 ? "pendente" : "pendentes"} de ${cofre.length})` : "";
     $("cofreDica").hidden = !estado || !!estado.fixa;
@@ -681,6 +695,65 @@
     tirarMusica(m.id);
   }
 
+  // ---------- Casa do casal e presença ----------
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho"];
+
+  function mostrarVista(nome) {
+    vista = nome;
+    const naCasa = nome !== "jogo";
+    $("telaCasa").hidden = !naCasa;
+    $("telaJogo").hidden = naCasa;
+    document.body.classList.toggle("vista-casa", naCasa);
+    $("casaGrade").hidden = !(estado && estado.fixa) || nome !== "casa";
+    VISTAS_CASA.forEach(v => { if ($(v)) $(v).hidden = v !== nome; });
+    $("abaCasa").setAttribute("aria-current", naCasa ? "page" : "false");
+    $("abaJogo").setAttribute("aria-current", naCasa ? "false" : "page");
+    if (estado) desenharCasa(estado);
+    window.scrollTo(0, 0);
+  }
+
+  // cartões da Casa: um resumo de cada canto
+  function desenharCasa(e) {
+    if (!e.fixa) return;
+    const outro = e.jogadores[1 - eu];
+    const hoje = hojeISO();
+    $("cardDiarioSub").textContent = cumpriuNoDia(hoje, eu) ? "Cumprido hoje ✓" : "Seu desafio de hoje";
+    const pend = cofre.filter(x => !x.feito).length;
+    $("cardCofreSub").textContent = cofre.length ? `${pend} ${pend === 1 ? "pendente" : "pendentes"}` : "Guardem cartas para o reencontro";
+    $("cardJogoSub").textContent = e.vencedor !== null ? "Partida encerrada" : e.carta ? "Carta na mesa" : outro && e.vez === eu ? "Sua vez" : "Roleta, cartas e placar";
+    desenharCasaExtras(e);
+  }
+  // as fases seguintes acrescentam cartões (envelopes, semana, cápsulas…)
+  const extrasDaCasa = [];
+  function desenharCasaExtras(e) { extrasDaCasa.forEach(f => f(e)); }
+
+  // Presence: cada aparelho anuncia { jogador, online_em } no canal da sala
+  function sincronizarPresenca(c) {
+    if (!canal || c !== codigo) return;
+    const st = canal.presenceState() || {};
+    const agora = new Set();
+    Object.values(st).forEach(lista => (lista || []).forEach(p => { if (p && (p.jogador === 0 || p.jogador === 1)) agora.add(p.jogador); }));
+    const outro = 1 - eu;
+    const chegou = !presentes.has(outro) && agora.has(outro);
+    presentes = agora;
+    if (chegou && presencaPronta) vibrar([60, 40, 60]);   // a outra pessoa entrou na sala
+    presencaPronta = true;
+    desenharPresenca();
+    presencaMudou.forEach(f => f());
+  }
+  const presencaMudou = [];   // envelopes e desafio surpresa escutam aqui
+  const ambosPresentes = () => presentes.has(0) && presentes.has(1);
+
+  function desenharPresenca() {
+    const el = $("presenca");
+    const nome = estado && estado.jogadores[1 - eu];
+    el.hidden = !nome;
+    if (!nome) return;
+    const on = presentes.has(1 - eu);
+    el.textContent = on ? `💚 ${nome} está aqui agora` : `${nome} está fora`;
+    el.classList.toggle("on", on);
+  }
+
   // ---------- salas recentes (só neste aparelho) ----------
   const recentes = () => { const r = lerLocal("lp-salas"); return Array.isArray(r) ? r : []; };
 
@@ -751,6 +824,8 @@
   function sair() {
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null; ultimoVencedor = null; ultimaRevelada = null;
+    presentes = new Set(); presencaPronta = false;
+    mostrarVista("jogo");
     missaoAberta = false;
     cartas = []; cartasOk = false; cofre = []; musicas = []; tocandoUrl = null;
     pendentes.forEach(p => clearTimeout(p.t)); pendentes.clear();
@@ -969,6 +1044,8 @@
     if (s) s.textContent = nomes[e.vez];
 
     desenharPlacar(e, nomes);
+    desenharPresenca();
+    if (vista !== "jogo") desenharCasa(e);
     desenharEfeitos(e);
     desenharSecretas(e);
     desenharReencontro(e);
@@ -1989,6 +2066,12 @@
     $("instalar").addEventListener("click", instalar);
     desenharAjustes();
     $("som").addEventListener("click", trocarSom);
+    // Casa do casal: qualquer elemento com data-abre troca de vista
+    document.addEventListener("click", ev => {
+      const b = ev.target.closest && ev.target.closest("[data-abre]");
+      if (b && $("jogo").contains(b)) mostrarVista(b.dataset.abre);
+    });
+    addEventListener("pagehide", () => { try { if (canal) canal.untrack(); } catch (err) {} });
     $("camera").addEventListener("change", mudarCamera);
     // reserva o espaço da barra fixa no fim da página
     try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) {}

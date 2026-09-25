@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=25">
+<link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 <main>
@@ -80,33 +80,6 @@
       <button class="linkbtn" id="reencontroMudar" type="button" hidden>mudar data</button>
     </div>
 
-    <section class="diario" id="diario" hidden aria-label="Desafio do dia">
-      <div class="diario-topo">
-        <h2>Desafio do dia</h2>
-        <label>Nível
-          <select id="nivelDiario">
-            <option value="leve">Leve</option>
-            <option value="criativo">Criativo</option>
-            <option value="picante">Picante</option>
-            <option value="pesado">Pesado +18</option>
-          </select>
-        </label>
-      </div>
-      <div class="diario-meu">
-        <p class="diario-quem" id="diarioMeuTitulo"></p>
-        <p class="diario-texto" id="diarioMeuTexto"></p>
-        <p class="diario-seq" id="diarioMeuSeq"></p>
-        <div class="row">
-          <a class="wa" id="diarioWa" target="_blank" rel="noopener">Mandar no WhatsApp</a>
-          <button class="secondary" id="diarioCumpri" type="button">Cumpri hoje</button>
-        </div>
-      </div>
-      <div class="diario-outro" id="diarioOutro" hidden>
-        <p class="diario-quem" id="diarioOutroTitulo"></p>
-        <p class="diario-texto" id="diarioOutroTexto"></p>
-        <p class="diario-seq" id="diarioOutroSeq"></p>
-      </div>
-    </section>
 
     <div class="invite" id="convite" hidden>
       <p>Mande o link para a outra pessoa entrar. O jogo começa quando ela chegar.</p>
@@ -116,6 +89,58 @@
         <button class="secondary" id="copiar">Copiar link</button>
       </div>
     </div>
+
+    <nav class="abas" id="abas" aria-label="Seções da sala">
+      <button type="button" data-abre="casa" id="abaCasa">🏠 Casa</button>
+      <button type="button" data-abre="jogo" id="abaJogo">🎲 Jogar</button>
+    </nav>
+    <p class="presenca" id="presenca" hidden></p>
+    <p class="erro" id="erroJogo" role="alert"></p>
+
+    <section class="casa" id="telaCasa" hidden aria-label="Casa do casal">
+      <p class="casa-convite" id="casaConvite" hidden>Crie uma sala fixa para guardar envelopes, álbum e conquistas. No início, toque em "Criar sala fixa".</p>
+      <div class="casa-grade" id="casaGrade">
+        <button type="button" class="casa-card" data-abre="jogo"><span class="ic">🎲</span><b>Jogar</b><span class="sub" id="cardJogoSub">Roleta, cartas e placar</span></button>
+        <button type="button" class="casa-card" data-abre="vDiario"><span class="ic">🔥</span><b>Desafio do dia</b><span class="sub" id="cardDiarioSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
+      </div>
+      <section class="casa-vista" id="vDiario" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <section class="diario" id="diario" hidden aria-label="Desafio do dia">
+          <div class="diario-topo">
+            <h2>Desafio do dia</h2>
+            <label>Nível
+              <select id="nivelDiario">
+                <option value="leve">Leve</option>
+                <option value="criativo">Criativo</option>
+                <option value="picante">Picante</option>
+                <option value="pesado">Pesado +18</option>
+              </select>
+            </label>
+          </div>
+          <div class="diario-meu">
+            <p class="diario-quem" id="diarioMeuTitulo"></p>
+            <p class="diario-texto" id="diarioMeuTexto"></p>
+            <p class="diario-seq" id="diarioMeuSeq"></p>
+            <div class="row">
+              <a class="wa" id="diarioWa" target="_blank" rel="noopener">Mandar no WhatsApp</a>
+              <button class="secondary" id="diarioCumpri" type="button">Cumpri hoje</button>
+            </div>
+          </div>
+          <div class="diario-outro" id="diarioOutro" hidden>
+            <p class="diario-quem" id="diarioOutroTitulo"></p>
+            <p class="diario-texto" id="diarioOutroTexto"></p>
+            <p class="diario-seq" id="diarioOutroSeq"></p>
+          </div>
+        </section>
+      </section>
+      <section class="casa-vista" id="vCofre" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <div id="lugarCofre"></div>
+      </section>
+    </section>
+
+    <div id="telaJogo">
 
     <div class="chips" id="niveis" aria-label="Níveis">
       <label class="chip"><input type="checkbox" value="leve"><span>Leve</span></label>
@@ -287,8 +312,8 @@
       <p class="extras-sub" id="extrasVazio">Nenhuma carta de vocês ainda. Toque em "Adicionar carta" para criar.</p>
       <ul class="lista-extras" id="listaExtras"></ul>
     </details>
-    <p class="erro" id="erroJogo" role="alert"></p>
     <p class="hint">Combinem uma palavra para pular qualquer rodada sem explicação. Fotos e áudios ousados: usem a visualização única do WhatsApp.</p>
+    </div>
 
     <div class="barra-acoes" id="barraAcoes">
       <div class="barra-in">
@@ -418,8 +443,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=25"></script>
-<script src="app.js?v=25"></script>
+<script src="config.js?v=26"></script>
+<script src="app.js?v=26"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
