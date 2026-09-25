@@ -342,7 +342,7 @@
     carregarCofre(c);
     carregarMusicas(c);
     Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
-    marcas = new Map(); vistas = new Map();
+    marcas = new Map(); vistas = new Map(); partidasSala = [];
     if (fixa) { carregarV5(c); carregarBaralho(c); }
   }
 
@@ -480,6 +480,7 @@
     const { error } = await sb.from("cofre").update({ feito }).eq("id", x.id);
     if (error) { erro("erroJogo", "Não consegui marcar. Confira a internet e tente de novo."); return desenharCofre(); }
     juntarCofre({ ...x, feito });
+    if (feito) depoisDeAcao();
   }
 
   async function apagarCofre(x) {
@@ -551,7 +552,7 @@
       n.diario[hoje] = Object.assign({}, n.diario[hoje], { [eu]: true });
       // guarda só os últimos 60 dias
       Object.keys(n.diario).sort().slice(0, -60).forEach(d => { delete n.diario[d]; });
-    });
+    }).then(depoisDeAcao);
   }
 
   // ---------- trilha da rodada (Spotify, só links e player embutido) ----------
@@ -724,6 +725,7 @@
     if (nome === "vSemana") desenharSemana();
     if (nome === "vAlbum") desenharAlbum();
     if (nome === "vBaralho") desenharBaralho();
+    if (nome === "vConquistas") desenharConquistas();
     window.scrollTo(0, 0);
   }
 
@@ -1523,9 +1525,129 @@
     $("cardBaralhoSub").textContent = n ? `${n} ${n === 1 ? "favorita" : "favoritas"}` : "Favoritas e aposentadas";
   });
 
+  // ---------- conquistas (definições em conquistas.js) ----------
+  let partidasSala = [];   // partidas terminadas desta sala (carregadas com o histórico)
+  const CONQ = () => window.CONQUISTAS || [];
+  const defConquista = c => CONQ().find(x => x.codigo === c);
+  const linhaConquista = (c, j) => dados.conquistas.find(r => r.codigo === c && (r.jogador ?? null) === j);
+
+  // partidas na ordem dos jogadores de agora (pelo nome, como o histórico)
+  function partidasDoCasal() {
+    const nomes = estado.jogadores;
+    return partidasSala.map(p => {
+      const js = p.jogadores || [];
+      const ordem = [0, 1].map(i => { const k = js.findIndex(n => mesmoNome(n, nomes[i])); return k >= 0 ? k : i; });
+      if (ordem[0] === ordem[1]) ordem[1] = 1 - ordem[0];
+      return { placar: ordem.map(k => (Array.isArray(p.placar) && p.placar[k]) || {}), vencedor: ordem.indexOf(p.vencedor) };
+    });
+  }
+  function dadosConquistas() {
+    return {
+      partidas: partidasDoCasal(), autorais: cartas.filter(c => c.sala).length,
+      envelopes: dados.envelopes, capsulas: dados.capsulas, apostas: dados.apostas, observacoes: dados.observacoes, momentos: dados.momentos,
+      cofre, seq: [sequencia(0), sequencia(1)]
+    };
+  }
+  function progresso(c, d, j) { try { return Number(c.contar(d, j)) || 0; } catch (err) { return 0; } }
+
+  // só o aparelho que fez a ação chama isto; conquista repetida (23505) é ignorada
+  let verificando = false, verificarDeNovo = false;
+  async function verificarConquistas() {
+    if (!estado || !estado.fixa || !codigo) return;
+    if (verificando) { verificarDeNovo = true; return; }
+    verificando = true;
+    try {
+      const d = dadosConquistas(), sala = codigo;
+      for (const c of CONQ()) {
+        for (const j of c.escopo === "casal" ? [null] : [0, 1]) {
+          if (linhaConquista(c.codigo, j) || progresso(c, d, j) < c.meta) continue;
+          const { data, error } = await sb.from("conquistas").insert({ sala, codigo: c.codigo, jogador: j }).select("*").single();
+          if (!error && data && sala === codigo) linhaV5("conquistas", "INSERT", data);
+        }
+      }
+    } finally {
+      verificando = false;
+      if (verificarDeNovo) { verificarDeNovo = false; verificarConquistas(); }
+    }
+  }
+
+  // aviso nos dois aparelhos (quem gravou e quem recebeu pelo Realtime)
+  let filaConquistas = [], timerConquistas = null;
+  escutar("conquistas", (ev, row, antes) => {
+    if (ev !== "INSERT" || antes) return;
+    const c = defConquista(row.codigo);
+    if (!c || (c.categoria === "ousadia" && estado && !estado.mostrarOusadia)) return;
+    // várias de uma vez (fim de partida): um aviso só
+    filaConquistas.push(`🏆 ${c.titulo}` + (row.jogador === 0 || row.jogador === 1 ? ` (${nomeDe(row.jogador)})` : ""));
+    clearTimeout(timerConquistas);
+    timerConquistas = setTimeout(() => { mostrarAviso(novoAviso(filaConquistas.join(" · ")), false); filaConquistas = []; }, 300);
+  });
+
+  function itemConquista(c, d) {
+    const quem = c.escopo === "casal" ? [null] : [0, 1];
+    const feitas = quem.map(j => linhaConquista(c.codigo, j));
+    const box = el("div", "conq" + (feitas.every(Boolean) ? " ok" : feitas.some(Boolean) ? " meio" : ""));
+    box.append(el("b", "", (feitas.some(Boolean) ? "🏆 " : "🔒 ") + c.titulo), el("span", "desc", c.descricao));
+    quem.forEach((j, k) => {
+      const linha = el("div", "conq-linha");
+      if (j !== null) linha.appendChild(el("span", "quem", nomeDe(j)));
+      if (feitas[k]) linha.appendChild(el("span", "feita", `Desbloqueada em ${dataCurta(feitas[k].desbloqueada_em)}`));
+      else {
+        const v = Math.min(progresso(c, d, j), c.meta);
+        const barra = el("div", "barra");
+        const i = el("i");
+        i.style.width = Math.round(v / c.meta * 100) + "%";
+        barra.appendChild(i);
+        barra.setAttribute("role", "progressbar");
+        barra.setAttribute("aria-valuemin", "0");
+        barra.setAttribute("aria-valuemax", String(c.meta));
+        barra.setAttribute("aria-valuenow", String(v));
+        linha.append(barra, el("span", "num", `${v}/${c.meta}`));
+      }
+      box.appendChild(linha);
+    });
+    return box;
+  }
+
+  function desenharConquistas() {
+    if (!$("vConquistas") || !estado || !estado.fixa) return;
+    const d = dadosConquistas();
+    const mostrar = estado.mostrarOusadia;
+    ["jornada", "ousadia"].forEach(cat => {
+      const grade = $(cat === "jornada" ? "conqJornada" : "conqOusadia");
+      grade.textContent = "";
+      CONQ().filter(c => c.categoria === cat).forEach(c => grade.appendChild(itemConquista(c, d)));
+    });
+    $("mostrarOusadia").checked = mostrar;
+    $("conqOusadia").hidden = !mostrar;
+    const visiveis = CONQ().filter(c => mostrar || c.categoria !== "ousadia");
+    const total = visiveis.reduce((s, c) => s + (c.escopo === "casal" ? 1 : 2), 0);
+    const feitas = visiveis.reduce((s, c) => s + (c.escopo === "casal" ? [null] : [0, 1]).filter(j => linhaConquista(c.codigo, j)).length, 0);
+    $("conqResumo").textContent = `${feitas} de ${total} desbloqueadas`;
+    // título: entre as conquistas de jogador que eu já tenho
+    const sel = $("meuTitulo");
+    sel.textContent = "";
+    const nenhum = el("option", "", "Sem título"); nenhum.value = ""; sel.appendChild(nenhum);
+    CONQ().filter(c => c.escopo === "jogador" && linhaConquista(c.codigo, eu) && (mostrar || c.categoria !== "ousadia")).forEach(c => {
+      const o = el("option", "", c.titulo); o.value = c.codigo; sel.appendChild(o);
+    });
+    sel.value = estado.titulos[eu] && [...sel.options].some(o => o.value === estado.titulos[eu]) ? estado.titulos[eu] : "";
+  }
+  const tituloDe = (e, i) => {
+    const c = e.fixa && e.titulos[i] ? defConquista(e.titulos[i]) : null;
+    return c && linhaConquista(c.codigo, i) && (e.mostrarOusadia || c.categoria !== "ousadia") ? c.titulo : "";
+  };
+  redesenhar("conquistas", () => { desenharConquistas(); if (estado) desenharPlacar(estado, [estado.jogadores[0] || "Pessoa 1", estado.jogadores[1] || "…"]); });
+  extrasDaCasa.push(e => {
+    const n = dados.conquistas.filter(r => { const c = defConquista(r.codigo); return c && (e.mostrarOusadia || c.categoria !== "ousadia"); }).length;
+    $("cardConqSub").textContent = n ? `${n} ${n === 1 ? "desbloqueada" : "desbloqueadas"}` : "Jornada do casal";
+    if (vista === "vConquistas") desenharConquistas();
+  });
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
+  aposAcao.push(verificarConquistas);
 
   // ---------- salas recentes (só neste aparelho) ----------
   const recentes = () => { const r = lerLocal("lp-salas"); return Array.isArray(r) ? r : []; };
@@ -1562,7 +1684,7 @@
   function registrarPartida(sala, e) {
     sb.from("partidas")
       .insert({ sala, jogadores: e.jogadores, placar: e.placar, vencedor: e.vencedor, meta: e.meta })
-      .then(({ error }) => { if (!error && sala === codigo) carregarHistorico(sala); });
+      .then(({ error }) => { if (!error && sala === codigo) carregarHistorico(sala).then(verificarConquistas); });
   }
 
   async function carregarHistorico(c) {
@@ -1572,6 +1694,7 @@
       .order("finalizada_em", { ascending: false })
       .limit(1000);
     if (c !== codigo || error || !data) return;
+    partidasSala = data;
     const nomes = estado ? estado.jogadores : [];
     const vitorias = [0, 1].map(i => data.filter(p => mesmoNome((p.jogadores || [])[p.vencedor], nomes[i])).length);
     $("histQtd").textContent = data.length ? `(${data.length})` : "";
@@ -1613,7 +1736,10 @@
 
   // ---------- placar ----------
   const placarVazio = (pontos, pulosMax) =>
-    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, duplas: 0, reverso: true, livresV: pulosMax, livresD: pulosMax });
+    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, duplas: 0, reverso: true, livresV: pulosMax, livresD: pulosMax,
+      // v5 (conquistas): por nível, eventos que saíram, pulos usados, efeitos Pesados até o fim, missões secretas Pesadas
+      porNivel: { leve: { v: 0, d: 0 }, criativo: { v: 0, d: 0 }, picante: { v: 0, d: 0 }, pesado: { v: 0, d: 0 } },
+      eventos: {}, pulosUsados: 0, efeitosPesados: 0, secretasPesadas: 0 });
 
   const novoAviso = texto => ({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto });
 
@@ -1628,6 +1754,8 @@
       if (p.livresV === undefined && typeof p.pulosV === "number") q.livresV = Math.max(0, e.pulosMax - p.pulosV);
       if (p.livresD === undefined && typeof p.pulosD === "number") q.livresD = Math.max(0, e.pulosMax - p.pulosD);
       delete q.pulosV; delete q.pulosD;
+      // partida em andamento de antes da v5: se já gastou pulo, não conta como "sem pulo"
+      if (typeof p.pulosUsados !== "number") q.pulosUsados = q.livresV < e.pulosMax || q.livresD < e.pulosMax ? 1 : 0;
       return q;
     });
     if (e.vencedor !== 0 && e.vencedor !== 1) e.vencedor = null;
@@ -1648,6 +1776,8 @@
     if (!LEVEL_NAMES[e.nivelSemana]) e.nivelSemana = "leve";
     if (!Array.isArray(e.obsPedida) || e.obsPedida.length !== 2) e.obsPedida = [null, null];
     if (!Array.isArray(e.historico)) e.historico = [];
+    if (typeof e.mostrarOusadia !== "boolean") e.mostrarOusadia = true;
+    if (!Array.isArray(e.titulos) || e.titulos.length !== 2) e.titulos = [null, null];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
   }
@@ -1712,6 +1842,7 @@
       n.efeitos = n.efeitos.filter(ef => !acabaram.includes(ef));
       const pts = acabaram.reduce((s, ef) => s + (PONTOS_EFEITO[ef.nivel] || 1), 0);
       n.placar[dono].pontos += pts;
+      n.placar[dono].efeitosPesados = (n.placar[dono].efeitosPesados || 0) + acabaram.filter(ef => ef.nivel === "pesado").length;
       n.pontos = n.placar.map(x => x.pontos);
       n.aviso = novoAviso(`${n.jogadores[dono]} aguentou o efeito até o fim! +${pts}`);
       if (conferirMeta(n)) return;
@@ -1740,6 +1871,8 @@
     nomes.forEach((n, i) => {
       const th = document.createElement("th");
       th.textContent = n;
+      const titulo = tituloDe(e, i);
+      if (titulo) th.appendChild(el("small", "titulo-placar", titulo));
       th.className = (i === eu ? "me " : "") + (i === e.vez && e.jogadores[1] ? "vez" : "");
       thead.appendChild(th);
     });
@@ -2221,7 +2354,12 @@
       const niveis = n.niveis.filter(nv => cartas.some(c => c.tipo === tipo && c.nivel === nv));
       if (niveis.length) {
         const carta = sortear(tipo, [niveis[Math.floor(Math.random() * niveis.length)]], n.usados || []);
-        if (carta) { carta.evento = true; carta.de = n.vez; return carta; }
+        if (carta) {
+          carta.evento = true; carta.de = n.vez;
+          const ev = n.placar[n.vez].eventos || (n.placar[n.vez].eventos = {});
+          ev[tipo] = (ev[tipo] || 0) + 1;
+          return carta;
+        }
       }
       tipos = tipos.filter(([t]) => t !== tipo);
     }
@@ -2561,6 +2699,7 @@
       m.status = "cumprida";
       const pts = PONTOS_MISSAO[m.nivel] || 2;
       n.placar[dono].pontos += pts;
+      if (m.nivel === "pesado") n.placar[dono].secretasPesadas = (n.placar[dono].secretasPesadas || 0) + 1;
       n.pontos = n.placar.map(x => x.pontos);
       n.aviso = novoAviso(`${n.jogadores[dono]} cumpriu a missão secreta: ${m.texto} (+${pts})`);
       conferirMeta(n);
@@ -2642,6 +2781,8 @@
     p.pontos += ((PONTOS[c.tipo] || {})[c.nivel] || 0) + estrelas;
     p.estrelas += estrelas;
     if (c.tipo === "verdade") p.verdades++; else p.desafios++;
+    const pn = p.porNivel && p.porNivel[c.nivel];
+    if (pn) pn[c.tipo === "verdade" ? "v" : "d"]++;
     passarVez(n, c);
     conferirMeta(n);
   }
@@ -2674,6 +2815,7 @@
       const c = n.carta;
       const q = n.placar[n.vez];
       const campo = c.tipo === "verdade" ? "livresV" : "livresD";
+      q.pulosUsados = (q.pulosUsados || 0) + 1;
       if (q[campo] > 0) {
         q[campo]--;
         n.carta = null;
@@ -2818,6 +2960,7 @@
     erro("erroJogo", "");
     juntarCarta(data);
     $("dlgCarta").close();
+    depoisDeAcao();
   }
 
   async function apagarCarta(x) {
@@ -2867,6 +3010,8 @@
     $("formCapsula").addEventListener("submit", salvarCapsula);
     $("cancelarCapsula").addEventListener("click", () => $("dlgCapsula").close());
     $("formMomento").addEventListener("submit", salvarMomento);
+    $("mostrarOusadia").addEventListener("change", () => { const v = $("mostrarOusadia").checked; gravar(n => { n.mostrarOusadia = v; }); });
+    $("meuTitulo").addEventListener("change", () => { const v = $("meuTitulo").value || null; gravar(n => { n.titulos[eu] = v; }); });
     document.querySelectorAll("#marcas [data-marca]").forEach(b => b.addEventListener("click", () => marcarCarta(estado && estado.carta && estado.carta.id, b.dataset.marca)));
     $("cancelarMomento").addEventListener("click", () => $("dlgMomento").close());
     document.querySelectorAll("#albumFiltro [data-filtro]").forEach(b => b.addEventListener("click", () => { filtroAlbum = b.dataset.filtro; desenharAlbum(); }));

@@ -228,6 +228,19 @@ body.vista-casa .barra-acoes{display:none}
 .marcas button{width:auto; background:none; border:1px solid transparent; border-radius:999px; padding:2px 8px; font-size:1rem; opacity:.45; cursor:pointer}
 .marcas button[aria-pressed="true"]{opacity:1; border-color:var(--line)}
 #vBaralho .t{overflow-wrap:anywhere}
+.conq-grade{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px}
+.conq{background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; opacity:.75; min-width:0}
+.conq.ok, .conq.meio{opacity:1; border-color:var(--lamp)}
+.conq b{display:block; overflow-wrap:anywhere}
+.conq .desc{display:block; font-size:.85rem; color:var(--muted); margin:2px 0 6px}
+.conq-linha{display:flex; align-items:center; gap:6px; font-size:.8rem; flex-wrap:wrap}
+.conq-linha .quem{font-weight:700}
+.conq-linha .barra{flex:1; min-width:50px}
+.conq-linha .feita{color:var(--muted)}
+.meu-titulo select{width:auto; margin-left:6px; max-width:100%}
+.toggle{display:flex; align-items:center; gap:8px; margin:0 0 10px}
+.toggle input{width:auto}
+.titulo-placar{display:block; font-size:.72rem; font-weight:600; color:var(--muted)}
 .cap-status{display:block; font-size:.88rem; margin-top:4px}
 .cap-responder{display:flex; flex-direction:column; gap:6px; margin-top:8px}
 .cap-responder textarea{margin:0}
