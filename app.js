@@ -16,6 +16,8 @@
   const CHANCE_EVENTO = { desligado: 0, raro: 0.10, normal: 0.20, frequente: 0.35 };
   const PESOS_EVENTO = [["efeito", 35], ["duelo", 30], ["sintonia", 20], ["missao_dupla", 15]];
   const PARA_OS_DOIS = ["duelo", "missao_dupla"];
+  const PONTOS_EFEITO = { leve: 1, criativo: 1, picante: 2, pesado: 3 };   // quem aguenta o efeito até o fim
+  const MAX_EFEITOS = 2;                                                     // por pessoa
   // tipos de evento com tratamento próprio (as fases seguintes registram aqui); os demais usam "Concluir evento"
   const EVENTOS_TRATADOS = new Set();
   const ORDEM_NIVEIS = ["leve", "criativo", "picante", "pesado"];
@@ -42,6 +44,7 @@
   let timerLocal = null;    // { id, t0 } — início da contagem medido neste aparelho
   let timerTick = null;
   let timerAcabou = null;   // id do timer que já deu "Tempo!" aqui
+  const efeitosAbertos = new Set();   // efeitos com o texto completo aberto neste aparelho
   let timerAviso = null;
   let cartas = [];        // cartas padrão + cartas desta sala, vindas da tabela `cartas`
   let cartasOk = false;   // false até a busca terminar (ou se falhar)
@@ -142,6 +145,8 @@
     if (!estado) return;
     const novo = structuredClone(estado);
     mudar(novo);
+    // começou uma vez nova (sem carta na mesa): conta as rodadas dos efeitos e traz a prenda pendente
+    if (novo.vez !== estado.vez && novo.vencedor == null && !novo.carta && novo.jogadores[1]) inicioDaVez(novo);
     // o cronômetro pertence à carta: saiu a carta (cumpri, pular, liberar, nova carta), sai o timer
     if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) novo.timer = null;
     if (!novo.carta) novo.musica = null;
@@ -753,6 +758,8 @@
     if (!e.diario || typeof e.diario !== "object" || Array.isArray(e.diario)) e.diario = {};
     if (typeof e.notaAdversario !== "boolean") e.notaAdversario = true;
     if (!(e.eventos in CHANCE_EVENTO)) e.eventos = "normal";
+    if (!Array.isArray(e.efeitos)) e.efeitos = [];
+    if (!e.prendaPendente || ![0, 1].includes(e.prendaPendente.dono)) e.prendaPendente = null;
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
   }
@@ -784,6 +791,53 @@
     carta.motivo = motivo;
     if (motivo === "pulo") carta.origem = pulada.tipo;
     return carta;
+  }
+
+  // a vez normalmente vai para o outro; algumas cartas dizem com quem ela fica depois (proxVez)
+  function passarVez(n, c) {
+    n.vez = c && (c.proxVez === 0 || c.proxVez === 1) ? c.proxVez : 1 - n.vez;
+  }
+
+  // Confere a meta depois de qualquer ponto. Empate na meta não encerra: o próximo ponto decide.
+  function conferirMeta(n) {
+    if (n.vencedor != null) return true;
+    const [a, b] = n.placar.map(p => p.pontos);
+    if (a < n.meta && b < n.meta) return false;
+    if (a === b) { n.aviso = novoAviso("Empate na meta! Próximo ponto decide."); return false; }
+    n.vencedor = a > b ? 0 : 1;
+    n.vez = 1 - n.vencedor;                             // quem perdeu cumpre a prenda final
+    n.avaliacao = null;
+    n.efeitos = [];                                     // efeitos ativos são descartados, sem pontos
+    n.prendaPendente = null;
+    n.carta = prendaPara(n, "final");
+    return true;
+  }
+
+  // Início de uma vez: desconta 1 rodada dos efeitos do dono; quem aguentou até o fim ganha pontos.
+  // Depois, se houver prenda pendente ("Quebrou!") para quem começa a vez, ela vem antes do giro.
+  function inicioDaVez(n) {
+    const dono = n.vez;
+    const acabaram = [];
+    n.efeitos.forEach(ef => { if (ef.dono === dono) { ef.restantes--; if (ef.restantes <= 0) acabaram.push(ef); } });
+    if (acabaram.length) {
+      n.efeitos = n.efeitos.filter(ef => !acabaram.includes(ef));
+      const pts = acabaram.reduce((s, ef) => s + (PONTOS_EFEITO[ef.nivel] || 1), 0);
+      n.placar[dono].pontos += pts;
+      n.pontos = n.placar.map(x => x.pontos);
+      n.aviso = novoAviso(`${n.jogadores[dono]} aguentou o efeito até o fim! +${pts}`);
+      if (conferirMeta(n)) return;
+    }
+    const pend = n.prendaPendente;
+    if (pend && pend.dono === dono && !n.carta) {
+      const carta = sortearPrenda(pend.nivel, n.usados || []);
+      if (carta) {
+        registrarUso(n, carta);
+        carta.motivo = "quebra";
+        carta.proxVez = dono;                           // resolvida a prenda, a vez continua com o dono
+        n.carta = carta;
+      }
+      n.prendaPendente = null;
+    }
   }
 
   const ehPulo = c => c && c.tipo === "prenda" && /^pulo/.test(c.motivo || "");
@@ -869,6 +923,7 @@
     if (s) s.textContent = nomes[e.vez];
 
     desenharPlacar(e, nomes);
+    desenharEfeitos(e);
     desenharReencontro(e);
     desenharDiario();
 
@@ -961,6 +1016,7 @@
     $("done").hidden = !minhaVez || avaliando || evento;
     $("skip").hidden = !minhaVez || !c || c.tipo === "prenda" || avaliando || evento;
     $("eventoFim").hidden = !evento || !minhaVez || EVENTOS_TRATADOS.has(c.tipo);
+    $("efeitoAcoes").hidden = !(evento && c.tipo === "efeito" && minhaVez);
     // Nota do adversário: quem não cumpriu dá as estrelas
     $("avaliar").hidden = !completa || minhaVez || !avaliando;
     if (c && !evento && c.tipo !== "prenda") {
@@ -977,6 +1033,7 @@
     } else if (!minhaVez && completa) {
       const quem = estado.jogadores[estado.vez];
       ag.textContent = c && c.tipo === "prenda" ? `Aguardando ${quem} cumprir a prenda.`
+        : evento && c.tipo === "efeito" ? `Aguardando ${quem} aceitar ou recusar o efeito.`
         : evento ? `Aguardando ${quem} concluir o evento.`
         : `Aguardando ${quem} cumprir ou pular.`;
     }
@@ -991,11 +1048,14 @@
     card.hidden = false;
     $("selo").hidden = !c.evento;
     $("selo").textContent = c.evento ? "⚡ Evento especial" : "";
-    $("kind").textContent = ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
+    $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
+      : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
+      : ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
       : c.motivo === "final" ? "Prenda final"
       : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
-      + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome;
+      + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome
+      + (c.tipo === "efeito" && c.rodadas ? ` · dura ${c.rodadas} ${c.rodadas === 1 ? "rodada" : "rodadas"}` : "");
     $("text").textContent = c.texto;
     $("midia").hidden = !c.midia;
     $("wa").href = "https://wa.me/?text=" + encodeURIComponent(`${$("kind").textContent} para ${nome}: ${c.texto}`);
@@ -1162,6 +1222,88 @@
     return null;
   }
 
+  // ---------- efeito contínuo ----------
+  EVENTOS_TRATADOS.add("efeito");
+
+  function aceitarEfeito() {
+    if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo !== "efeito") return;
+    gravar(n => {
+      const c = n.carta;
+      if (!c || c.tipo !== "efeito") return;
+      const rodadas = c.rodadas || 2;
+      n.efeitos.push({ id: (c.id || c.chave) + "-" + Date.now().toString(36), dono: n.vez, texto: c.texto, nivel: c.nivel, restantes: rodadas });
+      n.aviso = novoAviso(`${n.jogadores[n.vez]} aceitou o efeito por ${rodadas} ${rodadas === 1 ? "rodada" : "rodadas"}.`);
+      n.carta = null;
+      passarVez(n, c);
+    });
+  }
+
+  // Recusar = prenda do mesmo nível, como um pulo sem pulos livres (devolve pulos de desafio ao ser cumprida)
+  function recusarEfeito() {
+    if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo !== "efeito") return;
+    gravar(n => {
+      const c = n.carta;
+      if (!c || c.tipo !== "efeito") return;
+      const prenda = sortearPrenda(c.nivel, n.usados || []);
+      if (!prenda) { n.carta = null; passarVez(n, c); return; }
+      registrarUso(n, prenda);
+      prenda.motivo = "pulo";
+      prenda.origem = "desafio";
+      prenda.recusa = true;
+      n.carta = prenda;
+    });
+  }
+
+  // O adversário diz que o dono quebrou o efeito: acaba sem pontos e fica uma prenda para a próxima vez do dono
+  function quebrouEfeito(id) {
+    const ef = estado && estado.efeitos.find(x => x.id === id);
+    if (!ef || ef.dono === eu) return;
+    gravar(n => {
+      const e2 = n.efeitos.find(x => x.id === id);
+      if (!e2) return;
+      n.efeitos = n.efeitos.filter(x => x.id !== id);
+      const antes = n.prendaPendente && n.prendaPendente.dono === e2.dono ? n.prendaPendente.nivel : null;
+      const nivel = antes && ORDEM_NIVEIS.indexOf(antes) > ORDEM_NIVEIS.indexOf(e2.nivel) ? antes : e2.nivel;
+      n.prendaPendente = { dono: e2.dono, nivel };
+      n.aviso = novoAviso(`${n.jogadores[1 - e2.dono]} disse que ${n.jogadores[e2.dono]} quebrou o efeito.`);
+    });
+  }
+
+  const resumo = (t, max) => t.length > max ? t.slice(0, max - 1).trimEnd() + "…" : t;
+
+  function desenharEfeitos(e) {
+    const barra = $("efeitosBarra");
+    barra.textContent = "";
+    barra.hidden = !e.efeitos.length;
+    e.efeitos.forEach(ef => {
+      const item = document.createElement("div");
+      item.className = "efeito-item";
+      const txt = document.createElement("button");
+      txt.type = "button";
+      txt.className = "ef-texto";
+      const aberto = efeitosAbertos.has(ef.id);
+      const quem = document.createElement("b");
+      quem.textContent = `✨ ${e.jogadores[ef.dono]}: `;
+      const corpo = document.createTextNode(aberto ? ef.texto : resumo(ef.texto, 48));
+      const rest = document.createElement("span");
+      rest.className = "ef-rest";
+      rest.textContent = ` · ${ef.restantes} ${ef.restantes === 1 ? "rodada" : "rodadas"}`;
+      txt.append(quem, corpo, rest);
+      txt.setAttribute("aria-expanded", String(aberto));
+      txt.addEventListener("click", () => { aberto ? efeitosAbertos.delete(ef.id) : efeitosAbertos.add(ef.id); desenharEfeitos(estado); });
+      item.appendChild(txt);
+      if (ef.dono !== eu) {
+        const q = document.createElement("button");
+        q.type = "button";
+        q.className = "quebrou";
+        q.textContent = "Quebrou!";
+        q.addEventListener("click", () => quebrouEfeito(ef.id));
+        item.appendChild(q);
+      }
+      barra.appendChild(item);
+    });
+  }
+
   // "Concluir evento": saída genérica para tipos de evento sem tratamento próprio
   function concluirEvento() {
     if (!estado || !estado.carta || !estado.carta.evento || estado.vez !== eu) return;
@@ -1195,7 +1337,7 @@
           const volta = p[campo] - antes;
           if (volta > 0) n.aviso = novoAviso(`${n.jogadores[n.vez]} recuperou ${volta} ${volta === 1 ? "pulo" : "pulos"} de ${origemDe(c)}.`);
         }
-        if (c.motivo !== "final") n.vez = 1 - n.vez;   // depois da prenda final a partida já acabou
+        if (c.motivo !== "final") passarVez(n, c);     // depois da prenda final a partida já acabou
       } else {
         pontuar(n, c, 0);
       }
@@ -1209,13 +1351,8 @@
     p.pontos += ((PONTOS[c.tipo] || {})[c.nivel] || 0) + estrelas;
     p.estrelas += estrelas;
     if (c.tipo === "verdade") p.verdades++; else p.desafios++;
-    if (n.vencedor === null && p.pontos >= n.meta) {
-      n.vencedor = n.vez;
-      n.vez = 1 - n.vez;                                // quem perdeu cumpre a prenda final
-      n.carta = prendaPara(n, "final");
-    } else {
-      n.vez = 1 - n.vez;
-    }
+    passarVez(n, c);
+    conferirMeta(n);
   }
 
   // Nota do adversário: cada estrela vale +1 ponto
@@ -1263,8 +1400,9 @@
       const final = n.carta.motivo === "final";
       n.placar[n.vez].liberadas++;
       n.aviso = novoAviso(`${n.jogadores[eu]} liberou ${n.jogadores[n.vez]} da prenda.`);
+      const c = n.carta;
       n.carta = null;
-      if (!final) n.vez = 1 - n.vez;                    // na prenda final a partida já acabou: fica o "Nova partida"
+      if (!final) passarVez(n, c);                      // na prenda final a partida já acabou: fica o "Nova partida"
     });
   }
 
@@ -1277,6 +1415,8 @@
       n.vencedor = null;
       n.usados = [];
       n.carta = null;
+      n.efeitos = [];
+      n.prendaPendente = null;
     });
   }
 
@@ -1443,6 +1583,8 @@
     $("meta").addEventListener("change", mudarMeta);
     $("eventos").addEventListener("change", mudarEventos);
     $("eventoFim").addEventListener("click", concluirEvento);
+    $("efeitoAceitar").addEventListener("click", aceitarEfeito);
+    $("efeitoRecusar").addEventListener("click", recusarEfeito);
     $("pulosMax").addEventListener("change", mudarPulosMax);
     $("niveis").addEventListener("change", mudarNiveis);
     $("abrirCarta").addEventListener("click", abrirDialogo);
