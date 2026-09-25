@@ -711,6 +711,7 @@
     $("abaCasa").setAttribute("aria-current", naCasa ? "page" : "false");
     $("abaJogo").setAttribute("aria-current", naCasa ? "false" : "page");
     if (estado) desenharCasa(estado);
+    if (nome === "vSemana") desenharSemana();
     window.scrollTo(0, 0);
   }
 
@@ -1080,6 +1081,218 @@
     $("cardCap").classList.toggle("destaque", prontas > 0 || resp > 0);
   });
 
+  // ---------- a semana: apostas e missão de observação ----------
+  // Semana de segunda a domingo (America/Bahia); `semana` = data da segunda. Apostar até quarta; conferir de sábado em diante.
+  function semanaAgora() {
+    const hoje = hojeISO();
+    const dow = (new Date(hoje + "T12:00:00Z").getUTCDay() + 6) % 7;   // 0 = segunda … 6 = domingo
+    return { semana: somarDias(hoje, -dow), dia: dow, podeApostar: dow <= 2, podeConferir: dow >= 5 };
+  }
+  const RESULTADOS = { acertou: "✓ Acertou", quase: "≈ Quase", errou: "✗ Errou" };
+  const trocaNome = (t, nome) => t.split("{nome}").join(nome);
+
+  // sorteio determinístico (como o desafio do dia): mesma sala + semana + jogador = mesmas cartas nos dois aparelhos
+  function poolSemana(tipo) {
+    let pool = cartas.filter(c => !c.sala && c.tipo === tipo && c.nivel === estado.nivelSemana);
+    if (!pool.length) pool = cartas.filter(c => !c.sala && c.tipo === tipo && c.nivel === "leve");
+    return pool.sort((a, b) => (a.id < b.id ? -1 : 1));
+  }
+  function perguntasDaSemana(jogador, semana) {
+    const pool = poolSemana("aposta");
+    if (!pool.length) return [];
+    const i = fnv1a(`${codigo}|${semana}|${jogador}|aposta`) % pool.length;
+    if (pool.length === 1) return [trocaNome(pool[i].texto, nomeDe(1 - jogador))];
+    let j = fnv1a(`${codigo}|${semana}|${jogador}|aposta2`) % (pool.length - 1);
+    if (j >= i) j++;
+    return [pool[i], pool[j]].map(c => trocaNome(c.texto, nomeDe(1 - jogador)));
+  }
+  function missaoDaSemana(jogador, semana) {
+    const pool = poolSemana("observacao");
+    return pool.length ? pool[fnv1a(`${codigo}|${semana}|${jogador}|observacao`) % pool.length].texto : null;
+  }
+  // as minhas perguntas da semana: as que já têm palpite ficam, mesmo se o nível mudou
+  function minhasPerguntas(semana) {
+    const feitas = dados.apostas.filter(a => a.semana === semana && a.autor === eu).map(a => a.pergunta);
+    const lista = feitas.slice();
+    perguntasDaSemana(eu, semana).forEach(p => { if (lista.length < 2 && !lista.includes(p)) lista.push(p); });
+    return lista;
+  }
+
+  function campoTexto(chave, rotulo, max, botao, aoSalvar) {
+    const box = el("div", "cap-responder");
+    const ta = el("textarea");
+    ta.maxLength = max; ta.rows = 2; ta.placeholder = rotulo; ta.setAttribute("aria-label", rotulo);
+    ta.value = rascunhos[chave] || "";
+    ta.addEventListener("input", () => { rascunhos[chave] = ta.value; });
+    const b = el("button", "secondary", botao);
+    b.type = "button";
+    b.addEventListener("click", async () => {
+      const t = ta.value.replace(/\s+/g, " ").trim().slice(0, max);
+      if (!t) return;
+      b.disabled = true;
+      if (await aoSalvar(t) !== false) delete rascunhos[chave];
+      b.disabled = false;
+    });
+    box.append(ta, b);
+    return box;
+  }
+
+  async function apostar(semana, pergunta, palpite) {
+    const { data, error } = await sb.from("apostas").insert({ sala: codigo, semana, autor: eu, pergunta, palpite }).select("*").single();
+    if (error) { erro("erroJogo", "Não consegui guardar a aposta. Confira a internet e tente de novo."); return false; }
+    linhaV5("apostas", "INSERT", data);
+  }
+
+  async function mudarAposta(a, campos) {
+    const { error } = await sb.from("apostas").update(campos).eq("id", a.id);
+    if (error) { erro("erroJogo", "Não consegui salvar. Confira a internet e tente de novo."); return false; }
+    linhaV5("apostas", "UPDATE", { ...a, ...campos });
+    depoisDeAcao();
+  }
+
+  function pedirObservacao(semana, missao) {
+    gravar(n => { n.obsPedida[eu] = { semana, missao }; });
+  }
+
+  async function julgarObservacao(confirma) {
+    const dono = 1 - eu, p = estado.obsPedida[dono];
+    if (!p) return;
+    if (confirma) {
+      const { data, error } = await sb.from("observacoes").insert({ sala: codigo, semana: p.semana, jogador: dono, missao: p.missao }).select("*").single();
+      if (error && error.code !== "23505") return erro("erroJogo", "Não consegui confirmar. Confira a internet e tente de novo.");
+      if (data) linhaV5("observacoes", "INSERT", data);
+    }
+    gravar(n => {
+      n.obsPedida[dono] = null;
+      n.aviso = novoAviso(confirma ? `${n.jogadores[eu]} confirmou: ${n.jogadores[dono]} cumpriu a missão da semana 👀`
+        : `${n.jogadores[eu]} disse que a missão de ${n.jogadores[dono]} ainda não foi mostrada.`);
+    });
+    if (confirma) depoisDeAcao();
+  }
+
+  function itemAposta(pergunta) {
+    const li = el("li");
+    const info = el("div", "info");
+    info.appendChild(el("span", "t", pergunta));
+    li.appendChild(info);
+    return [li, info];
+  }
+
+  function desenharSemana() {
+    if (!estado || !estado.fixa || !$("vSemana")) return;
+    const { semana, podeApostar, podeConferir } = semanaAgora();
+    const outro = 1 - eu, nOutro = nomeDe(outro);
+    $("semanaInfo").textContent = `Semana de ${dataBR(semana)} a ${dataBR(somarDias(semana, 6))} · apostas até quarta, conferir a partir de sábado`;
+    $("nivelSemana").value = estado.nivelSemana;
+    $("titMinhasApostas").textContent = `Suas apostas sobre ${nOutro}`;
+    // minhas apostas
+    const ul = $("minhasApostas");
+    ul.textContent = "";
+    if (!cartasOk) ul.appendChild(el("li", "", "Carregando…"));
+    minhasPerguntas(semana).forEach(pergunta => {
+      const [li, info] = itemAposta(pergunta);
+      const a = dados.apostas.find(x => x.semana === semana && x.autor === eu && x.pergunta === pergunta);
+      if (!a) {
+        if (podeApostar) info.appendChild(campoTexto(`ap:${semana}:${pergunta}`, "Seu palpite", 200, "Apostar", t => apostar(semana, pergunta, t)));
+        else info.appendChild(el("span", "cap-status", "Prazo encerrado: as apostas vão até quarta."));
+      } else {
+        info.appendChild(el("span", "cap-status", `Seu palpite: ${a.palpite}`));
+        if (a.resultado) info.appendChild(el("span", "cap-status", `${nOutro} respondeu: ${a.resposta || "—"} · ${RESULTADOS[a.resultado]}`));
+        else info.appendChild(el("span", "autor", podeConferir ? `Esperando ${nOutro} conferir.` : `Aposta feita ✓ · ${nOutro} confere a partir de sábado.`));
+      }
+      ul.appendChild(li);
+    });
+    // apostas sobre mim
+    const sobre = dados.apostas.filter(x => x.semana === semana && x.autor === outro);
+    const us = $("apostasSobreMim");
+    us.textContent = "";
+    if (!sobre.length) us.appendChild(el("li", "extras-sub", `${nOutro} ainda não apostou nada sobre você esta semana.`));
+    else if (!podeConferir) us.appendChild(el("li", "extras-sub", `${nOutro} fez ${sobre.length} ${sobre.length === 1 ? "aposta" : "apostas"} sobre você. Dá para conferir a partir de sábado.`));
+    else sobre.forEach(a => {
+      const [li, info] = itemAposta(a.pergunta);
+      if (a.resposta == null) {
+        info.appendChild(campoTexto(`resp:${a.id}`, "Sua resposta verdadeira", 200, "Guardar resposta", t => mudarAposta(a, { resposta: t })));
+      } else {
+        info.appendChild(el("span", "cap-status", `Você respondeu: ${a.resposta}`));
+        info.appendChild(el("span", "cap-status", `Palpite de ${nOutro}: ${a.palpite}`));
+        if (!a.resultado) {
+          const v = el("div", "votos");
+          Object.entries({ acertou: "Acertou", quase: "Quase", errou: "Errou" }).forEach(([k, r]) => {
+            const b = el("button", "", r); b.type = "button";
+            b.addEventListener("click", () => mudarAposta(a, { resultado: k }));
+            v.appendChild(b);
+          });
+          info.appendChild(v);
+        } else info.appendChild(el("span", "cap-status", RESULTADOS[a.resultado]));
+      }
+      us.appendChild(li);
+    });
+    // placar das apostas
+    const certeiras = (i, s) => dados.apostas.filter(x => x.autor === i && x.resultado === "acertou" && (!s || x.semana === s)).length;
+    $("placarApostas").textContent = `Apostas certeiras · esta semana: ${nomeDe(0)} ${certeiras(0, semana)} × ${certeiras(1, semana)} ${nomeDe(1)} · no total: ${nomeDe(0)} ${certeiras(0)} × ${certeiras(1)} ${nomeDe(1)}`;
+    // missão de observação
+    const box = $("obsBox");
+    box.textContent = "";
+    const minha = missaoDaSemana(eu, semana);
+    const feita = i => dados.observacoes.find(x => x.semana === semana && x.jogador === i);
+    const pedida = i => { const p = estado.obsPedida[i]; return p && p.semana === semana ? p : null; };
+    const meu = el("div", "obs-minha");
+    meu.appendChild(el("p", "obs-titulo", "👀 Sua missão da semana"));
+    meu.appendChild(el("p", "t", minha || "Carregando…"));
+    if (feita(eu)) meu.appendChild(el("p", "cap-status", `Mostrada ✓ · ${nOutro} confirmou`));
+    else if (pedida(eu)) meu.appendChild(el("p", "cap-status", `Esperando ${nOutro} confirmar`));
+    else if (minha) {
+      const b = el("button", "secondary", "Mostrei!"); b.type = "button";
+      b.addEventListener("click", () => pedirObservacao(semana, minha));
+      meu.appendChild(b);
+    }
+    box.appendChild(meu);
+    const dele = feita(outro), pd = pedida(outro);
+    if (dele) box.appendChild(el("p", "missao-outro", `${nOutro} mostrou: “${dele.missao}” ✓`));
+    else if (pd) {
+      const c = el("div", "confirmar-missao");
+      c.appendChild(el("p", "", `${nOutro} mostrou: “${pd.missao}”. Confirmar?`));
+      const row = el("div", "row");
+      const sim = el("button", "done", "Confirmar"); sim.type = "button"; sim.addEventListener("click", () => julgarObservacao(true));
+      const nao = el("button", "secondary", "Ainda não"); nao.type = "button"; nao.addEventListener("click", () => julgarObservacao(false));
+      row.append(sim, nao); c.appendChild(row); box.appendChild(c);
+    } else box.appendChild(el("p", "missao-outro", `${nOutro} tem uma missão da semana`));
+    // semanas passadas
+    const passadas = [...new Set([...dados.apostas.map(a => a.semana), ...dados.observacoes.map(o => o.semana)])].filter(s => s < semana).sort().reverse();
+    const sp = $("semanasPassadas");
+    sp.textContent = "";
+    $("passadasQtd").textContent = passadas.length ? `(${passadas.length})` : "";
+    passadas.forEach(s => {
+      const bloco = el("div", "semana-passada");
+      bloco.appendChild(el("p", "obs-titulo", `Semana de ${dataBR(s)}`));
+      const lu = el("ul", "lista-extras");
+      dados.apostas.filter(a => a.semana === s).forEach(a => {
+        const li = el("li"); const info = el("div", "info");
+        info.append(el("span", "tag", `${nomeDe(a.autor)} apostou`), el("span", "t", a.pergunta),
+          el("span", "cap-status", `Palpite: ${a.palpite} · Resposta: ${a.resposta || "—"} · ${a.resultado ? RESULTADOS[a.resultado] : "não conferida"}`));
+        li.appendChild(info); lu.appendChild(li);
+      });
+      dados.observacoes.filter(o => o.semana === s).forEach(o => {
+        const li = el("li"); const info = el("div", "info");
+        info.append(el("span", "tag", `👀 ${nomeDe(o.jogador)} mostrou`), el("span", "t", o.missao));
+        li.appendChild(info); lu.appendChild(li);
+      });
+      bloco.appendChild(lu); sp.appendChild(bloco);
+    });
+  }
+  ["apostas", "observacoes"].forEach(t => redesenhar(t, desenharSemana));
+  extrasDaCasa.push(e => {
+    const { semana, podeApostar, podeConferir } = semanaAgora();
+    const outro = 1 - eu;
+    const faltaApostar = podeApostar && dados.apostas.filter(a => a.semana === semana && a.autor === eu).length < 2;
+    const conferir = podeConferir && dados.apostas.some(a => a.semana === semana && a.autor === outro && !a.resultado);
+    const p = e.obsPedida[outro], confirmar = !!(p && p.semana === semana);
+    $("cardSemanaSub").textContent = confirmar ? `${nomeDe(outro)} mostrou a missão: confirmar`
+      : conferir ? "Confira as apostas sobre você" : faltaApostar ? "Faça suas apostas (até quarta)" : "Apostas e missão da semana";
+    $("cardSemana").classList.toggle("destaque", confirmar || conferir || faltaApostar);
+    if (vista === "vSemana") desenharSemana();
+  });
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -1202,6 +1415,8 @@
     if (!e.sintonia || !e.carta || e.sintonia.chave !== e.carta.chave) e.sintonia = null;
     if (!e.dupla || !e.carta || e.dupla.chave !== e.carta.chave) e.dupla = null;
     if (!Array.isArray(e.secretas)) e.secretas = [];
+    if (!LEVEL_NAMES[e.nivelSemana]) e.nivelSemana = "leve";
+    if (!Array.isArray(e.obsPedida) || e.obsPedida.length !== 2) e.obsPedida = [null, null];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
   }
@@ -2407,6 +2622,7 @@
     document.querySelectorAll('input[name="envTipo"]').forEach(r => r.addEventListener("change", () => { $("envNivelLinha").hidden = r.value !== "desafio" || !r.checked; }));
     $("envFechar").addEventListener("click", () => { $("envAbrindo").hidden = true; });
     $("novaCapsula").addEventListener("click", abrirNovaCapsula);
+    $("nivelSemana").addEventListener("change", () => { const v = $("nivelSemana").value; if (LEVEL_NAMES[v]) gravar(n => { n.nivelSemana = v; }); });
     $("capOutra").addEventListener("click", outraPergunta);
     $("formCapsula").addEventListener("submit", salvarCapsula);
     $("cancelarCapsula").addEventListener("click", () => $("dlgCapsula").close());

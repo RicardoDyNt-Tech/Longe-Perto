@@ -205,6 +205,13 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 body.vista-casa .barra-acoes{display:none}
 .casa-h3{margin:18px 0 6px; font-size:1rem}
 .cap-item .info > .t{font-weight:700}
+#vSemana .info > .t, .obs-minha .t{font-weight:700; overflow-wrap:anywhere}
+#vSemana .votos{margin-top:8px}
+.nivel-semana select{width:auto; margin-left:6px}
+.obs-minha{background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:12px 14px}
+.obs-minha button{width:auto; padding:8px 14px}
+.obs-titulo{margin:0 0 4px; font-weight:800}
+.semana-passada{margin-top:10px}
 .cap-status{display:block; font-size:.88rem; margin-top:4px}
 .cap-responder{display:flex; flex-direction:column; gap:6px; margin-top:8px}
 .cap-responder textarea{margin:0}
