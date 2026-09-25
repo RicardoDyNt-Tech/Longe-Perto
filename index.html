@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=25">
+<link rel="stylesheet" href="style.css?v=25b">
 </head>
 <body>
 <main>
@@ -238,7 +238,6 @@
     <section class="trilha" id="trilha" hidden aria-label="Trilha da rodada">
       <p class="trilha-titulo" id="trilhaTitulo">Trilha da rodada</p>
       <p class="trilha-nome"><strong id="trilhaNome"></strong> <span id="trilhaArtista"></span></p>
-      <p class="trilha-playlist" id="trilhaPlaylist" hidden></p>
       <div class="trilha-acoes">
         <a class="spotify" id="trilhaAbrir" target="_blank" rel="noopener">Abrir no Spotify</a>
         <button class="secondary" id="trilhaTocar" type="button">Tocar aqui</button>
@@ -418,8 +417,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=25"></script>
-<script src="app.js?v=25"></script>
+<script src="config.js?v=25b"></script>
+<script src="app.js?v=25b"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

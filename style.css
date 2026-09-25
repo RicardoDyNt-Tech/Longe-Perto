@@ -227,8 +227,7 @@ input[type=url]{width:100%; font:inherit; color:var(--ink); background:var(--bg)
 .trilha-titulo{margin:0; font-size:.8rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--muted)}
 .trilha-nome{margin:4px 0 10px; overflow-wrap:anywhere}
 .trilha-nome span{color:var(--muted)}
-.trilha-nome{margin-bottom:2px}
-.trilha-playlist{margin:0 0 10px; color:var(--muted); font-size:.8rem; overflow-wrap:anywhere}
+
 .trilha-acoes{display:grid; grid-template-columns:1fr 1fr; gap:8px}
 .trilha-acoes .spotify{grid-column:1/-1; display:block; text-align:center; text-decoration:none; font-weight:600; padding:12px; border-radius:14px; background:#1DB954; color:#0B0B0B}
 .trilha-acoes button{width:auto}

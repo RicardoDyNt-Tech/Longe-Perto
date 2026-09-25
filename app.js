@@ -573,8 +573,6 @@
     $("trilhaTitulo").textContent = /m[úu]sica que eu escolher/i.test(c.texto || "") ? "Sugestão para este desafio" : "Trilha da rodada";
     $("trilhaNome").textContent = m.titulo;
     $("trilhaArtista").textContent = m.artista;
-    $("trilhaPlaylist").hidden = !m.playlist;
-    $("trilhaPlaylist").textContent = m.playlist ? "da playlist " + m.playlist : "";
     $("trilhaAbrir").href = m.url;
     $("trilhaOutra").disabled = musicas.length < 2;
     if (tocandoUrl !== m.url) { $("trilhaPlayer").textContent = ""; $("trilhaPlayer").hidden = true; $("trilhaTocar").hidden = false; tocandoUrl = null; }
