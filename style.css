@@ -75,8 +75,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 @media (prefers-reduced-motion:reduce){#wheel.anim{transition:transform .3s ease-out}}
 .hub{position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%); width:26%; aspect-ratio:1; border-radius:50%;
   background:var(--bg); border:4px solid var(--lamp); display:grid; place-items:center; font-size:1.6rem}
-#spin{width:auto; margin-top:18px; padding:14px 40px; font-size:1.2rem}
-.direct{display:flex; gap:10px; margin-top:12px}
+#spin{width:100%; padding:14px 40px; font-size:1.2rem}
+.direct{display:flex; gap:10px; margin-top:6px; justify-content:center}
 .direct button{background:transparent; color:var(--muted); padding:6px 10px; text-decoration:underline}
 
 .card{margin-top:22px; background:var(--surface); border-radius:20px; padding:20px; border:2px solid var(--line)}
@@ -143,6 +143,28 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .efeito-item .quebrou{background:var(--desafio); color:var(--on-color); font-weight:800; font-size:.85rem; padding:6px 10px; border-radius:10px; white-space:nowrap}
 .actions{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .actions .wa{grid-column:1/-1}
+/* barra fixa embaixo: tudo que se toca na rodada fica longe do topo (onde fica o vídeo do WhatsApp) */
+.barra-acoes{position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--bg); border-top:1.5px solid var(--line);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px)); box-shadow:0 -8px 20px rgba(0,0,0,.08)}
+.barra-in{max-width:520px; margin:0 auto}
+.barra-in .actions{max-height:52vh; overflow-y:auto}
+#jogo{padding-bottom:calc(var(--barra, 130px) + 12px)}
+.card-links{margin-top:4px}
+.ajustes{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:6px 0 0; font-size:.85rem; color:var(--muted)}
+.ajustes select{width:auto; margin:0 0 0 6px; padding:4px 8px; background:var(--surface)}
+.som{background:transparent; font-size:1.2rem; padding:4px 6px; border:1.5px solid var(--line); border-radius:10px}
+.pip-zona{display:none; position:fixed; top:0; width:40vw; height:180px; pointer-events:none; z-index:30;
+  border:2px dashed color-mix(in srgb, var(--muted) 40%, transparent); border-top:0}
+@media (max-width:700px){
+  body.cam-direita .pip-zona{display:block; right:0; border-right:0; border-bottom-left-radius:18px}
+  body.cam-esquerda .pip-zona{display:block; left:0; border-left:0; border-bottom-right-radius:18px}
+  body.cam-direita main > h1, body.cam-direita .topbar, body.cam-direita .ajustes, body.cam-direita .efeitos-barra,
+  body.cam-direita .reencontro{margin-right:40vw}
+  body.cam-esquerda main > h1, body.cam-esquerda .topbar, body.cam-esquerda .ajustes, body.cam-esquerda .efeitos-barra,
+  body.cam-esquerda .reencontro{margin-left:40vw}
+  body.cam-direita main > h1, body.cam-esquerda main > h1{font-size:1.9rem}
+  .topbar{flex-wrap:wrap}
+}
 .done{background:var(--ink); color:var(--bg); font-weight:600; padding:12px}
 .skip{background:transparent; color:var(--ink); border:1.5px solid var(--line); padding:12px}
 .wait{color:var(--muted); text-align:center; margin:0; grid-column:1/-1}

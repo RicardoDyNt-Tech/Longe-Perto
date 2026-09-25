@@ -750,7 +750,7 @@
 
   function sair() {
     if (canal) { sb.removeChannel(canal); canal = null; }
-    codigo = null; estado = null; eu = null; ultimoVencedor = null;
+    codigo = null; estado = null; eu = null; ultimoVencedor = null; ultimaRevelada = null;
     missaoAberta = false;
     cartas = []; cartasOk = false; cofre = []; musicas = []; tocandoUrl = null;
     pendentes.forEach(p => clearTimeout(p.t)); pendentes.clear();
@@ -945,7 +945,11 @@
     estado = normalizar(e);
     mostrarAviso(e.aviso, inicial);
     avisarMinhaVez(e, inicial || local);
-    if (!inicial && e.vencedor !== null && ultimoVencedor === null) setTimeout(() => carregarHistorico(codigo), 1500);
+    if (!inicial && e.vencedor !== null && ultimoVencedor === null) {
+      setTimeout(() => carregarHistorico(codigo), 1500);
+      somVitoria();
+      vibrar([300, 100, 300, 100, 500]);
+    }
     ultimoVencedor = e.vencedor;
     const nomes = [e.jogadores[0] || "Pessoa 1", e.jogadores[1] || "…"];
     const completa = !!e.jogadores[1];
@@ -982,8 +986,8 @@
       } else {
         girando = true;
         $("card").hidden = true;
-        requestAnimationFrame(() => posicionarRoleta(g.alvo, true));
-        timerCarta = setTimeout(() => { girando = false; mostrarCarta(estado); atualizarBotoes(); desenharTimer(estado, false); desenharTrilha(estado); }, GIRO_MS());
+        requestAnimationFrame(() => { posicionarRoleta(g.alvo, true); tiquesDaRoleta(); });
+        timerCarta = setTimeout(() => { girando = false; mostrarCarta(estado); atualizarBotoes(); desenharTimer(estado, false); desenharTrilha(estado); revelarCarta(estado, false); }, GIRO_MS());
       }
     } else if (!girando) {
       mostrarCarta(e);
@@ -991,6 +995,7 @@
     atualizarBotoes();
     desenharTimer(e, inicial);
     desenharTrilha(e);
+    revelarCarta(e, inicial);
     if (!local) conferirPendentes(e);
   }
 
@@ -1029,7 +1034,9 @@
     ultimaVez = e.jogadores[1] ? e.vez : null;
   }
 
-  const vibrar = padrao => { try { navigator.vibrate?.(padrao); } catch (err) {} };
+  // som e vibração: um botão só (🔊/🔇), guardado neste aparelho
+  let somLigado = lerLocal("lp-som") !== false;
+  const vibrar = padrao => { if (!somLigado) return; try { navigator.vibrate?.(padrao); } catch (err) {} };
 
   // aviso curto nos dois aparelhos (ex.: "Ana liberou Bia da prenda.")
   function mostrarAviso(a, inicial) {
@@ -1050,6 +1057,9 @@
     const c = estado.carta;
     const acabou = estado.vencedor !== null;
     const travado = !minhaVez || girando || !!c || !cartasOk || acabou;
+    // barra de baixo: sem carta, Girar/Escolher; com carta (depois do giro), as ações da carta
+    $("acoesGiro").hidden = !!c;
+    $("acoesCarta").hidden = !c || girando;
     $("spin").disabled = travado;
     $("pickV").disabled = $("pickD").disabled = travado;
 
@@ -1178,7 +1188,11 @@
     }
     num.classList.toggle("fim", r > 0 && s <= 5);
     num.classList.toggle("tempo", r <= 0);
-    if (r > 0) { num.textContent = relogio(s); return; }
+    if (r > 0) {
+      num.textContent = relogio(s);
+      if (s <= 5 && timerLocal.ultimoS !== s && !t.pausado) { timerLocal.ultimoS = s; somTicTac(s % 2 === 1); vibrar(50); }
+      return;
+    }
     num.textContent = "Tempo!";
     $("timerPausar").hidden = true;
     clearInterval(timerTick);
@@ -1190,21 +1204,85 @@
   }
 
   // bipe curto; o navegador só deixa tocar som depois de um toque na página
+  // sons gerados na hora (Web Audio, sem arquivos); o navegador só libera depois de um toque na página
   let audio = null;
   addEventListener("pointerdown", () => {
-    if (audio) return;
-    try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (err) {}
-  }, { once: true });
-  function bipe() {
-    if (!audio) return;
     try {
-      const o = audio.createOscillator(), g = audio.createGain();
-      o.frequency.value = 880;
-      g.gain.setValueAtTime(0.2, audio.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.35);
-      o.connect(g).connect(audio.destination);
-      o.start(); o.stop(audio.currentTime + 0.35);
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume();
     } catch (err) {}
+  });
+  function tom(freq, dur, depois = 0, tipo = "sine", vol = 0.15) {
+    if (!audio || !somLigado) return;
+    try {
+      const t0 = audio.currentTime + depois;
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = tipo;
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+      o.connect(g).connect(audio.destination);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    } catch (err) {}
+  }
+  const bipe = () => tom(880, 0.35, 0, "sine", 0.2);
+  const somTique = () => tom(1400, 0.03, 0, "square", 0.05);
+  const somTicTac = alto => tom(alto ? 1000 : 750, 0.06, 0, "square", 0.08);
+  const somEvento = () => [523, 659, 784].forEach(f => tom(f, 0.45, 0, "triangle", 0.12));
+  const somVitoria = () => [[523, 0], [659, 0.16], [1047, 0.32]].forEach(([f, d]) => tom(f, d === 0.32 ? 0.6 : 0.18, d, "triangle", 0.16));
+
+  // tiques da roleta: um a cada fatia que passa pelo ponteiro (espaçam sozinhos quando ela desacelera)
+  function tiquesDaRoleta() {
+    const w = $("wheel"), passo = 360 / SEGMENTOS;
+    let ultimo = null;
+    (function quadro() {
+      if (!girando) return;
+      const m = getComputedStyle(w).transform;
+      if (m && m.startsWith("matrix(")) {
+        const [a, b] = m.slice(7, -1).split(",").map(Number);
+        const ang = (Math.atan2(b, a) * 180 / Math.PI + 360) % 360;
+        const fatia = Math.floor(ang / passo);
+        if (ultimo !== null && fatia !== ultimo) somTique();
+        ultimo = fatia;
+      }
+      requestAnimationFrame(quadro);
+    })();
+  }
+
+  function trocarSom() {
+    somLigado = !somLigado;
+    salvarLocal("lp-som", somLigado);
+    desenharAjustes();
+  }
+
+  // ---------- câmera do WhatsApp (PiP) ----------
+  const CAMERAS = ["direita", "esquerda", "nenhuma"];
+  let camera = CAMERAS.includes(lerLocal("lp-camera")) ? lerLocal("lp-camera") : "direita";
+  function desenharAjustes() {
+    document.body.classList.toggle("cam-direita", camera === "direita");
+    document.body.classList.toggle("cam-esquerda", camera === "esquerda");
+    $("camera").value = camera;
+    $("som").textContent = somLigado ? "🔊" : "🔇";
+    $("som").setAttribute("aria-pressed", String(somLigado));
+    $("som").setAttribute("aria-label", somLigado ? "Som e vibração ligados" : "Som e vibração desligados");
+  }
+  function mudarCamera() {
+    camera = CAMERAS.includes($("camera").value) ? $("camera").value : "direita";
+    salvarLocal("lp-camera", camera);
+    desenharAjustes();
+  }
+
+  // carta nova na mesa: centraliza na tela e dá o retorno de som/vibração
+  let ultimaRevelada = null;
+  function revelarCarta(e, inicial) {
+    const c = e.carta;
+    if (!c || $("card").hidden || c.chave === ultimaRevelada) return;
+    ultimaRevelada = c.chave;
+    if (inicial) return;
+    const suave = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    try { $("card").scrollIntoView({ block: "center", behavior: suave ? "smooth" : "auto" }); } catch (err) {}
+    if (c.evento) { somEvento(); vibrar([100, 50, 100]); }
+    else if (c.nivel === "pesado") vibrar([80, 60, 80, 60, 200]);
   }
 
   const idTimer = () => Date.now() + "-" + Math.random().toString(36).slice(2, 7);
@@ -1909,6 +1987,11 @@
   // ---------- início ----------
   function iniciar() {
     $("instalar").addEventListener("click", instalar);
+    desenharAjustes();
+    $("som").addEventListener("click", trocarSom);
+    $("camera").addEventListener("change", mudarCamera);
+    // reserva o espaço da barra fixa no fim da página
+    try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) {}
     desenharRoleta();
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenharRoleta);
 
