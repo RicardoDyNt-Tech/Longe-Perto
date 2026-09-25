@@ -246,6 +246,7 @@
     atualizarBotoes();
     desenharExtras();
     desenharDiario();
+    if (estado && estado.fixa) desenharPergunta();
   }
 
   async function buscarSala(c) {
@@ -735,7 +736,7 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal"];
 
   function mostrarVista(nome) {
     vista = nome;
@@ -756,6 +757,7 @@
     if (nome === "vHistoria") desenharHistoria();
     if (nome === "vPote") { desenharPote(); $("motivoPapel").hidden = true; }
     if (nome === "vAbra") desenharAbra();
+    if (nome === "vDiarioCasal") { paginasDiario = 1; desenharDiarioCasal(); }
     window.scrollTo(0, 0);
   }
 
@@ -805,8 +807,8 @@
 
   // ---------- tabelas da v5 (só em sala fixa): carga, Realtime e redesenho ----------
   const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
-    carinhos: "criada_em", marcos: "data", motivos: "criada_em", abra_quando: "criada_em" };
-  const LIMITE_TABELA = { carinhos: 500 };   // tabelas que crescem sem parar: só as linhas mais novas
+    carinhos: "criada_em", marcos: "data", motivos: "criada_em", abra_quando: "criada_em", respostas_dia: "dia" };
+  const LIMITE_TABELA = { carinhos: 500, respostas_dia: 1000 };   // tabelas que crescem sem parar: só as linhas mais novas
   const aoCarregar = {};                     // tabela -> fn() depois da primeira carga
   const dados = {};
   Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
@@ -2592,6 +2594,102 @@
     $("cardAbraSub").textContent = fechadas ? `${fechadas} ${fechadas === 1 ? "carta fechada" : "cartas fechadas"} para você` : "Cartas para a hora certa";
   });
 
+  // ---------- v6: pergunta do dia a dois (sem sequência e sem pontos) ----------
+  // Mesma pergunta nos dois: hash de codigo + dia (como o desafio do dia), evitando as dos 30 dias anteriores.
+  // Se alguém já respondeu hoje, vale a pergunta gravada na resposta.
+  function perguntaDeHoje() {
+    const hoje = hojeISO();
+    const gravada = dados.respostas_dia.find(r => r.dia === hoje);
+    if (gravada) return gravada.pergunta;
+    const pool = cartas.filter(c => c.tipo === "pergunta_dia" && !c.sala).sort((a, b) => (a.id < b.id ? -1 : 1));
+    if (!pool.length) return null;
+    const limite = somarDias(hoje, -30);
+    const recentes = new Set(dados.respostas_dia.filter(r => r.dia < hoje && r.dia >= limite).map(r => r.pergunta));
+    const livres = pool.filter(c => !recentes.has(c.texto));
+    const lista = livres.length ? livres : pool;
+    return lista[fnv1a(`${codigo}|${hoje}|pergunta`) % lista.length].texto;
+  }
+  let editandoResposta = false, paginasDiario = 1;
+  async function responderPergunta() {
+    const pergunta = perguntaDeHoje();
+    const resposta = $("pdResposta").value.trim().slice(0, 500);
+    if (!pergunta) return;
+    if (!resposta) return erro("erroPergunta", "Escreva a sua resposta.");
+    erro("erroPergunta", "");
+    const hoje = hojeISO(), minha = dados.respostas_dia.find(r => r.dia === hoje && r.jogador === eu);
+    $("pdResponder").disabled = true;
+    const { data, error } = minha
+      ? await sb.from("respostas_dia").update({ resposta }).eq("id", minha.id).select("*").single()
+      : await sb.from("respostas_dia").insert({ sala: codigo, dia: hoje, jogador: eu, pergunta, resposta }).select("*").single();
+    $("pdResponder").disabled = false;
+    if (error) {
+      if (error.code === "23505") { carregarTabela("respostas_dia", codigo); return erro("erroPergunta", "Sua resposta já estava guardada. Confira abaixo."); }
+      return erro("erroPergunta", "Não consegui guardar. Confira a internet e tente de novo.");
+    }
+    editandoResposta = false;
+    linhaV5("respostas_dia", minha ? "UPDATE" : "INSERT", data);
+  }
+  escutar("respostas_dia", (ev, row, antes) => {
+    if (ev !== "INSERT" || antes || row.dia !== hojeISO()) return;
+    const hoje = hojeISO();
+    if ([0, 1].every(i => dados.respostas_dia.some(r => r.dia === hoje && r.jogador === i)))
+      mostrarAviso(novoAviso("As respostas de hoje estão abertas 💬"), false);
+  });
+  function desenharPergunta() {
+    if (!estado || !estado.fixa || !$("pdPergunta")) return;
+    const hoje = hojeISO(), outro = 1 - eu;
+    const p = perguntaDeHoje();
+    $("pdPergunta").textContent = p || "Carregando…";
+    const minha = dados.respostas_dia.find(r => r.dia === hoje && r.jogador === eu);
+    const dele = dados.respostas_dia.find(r => r.dia === hoje && r.jogador === outro);
+    const escrevendo = !minha || editandoResposta;
+    $("pdForm").hidden = !escrevendo || !p;
+    if (escrevendo && minha && document.activeElement !== $("pdResposta") && !$("pdResposta").value) $("pdResposta").value = minha.resposta;
+    $("pdResponder").textContent = minha ? "Salvar" : "Responder";
+    // a resposta do outro fica escondida até você responder
+    $("pdAviso").textContent = !minha && dele ? `${nomeDe(outro)} já respondeu! Responda para ver 👀` : minha && !dele ? `Esperando ${nomeDe(outro)} responder…` : "";
+    const lado = $("pdLado");
+    lado.textContent = "";
+    lado.hidden = !(minha && dele) || editandoResposta;
+    if (minha && dele && !editandoResposta) {
+      [[eu, minha], [outro, dele]].forEach(([i, r]) => {
+        const b = el("div", "pd-resposta");
+        b.append(el("span", "quem", i === eu ? "Você" : nomeDe(i)), el("p", "", r.resposta));
+        lado.appendChild(b);
+      });
+    }
+    $("pdMinha").hidden = !(minha && !dele) || editandoResposta;
+    $("pdMinha").textContent = minha ? `Sua resposta: ${minha.resposta}` : "";
+    $("pdEditar").hidden = !minha || editandoResposta;   // editável até o fim do dia
+  }
+  function desenharDiarioCasal() {
+    if (!$("listaDiario")) return;
+    const hoje = hojeISO();
+    const dias = [...new Set(dados.respostas_dia.filter(r => r.dia < hoje).map(r => r.dia))].sort().reverse();
+    $("diarioVazio").hidden = !!dias.length;
+    const ul = $("listaDiario");
+    ul.textContent = "";
+    dias.slice(0, paginasDiario * 30).forEach(d => {
+      const rs = dados.respostas_dia.filter(r => r.dia === d);
+      const li = el("li", "diario-dia");
+      li.append(el("span", "tag", dataBR(d)), el("p", "pd-pergunta", rs[0].pergunta));
+      [0, 1].forEach(i => {
+        const r = rs.find(x => x.jogador === i);
+        const b = el("div", "pd-resposta" + (r ? "" : " vazia"));
+        b.append(el("span", "quem", nomeDe(i)), el("p", "", r ? r.resposta : "sem resposta"));
+        li.appendChild(b);
+      });
+      ul.appendChild(li);
+    });
+    $("diarioMais").hidden = dias.length <= paginasDiario * 30;
+  }
+  redesenhar("respostas_dia", () => { desenharPergunta(); desenharDiarioCasal(); });
+  extrasDaCasa.push(() => {
+    desenharPergunta();
+    const n = new Set(dados.respostas_dia.filter(r => r.dia < hojeISO()).map(r => r.dia)).size;
+    $("cardDiarioCasalSub").textContent = n ? `${n} ${n === 1 ? "dia" : "dias"} de conversa` : "As perguntas dos outros dias";
+  });
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -4082,6 +4180,9 @@
     $("distManualSalvar").addEventListener("click", salvarDistanciaManual);
     $("novoMarco").addEventListener("click", () => abrirMarco(null));
     $("motivoGuardar").addEventListener("click", guardarMotivo);
+    $("pdResponder").addEventListener("click", responderPergunta);
+    $("pdEditar").addEventListener("click", () => { editandoResposta = true; $("pdResposta").value = ""; desenharPergunta(); $("pdResposta").focus(); });
+    $("diarioMais").addEventListener("click", () => { paginasDiario++; desenharDiarioCasal(); });
     $("motivoTirar").addEventListener("click", tirarMotivo);
     $("motivoPapel").addEventListener("click", () => { $("motivoPapel").hidden = true; });
     $("novaAbra").addEventListener("click", () => abrirNovaAbra(null));

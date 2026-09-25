@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=41">
+<link rel="stylesheet" href="style.css?v=42">
 </head>
 <body>
 <main>
@@ -103,6 +103,19 @@
       <div class="casa-grade" id="casaGrade">
         <p class="juntos-ha" id="juntosHa" hidden></p>
         <div class="datas-especiais" id="datasEspeciais" hidden></div>
+        <div class="casa-bloco pergunta-dia" id="casaPergunta">
+          <p class="pd-titulo">💬 Pergunta de hoje</p>
+          <p class="pd-pergunta" id="pdPergunta"></p>
+          <p class="pd-aviso" id="pdAviso"></p>
+          <div id="pdForm">
+            <textarea id="pdResposta" maxlength="500" rows="3" aria-label="Sua resposta"></textarea>
+            <button class="secondary" id="pdResponder" type="button">Responder</button>
+          </div>
+          <p class="pd-minha" id="pdMinha" hidden></p>
+          <div class="pd-lado" id="pdLado" hidden></div>
+          <button class="linkbtn" id="pdEditar" type="button" hidden>Editar minha resposta</button>
+          <p class="erro" id="erroPergunta" role="alert"></p>
+        </div>
         <div class="casa-bloco carinhos" id="casaCarinhos">
           <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo">✕</button></p>
           <div class="carinho-botoes" id="carinhoBotoes">
@@ -133,6 +146,7 @@
         <button type="button" class="casa-card" data-abre="vHistoria" id="cardHistoria"><span class="ic">📜</span><b>Nossa história</b><span class="sub" id="cardHistoriaSub"></span></button>
         <button type="button" class="casa-card" data-abre="vPote" id="cardPote"><span class="ic">🫙</span><b>Pote de motivos</b><span class="sub" id="cardPoteSub"></span></button>
         <button type="button" class="casa-card" data-abre="vAbra" id="cardAbra"><span class="ic">💌</span><b>Abra quando…</b><span class="sub" id="cardAbraSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="ic">📖</span><b>Diário</b><span class="sub" id="cardDiarioCasalSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -319,6 +333,13 @@
           <summary>Já abertas <span id="abraAbertasQtd"></span></summary>
           <ul class="lista-extras" id="abraAbertas"></ul>
         </details>
+      </section>
+      <section class="casa-vista" id="vDiarioCasal" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <h2>Diário do casal</h2>
+        <p class="extras-sub" id="diarioVazio">Os dias anteriores da pergunta do dia aparecem aqui.</p>
+        <ul class="diario-lista" id="listaDiario"></ul>
+        <button class="secondary" id="diarioMais" type="button" hidden>Ver mais</button>
       </section>
       <section class="casa-vista" id="vCofre" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
@@ -946,9 +967,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=41"></script>
-<script src="conquistas.js?v=41"></script>
-<script src="app.js?v=41"></script>
+<script src="config.js?v=42"></script>
+<script src="conquistas.js?v=42"></script>
+<script src="app.js?v=42"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
