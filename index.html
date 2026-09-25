@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=40">
+<link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
 <main>
@@ -131,6 +131,8 @@
         <button type="button" class="casa-card" id="cardPosicoes" hidden><span class="ic">📖</span><b>Posições</b><span class="sub">Guia para escolher e sortear</span></button>
         <button type="button" class="casa-card" data-abre="vMapa" id="cardMapa"><span class="ic">🗺️</span><b>Mapa da saudade</b><span class="sub" id="cardMapaSub"></span></button>
         <button type="button" class="casa-card" data-abre="vHistoria" id="cardHistoria"><span class="ic">📜</span><b>Nossa história</b><span class="sub" id="cardHistoriaSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vPote" id="cardPote"><span class="ic">🫙</span><b>Pote de motivos</b><span class="sub" id="cardPoteSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vAbra" id="cardAbra"><span class="ic">💌</span><b>Abra quando…</b><span class="sub" id="cardAbraSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -283,6 +285,40 @@
         <button class="secondary" id="novoMarco" type="button">+ Novo marco</button>
         <p class="extras-sub" id="marcosVazio">Nenhum marco ainda. Comece pelo primeiro encontro.</p>
         <ul class="linha-tempo" id="listaMarcos"></ul>
+      </section>
+      <section class="casa-vista" id="vPote" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <h2>Pote de motivos</h2>
+        <svg class="pote-svg" id="poteSvg" viewBox="0 0 160 170" role="img" aria-label="Pote de motivos"></svg>
+        <p class="pote-conta" id="poteConta"></p>
+        <button class="primary" id="motivoTirar" type="button">Tirar um motivo do pote</button>
+        <div class="motivo-papel" id="motivoPapel" hidden role="status">
+          <p class="motivo-texto" id="motivoPapelTexto"></p>
+          <p class="motivo-de" id="motivoPapelDe"></p>
+        </div>
+        <p class="erro" id="erroPote" role="alert"></p>
+        <label class="field"><span id="motivoRotulo">Um motivo pelo qual eu te amo</span>
+          <textarea id="motivoTexto" maxlength="280" rows="3"></textarea>
+        </label>
+        <button class="secondary" id="motivoGuardar" type="button">Colocar no pote</button>
+        <details class="extras">
+          <summary>Os motivos que você escreveu <span id="meusMotivosQtd"></span></summary>
+          <ul class="lista-extras" id="meusMotivos"></ul>
+        </details>
+      </section>
+      <section class="casa-vista" id="vAbra" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <h2>Abra quando…</h2>
+        <button class="secondary" id="novaAbra" type="button">+ Nova carta Abra quando…</button>
+        <h3 class="casa-h3" id="abraParaMimTitulo">Para você</h3>
+        <p class="extras-sub" id="abraVazio">Nenhuma carta fechada para você agora.</p>
+        <ul class="abra-lista" id="abraFechadas"></ul>
+        <h3 class="casa-h3">As que você escreveu</h3>
+        <ul class="lista-extras" id="abraMinhas"></ul>
+        <details class="extras">
+          <summary>Já abertas <span id="abraAbertasQtd"></span></summary>
+          <ul class="lista-extras" id="abraAbertas"></ul>
+        </details>
       </section>
       <section class="casa-vista" id="vCofre" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
@@ -692,6 +728,44 @@
     <ul class="pos-lista" id="posLista"></ul>
   </dialog>
 
+  <dialog id="dlgAbra" aria-labelledby="dlgAbraTitulo">
+    <form id="formAbra" method="dialog">
+      <h2 id="dlgAbraTitulo">Nova carta Abra quando…</h2>
+      <label class="field">Abra quando…
+        <select id="abraOcasiao">
+            <option value="você estiver triste">você estiver triste</option>
+            <option value="sentir saudade">sentir saudade</option>
+            <option value="não conseguir dormir">não conseguir dormir</option>
+            <option value="o dia for difícil">o dia for difícil</option>
+            <option value="estiver feliz">estiver feliz</option>
+            <option value="precisar rir">precisar rir</option>
+            <option value="brigarmos">brigarmos</option>
+            <option value="faltar uma semana para o reencontro">faltar uma semana para o reencontro</option>
+            <option value="outra">Outra ocasião…</option>
+        </select>
+      </label>
+      <label class="field" id="abraOutraLinha" hidden>Qual ocasião?
+        <input type="text" id="abraOutra" maxlength="60" placeholder="Ex.: chegar do trabalho cansado(a)">
+      </label>
+      <label class="field">Carta
+        <textarea id="abraTexto" maxlength="1000" rows="7"></textarea>
+        <span class="contador" id="abraContador">0/1000</span>
+      </label>
+      <p class="erro" id="erroAbra" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarAbra" type="submit">Guardar carta</button>
+        <button class="secondary" id="cancelarAbra" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgAbraLer" class="dlg-abra-ler" aria-labelledby="abraLerOcasiao">
+    <p class="abra-ocasiao" id="abraLerOcasiao"></p>
+    <p class="abra-texto" id="abraLerTexto"></p>
+    <p class="motivo-de" id="abraLerDe"></p>
+    <button class="primary" id="fecharAbraLer" type="button">Fechar</button>
+  </dialog>
+
   <dialog id="dlgMarco" aria-labelledby="dlgMarcoTitulo">
     <form id="formMarco" method="dialog">
       <h2 id="dlgMarcoTitulo">Novo marco</h2>
@@ -872,9 +946,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=40"></script>
-<script src="conquistas.js?v=40"></script>
-<script src="app.js?v=40"></script>
+<script src="config.js?v=41"></script>
+<script src="conquistas.js?v=41"></script>
+<script src="app.js?v=41"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

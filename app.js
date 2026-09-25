@@ -735,7 +735,7 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra"];
 
   function mostrarVista(nome) {
     vista = nome;
@@ -754,6 +754,8 @@
     if (nome === "vConquistas") desenharConquistas();
     if (nome === "vMapa") desenharMapa();
     if (nome === "vHistoria") desenharHistoria();
+    if (nome === "vPote") { desenharPote(); $("motivoPapel").hidden = true; }
+    if (nome === "vAbra") desenharAbra();
     window.scrollTo(0, 0);
   }
 
@@ -803,7 +805,7 @@
 
   // ---------- tabelas da v5 (só em sala fixa): carga, Realtime e redesenho ----------
   const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
-    carinhos: "criada_em", marcos: "data" };
+    carinhos: "criada_em", marcos: "data", motivos: "criada_em", abra_quando: "criada_em" };
   const LIMITE_TABELA = { carinhos: 500 };   // tabelas que crescem sem parar: só as linhas mais novas
   const aoCarregar = {};                     // tabela -> fn() depois da primeira carga
   const dados = {};
@@ -2408,6 +2410,188 @@
     if (vista === "vMapa") desenharMapa();
   });
 
+  // ---------- v6: pote de motivos ----------
+  const dataHora = iso => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  async function guardarMotivo() {
+    const texto = $("motivoTexto").value.replace(/\s+/g, " ").trim().slice(0, 280);
+    if (texto.length < 3) return erro("erroPote", "Escreva pelo menos 3 letras.");
+    erro("erroPote", "");
+    $("motivoGuardar").disabled = true;
+    const { data, error } = await sb.from("motivos").insert({ sala: codigo, de: eu, texto }).select("*").single();
+    $("motivoGuardar").disabled = false;
+    if (error) return erro("erroPote", "Não consegui guardar. Confira a internet e tente de novo.");
+    $("motivoTexto").value = "";
+    linhaV5("motivos", "INSERT", data);
+  }
+  async function apagarMotivo(m) {
+    if (m.de !== eu || !confirm("Tirar este motivo do pote?")) return;
+    const { error } = await sb.from("motivos").delete().eq("id", m.id);
+    if (error) return erro("erroPote", "Não consegui apagar. Confira a internet e tente de novo.");
+    linhaV5("motivos", "DELETE", { id: m.id });
+  }
+  // sorteia um motivo escrito pelo outro: primeiro os nunca lidos, depois os menos lidos
+  async function tirarMotivo() {
+    const pool = dados.motivos.filter(m => m.de !== eu);
+    if (!pool.length) return erro("erroPote", `${nomeDe(1 - eu)} ainda não colocou motivos no pote.`);
+    erro("erroPote", "");
+    const menor = Math.min(...pool.map(m => m.vezes || 0));
+    const opcoes = pool.filter(m => (m.vezes || 0) === menor);
+    const m = opcoes[Math.floor(Math.random() * opcoes.length)];
+    const campos = { vezes: (m.vezes || 0) + 1, sorteado_em: new Date().toISOString() };
+    $("motivoTirar").disabled = true;
+    const { error } = await sb.from("motivos").update(campos).eq("id", m.id);
+    $("motivoTirar").disabled = false;
+    if (error) return erro("erroPote", "Não consegui tirar agora. Confira a internet e tente de novo.");
+    linhaV5("motivos", "UPDATE", { ...m, ...campos });
+    $("motivoPapelTexto").textContent = m.texto;
+    $("motivoPapelDe").textContent = `— ${nomeDe(m.de)}`;
+    const papel = $("motivoPapel");
+    papel.classList.remove("anima"); papel.hidden = false; void papel.offsetWidth; papel.classList.add("anima");
+  }
+  // o autor fica sabendo (sem saber qual)
+  escutar("motivos", (ev, row, antes) => {
+    if (ev === "UPDATE" && antes && row.de === eu && (row.vezes || 0) > (antes.vezes || 0))
+      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} tirou um motivo seu do pote 🥰`), false);
+  });
+  function desenharPote() {
+    if (!estado || !estado.fixa || !$("poteSvg")) return;
+    const outro = 1 - eu;
+    const paraMim = dados.motivos.filter(m => m.de === outro);
+    const naoLidos = paraMim.filter(m => !(m.vezes > 0)).length;
+    $("poteConta").textContent = `No pote: ${paraMim.length} ${paraMim.length === 1 ? "motivo" : "motivos"} · ${naoLidos} ainda não ${naoLidos === 1 ? "lido" : "lidos"}`;
+    // o pote enche até 40 motivos
+    const nivel = Math.min(1, paraMim.length / 40), alto = 120 * nivel;
+    const svg = $("poteSvg");
+    svg.textContent = "";
+    const defs = svgEl("defs"), clip = svgEl("clipPath", { id: "poteClip" });
+    const forma = "M40 30 h80 v10 q14 8 14 26 v70 q0 18 -18 18 h-72 q-18 0 -18 -18 v-70 q0 -18 14 -26 z";
+    clip.appendChild(svgEl("path", { d: forma }));
+    defs.appendChild(clip);
+    svg.append(defs, svgEl("rect", { x: 20, y: 164 - alto, width: 120, height: alto, class: "pote-cheio", "clip-path": "url(#poteClip)" }),
+      svgEl("path", { d: forma, class: "pote-vidro" }), svgEl("rect", { x: 36, y: 20, width: 88, height: 12, rx: 4, class: "pote-tampa" }));
+    for (let i = 0; i < Math.min(paraMim.length, 14); i++)
+      svg.appendChild(svgEl("text", { x: 44 + (i * 23) % 76, y: 156 - Math.floor(i / 4) * 16, class: "pote-coracao" }, "❤"));
+    $("motivoTirar").disabled = !paraMim.length;
+    $("motivoRotulo").textContent = `Um motivo pelo qual eu te amo, ${nomeDe(outro)}`;
+    const meus = dados.motivos.filter(m => m.de === eu).slice().reverse();
+    $("meusMotivosQtd").textContent = meus.length ? `(${meus.length})` : "";
+    const ul = $("meusMotivos");
+    ul.textContent = "";
+    meus.forEach(m => {
+      const li = el("li"), info = el("div", "info");
+      info.append(el("span", "t", m.texto), el("span", "tag", m.vezes > 0 ? `lido ${m.vezes}×` : "ainda não lido"));
+      const ap = el("button", "linkbtn", "Apagar"); ap.type = "button"; ap.addEventListener("click", () => apagarMotivo(m));
+      li.append(info, ap); ul.appendChild(li);
+    });
+  }
+  redesenhar("motivos", desenharPote);
+
+  // ---------- v6: cartas "Abra quando…" (abre sozinho, sem precisar dos dois) ----------
+  const OCASIOES = ["você estiver triste", "sentir saudade", "não conseguir dormir", "o dia for difícil", "estiver feliz", "precisar rir", "brigarmos", "faltar uma semana para o reencontro"];
+  let abraEditando = null;
+  function abrirNovaAbra(x) {
+    abraEditando = x || null;
+    erro("erroAbra", "");
+    $("dlgAbraTitulo").textContent = x ? "Editar carta Abra quando…" : "Nova carta Abra quando…";
+    const conhecida = x && OCASIOES.includes(x.ocasiao);
+    $("abraOcasiao").value = !x ? OCASIOES[0] : conhecida ? x.ocasiao : "outra";
+    $("abraOutra").value = x && !conhecida ? x.ocasiao : "";
+    $("abraOutraLinha").hidden = $("abraOcasiao").value !== "outra";
+    $("abraTexto").value = x ? x.texto : "";
+    $("abraContador").textContent = `${$("abraTexto").value.length}/1000`;
+    $("dlgAbra").showModal();
+  }
+  async function salvarAbra(ev) {
+    ev.preventDefault();
+    const ocasiao = ($("abraOcasiao").value === "outra" ? $("abraOutra").value : $("abraOcasiao").value).replace(/\s+/g, " ").trim().slice(0, 60);
+    const texto = $("abraTexto").value.trim().slice(0, 1000);
+    if (ocasiao.length < 2) return erro("erroAbra", "Escreva a ocasião.");
+    if (texto.length < 3) return erro("erroAbra", "Escreva a carta (pelo menos 3 letras).");
+    $("salvarAbra").disabled = true;
+    // editar só enquanto estiver fechada
+    const { data, error } = abraEditando
+      ? await sb.from("abra_quando").update({ ocasiao, texto }).eq("id", abraEditando.id).is("aberto_em", null).select("*").maybeSingle()
+      : await sb.from("abra_quando").insert({ sala: codigo, de: eu, ocasiao, texto }).select("*").single();
+    $("salvarAbra").disabled = false;
+    if (error) return erro("erroAbra", "Não consegui salvar. Confira a internet e tente de novo.");
+    if (!data) return erro("erroAbra", "Essa carta já foi aberta e não pode mais ser editada.");
+    linhaV5("abra_quando", abraEditando ? "UPDATE" : "INSERT", data);
+    $("dlgAbra").close();
+  }
+  async function apagarAbra(x) {
+    if (x.de !== eu || x.aberto_em || !confirm("Apagar esta carta? Ela ainda não foi aberta.")) return;
+    const { error } = await sb.from("abra_quando").delete().eq("id", x.id).is("aberto_em", null);
+    if (error) return erro("erroJogo", "Não consegui apagar. Confira a internet e tente de novo.");
+    linhaV5("abra_quando", "DELETE", { id: x.id });
+  }
+  async function abrirAbra(x) {
+    if (x.de === eu || x.aberto_em) return;
+    if (!confirm("É mesmo a hora?")) return;
+    const agora = new Date().toISOString();
+    const { data, error } = await sb.from("abra_quando").update({ aberto_em: agora }).eq("id", x.id).is("aberto_em", null).select("*").maybeSingle();
+    if (error) return erro("erroJogo", "Não consegui abrir agora. Confira a internet e tente de novo.");
+    const linha = data || { ...x, aberto_em: agora };
+    linhaV5("abra_quando", "UPDATE", linha);
+    lerAbra(linha);
+  }
+  function lerAbra(x) {
+    $("abraLerOcasiao").textContent = `Abra quando… ${x.ocasiao}`;
+    $("abraLerTexto").textContent = x.texto;
+    $("abraLerDe").textContent = `— ${nomeDe(x.de)}`;
+    $("dlgAbraLer").showModal();
+  }
+  escutar("abra_quando", (ev, row, antes) => {
+    if (ev === "UPDATE" && antes && !antes.aberto_em && row.aberto_em && row.de === eu)
+      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} abriu a carta "Abra quando… ${row.ocasiao}" 💌`), false);
+  });
+  function desenharAbra() {
+    if (!estado || !estado.fixa || !$("abraFechadas")) return;
+    const outro = 1 - eu;
+    const paraMim = dados.abra_quando.filter(x => x.de === outro && !x.aberto_em);
+    const minhas = dados.abra_quando.filter(x => x.de === eu).slice().reverse();
+    const abertas = dados.abra_quando.filter(x => x.aberto_em).sort((a, b) => (a.aberto_em < b.aberto_em ? 1 : -1));
+    $("abraParaMimTitulo").textContent = `De ${nomeDe(outro)} para você`;
+    $("abraVazio").hidden = !!paraMim.length;
+    const uf = $("abraFechadas");
+    uf.textContent = "";
+    paraMim.forEach(x => {
+      const li = el("li"), b = el("button", "abra-envelope", `Abra quando… ${x.ocasiao}`);
+      b.type = "button"; b.addEventListener("click", () => abrirAbra(x));
+      li.appendChild(b); uf.appendChild(li);
+    });
+    const um = $("abraMinhas");
+    um.textContent = "";
+    minhas.forEach(x => {
+      const li = el("li"), info = el("div", "info");
+      info.append(el("span", "t", `Abra quando… ${x.ocasiao}`), el("span", "tag", x.aberto_em ? `aberta em ${dataHora(x.aberto_em)}` : "fechada"));
+      li.appendChild(info);
+      if (!x.aberto_em) {
+        const acoes = el("div", "acoes");
+        const ed = el("button", "linkbtn", "Editar"); ed.type = "button"; ed.addEventListener("click", () => abrirNovaAbra(x));
+        const ap = el("button", "linkbtn", "Apagar"); ap.type = "button"; ap.addEventListener("click", () => apagarAbra(x));
+        acoes.append(ed, ap); li.appendChild(acoes);
+      }
+      um.appendChild(li);
+    });
+    $("abraAbertasQtd").textContent = abertas.length ? `(${abertas.length})` : "";
+    const ua = $("abraAbertas");
+    ua.textContent = "";
+    abertas.forEach(x => {
+      const li = el("li"), info = el("div", "info");
+      info.append(el("span", "tag", `De ${nomeDe(x.de)} · aberta em ${dataHora(x.aberto_em)}`), el("span", "t", `Abra quando… ${x.ocasiao}`), el("span", "abra-texto", x.texto));
+      li.appendChild(info); ua.appendChild(li);
+    });
+  }
+  redesenhar("abra_quando", desenharAbra);
+  extrasDaCasa.push(() => {
+    const outro = 1 - eu;
+    const naoLidos = dados.motivos.filter(m => m.de === outro && !(m.vezes > 0)).length;
+    $("cardPoteSub").textContent = naoLidos ? `${naoLidos} ${naoLidos === 1 ? "motivo novo" : "motivos novos"}` : "Motivos de um para o outro";
+    $("cardPote").classList.toggle("destaque", naoLidos > 0);
+    const fechadas = dados.abra_quando.filter(x => x.de === outro && !x.aberto_em).length;
+    $("cardAbraSub").textContent = fechadas ? `${fechadas} ${fechadas === 1 ? "carta fechada" : "cartas fechadas"} para você` : "Cartas para a hora certa";
+  });
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -3897,6 +4081,15 @@
     });
     $("distManualSalvar").addEventListener("click", salvarDistanciaManual);
     $("novoMarco").addEventListener("click", () => abrirMarco(null));
+    $("motivoGuardar").addEventListener("click", guardarMotivo);
+    $("motivoTirar").addEventListener("click", tirarMotivo);
+    $("motivoPapel").addEventListener("click", () => { $("motivoPapel").hidden = true; });
+    $("novaAbra").addEventListener("click", () => abrirNovaAbra(null));
+    $("formAbra").addEventListener("submit", salvarAbra);
+    $("cancelarAbra").addEventListener("click", () => $("dlgAbra").close());
+    $("abraOcasiao").addEventListener("change", () => { $("abraOutraLinha").hidden = $("abraOcasiao").value !== "outra"; });
+    $("abraTexto").addEventListener("input", () => { $("abraContador").textContent = `${$("abraTexto").value.length}/1000`; });
+    $("fecharAbraLer").addEventListener("click", () => $("dlgAbraLer").close());
     $("formMarco").addEventListener("submit", salvarMarco);
     $("cancelarMarco").addEventListener("click", () => $("dlgMarco").close());
     document.querySelectorAll("#marcoSugestoes [data-emoji]").forEach(b => b.addEventListener("click", () => {

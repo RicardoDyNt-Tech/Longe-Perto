@@ -469,3 +469,25 @@ input[type=number]{width:100%; font:inherit; color:var(--ink); background:var(--
 .marco-sugestoes{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px}
 .marco-sugestoes button{width:auto; padding:5px 10px; border-radius:999px; border:1.5px solid var(--line); background:var(--surface); color:inherit; font-size:.8rem}
 .marco-emoji-campo{max-width:90px}
+
+/* v6 · pote de motivos e abra quando */
+.pote-svg{width:160px; height:170px; display:block; margin:6px auto 0}
+.pote-vidro{fill:none; stroke:var(--ink); stroke-width:2.5; opacity:.7}
+.pote-tampa{fill:var(--muted)}
+.pote-cheio{fill:color-mix(in srgb, #e0457b 30%, transparent); transition:all .6s}
+.pote-coracao{font-size:13px; fill:#e0457b}
+.pote-conta{text-align:center; font-weight:700; margin:6px 0 10px}
+#motivoTirar{display:block; margin:0 auto 10px}
+#motivoGuardar, #novaAbra{width:auto}
+.motivo-papel{background:#fffaf0; color:#3a2a1a; border-radius:6px; padding:18px 16px; margin:10px 0; box-shadow:0 6px 18px rgba(0,0,0,.15); cursor:pointer; transform-origin:top center}
+.motivo-papel.anima{animation:desdobra .7s ease-out}
+@keyframes desdobra{from{transform:scaleY(.05); opacity:0} 60%{transform:scaleY(1.03); opacity:1} to{transform:scaleY(1)}}
+.motivo-texto, .abra-texto{white-space:pre-wrap; overflow-wrap:anywhere; margin:0}
+.motivo-texto{font-size:1.1rem; font-style:italic}
+.motivo-de{text-align:right; margin:8px 0 0; font-weight:700}
+.abra-lista{list-style:none; padding:0; margin:6px 0 10px; display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.abra-envelope{width:100%; min-height:86px; padding:12px; border-radius:12px; border:1.5px solid var(--line); background:linear-gradient(160deg, var(--surface) 55%, color-mix(in srgb, #e0457b 18%, var(--surface)) 55%); color:var(--ink); font-weight:700; text-align:left; overflow-wrap:anywhere}
+.dlg-abra-ler .abra-ocasiao{font-weight:800; margin:0 0 10px}
+.dlg-abra-ler .abra-texto{font-size:1.05rem}
+.dlg-abra-ler button{margin-top:12px}
+#abraAbertas .abra-texto{display:block; margin-top:4px; font-size:.95rem}
