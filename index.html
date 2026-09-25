@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=31">
+<link rel="stylesheet" href="style.css?v=32">
 </head>
 <body>
 <main>
@@ -106,6 +106,7 @@
         <button type="button" class="casa-card" data-abre="vSemana" id="cardSemana"><span class="ic">📅</span><b>Semana</b><span class="sub" id="cardSemanaSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCapsulas" id="cardCap"><span class="ic">⏳</span><b>Cápsulas</b><span class="sub" id="cardCapSub"></span></button>
         <button type="button" class="casa-card" data-abre="vAlbum" id="cardAlbum"><span class="ic">📸</span><b>Álbum</b><span class="sub" id="cardAlbumSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vBaralho" id="cardBaralho"><span class="ic">🃏</span><b>Baralho</b><span class="sub" id="cardBaralhoSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -196,6 +197,17 @@
         <p class="extras-sub" id="albumVazio"></p>
         <ul class="lista-extras" id="listaAlbum"></ul>
       </section>
+      <section class="casa-vista" id="vBaralho" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <h2>Baralho</h2>
+        <p class="extras-sub">As cartas lembram o que já saiu: as menos vistas aparecem mais, as favoritas aparecem mais e as aposentadas não aparecem.</p>
+        <h3 class="casa-h3">⭐ Favoritas <span id="baralhoFavQtd"></span></h3>
+        <ul class="lista-extras" id="baralhoFavoritas"></ul>
+        <h3 class="casa-h3">🚫 Aposentadas <span id="baralhoAposQtd"></span></h3>
+        <ul class="lista-extras" id="baralhoAposentadas"></ul>
+        <h3 class="casa-h3">Mais vistas</h3>
+        <ul class="lista-extras" id="baralhoVistas"></ul>
+      </section>
       <section class="casa-vista" id="vCofre" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
         <div id="lugarCofre"></div>
@@ -279,6 +291,11 @@
       <p class="level" id="level"></p>
       <p class="text" id="text"></p>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
+      <div class="marcas" id="marcas" hidden role="group" aria-label="Marcar esta carta">
+        <button type="button" data-marca="favorita" aria-pressed="false" title="Favoritar">⭐</button>
+        <button type="button" data-marca="repetir" aria-pressed="false" title="Jogar de novo">🔁</button>
+        <button type="button" data-marca="aposentada" aria-pressed="false" title="Aposentar">🚫</button>
+      </div>
       <div class="sintonia" id="sintoniaBox" hidden>
         <div id="sintoniaResponder">
           <label class="field" for="sintoniaTexto" id="sintoniaPapel"></label>
@@ -587,8 +604,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=31"></script>
-<script src="app.js?v=31"></script>
+<script src="config.js?v=32"></script>
+<script src="app.js?v=32"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

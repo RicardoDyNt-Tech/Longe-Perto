@@ -112,15 +112,16 @@
   // chaves antigas em `usados` (de antes das cartas irem para o banco) não batem com nenhum id e são ignoradas
   function sortear(tipo, niveis, usados) {
     const lista = niveis.length ? niveis : ["leve"];
-    const pool = cartas.filter(c => c.tipo === tipo && lista.includes(c.nivel)).map(c => ({ ...c, chave: c.id }));
-    if (!pool.length) cartas.filter(c => c.tipo === tipo && c.nivel === "leve").forEach(c => pool.push({ ...c, chave: c.id }));
+    let pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && lista.includes(c.nivel)).map(c => ({ ...c, chave: c.id })));
+    if (!pool.length) pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === "leve").map(c => ({ ...c, chave: c.id })));
     if (!pool.length) return null;
     const usadosSet = new Set(usados);
     let livres = pool.filter(p => !usadosSet.has(p.chave));
     let reset = false;
     if (!livres.length) { livres = pool; reset = true; }
-    const p = livres[Math.floor(Math.random() * livres.length)];
+    const { p, repetir } = escolherComPeso(pool, livres);
     const carta = { tipo, nivel: p.nivel, texto: p.texto, chave: p.chave, reset, doPool: pool.map(x => x.chave) };
+    if (repetir) carta.repetir = true;
     if (p.id) carta.id = p.id;
     if (p.midia) carta.midia = p.midia;
     if (p.autor) carta.autor = p.autor;
@@ -158,6 +159,11 @@
     if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) {
       novo.timer = null;
       if (novo.fixa && estado.carta) guardarNoHistorico(novo, estado);
+      // carta nova sorteada aqui: conta a visualização e, se era "jogar de novo", tira a marca
+      if (novo.fixa && novo.carta && novo.carta.id && cartas.some(x => x.id === novo.carta.id)) {
+        contarVista(novo.carta.id, true);
+        if (novo.carta.repetir) { delete novo.carta.repetir; if (temMarca(novo.carta.id, "repetir")) setTimeout(() => marcarCarta(novo.carta.id, "repetir"), 0); }
+      }
     }
     if (!novo.carta) novo.musica = null;
     const venceuAgora = estado.vencedor == null && novo.vencedor != null;
@@ -336,7 +342,8 @@
     carregarCofre(c);
     carregarMusicas(c);
     Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
-    if (fixa) carregarV5(c);
+    marcas = new Map(); vistas = new Map();
+    if (fixa) { carregarV5(c); carregarBaralho(c); }
   }
 
   // ---------- reencontro e cofre ----------
@@ -716,6 +723,7 @@
     if (estado) desenharCasa(estado);
     if (nome === "vSemana") desenharSemana();
     if (nome === "vAlbum") desenharAlbum();
+    if (nome === "vBaralho") desenharBaralho();
     window.scrollTo(0, 0);
   }
 
@@ -1416,6 +1424,105 @@
     $("cardAlbumSub").textContent = n ? `${n} ${n === 1 ? "momento" : "momentos"}${f ? ` · ${f} ★` : ""}` : "Guarde as cartas que marcaram";
   });
 
+  // ---------- baralho com memória (só sala fixa) ----------
+  // marcas: carta_id -> Set("favorita" | "repetir" | "aposentada"); vistas: carta_id -> vezes
+  let marcas = new Map(), vistas = new Map();
+  const temMarca = (id, m) => !!(marcas.get(id) && marcas.get(id).has(m));
+  const baralhoAtivo = () => !!(estado && estado.fixa);
+
+  async function carregarBaralho(c) {
+    const [m, v] = await Promise.all([
+      sb.from("cartas_marcadas").select("carta_id,marca").eq("sala", c),
+      sb.from("cartas_vistas").select("carta_id,vezes").eq("sala", c)
+    ]);
+    if (c !== codigo) return;
+    if (!m.error) {
+      marcas = new Map();
+      (m.data || []).forEach(r => { if (!marcas.has(r.carta_id)) marcas.set(r.carta_id, new Set()); marcas.get(r.carta_id).add(r.marca); });
+    }
+    if (!v.error) vistas = new Map((v.data || []).map(r => [r.carta_id, r.vezes]));
+    desenharMarcas(estado && estado.carta);
+    desenharBaralho();
+  }
+
+  // quem sorteou grava vezes + 1; o outro aparelho só soma na memória
+  function contarVista(id, gravarNoBanco) {
+    const vezes = (vistas.get(id) || 0) + 1;
+    vistas.set(id, vezes);
+    if (gravarNoBanco) sb.from("cartas_vistas").upsert({ sala: codigo, carta_id: id, vezes, ultima_vez: new Date().toISOString() }, { onConflict: "sala,carta_id" }).then(() => {}, () => {});
+  }
+
+  // peso = max(0,2; 1/(1+vezes)), favorita × 3; aposentada fica fora; "jogar de novo" sai primeiro
+  function filtrarBaralho(pool) {
+    if (!baralhoAtivo()) return pool;
+    return pool.filter(p => !temMarca(p.id, "aposentada"));
+  }
+  function escolherComPeso(pool, livres) {
+    if (!baralhoAtivo()) return { p: livres[Math.floor(Math.random() * livres.length)] };
+    const rep = pool.find(p => temMarca(p.id, "repetir"));
+    if (rep) return { p: rep, repetir: true };
+    const peso = p => Math.max(0.2, 1 / (1 + (vistas.get(p.id) || 0))) * (temMarca(p.id, "favorita") ? 3 : 1);
+    const total = livres.reduce((s, p) => s + peso(p), 0);
+    let r = Math.random() * total;
+    for (const p of livres) { if ((r -= peso(p)) < 0) return { p }; }
+    return { p: livres[livres.length - 1] };
+  }
+
+  async function marcarCarta(id, marca) {
+    if (!baralhoAtivo() || !id) return;
+    const tinha = temMarca(id, marca);
+    if (marca === "aposentada" && !tinha && !confirm("Essa carta não vai mais aparecer nesta sala.")) return;
+    const q = tinha
+      ? sb.from("cartas_marcadas").delete().eq("sala", codigo).eq("carta_id", id).eq("marca", marca)
+      : sb.from("cartas_marcadas").insert({ sala: codigo, carta_id: id, marca });
+    const { error } = await q;
+    if (error && error.code !== "23505") return erro("erroJogo", "Não consegui salvar a marca. Confira a internet e tente de novo.");
+    if (!marcas.has(id)) marcas.set(id, new Set());
+    if (tinha) marcas.get(id).delete(marca); else marcas.get(id).add(marca);
+    desenharMarcas(estado && estado.carta);
+    desenharBaralho();
+    // o outro aparelho relê as marcas quando este número muda
+    gravarFresco(n => { n.baralhoVer = (n.baralhoVer || 0) + 1; });
+  }
+
+  function desenharMarcas(c) {
+    const box = $("marcas");
+    const id = c && c.id && cartas.some(x => x.id === c.id) ? c.id : null;
+    box.hidden = !baralhoAtivo() || !id;
+    if (box.hidden) return;
+    box.querySelectorAll("[data-marca]").forEach(b => b.setAttribute("aria-pressed", String(temMarca(id, b.dataset.marca))));
+  }
+
+  function desenharBaralho() {
+    if (!$("vBaralho") || !baralhoAtivo()) return;
+    const porId = new Map(cartas.map(c => [c.id, c]));
+    const comMarca = m => [...marcas].filter(([id, s]) => s.has(m) && porId.has(id)).map(([id]) => porId.get(id));
+    const lista = (ul, itens, vazio, acao) => {
+      ul.textContent = "";
+      if (!itens.length) { ul.appendChild(el("li", "extras-sub", vazio)); return; }
+      itens.forEach(({ c, extra }) => {
+        const li = el("li");
+        const info = el("div", "info");
+        info.append(el("span", "tag", [TIPO_NOMES[c.tipo] || c.tipo, LEVEL_NAMES[c.nivel] || c.nivel, extra].filter(Boolean).join(" · ")), el("span", "t", c.texto));
+        li.appendChild(info);
+        if (acao) li.appendChild(acao(c));
+        ul.appendChild(li);
+      });
+    };
+    const botao = (rotulo, f) => c => { const b = el("button", "linkbtn", rotulo); b.type = "button"; b.addEventListener("click", () => f(c)); return b; };
+    const fav = comMarca("favorita"), apos = comMarca("aposentada");
+    $("baralhoFavQtd").textContent = fav.length ? `(${fav.length})` : "";
+    $("baralhoAposQtd").textContent = apos.length ? `(${apos.length})` : "";
+    lista($("baralhoFavoritas"), fav.map(c => ({ c })), "Nenhuma favorita. Toque em ⭐ numa carta durante o jogo.", botao("Tirar ⭐", c => marcarCarta(c.id, "favorita")));
+    lista($("baralhoAposentadas"), apos.map(c => ({ c })), "Nenhuma carta aposentada.", botao("Restaurar", c => marcarCarta(c.id, "aposentada")));
+    const top = [...vistas].filter(([id, n]) => n > 0 && porId.has(id)).sort((a, b) => b[1] - a[1]).slice(0, 20);
+    lista($("baralhoVistas"), top.map(([id, n]) => ({ c: porId.get(id), extra: `${n}×` })), "Nenhuma carta sorteada ainda nesta sala.");
+  }
+  extrasDaCasa.push(() => {
+    const n = [...marcas.values()].filter(s => s.has("favorita")).length;
+    $("cardBaralhoSub").textContent = n ? `${n} ${n === 1 ? "favorita" : "favoritas"}` : "Favoritas e aposentadas";
+  });
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -1688,6 +1795,7 @@
   function aplicar(e, inicial, local) {
     if (!e) return;
     const vezAntes = estado ? estado.vez : null;
+    const chaveAntes = estado && estado.carta ? estado.carta.chave : null, baralhoAntes = estado ? estado.baralhoVer : undefined;
     estado = normalizar(e);
     mostrarAviso(e.aviso, inicial);
     avisarMinhaVez(e, inicial || local);
@@ -1747,6 +1855,11 @@
     if (!local) conferirPendentes(e);
     // começou a minha vez: se houver desafio surpresa para mim (e os dois aqui), ele entra no lugar do giro
     if (!inicial && vezAntes !== null && vezAntes !== e.vez && e.vez === eu) setTimeout(talvezSurpresa, 0);
+    // baralho: a carta que o outro sorteou conta aqui também; marcas mudadas no outro aparelho são relidas
+    if (!inicial && !local && e.fixa) {
+      if (e.carta && e.carta.id && e.carta.chave !== chaveAntes && cartas.some(x => x.id === e.carta.id)) contarVista(e.carta.id, false);
+      if (e.baralhoVer !== baralhoAntes) carregarBaralho(codigo);
+    }
   }
 
   function desenharExtras() {
@@ -1854,6 +1967,7 @@
     const nome = PARA_OS_DOIS.includes(c.tipo) ? "os dois" : e.jogadores[e.vez] || "";
     card.className = "card " + c.tipo + (c.evento ? " evento" : "") + (c.reversa ? " reversa" : "");
     card.hidden = false;
+    desenharMarcas(c);
     $("selo").hidden = !c.evento;
     $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "⚡ Evento especial · 🤝 Missão em dupla" : "⚡ Evento especial";
     $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
@@ -2753,6 +2867,7 @@
     $("formCapsula").addEventListener("submit", salvarCapsula);
     $("cancelarCapsula").addEventListener("click", () => $("dlgCapsula").close());
     $("formMomento").addEventListener("submit", salvarMomento);
+    document.querySelectorAll("#marcas [data-marca]").forEach(b => b.addEventListener("click", () => marcarCarta(estado && estado.carta && estado.carta.id, b.dataset.marca)));
     $("cancelarMomento").addEventListener("click", () => $("dlgMomento").close());
     document.querySelectorAll("#albumFiltro [data-filtro]").forEach(b => b.addEventListener("click", () => { filtroAlbum = b.dataset.filtro; desenharAlbum(); }));
     $("capAtalhos").addEventListener("click", ev => { const m = Number(ev.target.dataset && ev.target.dataset.meses); if (m) $("capData").value = somarMeses(hojeISO(), m); });

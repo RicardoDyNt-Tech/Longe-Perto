@@ -224,6 +224,10 @@ body.vista-casa .barra-acoes{display:none}
 .filtro button{width:auto; padding:6px 14px; border-radius:999px; border:1.5px solid var(--line); background:var(--surface); color:inherit}
 .filtro button[aria-pressed="true"]{border-color:var(--lamp); font-weight:700}
 .momento-carta{font-weight:700; overflow-wrap:anywhere}
+.marcas{display:flex; justify-content:center; gap:10px; margin:6px 0 2px}
+.marcas button{width:auto; background:none; border:1px solid transparent; border-radius:999px; padding:2px 8px; font-size:1rem; opacity:.45; cursor:pointer}
+.marcas button[aria-pressed="true"]{opacity:1; border-color:var(--line)}
+#vBaralho .t{overflow-wrap:anywhere}
 .cap-status{display:block; font-size:.88rem; margin-top:4px}
 .cap-responder{display:flex; flex-direction:column; gap:6px; margin-top:8px}
 .cap-responder textarea{margin:0}
