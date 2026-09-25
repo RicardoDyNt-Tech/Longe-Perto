@@ -1090,13 +1090,15 @@
     if (!estado || !estado.fixa) return;
     $("formEnvelope").reset();
     tipoDoEnvelope();
+    iaEnvelope.preparar();
     erro("erroEnvelope", "");
     $("envContador").textContent = "0/500";
     $("dlgEnvelope").showModal();
   }
 
   // "🎲 Sugerir": desafio do banco (com o peso do baralho) no campo; na mensagem, só uma ideia acima do campo
-  const sugeridas = { desafio: [], ideia_mensagem: [] };   // últimas 5 de cada, para não repetir
+  const sugeridas = { desafio: [], ideia_mensagem: [] };
+  let iaCarta = null, iaEnvelope = null;   // últimas 5 de cada, para não repetir
   function tipoDoEnvelope() {
     const desafio = document.querySelector('input[name="envTipo"]:checked').value === "desafio";
     $("envNivelRotulo").textContent = desafio ? "Nível do desafio" : "Nível da sugestão";
@@ -3161,6 +3163,70 @@
     desenharExtras();
   }
 
+  // ---------- ideias da IA (Edge Function "gerar-cartas"; a chave da Mistral fica no servidor) ----------
+  const IA_ERROS = {
+    limite: "A IA já trabalhou bastante hoje. Volte amanhã.",
+    recusado: "A IA não conseguiu criar essa. Tente outro tema ou escreva a sua.",
+    falha: "Não deu para gerar agora. Tente de novo."
+  };
+  async function gerarIdeias(tipo, nivel, tema) {
+    const corpo = { sala: codigo, tipo, nivel, tema, quantidade: 3 };
+    const tempo = new Promise(res => setTimeout(() => res({ data: { erro: "falha" } }), 20000));
+    try {
+      const { data, error } = await Promise.race([sb.functions.invoke("gerar-cartas", { body: corpo }), tempo]);
+      if (error || !data) return { erro: "falha" };
+      return data;
+    } catch (err) { return { erro: "falha" }; }
+  }
+  // p: prefixo dos elementos; contexto(): { tipo, nivel }; escolher(carta): põe o texto no dialog
+  function painelIA(p, contexto, escolher) {
+    const q = s => $(p + s);
+    let pedido = 0;   // reabrir o dialog descarta a resposta de um pedido antigo
+    const api = {
+      preparar() {
+        pedido++;
+        q("IaBotao").hidden = !(estado && estado.fixa);
+        q("IaPainel").hidden = true;
+        q("IaTema").value = "";
+        q("IaStatus").textContent = "";
+        q("IaLista").textContent = "";
+        q("IaGerar").textContent = "Gerar";
+        q("IaGerar").disabled = false;
+      }
+    };
+    q("IaBotao").addEventListener("click", () => { q("IaPainel").hidden = !q("IaPainel").hidden; if (!q("IaPainel").hidden) q("IaTema").focus(); });
+    q("IaGerar").addEventListener("click", async () => {
+      if (!estado || !estado.fixa) return;
+      const { tipo, nivel } = contexto();
+      const tema = q("IaTema").value.replace(/[\r\n]+/g, " ").trim().slice(0, 60);
+      const meu = ++pedido;
+      q("IaGerar").disabled = true;
+      q("IaStatus").textContent = "Pensando…";
+      q("IaLista").textContent = "";
+      const r = await gerarIdeias(tipo, nivel, tema);
+      if (meu !== pedido) return;
+      q("IaGerar").disabled = false;
+      if (typeof r.usadasHoje === "number" && typeof r.limite === "number") q("IaUso").textContent = `${r.usadasHoje} de ${r.limite} hoje`;
+      const cartasIA = Array.isArray(r.cartas) ? r.cartas.filter(c => c && typeof c.texto === "string" && c.texto.trim()) : [];
+      if (r.erro || !cartasIA.length) { q("IaStatus").textContent = IA_ERROS[r.erro] || IA_ERROS.falha; return; }
+      q("IaStatus").textContent = "Toque numa para usar. Dá para editar antes de salvar.";
+      q("IaGerar").textContent = "Gerar outras";
+      cartasIA.forEach(c => {
+        const li = el("li");
+        const b = el("button", "", c.texto);
+        b.type = "button";
+        b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", () => {
+          q("IaLista").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+          escolher(c);
+        });
+        li.appendChild(b);
+        q("IaLista").appendChild(li);
+      });
+    });
+    return api;
+  }
+
   function contarTexto() {
     $("contadorCarta").textContent = $("textoCarta").value.length + "/280";
   }
@@ -3171,6 +3237,7 @@
     $("midiaCarta").hidden = true;
     erro("erroCarta", "");
     contarTexto();
+    iaCarta.preparar();
     $("dlgCarta").showModal();
     $("textoCarta").focus();
   }
@@ -3346,6 +3413,18 @@
     $("pulosMax").addEventListener("change", mudarPulosMax);
     $("niveis").addEventListener("change", mudarNiveis);
     $("abrirCarta").addEventListener("click", abrirDialogo);
+    iaCarta = painelIA("carta", () => ({ tipo: document.querySelector('input[name="tipoCarta"]:checked').value, nivel: $("nivelCarta").value }), c => {
+      $("textoCarta").value = c.texto.slice(0, 280);
+      contarTexto();
+      const m = ["foto", "video", "audio"].includes(c.midia) ? c.midia : null;
+      $("temMidia").checked = !!m;
+      $("midiaCarta").hidden = !m;
+      if (m) $("midiaCarta").value = m;
+    });
+    iaEnvelope = painelIA("env", () => ({ tipo: document.querySelector('input[name="envTipo"]:checked').value === "desafio" ? "desafio" : "ideia_mensagem", nivel: $("envNivel").value }), c => {
+      $("envTexto").value = c.texto.slice(0, 500);
+      $("envContador").textContent = `${$("envTexto").value.length}/500`;
+    });
     $("formCarta").addEventListener("submit", salvarCarta);
     $("cancelarCarta").addEventListener("click", () => $("dlgCarta").close());
     $("textoCarta").addEventListener("input", contarTexto);

@@ -369,3 +369,16 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--lamp); outli
 .env-sugerir{display:flex; justify-content:flex-end; margin:-4px 0 6px}
 .env-sugerir button{width:auto; padding:6px 12px}
 .env-ideia{margin:0 0 8px; padding:8px 10px; border:1.5px dashed var(--line); border-radius:12px; overflow-wrap:anywhere}
+
+/* ideias da IA */
+.ia-botao{display:block; margin:0 0 8px}
+.ia-painel{border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; margin:0 0 10px}
+.ia-linha{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.ia-linha button{width:auto; padding:8px 14px}
+.ia-uso{font-size:.75rem; color:var(--muted)}
+.ia-status{margin:6px 0 0; font-size:.9rem}
+.ia-status:empty{display:none}
+.ia-lista{list-style:none; padding:0; margin:8px 0 0; display:grid; gap:8px}
+.ia-lista button{width:100%; text-align:left; font-weight:500; padding:10px 12px; border-radius:12px; border:1.5px solid var(--line); background:var(--surface); color:inherit; overflow-wrap:anywhere; white-space:normal; line-height:1.35}
+.ia-lista button[aria-pressed="true"]{border-color:var(--lamp)}
+.ia-painel input[type=text]{font-weight:400; margin-top:6px}

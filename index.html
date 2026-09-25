@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=35">
+<link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 <main>
@@ -498,6 +498,18 @@
         <button class="secondary" id="envSugerir" type="button">🎲 Sugerir</button>
       </div>
       <p class="env-ideia" id="envIdeia" hidden aria-live="polite"></p>
+      <button class="linkbtn ia-botao" id="envIaBotao" type="button" hidden>✨ Ideias da IA</button>
+      <div class="ia-painel" id="envIaPainel" hidden>
+        <label class="field">Tema (opcional)
+          <input type="text" id="envIaTema" maxlength="60" placeholder="Ex.: praia, cozinha, nosso primeiro encontro">
+        </label>
+        <div class="ia-linha">
+          <button class="secondary" id="envIaGerar" type="button">Gerar</button>
+          <span class="ia-uso" id="envIaUso"></span>
+        </div>
+        <p class="ia-status" id="envIaStatus" aria-live="polite"></p>
+        <ul class="ia-lista" id="envIaLista"></ul>
+      </div>
       <label class="field">Texto
         <textarea id="envTexto" maxlength="500" rows="5"></textarea>
         <span class="contador" id="envContador">0/500</span>
@@ -655,6 +667,18 @@
           <option value="pesado">Pesado +18</option>
         </select>
       </label>
+      <button class="linkbtn ia-botao" id="cartaIaBotao" type="button" hidden>✨ Ideias da IA</button>
+      <div class="ia-painel" id="cartaIaPainel" hidden>
+        <label class="field">Tema (opcional)
+          <input type="text" id="cartaIaTema" maxlength="60" placeholder="Ex.: praia, cozinha, nosso primeiro encontro">
+        </label>
+        <div class="ia-linha">
+          <button class="secondary" id="cartaIaGerar" type="button">Gerar</button>
+          <span class="ia-uso" id="cartaIaUso"></span>
+        </div>
+        <p class="ia-status" id="cartaIaStatus" aria-live="polite"></p>
+        <ul class="ia-lista" id="cartaIaLista"></ul>
+      </div>
       <label class="field">Texto
         <textarea id="textoCarta" maxlength="280" rows="4" placeholder="Ex.: Me conta um sonho que você teve comigo"></textarea>
         <span class="contador" id="contadorCarta">0/280</span>
@@ -675,9 +699,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=35"></script>
-<script src="conquistas.js?v=35"></script>
-<script src="app.js?v=35"></script>
+<script src="config.js?v=36"></script>
+<script src="conquistas.js?v=36"></script>
+<script src="app.js?v=36"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
