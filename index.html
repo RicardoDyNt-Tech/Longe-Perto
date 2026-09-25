@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=33">
+<link rel="stylesheet" href="style.css?v=34">
 </head>
 <body>
 <main>
@@ -61,6 +61,7 @@
 
     <div class="ajustes">
       <button class="som" id="som" type="button" aria-pressed="true" aria-label="Som e vibração ligados">🔊</button>
+      <button class="linkbtn" id="abrirPosicoesSala" type="button" hidden>📖 Posições</button>
       <label>📷 Câmera do WhatsApp
         <select id="camera">
           <option value="direita">Direita</option>
@@ -108,6 +109,7 @@
         <button type="button" class="casa-card" data-abre="vAlbum" id="cardAlbum"><span class="ic">📸</span><b>Álbum</b><span class="sub" id="cardAlbumSub"></span></button>
         <button type="button" class="casa-card" data-abre="vBaralho" id="cardBaralho"><span class="ic">🃏</span><b>Baralho</b><span class="sub" id="cardBaralhoSub"></span></button>
         <button type="button" class="casa-card" data-abre="vConquistas" id="cardConq"><span class="ic">🏆</span><b>Conquistas</b><span class="sub" id="cardConqSub"></span></button>
+        <button type="button" class="casa-card" id="cardPosicoes" hidden><span class="ic">📖</span><b>Posições</b><span class="sub">Guia para escolher e sortear</span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -305,6 +307,18 @@
       <p class="level" id="level"></p>
       <p class="text" id="text"></p>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
+      <div class="pos-carta" id="posCarta" hidden>
+        <div class="pos-carta-botoes">
+          <button class="secondary" id="abrirPosicoes" type="button">📖 Posições</button>
+          <button class="secondary" id="montarCardapio" type="button">Montar cardápio</button>
+        </div>
+        <p class="pos-escolhida" id="posEscolhida" hidden></p>
+        <div class="pos-cardapio" id="posCardapio" hidden>
+          <p class="pos-cardapio-titulo">Cardápio</p>
+          <ol id="posCardapioLista"></ol>
+          <button class="secondary" id="posGuardar" type="button">Guardar para o reencontro</button>
+        </div>
+      </div>
       <div class="marcas" id="marcas" hidden role="group" aria-label="Marcar esta carta">
         <button type="button" data-marca="favorita" aria-pressed="false" title="Favoritar">⭐</button>
         <button type="button" data-marca="repetir" aria-pressed="false" title="Jogar de novo">🔁</button>
@@ -492,6 +506,45 @@
     </form>
   </dialog>
 
+  <dialog id="dlgPosicoes" class="dlg-posicoes" aria-labelledby="dlgPosTitulo">
+    <div class="pos-topo">
+      <h2 id="dlgPosTitulo">📖 Posições</h2>
+      <button class="linkbtn" id="fecharPosicoes" type="button">Fechar</button>
+    </div>
+    <div class="pos-filtros">
+      <label>Dificuldade
+        <select id="posFiltroDif">
+          <option value="">Todas</option>
+          <option value="facil">Fácil</option>
+          <option value="media">Média</option>
+          <option value="dificil">Difícil</option>
+        </select>
+      </label>
+      <label>Clima
+        <select id="posFiltroClima">
+          <option value="">Todos</option>
+          <option value="romantica">Romântica</option>
+          <option value="intensa">Intensa</option>
+          <option value="aventura">Aventura</option>
+        </select>
+      </label>
+      <label>Marcas
+        <select id="posFiltroMarca">
+          <option value="">Todas</option>
+          <option value="favorita">Favoritas</option>
+          <option value="testar">Queremos testar</option>
+          <option value="feita">Já fizemos</option>
+        </select>
+      </label>
+    </div>
+    <button class="primary" id="sortearPosicao" type="button">🎲 Sortear posição</button>
+    <p class="pos-escolhida" id="posResultado" hidden aria-live="polite"></p>
+    <p class="pos-cardapio-barra" id="posCardapioBarra" hidden><span id="posCardapioConta"></span> · marque até 5 posições</p>
+    <p class="erro" id="erroPosicoes" role="alert"></p>
+    <p class="extras-sub" id="posVazio" hidden>Nenhuma posição com esses filtros.</p>
+    <ul class="pos-lista" id="posLista"></ul>
+  </dialog>
+
   <dialog id="dlgMomento" aria-labelledby="dlgMomentoTitulo">
     <form id="formMomento" method="dialog">
       <h2 id="dlgMomentoTitulo">📸 Guardar no álbum</h2>
@@ -618,9 +671,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=33"></script>
-<script src="conquistas.js?v=33"></script>
-<script src="app.js?v=33"></script>
+<script src="config.js?v=34"></script>
+<script src="conquistas.js?v=34"></script>
+<script src="app.js?v=34"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

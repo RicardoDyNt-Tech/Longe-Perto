@@ -158,6 +158,8 @@
     // o cronômetro pertence à carta: saiu a carta (cumpri, pular, liberar, nova carta), sai o timer
     if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) {
       novo.timer = null;
+      // a posição e o cardápio pertencem à carta
+      if (estado.carta) { novo.posicao = null; novo.cardapio = null; }
       if (novo.fixa && estado.carta) guardarNoHistorico(novo, estado);
       // carta nova sorteada aqui: conta a visualização e, se era "jogar de novo", tira a marca
       if (novo.fixa && novo.carta && novo.carta.id && cartas.some(x => x.id === novo.carta.id)) {
@@ -343,6 +345,7 @@
     carregarMusicas(c);
     Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
     marcas = new Map(); vistas = new Map(); partidasSala = [];
+    posicoes = []; marcasPos = []; carregarPosicoes(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
   }
 
@@ -781,7 +784,212 @@
   const redesenhar = (t, f) => (aoDesenhar[t] = aoDesenhar[t] || []).push(f);
   const redesenharV5 = t => { (aoDesenhar[t] || []).forEach(f => f()); if (estado) desenharCasa(estado); };
 
+  // ---------- guia de posições (só texto, sem imagens) ----------
+  // posicoes: o guia (só leitura); marcasPos: marcas do casal nesta sala { posicao_id, marca, link }
+  let posicoes = [], marcasPos = [];
+  let posModo = null;   // null (guia) | "cardapio"
+  const POS_DIF = { facil: "Fácil", media: "Média", dificil: "Difícil" };
+  const POS_CLIMA = { romantica: "Romântica", intensa: "Intensa", aventura: "Aventura" };
+  const POS_MARCAS = [["favorita", "⭐ Favorita"], ["testar", "🎯 Queremos testar"], ["feita", "✅ Já fizemos"]];
+  const MAX_CARDAPIO = 5;
+  const RE_POSICAO = /posi[çc](ão|ao|ões|oes)/i;
+  const RE_CARDAPIO = /card[áa]pio|posi[çc](ões|oes)/i;
+
+  // só aparece com Picante ou Pesado ativos, e só as posições dos níveis ativos
+  const niveisGuia = e => (e && e.niveis || []).filter(n => n === "picante" || n === "pesado");
+  const posicoesDoNivel = e => { const ns = niveisGuia(e); return posicoes.filter(p => ns.includes(p.nivel)); };
+  const guiaDisponivel = e => !!(e && niveisGuia(e).length && posicoes.length);
+  const marcaPos = (id, m) => marcasPos.find(x => x.posicao_id === id && x.marca === m);
+  const linkPos = id => { const x = marcasPos.find(y => y.posicao_id === id && y.link); return x ? x.link : null; };
+
+  async function carregarPosicoes(c) {
+    const [g, m] = await Promise.all([
+      sb.from("posicoes").select("id, nome, descricao, dificuldade, clima, nivel").eq("ativa", true).order("nome", { ascending: true }),
+      sb.from("posicoes_marcadas").select("posicao_id, marca, link, sala").eq("sala", c)
+    ]);
+    if (c !== codigo) return;
+    posicoes = g.error || !g.data ? [] : g.data;
+    marcasPos = m.error || !m.data ? [] : m.data;
+    desenharPosicoes();
+  }
+
+  function comPosicoes(ch, c) {
+    const mudou = (ev, row) => {
+      if (!row || row.sala !== codigo) return;
+      marcasPos = marcasPos.filter(x => !(x.posicao_id === row.posicao_id && x.marca === row.marca));
+      if (ev !== "DELETE") marcasPos.push({ posicao_id: row.posicao_id, marca: row.marca, link: row.link || null, sala: row.sala });
+      desenharPosicoes();
+    };
+    return ch
+      .on("postgres_changes", { event: "*", schema: "public", table: "posicoes_marcadas", filter: `sala=eq.${c}` }, p => mudou(p.eventType, p.eventType === "DELETE" ? p.old : p.new))
+      // DELETE não é filtrável: a linha antiga vem inteira (replica identity full) e traz a sala
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "posicoes_marcadas" }, p => mudou("DELETE", p.old));
+  }
+
+  async function marcarPosicao(p, m) {
+    const tinha = marcaPos(p.id, m);
+    const link = linkPos(p.id);
+    const { error } = tinha
+      ? await sb.from("posicoes_marcadas").delete().eq("sala", codigo).eq("posicao_id", p.id).eq("marca", m)
+      : await sb.from("posicoes_marcadas").insert({ sala: codigo, posicao_id: p.id, marca: m, link });
+    if (error && error.code !== "23505") return erro("erroPosicoes", "Não consegui salvar a marca. Confira a internet e tente de novo.");
+    erro("erroPosicoes", "");
+    marcasPos = marcasPos.filter(x => !(x.posicao_id === p.id && x.marca === m));
+    if (!tinha) marcasPos.push({ posicao_id: p.id, marca: m, link, sala: codigo });
+    desenharPosicoes();
+  }
+
+  // link externo escolhido pelo casal: guardado nas marcas da posição, abre fora do app
+  async function referenciaPosicao(p) {
+    const atual = linkPos(p.id) || "";
+    const r = prompt(`Link de referência para "${p.nome}" (começando com https://). Deixe vazio para tirar.`, atual);
+    if (r === null) return;
+    const link = r.trim();
+    if (link && (!/^https:\/\/\S+$/.test(link) || link.length > 500)) return erro("erroPosicoes", "O link precisa começar com https://");
+    const { error } = await sb.from("posicoes_marcadas").update({ link: link || null }).eq("sala", codigo).eq("posicao_id", p.id);
+    if (error) return erro("erroPosicoes", "Não consegui salvar o link. Confira a internet e tente de novo.");
+    erro("erroPosicoes", "");
+    marcasPos.forEach(x => { if (x.posicao_id === p.id) x.link = link || null; });
+    desenharPosicoes();
+  }
+
+  function filtradas() {
+    const d = $("posFiltroDif").value, c = $("posFiltroClima").value, m = $("posFiltroMarca").value;
+    return posicoesDoNivel(estado).filter(p => (!d || p.dificuldade === d) && (!c || p.clima === c) && (!m || marcaPos(p.id, m)));
+  }
+
+  // sortear e escolher: vão para estado.posicao e aparecem nos dois aparelhos
+  function definirPosicao(p, modo) {
+    if (!estado || !p) return;
+    gravarFresco(n => {
+      n.posicao = { id: p.id, nome: p.nome, descricao: p.descricao, por: eu, modo, chave: n.carta ? n.carta.chave : null };
+      n.aviso = novoAviso(`${n.jogadores[eu]} ${modo === "escolheu" ? "escolheu" : "sorteou"}: ${p.nome}`);
+    });
+  }
+  function sortearPosicao() {
+    const lista = filtradas();
+    if (!lista.length) return erro("erroPosicoes", "Nenhuma posição com esses filtros.");
+    erro("erroPosicoes", "");
+    definirPosicao(lista[Math.floor(Math.random() * lista.length)], "sorteou");
+  }
+
+  // cardápio: até 5 posições para a carta na mesa
+  const cardapioAtual = e => e && e.cardapio && e.carta && e.cardapio.chave === e.carta.chave ? e.cardapio : null;
+  function alternarCardapio(p) {
+    if (!estado || !estado.carta) return;
+    gravarFresco(n => {
+      if (!n.carta) return;
+      const c = n.cardapio && n.cardapio.chave === n.carta.chave ? n.cardapio : { chave: n.carta.chave, itens: [], por: eu, guardado: false };
+      if (c.itens.some(x => x.id === p.id)) c.itens = c.itens.filter(x => x.id !== p.id);
+      else if (c.itens.length < MAX_CARDAPIO) c.itens.push({ id: p.id, nome: p.nome });
+      c.guardado = false;
+      n.cardapio = c;
+    });
+  }
+  async function guardarCardapio() {
+    const c = cardapioAtual(estado);
+    if (!c || !c.itens.length || c.guardado) return;
+    $("posGuardar").disabled = true;
+    const { data, error } = await sb.from("cofre")
+      .insert({ sala: codigo, carta: estado.carta.texto.slice(0, 280), nota: ("Cardápio: " + c.itens.map(x => x.nome).join(" · ")).slice(0, 500), autor: (estado.jogadores[eu] || "").trim().slice(0, 20) })
+      .select("id, sala, carta, nota, autor, feito, criada_em").single();
+    $("posGuardar").disabled = false;
+    if (error) return erro("erroJogo", /limite/.test(error.message || "") ? "O cofre desta sala chegou a 300 itens." : "Não consegui guardar. Confira a internet e tente de novo.");
+    juntarCofre(data);
+    gravarFresco(n => { if (n.cardapio && n.cardapio.chave === c.chave) n.cardapio.guardado = true; n.aviso = novoAviso(`${n.jogadores[eu]} guardou o cardápio no cofre 💞`); });
+  }
+
+  function abrirGuia(modo) {
+    if (!guiaDisponivel(estado)) return;
+    posModo = modo === "cardapio" && estado.carta ? "cardapio" : null;
+    erro("erroPosicoes", "");
+    if (!$("dlgPosicoes").open) $("dlgPosicoes").showModal();
+    desenharPosicoes();
+  }
+
+  function desenharPosicoes() {
+    if (!estado) return;
+    const e = estado, disp = guiaDisponivel(e);
+    // botões fora do guia
+    $("cardPosicoes").hidden = !e.fixa || !disp;
+    $("abrirPosicoesSala").hidden = !!e.fixa || !disp;
+    desenharPosCarta(e);
+    if (!$("dlgPosicoes").open) return;
+    if (!disp) { $("dlgPosicoes").close(); return; }
+    const cardapio = posModo === "cardapio" ? cardapioAtual(e) : null;
+    $("posCardapioBarra").hidden = posModo !== "cardapio";
+    $("posCardapioConta").textContent = `Cardápio: ${cardapio ? cardapio.itens.length : 0}/${MAX_CARDAPIO}`;
+    const r = e.posicao;
+    $("posResultado").hidden = !r;
+    $("posResultado").textContent = r ? `${nomeDe(r.por)} ${r.modo === "escolheu" ? "escolheu" : "sorteou"}: ${r.nome}` : "";
+    const lista = filtradas();
+    $("posVazio").hidden = !!lista.length;
+    const ul = $("posLista");
+    ul.textContent = "";
+    lista.forEach(p => {
+      const li = el("li", "pos-card");
+      li.appendChild(el("h3", "", p.nome));
+      li.appendChild(el("p", "pos-desc", p.descricao));
+      const selos = el("div", "pos-selos");
+      selos.append(el("span", "selo-pos", POS_DIF[p.dificuldade] || p.dificuldade), el("span", "selo-pos", POS_CLIMA[p.clima] || p.clima), el("span", "selo-pos nivel", LEVEL_NAMES[p.nivel] || p.nivel));
+      li.appendChild(selos);
+      const marcas = el("div", "pos-marcas");
+      POS_MARCAS.forEach(([m, rot]) => {
+        const b = el("button", "", rot); b.type = "button";
+        b.setAttribute("aria-pressed", String(!!marcaPos(p.id, m)));
+        b.addEventListener("click", () => marcarPosicao(p, m));
+        marcas.appendChild(b);
+      });
+      li.appendChild(marcas);
+      const acoes = el("div", "pos-acoes");
+      const esc = el("button", "secondary", "Escolher esta"); esc.type = "button";
+      esc.addEventListener("click", () => definirPosicao(p, "escolheu"));
+      acoes.appendChild(esc);
+      if (posModo === "cardapio") {
+        const no = !!(cardapio && cardapio.itens.some(x => x.id === p.id));
+        const b = el("button", "secondary", no ? "✓ No cardápio" : "＋ Cardápio"); b.type = "button";
+        b.setAttribute("aria-pressed", String(no));
+        b.disabled = !no && !!cardapio && cardapio.itens.length >= MAX_CARDAPIO;
+        b.addEventListener("click", () => alternarCardapio(p));
+        acoes.appendChild(b);
+      }
+      if (marcasPos.some(x => x.posicao_id === p.id)) {
+        const ref = el("button", "linkbtn", "🔗 Referência"); ref.type = "button";
+        ref.addEventListener("click", () => referenciaPosicao(p));
+        acoes.appendChild(ref);
+        const link = linkPos(p.id);
+        if (link) {
+          const a = el("a", "pos-link", "Abrir referência ↗");
+          a.href = link; a.target = "_blank"; a.rel = "noopener noreferrer";
+          acoes.appendChild(a);
+        }
+      }
+      li.appendChild(acoes);
+      ul.appendChild(li);
+    });
+  }
+
+  // embaixo da carta: botões do guia, posição sorteada/escolhida e cardápio
+  function desenharPosCarta(e) {
+    const c = e && e.carta, disp = guiaDisponivel(e);
+    const falaPosicao = !!(c && c.texto && disp && RE_POSICAO.test(c.texto));
+    const r = e && e.posicao && c && e.posicao.chave === c.chave ? e.posicao : null;
+    const cardapio = cardapioAtual(e);
+    $("posCarta").hidden = !falaPosicao && !r && !cardapio;
+    $("abrirPosicoes").hidden = !falaPosicao;
+    $("montarCardapio").hidden = !(falaPosicao && RE_CARDAPIO.test(c.texto));
+    $("posEscolhida").hidden = !r;
+    $("posEscolhida").textContent = r ? `${nomeDe(r.por)} ${r.modo === "escolheu" ? "escolheu" : "sorteou"}: ${r.nome}` : "";
+    $("posCardapio").hidden = !cardapio || !cardapio.itens.length;
+    const ul = $("posCardapioLista");
+    ul.textContent = "";
+    if (cardapio) cardapio.itens.forEach(x => ul.appendChild(el("li", "", x.nome)));
+    $("posGuardar").disabled = !!(cardapio && cardapio.guardado);
+    $("posGuardar").textContent = cardapio && cardapio.guardado ? "Guardado no cofre ✓" : "Guardar para o reencontro";
+  }
+
   function comTabelasV5(ch, c) {
+    ch = comPosicoes(ch, c);
     Object.keys(TABELAS_V5).forEach(t => {
       ch = ch
         .on("postgres_changes", { event: "*", schema: "public", table: t, filter: `sala=eq.${c}` },
@@ -1776,6 +1984,8 @@
     if (!LEVEL_NAMES[e.nivelSemana]) e.nivelSemana = "leve";
     if (!Array.isArray(e.obsPedida) || e.obsPedida.length !== 2) e.obsPedida = [null, null];
     if (!Array.isArray(e.historico)) e.historico = [];
+    if (!e.posicao || typeof e.posicao !== "object" || !e.posicao.nome) e.posicao = null;
+    if (!e.cardapio || typeof e.cardapio !== "object" || !Array.isArray(e.cardapio.itens)) e.cardapio = null;
     if (typeof e.mostrarOusadia !== "boolean") e.mostrarOusadia = true;
     if (!Array.isArray(e.titulos) || e.titulos.length !== 2) e.titulos = [null, null];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
@@ -1956,6 +2166,7 @@
     if (s) s.textContent = nomes[e.vez];
 
     desenharPlacar(e, nomes);
+    desenharPosicoes();
     desenharPresenca();
     if (vista !== "jogo") desenharCasa(e);
     desenharEfeitos(e);
@@ -2101,6 +2312,7 @@
     card.className = "card " + c.tipo + (c.evento ? " evento" : "") + (c.reversa ? " reversa" : "");
     card.hidden = false;
     desenharMarcas(c);
+    desenharPosCarta(e);
     $("selo").hidden = !c.evento;
     $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "⚡ Evento especial · 🤝 Missão em dupla" : "⚡ Evento especial";
     $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
@@ -3010,6 +3222,14 @@
     $("formCapsula").addEventListener("submit", salvarCapsula);
     $("cancelarCapsula").addEventListener("click", () => $("dlgCapsula").close());
     $("formMomento").addEventListener("submit", salvarMomento);
+    $("abrirPosicoes").addEventListener("click", () => abrirGuia());
+    $("montarCardapio").addEventListener("click", () => abrirGuia("cardapio"));
+    $("abrirPosicoesSala").addEventListener("click", () => abrirGuia());
+    $("cardPosicoes").addEventListener("click", () => abrirGuia());
+    $("fecharPosicoes").addEventListener("click", () => $("dlgPosicoes").close());
+    $("sortearPosicao").addEventListener("click", sortearPosicao);
+    $("posGuardar").addEventListener("click", guardarCardapio);
+    ["posFiltroDif", "posFiltroClima", "posFiltroMarca"].forEach(id => $(id).addEventListener("change", desenharPosicoes));
     $("mostrarOusadia").addEventListener("change", () => { const v = $("mostrarOusadia").checked; gravar(n => { n.mostrarOusadia = v; }); });
     $("meuTitulo").addEventListener("change", () => { const v = $("meuTitulo").value || null; gravar(n => { n.titulos[eu] = v; }); });
     document.querySelectorAll("#marcas [data-marca]").forEach(b => b.addEventListener("click", () => marcarCarta(estado && estado.carta && estado.carta.id, b.dataset.marca)));
