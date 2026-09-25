@@ -364,3 +364,8 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--lamp); outli
 .pos-marcas button[aria-pressed="true"]{opacity:1; border-color:var(--lamp); font-weight:700}
 .pos-acoes button{width:auto; padding:6px 12px}
 .pos-link{font-size:.85rem}
+
+/* sugestões nos envelopes */
+.env-sugerir{display:flex; justify-content:flex-end; margin:-4px 0 6px}
+.env-sugerir button{width:auto; padding:6px 12px}
+.env-ideia{margin:0 0 8px; padding:8px 10px; border:1.5px dashed var(--line); border-radius:12px; overflow-wrap:anywhere}
