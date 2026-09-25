@@ -943,6 +943,143 @@
     $("cardEnv").classList.toggle("destaque", dados.envelopes.some(x => !x.aberto_em && x.de !== eu && x.tipo === "mensagem"));
   });
 
+  // ---------- cápsula do tempo ----------
+  // Pergunta respondida agora (escondida até dos dois) e de novo na data; aí os 4 quadros aparecem juntos.
+  const somarDias = (iso, n) => { const [a, m, d] = iso.split("-").map(Number); return new Date(Date.UTC(a, m - 1, d + n)).toISOString().slice(0, 10); };
+  const somarMeses = (iso, n) => { const [a, m, d] = iso.split("-").map(Number); return new Date(Date.UTC(a, m - 1 + n, d)).toISOString().slice(0, 10); };
+  const cheio = arr => Array.isArray(arr) && arr[0] != null && arr[1] != null;
+  const faseCapsula = x => !cheio(x.respostas) ? "respondendo" : diasAte(x.abre_em) > 0 ? "selada" : !cheio(x.respostas_depois) ? "pronta" : "aberta";
+  let perguntaAtual = -1;
+
+  function outraPergunta() {
+    const pool = cartas.filter(c => c.tipo === "capsula");
+    if (!pool.length) return;
+    let i = Math.floor(Math.random() * pool.length);
+    if (pool.length > 1 && i === perguntaAtual) i = (i + 1) % pool.length;
+    perguntaAtual = i;
+    $("capPergunta").value = pool[i].texto;
+  }
+
+  function abrirNovaCapsula() {
+    if (!estado || !estado.fixa) return;
+    erro("erroCapsula", "");
+    outraPergunta();
+    const hoje = hojeISO();
+    $("capData").min = somarDias(hoje, 7);
+    $("capData").max = somarDias(hoje, 730);
+    $("capData").value = somarMeses(hoje, 1);
+    $("dlgCapsula").showModal();
+  }
+
+  async function salvarCapsula(ev) {
+    ev.preventDefault();
+    const pergunta = $("capPergunta").value.replace(/\s+/g, " ").trim().slice(0, 280);
+    const data = $("capData").value, hoje = hojeISO();
+    if (pergunta.length < 3) return erro("erroCapsula", "Escreva a pergunta (pelo menos 3 letras).");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || data < somarDias(hoje, 7) || data > somarDias(hoje, 730))
+      return erro("erroCapsula", "Escolha uma data entre 7 dias e 2 anos a partir de hoje.");
+    $("salvarCapsula").disabled = true;
+    const { data: linha, error } = await sb.from("capsulas")
+      .insert({ sala: codigo, pergunta, abre_em: data, respostas: [null, null], respostas_depois: [null, null] }).select("*").single();
+    $("salvarCapsula").disabled = false;
+    if (error) return erro("erroCapsula", "Não consegui criar a cápsula. Confira a internet e tente de novo.");
+    linhaV5("capsulas", "INSERT", linha);
+    $("dlgCapsula").close();
+  }
+
+  // grava a minha resposta no array (lê a linha antes e confere depois, para não apagar a do outro)
+  async function responderCapsula(x, campo, txt) {
+    for (let tentativa = 0; tentativa < 4; tentativa++) {
+      const { data: atual } = await sb.from("capsulas").select("*").eq("id", x.id).maybeSingle();
+      if (!atual) return;
+      const arr = Array.isArray(atual[campo]) ? atual[campo].slice() : [null, null];
+      if (arr[eu] != null) { linhaV5("capsulas", "UPDATE", atual); break; }
+      arr[eu] = txt;
+      const { error } = await sb.from("capsulas").update({ [campo]: arr }).eq("id", x.id);
+      if (error) return erro("erroJogo", "Não consegui guardar a resposta. Confira a internet e tente de novo.");
+      await new Promise(r => setTimeout(r, 250 + Math.random() * 300));
+      const { data: depois } = await sb.from("capsulas").select("*").eq("id", x.id).maybeSingle();
+      if (depois && Array.isArray(depois[campo]) && depois[campo][eu] === txt) { linhaV5("capsulas", "UPDATE", depois); break; }
+    }
+    depoisDeAcao();
+  }
+
+  const rascunhos = {};   // o que está sendo digitado sobrevive quando a lista é redesenhada
+  function campoResposta(x, campo, rotulo) {
+    const box = el("div", "cap-responder");
+    const ta = el("textarea");
+    const chave = x.id + ":" + campo;
+    ta.maxLength = 280; ta.rows = 2; ta.setAttribute("aria-label", rotulo); ta.placeholder = rotulo;
+    ta.value = rascunhos[chave] || "";
+    ta.addEventListener("input", () => { rascunhos[chave] = ta.value; });
+    const b = el("button", "secondary", "Guardar resposta");
+    b.type = "button";
+    b.addEventListener("click", () => {
+      const t = ta.value.replace(/\s+/g, " ").trim().slice(0, 280);
+      if (!t) return;
+      b.disabled = true;
+      delete rascunhos[chave];
+      responderCapsula(x, campo, t);
+    });
+    box.append(ta, b);
+    return box;
+  }
+
+  function desenharCapsulas() {
+    if (!estado || !estado.fixa) return;
+    const outro = 1 - eu, nOutro = nomeDe(outro);
+    const grupos = { pronta: $("capProntas"), respondendo: $("capRespondendo"), selada: $("capSeladas"), aberta: $("capAbertas") };
+    Object.values(grupos).forEach(u => { u.textContent = ""; });
+    const contagem = { pronta: 0, respondendo: 0, selada: 0, aberta: 0 };
+    dados.capsulas.slice().sort((a, b) => (a.abre_em < b.abre_em ? -1 : 1)).forEach(x => {
+      const fase = faseCapsula(x);
+      contagem[fase]++;
+      const li = el("li", "cap-item");
+      const info = el("div", "info");
+      info.appendChild(el("span", "t", `“${x.pergunta}”`));
+      const dias = diasAte(x.abre_em);
+      if (fase === "respondendo") {
+        info.appendChild(el("span", "autor", `abre em ${dataBR(x.abre_em)} · as respostas ficam escondidas até lá`));
+        const r = x.respostas || [null, null];
+        if (r[eu] == null) info.appendChild(campoResposta(x, "respostas", "Sua resposta de hoje"));
+        else info.appendChild(el("span", "cap-status", "Você respondeu ✓"));
+        info.appendChild(el("span", "cap-status", r[outro] == null ? `Esperando ${nOutro} responder` : `${nOutro} respondeu ✓`));
+      } else if (fase === "selada") {
+        info.appendChild(el("span", "cap-status", `🔒 Selada · abre em ${dias} ${dias === 1 ? "dia" : "dias"} (${dataBR(x.abre_em)})`));
+      } else if (fase === "pronta") {
+        info.appendChild(el("span", "cap-status", "⏳ Cápsula pronta para abrir: respondam de novo, sem ver a antiga."));
+        const d = x.respostas_depois || [null, null];
+        if (d[eu] == null) info.appendChild(campoResposta(x, "respostas_depois", "Sua resposta de agora"));
+        else info.appendChild(el("span", "cap-status", "Você respondeu de novo ✓"));
+        info.appendChild(el("span", "cap-status", d[outro] == null ? `Esperando ${nOutro} responder de novo` : `${nOutro} respondeu de novo ✓`));
+      } else {
+        info.appendChild(el("span", "autor", `guardada em ${dataCurta(x.criada_em)} · aberta em ${dataBR(x.abre_em)}`));
+        const q = el("div", "cap-quadros");
+        [[eu, "Você"], [outro, nOutro]].forEach(([i, quem]) => {
+          [["antes", x.respostas[i]], ["agora", x.respostas_depois[i]]].forEach(([quando, txt]) => {
+            const c = el("div", "cap-quadro");
+            c.append(el("span", "quem", `${quem} ${quando}`), el("p", "", txt));
+            q.appendChild(c);
+          });
+        });
+        info.appendChild(q);
+      }
+      li.appendChild(info);
+      grupos[fase].appendChild(li);
+    });
+    Object.entries(contagem).forEach(([f, n]) => { $("capGrupo-" + f).hidden = !n; });
+    $("capVazio").hidden = dados.capsulas.length > 0;
+  }
+  redesenhar("capsulas", desenharCapsulas);
+  extrasDaCasa.push(() => {
+    const prontas = dados.capsulas.filter(x => faseCapsula(x) === "pronta").length;
+    const seladas = dados.capsulas.filter(x => faseCapsula(x) === "selada").length;
+    const resp = dados.capsulas.filter(x => faseCapsula(x) === "respondendo" && (x.respostas || [])[eu] == null).length;
+    $("cardCapSub").textContent = prontas ? `⏳ ${prontas} pronta${prontas > 1 ? "s" : ""} para abrir`
+      : resp ? `${resp} esperando sua resposta` : seladas ? `${seladas} selada${seladas > 1 ? "s" : ""}` : "Perguntas para o futuro";
+    $("cardCap").classList.toggle("destaque", prontas > 0 || resp > 0);
+  });
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -2269,6 +2406,11 @@
     $("envTexto").addEventListener("input", () => { $("envContador").textContent = $("envTexto").value.length + "/500"; });
     document.querySelectorAll('input[name="envTipo"]').forEach(r => r.addEventListener("change", () => { $("envNivelLinha").hidden = r.value !== "desafio" || !r.checked; }));
     $("envFechar").addEventListener("click", () => { $("envAbrindo").hidden = true; });
+    $("novaCapsula").addEventListener("click", abrirNovaCapsula);
+    $("capOutra").addEventListener("click", outraPergunta);
+    $("formCapsula").addEventListener("submit", salvarCapsula);
+    $("cancelarCapsula").addEventListener("click", () => $("dlgCapsula").close());
+    $("capAtalhos").addEventListener("click", ev => { const m = Number(ev.target.dataset && ev.target.dataset.meses); if (m) $("capData").value = somarMeses(hojeISO(), m); });
     // Casa do casal: qualquer elemento com data-abre troca de vista
     document.addEventListener("click", ev => {
       const b = ev.target.closest && ev.target.closest("[data-abre]");

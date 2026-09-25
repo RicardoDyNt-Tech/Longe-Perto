@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=28">
+<link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 <main>
@@ -103,6 +103,7 @@
         <button type="button" class="casa-card" data-abre="jogo"><span class="ic">🎲</span><b>Jogar</b><span class="sub" id="cardJogoSub">Roleta, cartas e placar</span></button>
         <button type="button" class="casa-card" data-abre="vDiario"><span class="ic">🔥</span><b>Desafio do dia</b><span class="sub" id="cardDiarioSub"></span></button>
         <button type="button" class="casa-card" data-abre="vEnvelopes" id="cardEnv"><span class="ic">💌</span><b>Envelopes</b><span class="sub" id="cardEnvSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vCapsulas" id="cardCap"><span class="ic">⏳</span><b>Cápsulas</b><span class="sub" id="cardCapSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -147,6 +148,17 @@
           <summary>Já abertos <span id="envAbertosQtd"></span></summary>
           <ul class="lista-extras" id="listaEnvAbertos"></ul>
         </details>
+      </section>
+      <section class="casa-vista" id="vCapsulas" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <h2>Cápsulas do tempo</h2>
+        <p class="extras-sub">A mesma pergunta, respondida agora e de novo numa data futura. Ninguém vê nada até lá.</p>
+        <button class="primary" id="novaCapsula" type="button">Nova cápsula</button>
+        <p class="extras-sub" id="capVazio">Nenhuma cápsula ainda.</p>
+        <div id="capGrupo-pronta" hidden><h3 class="casa-h3">Prontas para abrir</h3><ul class="lista-extras" id="capProntas"></ul></div>
+        <div id="capGrupo-respondendo" hidden><h3 class="casa-h3">Esperando respostas</h3><ul class="lista-extras" id="capRespondendo"></ul></div>
+        <div id="capGrupo-selada" hidden><h3 class="casa-h3">Seladas</h3><ul class="lista-extras" id="capSeladas"></ul></div>
+        <div id="capGrupo-aberta" hidden><h3 class="casa-h3">Abertas</h3><ul class="lista-extras" id="capAbertas"></ul></div>
       </section>
       <section class="casa-vista" id="vCofre" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
@@ -404,6 +416,30 @@
     </form>
   </dialog>
 
+  <dialog id="dlgCapsula" aria-labelledby="dlgCapTitulo">
+    <form id="formCapsula" method="dialog">
+      <h2 id="dlgCapTitulo">Nova cápsula do tempo</h2>
+      <label class="field">Pergunta (pode escrever a sua)
+        <textarea id="capPergunta" maxlength="280" rows="3"></textarea>
+      </label>
+      <button class="linkbtn" id="capOutra" type="button">Outra pergunta</button>
+      <label class="field cap-data">Abrir em
+        <input type="date" id="capData">
+      </label>
+      <div class="cap-atalhos" id="capAtalhos">
+        <button type="button" data-meses="1">1 mês</button>
+        <button type="button" data-meses="3">3 meses</button>
+        <button type="button" data-meses="6">6 meses</button>
+        <button type="button" data-meses="12">1 ano</button>
+      </div>
+      <p class="erro" id="erroCapsula" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarCapsula" type="submit">Criar cápsula</button>
+        <button class="secondary" id="cancelarCapsula" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="env-abrindo" id="envAbrindo" hidden role="dialog" aria-label="Envelope aberto">
     <div class="env-papel">
       <p class="env-de" id="envAbrindoDe"></p>
@@ -491,8 +527,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=28"></script>
-<script src="app.js?v=28"></script>
+<script src="config.js?v=29"></script>
+<script src="app.js?v=29"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

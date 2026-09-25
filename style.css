@@ -204,6 +204,18 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .casa-vista h2{margin:0 0 10px; font-size:1.3rem}
 body.vista-casa .barra-acoes{display:none}
 .casa-h3{margin:18px 0 6px; font-size:1rem}
+.cap-item .info > .t{font-weight:700}
+.cap-status{display:block; font-size:.88rem; margin-top:4px}
+.cap-responder{display:flex; flex-direction:column; gap:6px; margin-top:8px}
+.cap-responder textarea{margin:0}
+.cap-responder button{width:auto; align-self:flex-start; padding:8px 14px}
+.cap-quadros{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px}
+.cap-quadro{background:var(--bg); border-radius:12px; padding:10px; min-width:0}
+.cap-quadro .quem{display:block; font-size:.78rem; font-weight:800; color:var(--muted)}
+.cap-quadro p{margin:4px 0 0; overflow-wrap:anywhere}
+.cap-data input{display:block; width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:6px}
+.cap-atalhos{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:0 0 6px}
+.cap-atalhos button{background:transparent; color:var(--ink); border:1.5px solid var(--line); padding:8px 0; font-size:.85rem}
 .lista-env li{align-items:flex-start}
 .lista-env .acoes{display:flex; flex-direction:column; align-items:flex-end; gap:6px}
 .abrir-env{width:auto; padding:8px 12px; font-size:.85rem}
