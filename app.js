@@ -159,7 +159,7 @@
     if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) {
       novo.timer = null;
       // a posição e o cardápio pertencem à carta
-      if (estado.carta) { novo.posicao = null; novo.cardapio = null; }
+      if (estado.carta) { novo.posicao = null; novo.cardapio = null; novo.pose = null; }
       if (novo.fixa && estado.carta) guardarNoHistorico(novo, estado);
       // carta nova sorteada aqui: conta a visualização e, se era "jogar de novo", tira a marca
       if (novo.fixa && novo.carta && novo.carta.id && cartas.some(x => x.id === novo.carta.id)) {
@@ -346,6 +346,7 @@
     Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
     marcas = new Map(); vistas = new Map(); partidasSala = [];
     posicoes = []; marcasPos = []; carregarPosicoes(c);
+    poses = []; carregarPoses(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
   }
 
@@ -987,6 +988,113 @@
     $("posGuardar").disabled = !!(cardapio && cardapio.guardado);
     $("posGuardar").textContent = cardapio && cardapio.guardado ? "Guardado no cofre ✓" : "Guardar para o reencontro";
   }
+
+  // ---------- guia de poses para fotos e vídeos (só texto; ícones opcionais em icones/poses/) ----------
+  // O app não recebe, não guarda e não envia fotos ou vídeos: tudo continua no WhatsApp.
+  let poses = [];
+  let poseTeto = null;   // aberto por uma carta: nível máximo que ela permite
+  const POSE_NIVEIS = ["leve", "picante", "pesado"];
+  const POSE_ENQ = { close: "Close", meio: "Meio corpo", inteiro: "Corpo inteiro", espelho: "Espelho", silhueta: "Silhueta" };
+  const RE_POSE = /foto|v[íi]deo|nude|selfie/i;
+  const tetoDaCarta = n => (n === "pesado" ? "pesado" : n === "picante" ? "picante" : "leve");
+  const pedeFotoOuVideo = c => !!(c && c.texto && (c.midia === "foto" || c.midia === "video" || RE_POSE.test(c.texto)));
+  const formatoDaCarta = c => (c.midia === "video" || (c.midia !== "foto" && /v[íi]deo/i.test(c.texto)) ? "video" : "foto");
+
+  async function carregarPoses(c) {
+    const { data, error } = await sb.from("poses").select("id, nome, como, tipo, nivel, enquadramento, icone").eq("ativa", true).order("nome", { ascending: true });
+    if (c !== codigo) return;
+    poses = error || !data ? [] : data;
+    if (estado) desenharPoses();
+  }
+
+  function abrirPoses(daCarta) {
+    const c = estado && estado.carta;
+    poseTeto = daCarta && c ? tetoDaCarta(c.nivel) : null;
+    const sel = $("poseFiltroNivel");
+    [...sel.options].forEach(o => { o.disabled = !!poseTeto && POSE_NIVEIS.indexOf(o.value) > POSE_NIVEIS.indexOf(poseTeto); });
+    if (daCarta && c) { $("poseFiltroTipo").value = formatoDaCarta(c); sel.value = poseTeto; }
+    else if (!sel.value || sel.options[sel.selectedIndex].disabled) sel.value = "pesado";
+    $("poseFiltroEnq").value = "";
+    $("poseCuidados").open = false;
+    erro("erroPoses", "");
+    if (iaPose) iaPose.limpar();
+    if (!$("dlgPoses").open) $("dlgPoses").showModal();
+    desenharPoses();
+  }
+
+  function posesFiltradas() {
+    const t = $("poseFiltroTipo").value, e = $("poseFiltroEnq").value;
+    const ate = POSE_NIVEIS.indexOf(poseTeto && POSE_NIVEIS.indexOf($("poseFiltroNivel").value) > POSE_NIVEIS.indexOf(poseTeto) ? poseTeto : $("poseFiltroNivel").value);
+    return poses.filter(p => (!t || p.tipo === t) && POSE_NIVEIS.indexOf(p.nivel) <= ate && (!e || p.enquadramento === e));
+  }
+
+  // sortear e "Usar esta": estado.pose aparece embaixo da carta nos dois aparelhos
+  function usarPose(p) {
+    if (!estado || !p) return;
+    gravarFresco(n => {
+      n.pose = { id: p.id || null, nome: String(p.nome).slice(0, 60), como: String(p.como).slice(0, 300), por: eu, chave: n.carta ? n.carta.chave : null };
+      n.aviso = novoAviso(`${n.jogadores[eu]} sugeriu a pose: ${n.pose.nome}`);
+    });
+  }
+  function sortearPose() {
+    const lista = posesFiltradas();
+    if (!lista.length) return erro("erroPoses", "Nenhuma pose com esses filtros.");
+    erro("erroPoses", "");
+    usarPose(lista[Math.floor(Math.random() * lista.length)]);
+  }
+
+  function cartaoPose(p, ia) {
+    const li = el("li", "pos-card pose-card");
+    const topo = el("div", "pose-topo");
+    if (p.icone && /^[a-z0-9-]+\.(svg|png)$/.test(p.icone)) {
+      const img = el("img", "pose-icone");
+      img.src = "icones/poses/" + p.icone; img.alt = p.nome; img.loading = "lazy"; img.width = 56; img.height = 56;
+      topo.appendChild(img);
+    }
+    topo.appendChild(el("h3", "", p.nome));
+    li.appendChild(topo);
+    li.appendChild(el("p", "pos-desc", p.como));
+    const selos = el("div", "pos-selos");
+    if (ia) selos.appendChild(el("span", "selo-pos ia", "✨ IA"));
+    selos.appendChild(el("span", "selo-pos", POSE_ENQ[p.enquadramento] || p.enquadramento));
+    if (p.tipo) selos.appendChild(el("span", "selo-pos", p.tipo === "video" ? "Vídeo" : "Foto"));
+    if (p.nivel) selos.appendChild(el("span", "selo-pos nivel", LEVEL_NAMES[p.nivel] || p.nivel));
+    li.appendChild(selos);
+    const acoes = el("div", "pos-acoes");
+    const b = el("button", "secondary", "Usar esta"); b.type = "button";
+    b.addEventListener("click", () => usarPose(p));
+    acoes.appendChild(b);
+    li.appendChild(acoes);
+    return li;
+  }
+
+  function desenharPoses() {
+    if (!estado) return;
+    $("cardPoses").hidden = !estado.fixa || !poses.length;
+    desenharPoseCarta(estado);
+    if (!$("dlgPoses").open) return;
+    const r = estado.pose;
+    $("poseResultado").hidden = !r;
+    $("poseResultado").textContent = r ? `${nomeDe(r.por)} sugeriu a pose: ${r.nome}` : "";
+    const lista = posesFiltradas();
+    $("poseVazio").hidden = !!lista.length;
+    const ul = $("poseLista");
+    ul.textContent = "";
+    lista.forEach(p => ul.appendChild(cartaoPose(p, false)));
+  }
+
+  function desenharPoseCarta(e) {
+    const c = e && e.carta;
+    const pede = pedeFotoOuVideo(c) && poses.length > 0;
+    const r = e && e.pose && c && e.pose.chave === c.chave ? e.pose : null;
+    $("poseCarta").hidden = !pede && !r;
+    $("abrirPoses").hidden = !pede;
+    $("poseEscolhida").hidden = !r;
+    $("poseEscolhida").textContent = r ? `${nomeDe(r.por)} sugeriu a pose: ${r.nome}` : "";
+    $("poseComo").hidden = !r;
+    $("poseComo").textContent = r ? r.como : "";
+  }
+  let iaPose = null;
 
   function comTabelasV5(ch, c) {
     ch = comPosicoes(ch, c);
@@ -2019,6 +2127,7 @@
     if (!Array.isArray(e.historico)) e.historico = [];
     if (!e.posicao || typeof e.posicao !== "object" || !e.posicao.nome) e.posicao = null;
     if (!e.cardapio || typeof e.cardapio !== "object" || !Array.isArray(e.cardapio.itens)) e.cardapio = null;
+    if (!e.pose || typeof e.pose !== "object" || !e.pose.nome) e.pose = null;
     if (typeof e.mostrarOusadia !== "boolean") e.mostrarOusadia = true;
     if (!Array.isArray(e.titulos) || e.titulos.length !== 2) e.titulos = [null, null];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
@@ -2200,6 +2309,7 @@
 
     desenharPlacar(e, nomes);
     desenharPosicoes();
+    desenharPoses();
     desenharPresenca();
     if (vista !== "jogo") desenharCasa(e);
     desenharEfeitos(e);
@@ -2346,6 +2456,7 @@
     card.hidden = false;
     desenharMarcas(c);
     desenharPosCarta(e);
+    desenharPoseCarta(e);
     $("selo").hidden = !c.evento;
     $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "⚡ Evento especial · 🤝 Missão em dupla" : "⚡ Evento especial";
     $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
@@ -3322,6 +3433,11 @@
     $("cancelarCapsula").addEventListener("click", () => $("dlgCapsula").close());
     $("formMomento").addEventListener("submit", salvarMomento);
     $("abrirPosicoes").addEventListener("click", () => abrirGuia());
+    $("abrirPoses").addEventListener("click", () => abrirPoses(true));
+    $("cardPoses").addEventListener("click", () => abrirPoses(false));
+    $("fecharPoses").addEventListener("click", () => $("dlgPoses").close());
+    $("sortearPose").addEventListener("click", sortearPose);
+    ["poseFiltroTipo", "poseFiltroNivel", "poseFiltroEnq"].forEach(id => $(id).addEventListener("change", desenharPoses));
     $("montarCardapio").addEventListener("click", () => abrirGuia("cardapio"));
     $("abrirPosicoesSala").addEventListener("click", () => abrirGuia());
     $("cardPosicoes").addEventListener("click", () => abrirGuia());

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=36">
+<link rel="stylesheet" href="style.css?v=37">
 </head>
 <body>
 <main>
@@ -109,6 +109,7 @@
         <button type="button" class="casa-card" data-abre="vAlbum" id="cardAlbum"><span class="ic">📸</span><b>Álbum</b><span class="sub" id="cardAlbumSub"></span></button>
         <button type="button" class="casa-card" data-abre="vBaralho" id="cardBaralho"><span class="ic">🃏</span><b>Baralho</b><span class="sub" id="cardBaralhoSub"></span></button>
         <button type="button" class="casa-card" data-abre="vConquistas" id="cardConq"><span class="ic">🏆</span><b>Conquistas</b><span class="sub" id="cardConqSub"></span></button>
+        <button type="button" class="casa-card" id="cardPoses" hidden><span class="ic">📸</span><b>Poses</b><span class="sub">Ideias para fotos e vídeos</span></button>
         <button type="button" class="casa-card" id="cardPosicoes" hidden><span class="ic">📖</span><b>Posições</b><span class="sub">Guia para escolher e sortear</span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
@@ -307,6 +308,13 @@
       <p class="level" id="level"></p>
       <p class="text" id="text"></p>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
+      <div class="pos-carta" id="poseCarta" hidden>
+        <div class="pos-carta-botoes">
+          <button class="secondary" id="abrirPoses" type="button">📸 Ideias de pose</button>
+        </div>
+        <p class="pos-escolhida" id="poseEscolhida" hidden></p>
+        <p class="pose-como" id="poseComo" hidden></p>
+      </div>
       <div class="pos-carta" id="posCarta" hidden>
         <div class="pos-carta-botoes">
           <button class="secondary" id="abrirPosicoes" type="button">📖 Posições</button>
@@ -522,6 +530,67 @@
     </form>
   </dialog>
 
+  <dialog id="dlgPoses" class="dlg-posicoes" aria-labelledby="dlgPoseTitulo">
+    <div class="pos-topo">
+      <h2 id="dlgPoseTitulo">📸 Ideias de pose</h2>
+      <button class="linkbtn" id="fecharPoses" type="button">Fechar</button>
+    </div>
+    <details class="pose-cuidados" id="poseCuidados">
+      <summary>Cuidados antes de mandar</summary>
+      <ul>
+        <li>Deixe o rosto, tatuagens e objetos que identifiquem você fora do quadro nas fotos mais ousadas.</li>
+        <li>Mande sempre em visualização única e não salve o que receber.</li>
+        <li>Veja se a galeria não faz backup automático na nuvem (Google Fotos, por exemplo) ou use uma pasta bloqueada.</li>
+        <li>Ninguém é obrigado a mandar: dá para pular e pagar a prenda.</li>
+      </ul>
+    </details>
+    <div class="pos-filtros">
+      <label>Tipo
+        <select id="poseFiltroTipo">
+          <option value="foto">Foto</option>
+          <option value="video">Vídeo</option>
+          <option value="">Os dois</option>
+        </select>
+      </label>
+      <label>Nível
+        <select id="poseFiltroNivel">
+          <option value="leve">Leve</option>
+          <option value="picante">Até Picante</option>
+          <option value="pesado" selected>Até Pesado</option>
+        </select>
+      </label>
+      <label>Enquadramento
+        <select id="poseFiltroEnq">
+          <option value="">Todos</option>
+          <option value="close">Close</option>
+          <option value="meio">Meio corpo</option>
+          <option value="inteiro">Corpo inteiro</option>
+          <option value="espelho">Espelho</option>
+          <option value="silhueta">Silhueta</option>
+        </select>
+      </label>
+    </div>
+    <div class="pose-botoes">
+      <button class="primary" id="sortearPose" type="button">🎲 Sortear pose</button>
+      <button class="secondary" id="poseIaBotao" type="button" hidden>✨ Ideias da IA</button>
+    </div>
+    <div class="ia-painel" id="poseIaPainel" hidden>
+      <label class="field">Tema (opcional)
+        <input type="text" id="poseIaTema" maxlength="60" placeholder="Ex.: luz de vela, banheiro, roupa vermelha">
+      </label>
+      <div class="ia-linha">
+        <button class="secondary" id="poseIaGerar" type="button">Gerar</button>
+        <span class="ia-uso" id="poseIaUso"></span>
+      </div>
+      <p class="ia-status" id="poseIaStatus" aria-live="polite"></p>
+      <ul class="pos-lista" id="poseIaLista"></ul>
+    </div>
+    <p class="pos-escolhida" id="poseResultado" hidden aria-live="polite"></p>
+    <p class="erro" id="erroPoses" role="alert"></p>
+    <p class="extras-sub" id="poseVazio" hidden>Nenhuma pose com esses filtros.</p>
+    <ul class="pos-lista" id="poseLista"></ul>
+  </dialog>
+
   <dialog id="dlgPosicoes" class="dlg-posicoes" aria-labelledby="dlgPosTitulo">
     <div class="pos-topo">
       <h2 id="dlgPosTitulo">📖 Posições</h2>
@@ -699,9 +768,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=36"></script>
-<script src="conquistas.js?v=36"></script>
-<script src="app.js?v=36"></script>
+<script src="config.js?v=37"></script>
+<script src="conquistas.js?v=37"></script>
+<script src="app.js?v=37"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

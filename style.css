@@ -382,3 +382,16 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--lamp); outli
 .ia-lista button{width:100%; text-align:left; font-weight:500; padding:10px 12px; border-radius:12px; border:1.5px solid var(--line); background:var(--surface); color:inherit; overflow-wrap:anywhere; white-space:normal; line-height:1.35}
 .ia-lista button[aria-pressed="true"]{border-color:var(--lamp)}
 .ia-painel input[type=text]{font-weight:400; margin-top:6px}
+
+/* guia de poses */
+.pose-como{margin:4px 0 0; text-align:center; font-size:.9rem; color:var(--muted); overflow-wrap:anywhere}
+.pose-cuidados{border:1.5px solid var(--line); border-radius:12px; padding:8px 12px; margin:10px 0 0}
+.pose-cuidados summary{font-weight:700; cursor:pointer}
+.pose-cuidados ul{margin:8px 0 0; padding-left:20px}
+.pose-cuidados li{margin-bottom:4px}
+.pose-botoes{display:flex; gap:8px; flex-wrap:wrap}
+.pose-botoes button{flex:1 1 150px}
+.pose-topo{display:flex; align-items:center; gap:10px}
+.pose-icone{width:56px; height:56px; flex:none; filter:invert(1)}
+@media (prefers-color-scheme:dark){ .pose-icone{filter:none} }
+.selo-pos.ia{border-color:var(--lamp)}
