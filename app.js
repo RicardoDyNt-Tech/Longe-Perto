@@ -7,7 +7,7 @@
   const ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   const SEGMENTOS = 8;
   const GIRO_MS = () => matchMedia("(prefers-reduced-motion: reduce)").matches ? 350 : 3300;
-  const LEVEL_NAMES = { leve: "Leve", criativo: "Criativo", picante: "Picante", pesado: "Pesado +18" };
+  const LEVEL_NAMES = { romantico: "Romântico", leve: "Leve", criativo: "Criativo", picante: "Picante", pesado: "Pesado +18" };
   const TIPO_NOMES = {
     verdade: "Verdade", desafio: "Desafio", prenda: "Prenda",
     efeito: "Efeito contínuo", duelo: "Duelo", sintonia: "Sintonia", missao_dupla: "Missão em dupla", missao_secreta: "Missão secreta"
@@ -24,12 +24,12 @@
   const EVENTOS_TRATADOS = new Set();
   const ORDEM_NIVEIS = ["leve", "criativo", "picante", "pesado"];
   const PONTOS = {
-    verdade: { leve: 1, criativo: 1, picante: 2, pesado: 3 },
-    desafio: { leve: 2, criativo: 2, picante: 3, pesado: 4 }
+    verdade: { romantico: 1, leve: 1, criativo: 1, picante: 2, pesado: 3 },
+    desafio: { romantico: 2, leve: 2, criativo: 2, picante: 3, pesado: 4 }
   };
   const METAS = [10, 20, 30];
   const PULOS_OPCOES = [0, 1, 2, 3, 5, 10];
-  const DEVOLVE = { leve: 1, criativo: 1, picante: 2, pesado: 3 };   // pulos devolvidos ao cumprir prenda por pulo
+  const DEVOLVE = { romantico: 1, leve: 1, criativo: 1, picante: 2, pesado: 3 };   // pulos devolvidos ao cumprir prenda por pulo
 
   let sb = null;
   let codigo = null;    // sala atual
@@ -130,8 +130,20 @@
     return carta;
   }
 
-  // prenda do nível pedido; se não houver prenda nesse nível, desce um nível até encontrar
-  function sortearPrenda(nivel, usados) {
+  // prenda do nível pedido; se não houver prenda nesse nível, desce um nível até encontrar.
+  // Romântico fica fora da ordem de subida. Com "Prendas fofas", toda prenda sai romântica,
+  // guardando em nivelOriginal o nível que ela teria (para a devolução de pulos).
+  const temPrendaRomantica = () => cartas.some(c => c.tipo === "prenda" && c.nivel === "romantico");
+  function sortearPrenda(nivel, usados, n) {
+    if (n && n.prendasFofas && temPrendaRomantica()) {
+      const fofa = sortear("prenda", ["romantico"], usados);
+      if (fofa && nivel !== "romantico") fofa.nivelOriginal = nivel;
+      return fofa;
+    }
+    if (nivel === "romantico") {
+      if (temPrendaRomantica()) return sortear("prenda", ["romantico"], usados);
+      nivel = "leve";
+    }
     for (let i = ORDEM_NIVEIS.indexOf(nivel); i >= 0; i--) {
       const n = ORDEM_NIVEIS[i];
       if (cartas.some(c => c.tipo === "prenda" && c.nivel === n)) return sortear("prenda", [n], usados);
@@ -210,10 +222,19 @@
   async function carregarCartas(c) {
     cartasOk = false;
     atualizarBotoes();
-    const { data, error } = await sb.from("cartas")
-      .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos")
-      .or("sala.is.null,sala.eq." + c)
-      .eq("ativa", true);
+    // em blocos de 1.000 (o limite de uma consulta no Supabase)
+    let data = [], error = null;
+    for (let de = 0; ; de += 1000) {
+      const r = await sb.from("cartas")
+        .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos")
+        .or("sala.is.null,sala.eq." + c)
+        .eq("ativa", true)
+        .order("id", { ascending: true })
+        .range(de, de + 999);
+      if (r.error || !r.data) { error = r.error || true; break; }
+      data = data.concat(r.data);
+      if (r.data.length < 1000) break;
+    }
     if (c !== codigo) return;   // saiu da sala enquanto carregava
     if (error || !data || !data.length) {
       cartas = [];
@@ -1253,7 +1274,8 @@
   }
   function sugerirEnvelope() {
     const desafio = document.querySelector('input[name="envTipo"]:checked').value === "desafio";
-    const tipo = desafio ? "desafio" : "ideia_mensagem", nivel = $("envNivel").value;
+    const tipo = desafio ? "desafio" : "ideia_mensagem";
+    const nivel = !desafio && $("envNivel").value === "romantico" ? "leve" : $("envNivel").value;
     const pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === nivel));
     if (!pool.length) return erro("erroEnvelope", desafio ? "Não há desafios desse nível." : "Ainda não há ideias desse nível.");
     erro("erroEnvelope", "");
@@ -2153,6 +2175,7 @@
     if (!LEVEL_NAMES[e.nivelDiario]) e.nivelDiario = "leve";
     if (!e.diario || typeof e.diario !== "object" || Array.isArray(e.diario)) e.diario = {};
     if (typeof e.notaAdversario !== "boolean") e.notaAdversario = true;
+    if (typeof e.prendasFofas !== "boolean") e.prendasFofas = false;
     if (!(e.eventos in CHANCE_EVENTO)) e.eventos = "normal";
     if (!Array.isArray(e.efeitos)) e.efeitos = [];
     if (!e.prendaPendente || ![0, 1].includes(e.prendaPendente.dono)) e.prendaPendente = null;
@@ -2186,6 +2209,9 @@
   // Nível da prenda. Final: o mais alto ativo. Por pulo: desafio sobe um nível, verdade fica no mesmo.
   // Nunca acima do mais alto ativo (a descida quando falta prenda fica no sortearPrenda).
   function nivelDaPrenda(n, motivo, pulada) {
+    if (pulada && pulada.nivel === "romantico") return "romantico";   // romântica não sobe de nível
+    // só o Romântico ligado: a prenda final também é romântica
+    if (!ORDEM_NIVEIS.some(x => n.niveis.includes(x)) && n.niveis.includes("romantico")) return "romantico";
     const teto = ORDEM_NIVEIS.indexOf(nivelMaisAlto(n.niveis));
     if (motivo === "final" || !pulada) return ORDEM_NIVEIS[teto];
     const base = Math.max(0, ORDEM_NIVEIS.indexOf(pulada.nivel));
@@ -2194,7 +2220,7 @@
 
   // sorteia a prenda, marca como usada e devolve
   function prendaPara(n, motivo, pulada) {
-    const carta = sortearPrenda(nivelDaPrenda(n, motivo, pulada), n.usados || []);
+    const carta = sortearPrenda(nivelDaPrenda(n, motivo, pulada), n.usados || [], n);
     if (!carta) return null;
     registrarUso(n, carta);
     carta.motivo = motivo;
@@ -2239,7 +2265,7 @@
     }
     const pend = n.prendaPendente;
     if (pend && pend.dono === dono && !n.carta) {
-      const carta = sortearPrenda(pend.nivel, n.usados || []);
+      const carta = sortearPrenda(pend.nivel, n.usados || [], n);
       if (carta) {
         registrarUso(n, carta);
         carta.motivo = "quebra";
@@ -2304,9 +2330,10 @@
     $("pulosMax").value = String(e.pulosMax);
     const zerado = placarZerado(e);
     $("notaAdv").checked = e.notaAdversario;
+    $("prendasFofas").checked = e.prendasFofas;
     $("eventos").value = e.eventos;
-    $("meta").disabled = $("pulosMax").disabled = $("notaAdv").disabled = $("eventos").disabled = !zerado;
-    $("configDica").textContent = zerado ? "" : "Meta, pulos, eventos e nota só mudam com o placar zerado (em Nova partida).";
+    $("meta").disabled = $("pulosMax").disabled = $("notaAdv").disabled = $("eventos").disabled = $("prendasFofas").disabled = !zerado;
+    $("configDica").textContent = zerado ? "" : "Meta, pulos, eventos, nota e prendas fofas só mudam com o placar zerado (em Nova partida).";
 
     const fim = $("fim");
     fim.hidden = e.vencedor === null;
@@ -2745,7 +2772,7 @@
       const total = tipos.reduce((s, [, w]) => s + w, 0);
       let r = Math.random() * total, tipo = tipos[tipos.length - 1][0];
       for (const [t, w] of tipos) { if ((r -= w) < 0) { tipo = t; break; } }
-      const niveis = n.niveis.filter(nv => cartas.some(c => c.tipo === tipo && c.nivel === nv));
+      const niveis = n.niveis.filter(nv => nv !== "romantico" && cartas.some(c => c.tipo === tipo && c.nivel === nv));
       if (niveis.length) {
         const carta = sortear(tipo, [niveis[Math.floor(Math.random() * niveis.length)]], n.usados || []);
         if (carta) {
@@ -2782,7 +2809,7 @@
     gravar(n => {
       const c = n.carta;
       if (!c || c.tipo !== "efeito") return;
-      const prenda = sortearPrenda(c.nivel, n.usados || []);
+      const prenda = sortearPrenda(c.nivel, n.usados || [], n);
       if (!prenda) { n.carta = null; passarVez(n, c); return; }
       registrarUso(n, prenda);
       prenda.motivo = "pulo";
@@ -2894,7 +2921,7 @@
       n.aviso = novoAviso(`${n.jogadores[venc]} venceu o duelo! +2`);
       if (conferirMeta(n)) return;
       // o perdedor paga uma prenda na hora; depois a vez segue a partir de quem girou
-      const prenda = sortearPrenda(c.nivel, n.usados || []);
+      const prenda = sortearPrenda(c.nivel, n.usados || [], n);
       if (prenda) {
         registrarUso(n, prenda);
         prenda.motivo = "duelo";
@@ -3063,7 +3090,8 @@
   // ---------- missão secreta da partida ----------
   // Duas missões diferentes, dos níveis ativos (se faltar, de qualquer nível). Cada um vê só a sua.
   function sortearSecretas(n) {
-    let pool = cartas.filter(c => c.tipo === "missao_secreta" && n.niveis.includes(c.nivel));
+    const nv = n.niveis.map(x => (x === "romantico" ? "leve" : x));
+    let pool = cartas.filter(c => c.tipo === "missao_secreta" && nv.includes(c.nivel));
     if (pool.length < 2) pool = cartas.filter(c => c.tipo === "missao_secreta");
     if (pool.length < 2) return [];
     const i = Math.floor(Math.random() * pool.length);
@@ -3157,7 +3185,7 @@
           // devolve pulos ao contador do tipo pulado, sem passar de pulosMax
           const campo = origemDe(c) === "desafio" ? "livresD" : "livresV";
           const antes = p[campo];
-          p[campo] = Math.min(n.pulosMax, antes + (DEVOLVE[c.nivel] || 0));
+          p[campo] = Math.min(n.pulosMax, antes + (DEVOLVE[c.nivelOriginal || c.nivel] || 0));
           const volta = p[campo] - antes;
           if (volta > 0) n.aviso = novoAviso(`${n.jogadores[n.vez]} recuperou ${volta} ${volta === 1 ? "pulo" : "pulos"} de ${origemDe(c)}.`);
         }
@@ -3193,6 +3221,12 @@
       pontuar(n, c, estrelas);
       n.pontos = n.placar.map(x => x.pontos);
     });
+  }
+
+  function mudarPrendasFofas() {
+    const v = $("prendasFofas").checked;
+    if (!estado || !placarZerado(estado)) return;
+    gravar(n => { if (placarZerado(n)) n.prendasFofas = v; });
   }
 
   function mudarNota() {
@@ -3319,7 +3353,7 @@
     falha: "Não deu para gerar agora. Tente de novo."
   };
   async function gerarIdeias(tipo, nivel, tema, extra) {
-    const corpo = { sala: codigo, tipo, nivel, tema, quantidade: 3, ...(extra || {}) };
+    const corpo = { sala: codigo, tipo, nivel: nivel === "romantico" ? "leve" : nivel, tema, quantidade: 3, ...(extra || {}) };
     const tempo = new Promise(res => setTimeout(() => res({ data: { erro: "falha" } }), 20000));
     try {
       const { data, error } = await Promise.race([sb.functions.invoke("gerar-cartas", { body: corpo }), tempo]);
@@ -3545,6 +3579,7 @@
     $("liberar").addEventListener("click", liberar);
     $("avaliar").addEventListener("click", ev => { const k = Number(ev.target.dataset && ev.target.dataset.n); if (k) avaliar(k); });
     $("notaAdv").addEventListener("change", mudarNota);
+    $("prendasFofas").addEventListener("change", mudarPrendasFofas);
     $("timerIniciar").addEventListener("click", () => iniciarTimer(Number($("timerIniciar").dataset.seg)));
     $("timerAbrir").addEventListener("click", () => { $("timerOpcoes").hidden = !$("timerOpcoes").hidden; });
     $("timerOpcoes").addEventListener("click", ev => { const s = Number(ev.target.dataset && ev.target.dataset.seg); if (s) iniciarTimer(s); });
