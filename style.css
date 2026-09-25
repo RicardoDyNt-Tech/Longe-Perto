@@ -395,3 +395,38 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--lamp); outli
 .pose-icone{width:56px; height:56px; flex:none; filter:invert(1)}
 @media (prefers-color-scheme:dark){ .pose-icone{filter:none} }
 .selo-pos.ia{border-color:var(--lamp)}
+
+/* v6 · carinhos e mãos juntas */
+.casa-bloco{grid-column:1 / -1; background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px}
+.carinho-resumo{margin:0 0 10px; font-weight:700; display:flex; justify-content:space-between; align-items:center; gap:8px}
+.carinho-resumo button{width:auto}
+.carinho-botoes{display:grid; grid-template-columns:repeat(4, 1fr); gap:8px}
+.carinho-botoes button{display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 4px; font-size:.72rem; font-weight:700; border-radius:14px; border:1.5px solid var(--line); background:var(--bg); color:var(--ink); line-height:1.2}
+.carinho-botoes .ic{font-size:1.7rem}
+.carinho-botoes button:disabled{opacity:.5}
+.carinho-hoje{margin:10px 0 0; font-size:.82rem; color:var(--muted)}
+.carinho-enviado{color:var(--ink); font-weight:700}
+.maos{display:flex; flex-direction:column; align-items:center; margin-top:14px}
+.maos-coracao{width:120px; height:120px; border-radius:50%; font-size:4rem; line-height:1; color:#e0457b; background:var(--bg); border:2px solid var(--line); touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; opacity:.7; transition:opacity .2s, box-shadow .2s}
+.maos-coracao.sozinho{opacity:.9; box-shadow:0 0 18px color-mix(in srgb, #e0457b 35%, transparent)}
+.maos-coracao.chamando{opacity:1; border-color:#e0457b}
+.maos-coracao.juntos{opacity:1; border-color:#e0457b; box-shadow:0 0 28px color-mix(in srgb, #e0457b 60%, transparent); animation:batida .857s ease-in-out infinite}
+@keyframes batida{0%,100%{transform:scale(1)} 15%{transform:scale(1.12)} 30%{transform:scale(1)} 45%{transform:scale(1.08)}}
+.maos-status{margin:8px 0 0; font-weight:700}
+.maos-msg{margin:4px 0 0; font-size:.9rem}
+.maos-msg:empty, .maos-total:empty{display:none}
+.maos-total{margin:4px 0 0; font-size:.82rem; color:var(--muted)}
+.juntos-anim, .carinho-anim{position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; background:color-mix(in srgb, var(--bg) 70%, transparent)}
+.juntos-anim[hidden], .carinho-anim[hidden]{display:none}
+.juntos-anim p, .carinho-anim p{font-weight:800; font-size:1.2rem; margin:12px 0 0; text-align:center; padding:0 16px}
+.juntos-par{position:relative; width:220px; height:80px}
+.juntos-par span{position:absolute; top:10px; font-size:3.4rem}
+.juntos-anim.anima .c1{animation:vemEsq 1.5s ease-out forwards}
+.juntos-anim.anima .c2{animation:vemDir 1.5s ease-out forwards}
+@keyframes vemEsq{from{left:-40px; opacity:0} 60%{opacity:1} to{left:70px}}
+@keyframes vemDir{from{left:220px; opacity:0} 60%{opacity:1} to{left:100px}}
+.carinho-emoji{font-size:6rem}
+.carinho-anim.anima .carinho-emoji{animation:flutua 2.2s ease-out forwards}
+.carinho-anim.anima{animation:somePouco 2.2s ease-in forwards}
+@keyframes flutua{from{transform:translateY(40px) scale(.6)} 30%{transform:translateY(0) scale(1.1)} to{transform:translateY(-60px) scale(1)}}
+@keyframes somePouco{0%,70%{opacity:1} to{opacity:0}}

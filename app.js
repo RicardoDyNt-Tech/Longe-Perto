@@ -347,6 +347,7 @@
         payload => tirarMusica(payload.old && payload.old.id))
       ;
     canal = comTabelasV5(canal, c)
+      .on("broadcast", { event: "mao" }, m => receberMao(m && m.payload))
       .subscribe(status => {
         if (status === "SUBSCRIBED" && canal) canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {});
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
@@ -777,7 +778,9 @@
     Object.values(st).forEach(lista => (lista || []).forEach(p => { if (p && (p.jogador === 0 || p.jogador === 1)) agora.add(p.jogador); }));
     const outro = 1 - eu;
     const chegou = !presentes.has(outro) && agora.has(outro);
+    const juntosAntes = presentes.has(0) && presentes.has(1);
     presentes = agora;
+    if (!juntosAntes && agora.has(0) && agora.has(1)) talvezJuntos();   // v6: "Vocês estão juntos agora"
     if (chegou && presencaPronta) vibrar([60, 40, 60]);   // a outra pessoa entrou na sala
     presencaPronta = true;
     desenharPresenca();
@@ -797,7 +800,10 @@
   }
 
   // ---------- tabelas da v5 (só em sala fixa): carga, Realtime e redesenho ----------
-  const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em" };
+  const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
+    carinhos: "criada_em" };
+  const LIMITE_TABELA = { carinhos: 500 };   // tabelas que crescem sem parar: só as linhas mais novas
+  const aoCarregar = {};                     // tabela -> fn() depois da primeira carga
   const dados = {};
   Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
   const aoMudar = {};                 // tabela -> [fn(evento, linha, antes)]
@@ -1168,9 +1174,13 @@
   }
 
   async function carregarTabela(t, c) {
-    const { data, error } = await sb.from(t).select("*").eq("sala", c).order(TABELAS_V5[t], { ascending: true });
+    const lim = LIMITE_TABELA[t];
+    let q = sb.from(t).select("*").eq("sala", c).order(TABELAS_V5[t], { ascending: !lim });
+    if (lim) q = q.limit(lim);
+    const { data, error } = await q;
     if (c !== codigo) return;
-    dados[t] = error || !data ? [] : data;
+    dados[t] = error || !data ? [] : (lim ? data.reverse() : data);
+    if (aoCarregar[t]) aoCarregar[t]();
     redesenharV5(t);
   }
 
@@ -2053,6 +2063,138 @@
     if (vista === "vConquistas") desenharConquistas();
   });
 
+  // ---------- v6: "Vocês estão juntos agora", "Pensei em você" e Mãos juntas (só sala fixa) ----------
+  // juntos agora: quando a presença passa a ter os dois; no máximo uma vez a cada 10 minutos por aparelho
+  let timerJuntos = null;
+  function talvezJuntos() {
+    if (!estado || !estado.fixa || !codigo) return;
+    const k = "lp-juntos-" + codigo;
+    if (Date.now() - (Number(lerLocal(k)) || 0) < 10 * 60 * 1000) return;
+    salvarLocal(k, Date.now());
+    const a = $("juntosAnim");
+    a.classList.remove("anima"); a.hidden = false; void a.offsetWidth; a.classList.add("anima");
+    vibrar([80, 60, 80]);
+    [659, 784, 988].forEach((f, i) => tom(f, 0.3, i * 0.12, "sine", 0.12));
+    clearTimeout(timerJuntos);
+    timerJuntos = setTimeout(() => { a.hidden = true; a.classList.remove("anima"); }, 1800);
+  }
+
+  // carinhos: tocar grava em `carinhos`; quem recebe com o app aberto vê o emoji flutuando
+  const CARINHOS = { pensei: ["💭", "pensou em você"], beijo: ["😘", "mandou um beijo"], abraco: ["🤗", "mandou um abraço"], saudade: ["🥺", "está com saudade"] };
+  let ultimoCarinho = 0, timerCarinho = null, resumoCarinhos = "";
+  const vistoCarinhos = () => "lp-carinho-visto-" + codigo;
+  function marcarCarinhoVisto(iso) {
+    const atual = lerLocal(vistoCarinhos());
+    if (!atual || iso > atual) salvarLocal(vistoCarinhos(), iso);
+  }
+  async function mandarCarinho(tipo) {
+    if (!estado || !estado.fixa || !CARINHOS[tipo]) return;
+    if (Date.now() - ultimoCarinho < 2000) return;   // evita toques repetidos sem querer
+    ultimoCarinho = Date.now();
+    document.querySelectorAll("#carinhoBotoes button").forEach(b => { b.disabled = true; });
+    setTimeout(() => document.querySelectorAll("#carinhoBotoes button").forEach(b => { b.disabled = false; }), 2000);
+    const { data, error } = await sb.from("carinhos").insert({ sala: codigo, de: eu, tipo }).select("*").single();
+    if (error) return erro("erroJogo", "Não consegui mandar o carinho. Confira a internet e tente de novo.");
+    linhaV5("carinhos", "INSERT", data);
+    $("carinhoEnviado").textContent = `${CARINHOS[tipo][0]} enviado`;
+    setTimeout(() => { $("carinhoEnviado").textContent = ""; }, 2000);
+  }
+  function mostrarCarinho(row) {
+    const c = CARINHOS[row.tipo];
+    if (!c) return;
+    $("carinhoEmoji").textContent = c[0];
+    $("carinhoTexto").textContent = `${nomeDe(row.de)} ${c[1]}`;
+    const a = $("carinhoAnim");
+    a.classList.remove("anima"); a.hidden = false; void a.offsetWidth; a.classList.add("anima");
+    vibrar([100, 50, 100]);
+    clearTimeout(timerCarinho);
+    timerCarinho = setTimeout(() => { a.hidden = true; a.classList.remove("anima"); }, 2200);
+  }
+  escutar("carinhos", (ev, row, antes) => {
+    if (ev !== "INSERT" || antes || row.de === eu) return;
+    mostrarCarinho(row);
+    marcarCarinhoVisto(row.criada_em);
+  });
+  // ao abrir: resumo do que chegou enquanto estava fora (o "visto" fica neste aparelho)
+  aoCarregar.carinhos = () => {
+    const visto = lerLocal(vistoCarinhos());
+    const novos = dados.carinhos.filter(x => x.de !== eu && (!visto || x.criada_em > visto));
+    const conta = {};
+    novos.forEach(x => { conta[x.tipo] = (conta[x.tipo] || 0) + 1; });
+    resumoCarinhos = Object.keys(CARINHOS).filter(t => conta[t]).map(t => `${CARINHOS[t][0]} × ${conta[t]}`).join(", ");
+    if (novos.length) marcarCarinhoVisto(novos[novos.length - 1].criada_em);
+    desenharCarinhos();
+  };
+  function desenharCarinhos() {
+    if (!estado || !estado.fixa || !$("carinhoHoje")) return;
+    $("carinhoResumo").hidden = !resumoCarinhos;
+    $("carinhoResumoTexto").textContent = resumoCarinhos ? `Enquanto você estava fora: ${resumoCarinhos}` : "";
+    const hoje = hojeISO();
+    const deHoje = dados.carinhos.filter(x => hojeISO(new Date(x.criada_em)) === hoje);
+    const linha = i => {
+      const conta = {};
+      deHoje.filter(x => x.de === i).forEach(x => { conta[x.tipo] = (conta[x.tipo] || 0) + 1; });
+      const partes = Object.keys(CARINHOS).filter(t => conta[t]).map(t => `${CARINHOS[t][0]} ${conta[t]}`);
+      return `${nomeDe(i)}: ${partes.length ? partes.join(" · ") : "—"}`;
+    };
+    $("carinhoHoje").textContent = deHoje.length ? `Hoje · ${linha(eu)} · ${linha(1 - eu)}` : "Hoje ainda sem carinhos.";
+  }
+  redesenhar("carinhos", desenharCarinhos);
+
+  // mãos juntas: sem banco, por broadcast do Realtime no canal da sala
+  const maos = [false, false];
+  let juntosDesde = null, timerMaos = null, batidaMaos = null, maosNoite = 0, timerMsgMaos = null;
+  const fmtMinSeg = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const fmtTotal = s => { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h} h ${m} min` : m ? `${m} min` : `${s} s`; };
+  function mudarMaos(quem, segurando, souEu) {
+    const antes = maos[0] && maos[1];
+    maos[quem] = segurando;
+    const agora = maos[0] && maos[1];
+    if (!antes && agora) {
+      juntosDesde = Date.now();
+      clearInterval(batidaMaos);
+      batidaMaos = setInterval(() => vibrar(25), 857);   // cerca de 70 batidas por minuto
+      clearInterval(timerMaos);
+      timerMaos = setInterval(desenharMaos, 250);
+    }
+    if (antes && !agora) {
+      const seg = Math.max(0, Math.round((Date.now() - juntosDesde) / 1000));
+      juntosDesde = null;
+      clearInterval(batidaMaos); clearInterval(timerMaos);
+      maosNoite += seg;
+      $("maosMsg").textContent = `Vocês ficaram ${fmtMinSeg(seg)} de mãos dadas`;
+      clearTimeout(timerMsgMaos);
+      timerMsgMaos = setTimeout(() => { $("maosMsg").textContent = ""; }, 6000);
+      // só quem soltou primeiro grava, para não somar duas vezes
+      if (souEu && seg > 0) gravarFresco(n => { n.maosTotal = (Number(n.maosTotal) || 0) + seg; });
+    }
+    desenharMaos();
+  }
+  function segurar(v) {
+    if (!estado || !estado.fixa || maos[eu] === v) return;
+    mudarMaos(eu, v, true);
+    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "mao", jogador: eu, segurando: v } }); } catch (err) {}
+  }
+  function receberMao(p) {
+    if (!p || (p.jogador !== 0 && p.jogador !== 1) || p.jogador === eu) return;
+    mudarMaos(p.jogador, !!p.segurando, false);
+  }
+  // o outro saiu da sala segurando: solta por ele (e este aparelho grava o tempo)
+  presencaMudou.push(() => { const o = 1 - eu; if (maos[o] && !presentes.has(o)) mudarMaos(o, false, true); });
+  function desenharMaos() {
+    if (!estado || !$("maosCoracao")) return;
+    const o = 1 - eu, nOutro = nomeDe(o);
+    const c = $("maosCoracao");
+    c.classList.toggle("juntos", maos[0] && maos[1]);
+    c.classList.toggle("sozinho", maos[eu] && !maos[o]);
+    c.classList.toggle("chamando", !maos[eu] && maos[o]);
+    $("maosStatus").textContent = maos[0] && maos[1] ? `juntos há ${fmtMinSeg(Math.floor((Date.now() - juntosDesde) / 1000))}`
+      : maos[eu] ? `Esperando ${nOutro}…` : maos[o] ? `${nOutro} está segurando. Segure junto!` : "Segure junto";
+    const t = Number(estado.maosTotal) || 0;
+    $("maosTotal").textContent = t ? `Tempo total de mãos dadas: ${fmtTotal(t)}` : "";
+  }
+  extrasDaCasa.push(() => { desenharCarinhos(); desenharMaos(); });
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -2189,6 +2331,7 @@
     if (!e.posicao || typeof e.posicao !== "object" || !e.posicao.nome) e.posicao = null;
     if (!e.cardapio || typeof e.cardapio !== "object" || !Array.isArray(e.cardapio.itens)) e.cardapio = null;
     if (!e.pose || typeof e.pose !== "object" || !e.pose.nome) e.pose = null;
+    if (!(Number(e.maosTotal) >= 0)) e.maosTotal = 0;
     if (typeof e.mostrarOusadia !== "boolean") e.mostrarOusadia = true;
     if (!Array.isArray(e.titulos) || e.titulos.length !== 2) e.titulos = [null, null];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
@@ -3530,7 +3673,14 @@
       const b = ev.target.closest && ev.target.closest("[data-abre]");
       if (b && $("jogo").contains(b)) mostrarVista(b.dataset.abre);
     });
-    addEventListener("pagehide", () => { try { if (canal) canal.untrack(); } catch (err) {} });
+    addEventListener("pagehide", () => { segurar(false); try { if (canal) canal.untrack(); } catch (err) {} });
+    document.querySelectorAll("#carinhoBotoes [data-carinho]").forEach(b => b.addEventListener("click", () => mandarCarinho(b.dataset.carinho)));
+    $("carinhoResumoFechar").addEventListener("click", () => { resumoCarinhos = ""; desenharCarinhos(); });
+    const coracao = $("maosCoracao");
+    coracao.addEventListener("pointerdown", ev => { ev.preventDefault(); try { coracao.setPointerCapture(ev.pointerId); } catch (err) {} segurar(true); });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => coracao.addEventListener(t, () => segurar(false)));
+    coracao.addEventListener("contextmenu", ev => ev.preventDefault());
+    document.addEventListener("visibilitychange", () => { if (document.hidden) segurar(false); });
     $("camera").addEventListener("change", mudarCamera);
     // reserva o espaço da barra fixa no fim da página
     try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) {}

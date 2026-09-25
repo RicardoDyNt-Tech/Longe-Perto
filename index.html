@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=38">
+<link rel="stylesheet" href="style.css?v=39">
 </head>
 <body>
 <main>
@@ -101,6 +101,22 @@
     <section class="casa" id="telaCasa" hidden aria-label="Casa do casal">
       <p class="casa-convite" id="casaConvite" hidden>Crie uma sala fixa para guardar envelopes, álbum e conquistas. No início, toque em "Criar sala fixa".</p>
       <div class="casa-grade" id="casaGrade">
+        <div class="casa-bloco carinhos" id="casaCarinhos">
+          <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo">✕</button></p>
+          <div class="carinho-botoes" id="carinhoBotoes">
+            <button type="button" data-carinho="pensei"><span class="ic">💭</span>Pensei em você</button>
+            <button type="button" data-carinho="beijo"><span class="ic">😘</span>Beijo</button>
+            <button type="button" data-carinho="abraco"><span class="ic">🤗</span>Abraço</button>
+            <button type="button" data-carinho="saudade"><span class="ic">🥺</span>Saudade</button>
+          </div>
+          <p class="carinho-hoje"><span id="carinhoHoje"></span> <span class="carinho-enviado" id="carinhoEnviado" aria-live="polite"></span></p>
+          <div class="maos">
+            <button class="maos-coracao" id="maosCoracao" type="button" aria-label="Segure junto">❤</button>
+            <p class="maos-status" id="maosStatus" aria-live="polite">Segure junto</p>
+            <p class="maos-msg" id="maosMsg" aria-live="polite"></p>
+            <p class="maos-total" id="maosTotal"></p>
+          </div>
+        </div>
         <button type="button" class="casa-card" data-abre="jogo"><span class="ic">🎲</span><b>Jogar</b><span class="sub" id="cardJogoSub">Roleta, cartas e placar</span></button>
         <button type="button" class="casa-card" data-abre="vDiario"><span class="ic">🔥</span><b>Desafio do dia</b><span class="sub" id="cardDiarioSub"></span></button>
         <button type="button" class="casa-card" data-abre="vEnvelopes" id="cardEnv"><span class="ic">💌</span><b>Envelopes</b><span class="sub" id="cardEnvSub"></span></button>
@@ -672,6 +688,15 @@
     </form>
   </dialog>
 
+  <div class="juntos-anim" id="juntosAnim" hidden aria-live="polite">
+    <div class="juntos-par" aria-hidden="true"><span class="c1">💗</span><span class="c2">💗</span></div>
+    <p>Vocês estão juntos agora 💞</p>
+  </div>
+  <div class="carinho-anim" id="carinhoAnim" hidden aria-live="polite">
+    <span class="carinho-emoji" id="carinhoEmoji" aria-hidden="true"></span>
+    <p id="carinhoTexto"></p>
+  </div>
+
   <div class="env-abrindo" id="envAbrindo" hidden role="dialog" aria-label="Envelope aberto">
     <div class="env-papel">
       <p class="env-de" id="envAbrindoDe"></p>
@@ -772,9 +797,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=38"></script>
-<script src="conquistas.js?v=38"></script>
-<script src="app.js?v=38"></script>
+<script src="config.js?v=39"></script>
+<script src="conquistas.js?v=39"></script>
+<script src="app.js?v=39"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
