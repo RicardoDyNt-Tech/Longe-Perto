@@ -535,3 +535,12 @@ input[type=number]{width:100%; font:inherit; color:var(--ink); background:var(--
 .noite-info{margin:4px 0; opacity:.85}
 .noite-info:empty{display:none}
 #noiteDormir{margin-top:18px}
+
+/* v6 · nossa playlist */
+#trilhaNossa{grid-column:1 / -1}
+#trilhaNossa[aria-pressed="true"]{border-color:#e0457b}
+.nossa-musica{flex-direction:column; align-items:stretch}
+.nossa-musica .t{font-weight:700; overflow-wrap:anywhere}
+.nossa-musica .acoes{display:flex; gap:14px; align-items:center; margin-top:4px}
+.nossa-musica .trilha-player:empty{display:none}
+.nossa-musica .trilha-player{margin-top:6px}

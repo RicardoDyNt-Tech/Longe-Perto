@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=43">
+<link rel="stylesheet" href="style.css?v=44">
 </head>
 <body>
 <main>
@@ -148,6 +148,7 @@
         <button type="button" class="casa-card" data-abre="vPote" id="cardPote"><span class="ic">🫙</span><b>Pote de motivos</b><span class="sub" id="cardPoteSub"></span></button>
         <button type="button" class="casa-card" data-abre="vAbra" id="cardAbra"><span class="ic">💌</span><b>Abra quando…</b><span class="sub" id="cardAbraSub"></span></button>
         <button type="button" class="casa-card" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="ic">📖</span><b>Diário</b><span class="sub" id="cardDiarioCasalSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vPlaylist" id="cardPlaylist"><span class="ic">🎵</span><b>Nossa playlist</b><span class="sub" id="cardPlaylistSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -342,6 +343,13 @@
         <ul class="diario-lista" id="listaDiario"></ul>
         <button class="secondary" id="diarioMais" type="button" hidden>Ver mais</button>
       </section>
+      <section class="casa-vista" id="vPlaylist" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <h2>Nossa playlist</h2>
+        <p class="extras-sub">Abra cada música no Spotify e adicione a uma playlist de vocês.</p>
+        <p class="extras-sub" id="nossasVazio">Nenhuma música ainda. Na trilha da rodada, toque em "🤍 Nossa".</p>
+        <ul class="lista-extras" id="listaNossas"></ul>
+      </section>
       <section class="casa-vista" id="vCofre" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
         <div id="lugarCofre"></div>
@@ -391,6 +399,8 @@
     </div>
     <label class="check nota-cfg"><input type="checkbox" id="notaAdv"> Nota do adversário (★ valem pontos nos desafios)</label>
     <label class="check nota-cfg"><input type="checkbox" id="prendasFofas"> Prendas fofas (toda prenda sai do nível Romântico)</label>
+    <label class="check nota-cfg" id="soNossasLinha" hidden><input type="checkbox" id="soNossas"> Trilha: só as nossas</label>
+    <p class="config-dica" id="soNossasAviso" hidden>Marquem pelo menos 5 músicas com 🤍 Nossa para usar "só as nossas".</p>
     <p class="config-dica" id="configDica"></p>
 
     <div class="secretas" id="secretasBox" hidden>
@@ -501,6 +511,7 @@
         <a class="spotify" id="trilhaAbrir" target="_blank" rel="noopener">Abrir no Spotify</a>
         <button class="secondary" id="trilhaTocar" type="button">Tocar aqui</button>
         <button class="secondary" id="trilhaOutra" type="button">Outra música</button>
+        <button class="secondary" id="trilhaNossa" type="button" aria-pressed="false" hidden>🤍 Nossa</button>
       </div>
       <div class="trilha-player" id="trilhaPlayer" hidden></div>
     </section>
@@ -993,9 +1004,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=43"></script>
-<script src="conquistas.js?v=43"></script>
-<script src="app.js?v=43"></script>
+<script src="config.js?v=44"></script>
+<script src="conquistas.js?v=44"></script>
+<script src="app.js?v=44"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

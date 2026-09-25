@@ -369,6 +369,7 @@
     Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
     marcas = new Map(); vistas = new Map(); partidasSala = [];
     posicoes = []; marcasPos = []; carregarPosicoes(c);
+    nossas = []; if (fixa) carregarNossas(c);
     poses = []; carregarPoses(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
   }
@@ -609,16 +610,20 @@
 
   // música do nível da carta; sem música nesse nível, desce até achar; sem nenhuma, null
   function sortearMusica(nivel, evitarUrl) {
+    // "Trilha: só as nossas" (com pelo menos 5): ignora o nível
+    const niveisPool = soNossasAtivo() ? [null] : null;
     for (let i = Math.max(0, ORDEM_NIVEIS.indexOf(nivel)); i >= 0; i--) {
-      let pool = musicas.filter(m => m.nivel === ORDEM_NIVEIS[i]);
+      let pool = niveisPool ? musicas.filter(m => ehNossa(m.id)) : musicas.filter(m => m.nivel === ORDEM_NIVEIS[i]);
       if (pool.length > 1 && evitarUrl) pool = pool.filter(m => m.url !== evitarUrl);
       if (pool.length) {
         const m = pool[Math.floor(Math.random() * pool.length)];
-        return m.playlist ? { titulo: m.titulo, artista: m.artista, url: m.url, playlist: m.playlist } : { titulo: m.titulo, artista: m.artista, url: m.url };
+        return m.playlist ? { id: m.id, titulo: m.titulo, artista: m.artista, url: m.url, playlist: m.playlist } : { id: m.id, titulo: m.titulo, artista: m.artista, url: m.url };
       }
+      if (niveisPool) break;
     }
     return null;
   }
+
 
   function desenharTrilha(e) {
     const m = e.musica, c = e.carta;
@@ -632,6 +637,7 @@
     $("trilhaAbrir").href = m.url;
     $("trilhaOutra").disabled = musicas.length < 2;
     if (tocandoUrl !== m.url) { $("trilhaPlayer").textContent = ""; $("trilhaPlayer").hidden = true; $("trilhaTocar").hidden = false; tocandoUrl = null; }
+    desenharNossas();
   }
 
   function tocarAqui() {
@@ -736,7 +742,7 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist"];
 
   function mostrarVista(nome) {
     vista = nome;
@@ -757,6 +763,7 @@
     if (nome === "vHistoria") desenharHistoria();
     if (nome === "vPote") { desenharPote(); $("motivoPapel").hidden = true; }
     if (nome === "vAbra") desenharAbra();
+    if (nome === "vPlaylist") desenharNossas();
     if (nome === "vDiarioCasal") { paginasDiario = 1; desenharDiarioCasal(); }
     window.scrollTo(0, 0);
   }
@@ -1169,6 +1176,7 @@
 
   function comTabelasV5(ch, c) {
     ch = comPosicoes(ch, c);
+    ch = comNossas(ch, c);
     Object.keys(TABELAS_V5).forEach(t => {
       ch = ch
         .on("postgres_changes", { event: "*", schema: "public", table: t, filter: `sala=eq.${c}` },
@@ -2753,6 +2761,90 @@
     $("noiteMaos").textContent = maosNoite > 0 ? `Hoje vocês ficaram ${fmtMinSeg(maosNoite)} de mãos dadas` : "";
   }
 
+  // ---------- v6: nossa playlist (só sala fixa) ----------
+  let nossas = [];   // { musica_id, marcado_por, criada_em }
+  const idMusicaAtual = m => (m && (m.id || (musicas.find(x => x.url === m.url) || {}).id)) || null;
+  const ehNossa = id => nossas.some(x => x.musica_id === id);
+  async function carregarNossas(c) {
+    const { data, error } = await sb.from("musicas_nossas").select("musica_id, marcado_por, criada_em, sala").eq("sala", c);
+    if (c !== codigo) return;
+    nossas = error || !data ? [] : data;
+    desenharNossas();
+  }
+  function comNossas(ch, c) {
+    const mudou = (ev, row) => {
+      if (!row || row.sala !== codigo) return;
+      nossas = nossas.filter(x => x.musica_id !== row.musica_id);
+      if (ev !== "DELETE") nossas.push({ musica_id: row.musica_id, marcado_por: row.marcado_por, criada_em: row.criada_em, sala: row.sala });
+      desenharNossas();
+    };
+    return ch
+      .on("postgres_changes", { event: "*", schema: "public", table: "musicas_nossas", filter: `sala=eq.${c}` }, p => mudou(p.eventType, p.eventType === "DELETE" ? p.old : p.new))
+      // DELETE não é filtrável: a linha antiga vem inteira (replica identity full) e traz a sala
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "musicas_nossas" }, p => mudou("DELETE", p.old));
+  }
+  async function alternarNossa(id) {
+    if (!estado || !estado.fixa || !id) return;
+    const tinha = ehNossa(id);
+    $("trilhaNossa").disabled = true;
+    const { error } = tinha
+      ? await sb.from("musicas_nossas").delete().eq("sala", codigo).eq("musica_id", id)
+      : await sb.from("musicas_nossas").insert({ sala: codigo, musica_id: id, marcado_por: nomeDe(eu) });
+    $("trilhaNossa").disabled = false;
+    if (error && error.code !== "23505") return erro("erroJogo", "Não consegui marcar a música. Confira a internet e tente de novo.");
+    nossas = nossas.filter(x => x.musica_id !== id);
+    if (!tinha) nossas.push({ musica_id: id, marcado_por: nomeDe(eu), criada_em: new Date().toISOString(), sala: codigo });
+    desenharNossas();
+  }
+  // "Trilha: só as nossas" vale com pelo menos 5 marcadas
+  const soNossasAtivo = () => !!(estado && estado.fixa && estado.playlistSoNossas && nossas.length >= 5);
+  let tocandoNossa = null;
+  function desenharNossas() {
+    if (!estado) return;
+    const m = estado.musica, id = idMusicaAtual(m);
+    const b = $("trilhaNossa");
+    b.hidden = !estado.fixa || !id;
+    const marcada = !!id && ehNossa(id);
+    b.textContent = marcada ? "❤️ Nossa" : "🤍 Nossa";
+    b.setAttribute("aria-pressed", String(marcada));
+    $("soNossasLinha").hidden = !estado.fixa;
+    $("soNossas").checked = !!estado.playlistSoNossas;
+    $("soNossasAviso").hidden = !(estado.fixa && estado.playlistSoNossas && nossas.length < 5);
+    $("cardPlaylistSub").textContent = nossas.length ? `${nossas.length} ${nossas.length === 1 ? "música" : "músicas"}` : "Marque com 🤍 na trilha";
+    if (!$("listaNossas")) return;
+    const porId = new Map(musicas.map(x => [x.id, x]));
+    const lista = nossas.filter(x => porId.has(x.musica_id)).sort((a, b) => (a.criada_em < b.criada_em ? 1 : -1));
+    $("nossasVazio").hidden = !!lista.length;
+    const ul = $("listaNossas");
+    ul.textContent = "";
+    lista.forEach(x => {
+      const mu = porId.get(x.musica_id);
+      const li = el("li", "nossa-musica"), info = el("div", "info");
+      info.append(el("span", "t", mu.titulo), el("span", "tag", `${mu.artista} · marcada por ${x.marcado_por}`));
+      const acoes = el("div", "acoes");
+      const a = el("a", "spotify", "Abrir no Spotify"); a.href = mu.url; a.target = "_blank"; a.rel = "noopener";
+      const t = el("button", "linkbtn", "Tocar aqui"); t.type = "button";
+      const player = el("div", "trilha-player");
+      t.addEventListener("click", () => {
+        const fid = idFaixa(mu.url);
+        if (!fid) return;
+        document.querySelectorAll("#listaNossas .trilha-player").forEach(p => { p.textContent = ""; });
+        const f = document.createElement("iframe");
+        f.src = "https://open.spotify.com/embed/track/" + encodeURIComponent(fid);
+        f.width = "100%"; f.height = "80"; f.loading = "lazy";
+        f.allow = "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
+        f.title = "Player do Spotify";
+        player.appendChild(f);
+        tocandoNossa = x.musica_id;
+      });
+      acoes.append(a, t);
+      info.appendChild(acoes);
+      li.append(info);
+      li.appendChild(player);
+      ul.appendChild(li);
+    });
+  }
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -2893,6 +2985,7 @@
     if (!Array.isArray(e.cidades) || e.cidades.length !== 2) e.cidades = [null, null];
     e.cidades = e.cidades.map(x => (x && typeof x.nome === "string" && x.nome.trim() ? { nome: x.nome.slice(0, 60), lat: Number.isFinite(x.lat) ? x.lat : null, lng: Number.isFinite(x.lng) ? x.lng : null } : null));
     if (!Number.isFinite(e.distanciaManual)) e.distanciaManual = null;
+    if (typeof e.playlistSoNossas !== "boolean") e.playlistSoNossas = false;
     if (!e.encerrando || typeof e.encerrando !== "object" || !Array.isArray(e.encerrando.frases) || e.encerrando.frases.length !== 2) e.encerrando = null;
     if (typeof e.mostrarOusadia !== "boolean") e.mostrarOusadia = true;
     if (!Array.isArray(e.titulos) || e.titulos.length !== 2) e.titulos = [null, null];
@@ -4247,6 +4340,8 @@
     $("novoMarco").addEventListener("click", () => abrirMarco(null));
     $("motivoGuardar").addEventListener("click", guardarMotivo);
     $("encerrarNoite").addEventListener("click", encerrarNoite);
+    $("trilhaNossa").addEventListener("click", () => alternarNossa(idMusicaAtual(estado && estado.musica)));
+    $("soNossas").addEventListener("change", () => { const v = $("soNossas").checked; gravar(n => { n.playlistSoNossas = v; }); });
     $("encerrarNoiteFim").addEventListener("click", encerrarNoite);
     $("noiteEnviar").addEventListener("click", () => enviarFraseNoite(false));
     $("noitePular").addEventListener("click", () => enviarFraseNoite(true));
