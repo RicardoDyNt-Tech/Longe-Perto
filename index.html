@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=42">
+<link rel="stylesheet" href="style.css?v=43">
 </head>
 <body>
 <main>
@@ -62,6 +62,7 @@
     <div class="ajustes">
       <button class="som" id="som" type="button" aria-pressed="true" aria-label="Som e vibração ligados">🔊</button>
       <button class="linkbtn" id="abrirPosicoesSala" type="button" hidden>📖 Posições</button>
+      <button class="linkbtn" id="encerrarNoite" type="button">🌙 Encerrar a noite</button>
       <label>📷 Câmera do WhatsApp
         <select id="camera">
           <option value="direita">Direita</option>
@@ -512,6 +513,7 @@
         <ul class="lista-extras" id="fimRodadas"></ul>
       </div>
       <button class="primary" id="novaPartida" type="button">Nova partida</button>
+      <button class="secondary" id="encerrarNoiteFim" type="button">🌙 Encerrar a noite</button>
     </div>
 
     <div class="placar">
@@ -858,6 +860,30 @@
     </form>
   </dialog>
 
+  <div class="noite" id="noite" hidden role="dialog" aria-modal="true" aria-labelledby="noiteTitulo">
+    <div class="noite-estrelas" aria-hidden="true"></div>
+    <div class="noite-conteudo">
+      <h2 id="noiteTitulo">Como foi a nossa noite?</h2>
+      <div id="noiteEscrever">
+        <input type="text" id="noiteFrase" maxlength="200" placeholder="Uma frase sobre hoje" aria-label="Uma frase sobre a noite">
+        <div class="row">
+          <button class="primary" id="noiteEnviar" type="button">Enviar</button>
+          <button class="secondary" id="noitePular" type="button">Pular</button>
+        </div>
+        <p class="erro" id="erroNoite" role="alert"></p>
+      </div>
+      <p class="noite-esperando" id="noiteEsperando" hidden></p>
+      <ul class="noite-frases" id="noiteFrases" hidden></ul>
+      <div class="noite-boa" id="noiteBoa" hidden>
+        <p class="noite-lua" aria-hidden="true">🌙</p>
+        <p class="noite-boa-frase" id="noiteBoaFrase"></p>
+        <p class="noite-info" id="noiteReencontro"></p>
+        <p class="noite-info" id="noiteMaos"></p>
+        <button class="primary" id="noiteDormir" type="button">Boa noite 💤</button>
+      </div>
+    </div>
+  </div>
+
   <div class="juntos-anim" id="juntosAnim" hidden aria-live="polite">
     <div class="juntos-par" aria-hidden="true"><span class="c1">💗</span><span class="c2">💗</span></div>
     <p>Vocês estão juntos agora 💞</p>
@@ -967,9 +993,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=42"></script>
-<script src="conquistas.js?v=42"></script>
-<script src="app.js?v=42"></script>
+<script src="config.js?v=43"></script>
+<script src="conquistas.js?v=43"></script>
+<script src="app.js?v=43"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

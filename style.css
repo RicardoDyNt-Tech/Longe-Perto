@@ -509,3 +509,29 @@ input[type=number]{width:100%; font:inherit; color:var(--ink); background:var(--
 .diario-dia{display:grid; grid-template-columns:1fr 1fr; gap:6px}
 .diario-dia .tag, .diario-dia .pd-pergunta{grid-column:1 / -1; margin:0}
 #diarioMais{width:auto; margin-top:10px}
+
+/* v6 · encerramento da noite e boa noite */
+#encerrarNoiteFim{margin-top:8px}
+.noite{position:fixed; inset:0; z-index:70; background:#0b1026; color:#f3f0ff; overflow:auto}
+.noite[hidden]{display:none}
+.noite-estrelas{position:fixed; inset:0; pointer-events:none;
+  background-image:radial-gradient(1.5px 1.5px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 30% 70%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 52% 30%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 70% 12%, #fff 50%, transparent 51%), radial-gradient(2px 2px at 84% 56%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 18% 88%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 64% 84%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 92% 90%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 40% 8%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 6% 50%, #fff 50%, transparent 51%);
+  background-size:260px 260px; animation:brilho 3s ease-in-out infinite alternate}
+@keyframes brilho{from{opacity:.45} to{opacity:1}}
+.noite-conteudo{position:relative; max-width:520px; margin:0 auto; padding:48px 20px 40px; text-align:center}
+.noite h2{margin:0 0 14px}
+.noite input[type=text]{background:#161c3a; color:#f3f0ff; border-color:#39406a}
+.noite .row{display:flex; gap:10px; margin-top:10px}
+.noite .row button{flex:1}
+.noite .erro{color:#ffb4c6}
+.noite-esperando{opacity:.8}
+.noite-frases{list-style:none; padding:0; margin:0; display:grid; gap:10px; text-align:left}
+.noite-frases li{background:#161c3a; border-radius:14px; padding:10px 12px}
+.noite-frases .quem{font-size:.75rem; font-weight:800; opacity:.7}
+.noite-frases p{margin:2px 0 0; overflow-wrap:anywhere}
+.noite-frases li.pulou p{opacity:.6; font-style:italic}
+.noite-lua{font-size:3rem; margin:24px 0 0}
+.noite-boa-frase{font-size:1.3rem; font-weight:700; margin:8px 0 14px; overflow-wrap:anywhere}
+.noite-info{margin:4px 0; opacity:.85}
+.noite-info:empty{display:none}
+#noiteDormir{margin-top:18px}

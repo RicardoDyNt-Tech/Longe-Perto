@@ -2690,6 +2690,69 @@
     $("cardDiarioCasalSub").textContent = n ? `${n} ${n === 1 ? "dia" : "dias"} de conversa` : "As perguntas dos outros dias";
   });
 
+  // ---------- v6: encerramento da noite e Boa noite (qualquer sala; o álbum só na fixa) ----------
+  // estado.encerrando = { id, por, frases: [null | texto | false (pulou)], frase (boa noite, a mesma nos dois) }
+  function encerrarNoite() {
+    if (!estado || !estado.jogadores[1] || estado.encerrando) return;
+    const pool = cartas.filter(c => c.tipo === "boa_noite");
+    gravar(n => {
+      if (n.encerrando) return;
+      const f = pool.length ? pool[Math.floor(Math.random() * pool.length)].texto : "Boa noite, meu amor.";
+      n.encerrando = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), por: eu, frases: [null, null], frase: f };
+      n.aviso = novoAviso(`${n.jogadores[eu]} quer encerrar a noite 🌙`);
+    });
+  }
+  function enviarFraseNoite(pular) {
+    const e = estado && estado.encerrando;
+    if (!e || e.frases[eu] !== null) return;
+    const txt = pular ? false : $("noiteFrase").value.replace(/\s+/g, " ").trim().slice(0, 200);
+    if (!pular && !txt) return erro("erroNoite", "Escreva uma frase ou toque em Pular.");
+    erro("erroNoite", "");
+    const id = e.id;
+    // os dois podem enviar ao mesmo tempo: guarda como pendente e reenvia se sumir
+    pendente("noite", x => !x.encerrando || x.encerrando.id !== id, x => x.encerrando.frases[eu] !== null, () => gravarFraseNoite(txt, id));
+    gravarFraseNoite(txt, id);
+    // na sala fixa, a frase vira um momento do álbum
+    if (txt && estado.fixa) {
+      sb.from("momentos").insert({ sala: codigo, carta_texto: `Nossa noite em ${dataBR(hojeISO())}`, carta_tipo: "encerramento", frase: txt, autor: nomeDe(eu) })
+        .select("*").single().then(({ data }) => { if (data) linhaV5("momentos", "INSERT", data); }, () => {});
+    }
+  }
+  function gravarFraseNoite(txt, id) {
+    gravarFresco(n => { if (n.encerrando && n.encerrando.id === id && n.encerrando.frases[eu] === null) n.encerrando.frases[eu] = txt; });
+  }
+  function boaNoite() {
+    if (!estado || !estado.encerrando) return;
+    gravar(n => { n.encerrando = null; });
+  }
+  let noiteAtual = null;
+  function desenharNoite(e) {
+    const box = $("noite");
+    const enc = e && e.encerrando;
+    box.hidden = !enc;
+    if (!enc) { noiteAtual = null; return; }
+    if (noiteAtual !== enc.id) { noiteAtual = enc.id; $("noiteFrase").value = ""; erro("erroNoite", ""); }
+    const outro = 1 - eu, prontos = enc.frases.every(f => f !== null);
+    $("noiteEscrever").hidden = enc.frases[eu] !== null;
+    $("noiteEsperando").hidden = enc.frases[eu] === null || prontos;
+    $("noiteEsperando").textContent = `Esperando ${nomeDe(outro)}…`;
+    // a frase do outro só aparece depois dos dois enviarem ou pularem
+    $("noiteFrases").hidden = !prontos;
+    $("noiteBoa").hidden = !prontos;
+    if (!prontos) return;
+    const ul = $("noiteFrases");
+    ul.textContent = "";
+    [eu, outro].forEach(i => {
+      const li = el("li", enc.frases[i] ? "" : "pulou");
+      li.append(el("span", "quem", i === eu ? "Você" : nomeDe(i)), el("p", "", enc.frases[i] || "pulou"));
+      ul.appendChild(li);
+    });
+    $("noiteBoaFrase").textContent = enc.frase || "";
+    const r = e.reencontro ? diasAte(e.reencontro) : null;
+    $("noiteReencontro").textContent = r === null || r < 0 ? "" : r === 0 ? "O reencontro é hoje 💞" : r === 1 ? "Falta 1 dia para o reencontro" : `Faltam ${r} dias para o reencontro`;
+    $("noiteMaos").textContent = maosNoite > 0 ? `Hoje vocês ficaram ${fmtMinSeg(maosNoite)} de mãos dadas` : "";
+  }
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -2830,6 +2893,7 @@
     if (!Array.isArray(e.cidades) || e.cidades.length !== 2) e.cidades = [null, null];
     e.cidades = e.cidades.map(x => (x && typeof x.nome === "string" && x.nome.trim() ? { nome: x.nome.slice(0, 60), lat: Number.isFinite(x.lat) ? x.lat : null, lng: Number.isFinite(x.lng) ? x.lng : null } : null));
     if (!Number.isFinite(e.distanciaManual)) e.distanciaManual = null;
+    if (!e.encerrando || typeof e.encerrando !== "object" || !Array.isArray(e.encerrando.frases) || e.encerrando.frases.length !== 2) e.encerrando = null;
     if (typeof e.mostrarOusadia !== "boolean") e.mostrarOusadia = true;
     if (!Array.isArray(e.titulos) || e.titulos.length !== 2) e.titulos = [null, null];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
@@ -3014,6 +3078,7 @@
     if (s) s.textContent = nomes[e.vez];
 
     desenharPlacar(e, nomes);
+    desenharNoite(e);
     desenharPosicoes();
     desenharPoses();
     desenharPresenca();
@@ -3951,6 +4016,7 @@
       n.dupla = null;
       n.secretas = sortearSecretas(n);
       n.historico = [];
+      n.encerrando = null;
     });
     missaoAberta = false;
   }
@@ -4180,6 +4246,11 @@
     $("distManualSalvar").addEventListener("click", salvarDistanciaManual);
     $("novoMarco").addEventListener("click", () => abrirMarco(null));
     $("motivoGuardar").addEventListener("click", guardarMotivo);
+    $("encerrarNoite").addEventListener("click", encerrarNoite);
+    $("encerrarNoiteFim").addEventListener("click", encerrarNoite);
+    $("noiteEnviar").addEventListener("click", () => enviarFraseNoite(false));
+    $("noitePular").addEventListener("click", () => enviarFraseNoite(true));
+    $("noiteDormir").addEventListener("click", boaNoite);
     $("pdResponder").addEventListener("click", responderPergunta);
     $("pdEditar").addEventListener("click", () => { editandoResposta = true; $("pdResposta").value = ""; desenharPergunta(); $("pdResposta").focus(); });
     $("diarioMais").addEventListener("click", () => { paginasDiario++; desenharDiarioCasal(); });
