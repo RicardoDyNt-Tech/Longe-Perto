@@ -762,7 +762,7 @@
 
   // ---------- placar ----------
   const placarVazio = (pontos, pulosMax) =>
-    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, livresV: pulosMax, livresD: pulosMax });
+    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, duplas: 0, livresV: pulosMax, livresD: pulosMax });
 
   const novoAviso = texto => ({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto });
 
@@ -792,6 +792,7 @@
     if (!e.prendaPendente || ![0, 1].includes(e.prendaPendente.dono)) e.prendaPendente = null;
     if (!e.duelo || !e.carta || e.duelo.chave !== e.carta.chave) e.duelo = null;
     if (!e.sintonia || !e.carta || e.sintonia.chave !== e.carta.chave) e.sintonia = null;
+    if (!e.dupla || !e.carta || e.dupla.chave !== e.carta.chave) e.dupla = null;
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
   }
@@ -799,7 +800,7 @@
   // "zerado" = antes da primeira jogada ou logo depois de "Nova partida"
   const placarZerado = e => e.placar.every(p =>
     p.pontos === 0 && p.verdades === 0 && p.desafios === 0 && p.prendas === 0 && p.liberadas === 0 && p.estrelas === 0 &&
-    !p.duelos && !p.sintonias &&
+    !p.duelos && !p.sintonias && !p.duplas &&
     p.livresV === e.pulosMax && p.livresD === e.pulosMax);
 
   function nivelMaisAlto(niveis) {
@@ -897,6 +898,7 @@
       ["Estrelas", p => p.estrelas],
       ["Duelos vencidos", p => p.duelos],
       ["Sintonias certeiras", p => p.sintonias],
+      ["Missões em dupla", p => p.duplas],
       ["Pulos grátis de verdade", p => `${p.livresV}/${e.pulosMax}`],
       ["Pulos grátis de desafio", p => `${p.livresD}/${e.pulosMax}`]
     ];
@@ -1055,6 +1057,7 @@
     $("efeitoAcoes").hidden = !(evento && c.tipo === "efeito" && minhaVez);
     desenharDuelo(estado);
     desenharSintonia(estado);
+    desenharDupla(estado);
     // Nota do adversário: quem não cumpriu dá as estrelas
     $("avaliar").hidden = !completa || minhaVez || !avaliando;
     if (c && !evento && c.tipo !== "prenda") {
@@ -1085,7 +1088,7 @@
     card.className = "card " + c.tipo + (c.evento ? " evento" : "");
     card.hidden = false;
     $("selo").hidden = !c.evento;
-    $("selo").textContent = c.evento ? "⚡ Evento especial" : "";
+    $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "⚡ Evento especial · 🤝 Missão em dupla" : "⚡ Evento especial";
     $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
       : c.motivo === "duelo" ? "Prenda por perder o duelo"
       : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
@@ -1517,6 +1520,61 @@
     }
   }
 
+  // ---------- missão em dupla (cooperativa) ----------
+  EVENTOS_TRATADOS.add("missao_dupla");
+
+  function votarDupla(v) {
+    const c = estado && estado.carta;
+    if (!c || c.tipo !== "missao_dupla" || !["sim", "nao"].includes(v)) return;
+    const chave = c.chave, rodada = estado.dupla ? estado.dupla.rodada : 1;
+    pendente("dupla", e => !e.carta || e.carta.chave !== chave || (e.dupla ? e.dupla.rodada : 1) !== rodada,
+      e => !!(e.dupla && e.dupla.votos[eu] === v), () => gravarVotoDupla(v, chave, rodada));
+    gravarVotoDupla(v, chave, rodada);
+  }
+
+  function gravarVotoDupla(v, chave, rodada) {
+    gravarFresco(n => {
+      const c = n.carta;
+      if (!c || c.tipo !== "missao_dupla" || c.chave !== chave) return;
+      const d = n.dupla || { chave, cartaId: c.id || chave, votos: [null, null], rodada: 1 };
+      if (d.rodada !== rodada) return;                  // voto de outra rodada
+      d.votos[eu] = v;
+      n.dupla = d;
+      if (d.votos[0] === null || d.votos[1] === null) return;
+      if (d.votos[0] !== d.votos[1]) {
+        d.votos = [null, null];
+        d.rodada++;
+        n.aviso = novoAviso("Vocês discordaram, votem de novo.");
+        return;
+      }
+      const girou = c.de === 0 || c.de === 1 ? c.de : n.vez;
+      n.dupla = null;
+      n.carta = null;
+      n.vez = 1 - girou;
+      if (d.votos[0] === "sim") {
+        n.placar.forEach(p => { p.pontos += 2; p.duplas = (p.duplas || 0) + 1; });
+        n.pontos = n.placar.map(x => x.pontos);
+        n.aviso = novoAviso("Missão em dupla cumprida! +2 para cada um");
+        conferirMeta(n);                                // empate na meta não encerra: o próximo ponto decide
+      } else {
+        n.aviso = novoAviso("Não deu desta vez. Ninguém pontua.");
+      }
+    });
+  }
+
+  function desenharDupla(e) {
+    const c = e.carta;
+    const ativo = !!(c && c.tipo === "missao_dupla" && e.jogadores[1]);
+    $("duplaAcoes").hidden = !ativo;
+    if (!ativo) return;
+    const d = e.dupla;
+    const meu = d ? d.votos[eu] : null, dele = d ? d.votos[1 - eu] : null;
+    document.querySelectorAll("#duplaVotos button").forEach(b => b.classList.toggle("meu", meu === b.dataset.v));
+    const outro = e.jogadores[1 - eu];
+    $("duplaStatus").textContent = meu === null ? (dele === null ? "Quando acabarem, os dois votam." : `${outro} já votou. Falta você.`)
+      : dele === null ? `Você votou "${meu === "sim" ? "Conseguimos" : "Não deu"}". Esperando ${outro}…` : "";
+  }
+
   // "Concluir evento": saída genérica para tipos de evento sem tratamento próprio
   function concluirEvento() {
     if (!estado || !estado.carta || !estado.carta.evento || estado.vez !== eu) return;
@@ -1632,6 +1690,7 @@
       n.prendaPendente = null;
       n.duelo = null;
       n.sintonia = null;
+      n.dupla = null;
     });
   }
 
@@ -1802,6 +1861,7 @@
     $("efeitoRecusar").addEventListener("click", recusarEfeito);
     $("dueloComecar").addEventListener("click", comecarDuelo);
     $("sintoniaEnviar").addEventListener("click", enviarSintonia);
+    $("duplaVotos").addEventListener("click", ev => { const v = ev.target.dataset && ev.target.dataset.v; if (v) votarDupla(v); });
     $("sintoniaJulgar").addEventListener("click", ev => { const j = ev.target.dataset && ev.target.dataset.j; if (j) julgarSintonia(j); });
     $("dueloVotos").addEventListener("click", ev => { const v = ev.target.dataset && ev.target.dataset.v; if (v) votarDuelo(v); });
     $("pulosMax").addEventListener("change", mudarPulosMax);

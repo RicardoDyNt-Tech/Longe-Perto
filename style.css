@@ -113,6 +113,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .duelo-acoes{grid-template-columns:1fr}
 .votos{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
 .votos button{background:transparent; color:var(--ink); border:1.5px solid var(--line); padding:12px 6px; font-weight:600; overflow-wrap:anywhere}
+.votos-2{grid-template-columns:1fr 1fr}
 .votos button.meu{background:var(--ink); color:var(--bg); border-color:var(--ink)}
 .duelo-acoes .wait{margin:0}
 .sintonia{margin:0 0 16px}
