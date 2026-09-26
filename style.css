@@ -786,3 +786,7 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 .ro-nome{font-weight:800; font-size:1.05rem}
 .ro-desc{font-size:.88rem}
 .ro-etapas{font-size:.8rem; color:var(--muted)}
+/* v8: morte súbita */
+.faixa-ms{margin:12px 0 0; padding:12px 14px; border-radius:14px; text-align:center; background:color-mix(in srgb, var(--desafio) 16%, var(--surface)); border:2px solid var(--desafio)}
+.ms-titulo{margin:0; font-weight:800; font-size:1.1rem}
+.ms-sub{margin:4px 0 0; font-size:.85rem; overflow-wrap:anywhere}

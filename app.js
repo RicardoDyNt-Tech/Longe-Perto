@@ -189,6 +189,7 @@
         if (novo.carta.repetir) { delete novo.carta.repetir; if (temMarca(novo.carta.id, "repetir")) setTimeout(() => marcarCarta(novo.carta.id, "repetir"), 0); }
       }
     }
+    talvezMorteSubita(novo);
     if (!novo.carta) novo.musica = null;
     const venceuAgora = estado.vencedor == null && novo.vencedor != null;
     aplicar(novo, false, true);   // local: jogada feita neste aparelho
@@ -4671,6 +4672,9 @@
     if (!Array.isArray(e.obsPedida) || e.obsPedida.length !== 2) e.obsPedida = [null, null];
     if (!Array.isArray(e.historico)) e.historico = [];
     if (typeof e.escolhaCegas !== "boolean") e.escolhaCegas = false;
+    if (typeof e.morteSubita !== "boolean") e.morteSubita = false;
+    if (typeof e.emMorteSubita !== "boolean" || e.vencedor !== null) e.emMorteSubita = false;
+    if (!e.emMorteSubita || !e.ms || !Array.isArray(e.ms.res) || e.ms.res.length !== 2) e.ms = e.emMorteSubita ? { res: [null, null] } : null;
     if (!e.roteiro || typeof e.roteiro !== "object" || !etapasRoteiroOk(e.roteiro.etapas) || !(e.roteiro.etapa >= 0)) e.roteiro = null;
     if (e.roteiroEscolhendo !== 0 && e.roteiroEscolhendo !== 1) e.roteiroEscolhendo = null;
     if (!Array.isArray(e.cegas) || e.cegas.length !== 2 || e.carta || e.vencedor !== null) e.cegas = null;
@@ -4730,16 +4734,22 @@
   // Confere a meta depois de qualquer ponto. Empate na meta não encerra: o próximo ponto decide.
   function conferirMeta(n) {
     if (n.vencedor != null) return true;
+    if (n.emMorteSubita) return false;                 // na morte súbita, a rodada decide
     const [a, b] = n.placar.map(p => p.pontos);
     if (a < n.meta && b < n.meta) return false;
     if (a === b) { n.aviso = novoAviso("Empate na meta! Próximo ponto decide."); return false; }
-    n.vencedor = a > b ? 0 : 1;
+    declararVencedor(n, a > b ? 0 : 1);
+    return true;
+  }
+  function declararVencedor(n, w) {
+    n.emMorteSubita = false;
+    n.ms = null;
+    n.vencedor = w;
     n.vez = 1 - n.vencedor;                             // quem perdeu cumpre a prenda final
     n.avaliacao = null;
     n.efeitos = [];                                     // efeitos ativos são descartados, sem pontos
     n.prendaPendente = null;
     n.carta = prendaPara(n, "final");
-    return true;
   }
 
   // Início de uma vez: desconta 1 rodada dos efeitos do dono; quem aguentou até o fim ganha pontos.
@@ -4826,6 +4836,9 @@
     const zerado = placarZerado(e);
     $("notaAdv").checked = e.notaAdversario;
     $("escolhaCegas").checked = e.escolhaCegas;
+    $("morteSubita").checked = e.morteSubita;
+    $("morteSubita").disabled = !zerado;
+    $("morteSubitaLinha").hidden = config.chipsQuemMuda === "dono" && !souDono;
     $("escolhaCegas").disabled = !zerado;
     $("escolhaCegasLinha").hidden = config.chipsQuemMuda === "dono" && !souDono;   // quem pode mudar a partida
     $("prendasFofas").checked = e.prendasFofas;
@@ -4890,6 +4903,7 @@
     desenharNav();
     desenharRoteiro(e);
     talvezCofreRoteiro(e, inicial);
+    desenharMorteSubita(e, inicial);
     desenharFaixaHumor();
     desenharCartaMural(e);
 
@@ -4998,7 +5012,8 @@
     const avaliando = !!estado.avaliacao;
     const evento = !!(c && c.evento);
     $("done").hidden = !minhaVez || avaliando || evento;
-    $("skip").hidden = !minhaVez || !c || c.tipo === "prenda" || avaliando || evento;
+    $("skip").hidden = !minhaVez || !c || c.tipo === "prenda" || avaliando || evento || estado.emMorteSubita;
+    $("msDesistir").hidden = !estado.emMorteSubita || !minhaVez || !c || c.tipo === "prenda" || avaliando || evento;
     $("eventoFim").hidden = !evento || !minhaVez || EVENTOS_TRATADOS.has(c.tipo);
     $("reverso").hidden = !podeReverter(estado);
     $("efeitoAcoes").hidden = !(evento && c.tipo === "efeito" && minhaVez);
@@ -5053,7 +5068,8 @@
       : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
       + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome
-      + (c.tipo === "efeito" && c.rodadas ? ` · dura ${c.rodadas} ${c.rodadas === 1 ? "rodada" : "rodadas"}` : "");
+      + (c.tipo === "efeito" && c.rodadas ? ` · dura ${c.rodadas} ${c.rodadas === 1 ? "rodada" : "rodadas"}` : "")
+      + (e.emMorteSubita && (c.tipo === "verdade" || c.tipo === "desafio") ? " · ⚡ vale o dobro" : "");
     $("text").textContent = c.texto;
     desenharEtapas(e);
     $("midia").hidden = !c.midia;
@@ -5272,11 +5288,11 @@
     if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
       if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
-      let carta = sortear(tipo, n.niveis, n.usados || []);
+      let carta = sortear(tipo, n.emMorteSubita ? [nivelMorteSubita(n)] : n.niveis, n.usados || []);
       // com a chance configurada, o giro vira um evento especial (a roleta continua mostrando Verdade/Desafio)
       if (tipoEvento) carta = sortearEvento(n, tipoEvento) || carta;                 // roteiro: evento da etapa
-      else if (!et && Math.random() < CHANCE_EVENTO[n.eventos]) carta = sortearEvento(n) || carta;
-      const cegas = !carta.evento && n.escolhaCegas ? duasCegas(n, tipo, carta) : null;
+      else if (!et && !n.emMorteSubita && Math.random() < CHANCE_EVENTO[n.eventos]) carta = sortearEvento(n) || carta;
+      const cegas = !carta.evento && n.escolhaCegas && !n.emMorteSubita ? duasCegas(n, tipo, carta) : null;
       if (cegas) { n.cegas = cegas; n.carta = null; n.musica = null; }
       else {
         registrarUso(n, carta);
@@ -5292,7 +5308,7 @@
     if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
       if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
-      const carta = sortear(tipo, n.niveis, n.usados || []);
+      const carta = sortear(tipo, n.emMorteSubita ? [nivelMorteSubita(n)] : n.niveis, n.usados || []);
       registrarUso(n, carta);
       n.carta = carta;
       n.musica = sortearMusica(carta.nivel);
@@ -5921,6 +5937,61 @@
     if (!inicial && !$("dlgCofre").open) abrirGuardar(r.ultima);
   }
 
+  // ---------- v8: morte súbita ----------
+  // depois de uma jogada: empatados e os dois a 3 pontos ou menos da meta
+  function talvezMorteSubita(n) {
+    if (!n.morteSubita || n.emMorteSubita || n.vencedor != null || n.carta || !n.jogadores[1]) return;
+    const [a, b] = n.placar.map(p => p.pontos);
+    if (a !== b || n.meta - a > 3) return;
+    n.emMorteSubita = true;
+    n.ms = { res: [null, null] };
+    n.aviso = novoAviso("⚡ Morte súbita! Próxima carta decide");
+  }
+  // um degrau acima do nível mais alto dos chips, sem passar do máximo da sala
+  function nivelMorteSubita(n) {
+    const topo = Math.max(...niveisDaPartida(n.niveis).map(ordCfg));
+    return limitarNivel("nivel", ORDEM_CFG[Math.min(topo + 1, ORDEM_CFG.length - 1)]) || maisLeve();
+  }
+  // cada um joga uma carta: quem cumpriu com mais pontos vence; empate, mais uma para cada um
+  function decidirMorteSubita(n) {
+    const r = n.ms.res;
+    if (r[0] === null || r[1] === null) return;
+    if (r[0] === r[1]) {
+      n.ms.res = [null, null];
+      n.aviso = novoAviso("⚡ Empate de novo! Mais uma carta para cada um");
+      return;
+    }
+    const w = r[0] > r[1] ? 0 : 1;
+    n.aviso = novoAviso(`⚡ ${n.jogadores[w]} venceu a morte súbita!`);
+    declararVencedor(n, w);
+  }
+  function desistirMorteSubita() {
+    if (!estado || !estado.emMorteSubita || estado.vez !== eu || !estado.carta) return;
+    if (!confirm("Desistir? Na morte súbita, desistir dá a vitória ao outro.")) return;
+    gravar(n => {
+      if (!n.emMorteSubita || n.vez !== eu) return;
+      n.aviso = novoAviso(`${n.jogadores[eu]} desistiu. ${n.jogadores[1 - eu]} venceu!`);
+      n.carta = null;
+      declararVencedor(n, 1 - eu);
+    });
+  }
+  let emMSAntes = false;
+  function desenharMorteSubita(e, inicial) {
+    const f = $("faixaMS");
+    f.hidden = !e.emMorteSubita;
+    if (e.emMorteSubita && !emMSAntes && !inicial) vibrar([200, 100, 200, 100, 400]);
+    emMSAntes = e.emMorteSubita;
+    if (!e.emMorteSubita) return;
+    const r = e.ms.res;
+    $("msSub").textContent = [0, 1].map(i => `${e.jogadores[i]}: ${r[i] === null ? "falta jogar" : `cumpriu (+${r[i]})`}`).join(" · ")
+      + ` · cartas de nível ${LEVEL_NAMES[nivelMorteSubita(e)]}, valendo o dobro`;
+  }
+  function mudarMorteSubita() {
+    const v = $("morteSubita").checked;
+    if (!estado || !placarZerado(estado) || (config.chipsQuemMuda === "dono" && !souDono)) return;
+    gravar(n => { if (placarZerado(n)) n.morteSubita = v; });
+  }
+
   // ---------- missão secreta da partida ----------
   // Duas missões diferentes, dos níveis ativos (se faltar, de qualquer nível). Cada um vê só a sua.
   function sortearSecretas(n) {
@@ -6036,12 +6107,15 @@
   // soma pontos da tabela (+ estrelas), conta o tipo e só então confere a meta
   function pontuar(n, c, estrelas) {
     const p = n.placar[n.vez];
-    p.pontos += ((PONTOS[c.tipo] || {})[c.nivel] || 0) + estrelas;
+    const base = ((PONTOS[c.tipo] || {})[c.nivel] || 0) * (n.emMorteSubita ? 2 : 1);   // morte súbita: vale o dobro
+    p.pontos += base + estrelas;
+    if (n.emMorteSubita) n.ms.res[n.vez] = base + estrelas;
     p.estrelas += estrelas;
     if (c.tipo === "verdade") p.verdades++; else p.desafios++;
     const pn = p.porNivel && p.porNivel[c.nivel];
     if (pn) pn[c.tipo === "verdade" ? "v" : "d"]++;
     passarVez(n, c);
+    if (n.emMorteSubita) return decidirMorteSubita(n);
     conferirMeta(n);
   }
 
@@ -6074,7 +6148,7 @@
   // Pular: com pulos livres do tipo, gasta um, descarta e passa a vez;
   // com o contador em 0, a carta vira prenda para a mesma pessoa, na mesma vez.
   function pular() {
-    if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo === "prenda" || estado.carta.evento || estado.avaliacao) return;
+    if (!estado || estado.vez !== eu || !estado.carta || estado.carta.tipo === "prenda" || estado.carta.evento || estado.avaliacao || estado.emMorteSubita) return;
     gravar(n => {
       const c = n.carta;
       const q = n.placar[n.vez];
@@ -6096,7 +6170,7 @@
   // O outro resolve com as próprias regras e pontos, e depois a vez continua com ele (joga duas seguidas).
   function podeReverter(e) {
     const c = e && e.carta;
-    return !!(c && permitido("reverso") && e.jogadores[1] && e.vez === eu && !c.evento && !c.reversa && !e.avaliacao && e.vencedor === null
+    return !!(c && permitido("reverso") && e.jogadores[1] && e.vez === eu && !c.evento && !c.reversa && !e.avaliacao && e.vencedor === null && !e.emMorteSubita
       && (c.tipo === "verdade" || c.tipo === "desafio") && e.placar[e.vez].reverso !== false);
   }
 
@@ -6151,6 +6225,8 @@
       n.cegas = null;                                   // a opção escolhaCegas continua como estava
       n.roteiro = null;
       n.roteiroEscolhendo = null;
+      n.emMorteSubita = false;                          // a opção morteSubita continua como estava
+      n.ms = null;
     });
     missaoAberta = false;
   }
@@ -6532,6 +6608,8 @@
     $("avaliar").addEventListener("click", ev => { const k = Number(ev.target.dataset && ev.target.dataset.n); if (k) avaliar(k); });
     $("notaAdv").addEventListener("change", mudarNota);
     $("escolhaCegas").addEventListener("change", mudarCegas);
+    $("morteSubita").addEventListener("change", mudarMorteSubita);
+    $("msDesistir").addEventListener("click", desistirMorteSubita);
     $("prendasFofas").addEventListener("change", mudarPrendasFofas);
     $("timerIniciar").addEventListener("click", () => iniciarTimer(Number($("timerIniciar").dataset.seg)));
     $("timerAbrir").addEventListener("click", () => { $("timerOpcoes").hidden = !$("timerOpcoes").hidden; });
