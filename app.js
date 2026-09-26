@@ -7,7 +7,7 @@
   const ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   const SEGMENTOS = 8;
   const GIRO_MS = () => matchMedia("(prefers-reduced-motion: reduce)").matches ? 350 : 3300;
-  const LEVEL_NAMES = { leve: "Leve", criativo: "Criativo", picante: "Picante", pesado: "Pesado +18" };
+  const LEVEL_NAMES = { romantico: "Romântico", leve: "Leve", criativo: "Criativo", picante: "Picante", pesado: "Pesado +18" };
   const TIPO_NOMES = {
     verdade: "Verdade", desafio: "Desafio", prenda: "Prenda",
     efeito: "Efeito contínuo", duelo: "Duelo", sintonia: "Sintonia", missao_dupla: "Missão em dupla", missao_secreta: "Missão secreta"
@@ -24,12 +24,12 @@
   const EVENTOS_TRATADOS = new Set();
   const ORDEM_NIVEIS = ["leve", "criativo", "picante", "pesado"];
   const PONTOS = {
-    verdade: { leve: 1, criativo: 1, picante: 2, pesado: 3 },
-    desafio: { leve: 2, criativo: 2, picante: 3, pesado: 4 }
+    verdade: { romantico: 1, leve: 1, criativo: 1, picante: 2, pesado: 3 },
+    desafio: { romantico: 2, leve: 2, criativo: 2, picante: 3, pesado: 4 }
   };
   const METAS = [10, 20, 30];
   const PULOS_OPCOES = [0, 1, 2, 3, 5, 10];
-  const DEVOLVE = { leve: 1, criativo: 1, picante: 2, pesado: 3 };   // pulos devolvidos ao cumprir prenda por pulo
+  const DEVOLVE = { romantico: 1, leve: 1, criativo: 1, picante: 2, pesado: 3 };   // pulos devolvidos ao cumprir prenda por pulo
 
   let sb = null;
   let codigo = null;    // sala atual
@@ -111,9 +111,10 @@
   // ---------- sorteio ----------
   // chaves antigas em `usados` (de antes das cartas irem para o banco) não batem com nenhum id e são ignoradas
   function sortear(tipo, niveis, usados) {
-    const lista = niveis.length ? niveis : ["leve"];
-    let pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && lista.includes(c.nivel)).map(c => ({ ...c, chave: c.id })));
-    if (!pool.length) pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === "leve").map(c => ({ ...c, chave: c.id })));
+    const lista = niveisDaPartida(niveis);
+    const doTipo = cartas.filter(c => c.tipo === tipo && cartaPermitida(c));   // config da sala primeiro
+    let pool = filtrarBaralho(doTipo.filter(c => lista.includes(c.nivel)).map(c => ({ ...c, chave: c.id })));
+    if (!pool.length) pool = filtrarBaralho(doTipo.filter(c => c.nivel === maisLeve()).map(c => ({ ...c, chave: c.id })));
     if (!pool.length) return null;
     const usadosSet = new Set(usados);
     let livres = pool.filter(p => !usadosSet.has(p.chave));
@@ -130,13 +131,26 @@
     return carta;
   }
 
-  // prenda do nível pedido; se não houver prenda nesse nível, desce um nível até encontrar
-  function sortearPrenda(nivel, usados) {
-    for (let i = ORDEM_NIVEIS.indexOf(nivel); i >= 0; i--) {
-      const n = ORDEM_NIVEIS[i];
-      if (cartas.some(c => c.tipo === "prenda" && c.nivel === n)) return sortear("prenda", [n], usados);
+  // prenda do nível pedido; se não houver prenda nesse nível, desce um nível até encontrar.
+  // Romântico fica fora da ordem de subida. Com "Prendas fofas", toda prenda sai romântica,
+  // guardando em nivelOriginal o nível que ela teria (para a devolução de pulos).
+  const temPrendaRomantica = () => cartas.some(c => c.tipo === "prenda" && c.nivel === "romantico" && cartaPermitida(c));
+  function sortearPrenda(nivel, usados, n) {
+    if (n && n.prendasFofas && temPrendaRomantica()) {
+      const fofa = sortear("prenda", ["romantico"], usados);
+      if (fofa && nivel !== "romantico") fofa.nivelOriginal = nivel;
+      return fofa;
     }
-    return null;
+    if (nivel === "romantico") {
+      if (temPrendaRomantica()) return sortear("prenda", ["romantico"], usados);
+      nivel = "leve";
+    }
+    // nível que a sala não tem (ou sem prenda): desce até o permitido mais alto; sem nada, a romântica
+    for (let i = ORDEM_NIVEIS.indexOf(nivel); i >= 0; i--) {
+      const x = ORDEM_NIVEIS[i];
+      if (cartas.some(c => c.tipo === "prenda" && c.nivel === x && cartaPermitida(c))) return sortear("prenda", [x], usados);
+    }
+    return temPrendaRomantica() ? sortear("prenda", ["romantico"], usados) : null;
   }
 
   function registrarUso(novo, carta) {
@@ -159,7 +173,7 @@
     if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) {
       novo.timer = null;
       // a posição e o cardápio pertencem à carta
-      if (estado.carta) { novo.posicao = null; novo.cardapio = null; }
+      if (estado.carta) { novo.posicao = null; novo.cardapio = null; novo.pose = null; }
       if (novo.fixa && estado.carta) guardarNoHistorico(novo, estado);
       // carta nova sorteada aqui: conta a visualização e, se era "jogar de novo", tira a marca
       if (novo.fixa && novo.carta && novo.carta.id && cartas.some(x => x.id === novo.carta.id)) {
@@ -210,10 +224,19 @@
   async function carregarCartas(c) {
     cartasOk = false;
     atualizarBotoes();
-    const { data, error } = await sb.from("cartas")
-      .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos")
-      .or("sala.is.null,sala.eq." + c)
-      .eq("ativa", true);
+    // em blocos de 1.000 (o limite de uma consulta no Supabase)
+    let data = [], error = null;
+    for (let de = 0; ; de += 1000) {
+      const r = await sb.from("cartas")
+        .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos")
+        .or("sala.is.null,sala.eq." + c)
+        .eq("ativa", true)
+        .order("id", { ascending: true })
+        .range(de, de + 999);
+      if (r.error || !r.data) { error = r.error || true; break; }
+      data = data.concat(r.data);
+      if (r.data.length < 1000) break;
+    }
     if (c !== codigo) return;   // saiu da sala enquanto carregava
     if (error || !data || !data.length) {
       cartas = [];
@@ -225,6 +248,7 @@
     atualizarBotoes();
     desenharExtras();
     desenharDiario();
+    if (estado && estado.fixa) desenharPergunta();
   }
 
   async function buscarSala(c) {
@@ -244,7 +268,7 @@
     const inicial = {
       fixa: !!fixa,
       jogadores: [nome, null],
-      niveis: ["leve", "criativo"],
+      niveis: ["leve"],
       vez: 0,
       pontos: [0, 0],
       placar: [placarVazio(0, 3), placarVazio(0, 3)],
@@ -259,7 +283,7 @@
     for (let t = 0; t < 4; t++) {
       const c = fixa ? base + "-" + gerarSufixo() : gerarCodigo();
       const { error } = await sb.from("salas").insert({ codigo: c, estado: inicial });
-      if (!error) return abrirSala(c, 0, inicial);
+      if (!error) { abrirSala(c, 0, inicial); assumirDono(0); return; }
       if (error.code !== "23505") return erro("erroLobby", "Não consegui criar a sala: " + error.message);
     }
     erro("erroLobby", "Não consegui gerar um código livre. Tente de novo.");
@@ -326,8 +350,31 @@
         payload => tirarMusica(payload.old && payload.old.id))
       ;
     canal = comTabelasV5(canal, c)
+      .on("broadcast", { event: "mao" }, m => receberMao(m && m.payload))
+      .on("broadcast", { event: "mural" }, m => receberMural(m && m.payload))
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistos", filter: `sala=eq.${c}` }, p => {
+        const r = p.new;
+        if (c !== codigo || !r || (r.jogador !== 0 && r.jogador !== 1) || r.jogador === eu) return;
+        vistos[r.jogador] = r.visto_em;
+        desenharPresenca();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "pedidos_modelos", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo) linhaModelo(p.eventType, p.eventType === "DELETE" ? p.old : p.new);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "pedidos_modelos" }, p => { if (c === codigo) linhaModelo("DELETE", p.old); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "humores", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo && p.eventType !== "DELETE") linhaHumor(p.new);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "manuais", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo && p.eventType !== "DELETE") receberManual(p.new);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "salas_config", filter: `sala=eq.${c}` }, p => {
+        if (c !== codigo || p.eventType === "DELETE" || !p.new) return;
+        aplicarLinhaConfig(p.new);
+        conferirDono(c);   // ex.: "Gerar novo código" em outro aparelho
+      })
       .subscribe(status => {
-        if (status === "SUBSCRIBED" && canal) canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {});
+        if (status === "SUBSCRIBED" && canal) { canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {}); marcarVisto(true); }
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
           erro("erroJogo", "A conexão ao vivo caiu. Recarregue a página se a roleta parar de sincronizar.");
       });
@@ -336,6 +383,10 @@
     const fixa = !!e.fixa;
     if (fixa) $("lugarCofre").appendChild($("cofre")); else $("musicas").before($("cofre"));
     $("cofre").open = fixa;
+    // v7: na sala fixa, o reencontro mora no Início e o histórico de partidas na aba Histórico
+    if (fixa) { $("lugarReencontro").appendChild($("reencontro")); $("lugarHistorico").appendChild($("historico")); }
+    else { $("convite").before($("reencontro")); $("cofre").before($("historico")); }
+    $("historico").open = fixa;
     $("casaConvite").hidden = fixa;
     $("casaGrade").hidden = !fixa;
     aplicar(e, true);
@@ -346,7 +397,20 @@
     Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
     marcas = new Map(); vistas = new Map(); partidasSala = [];
     posicoes = []; marcasPos = []; carregarPosicoes(c);
+    vistos = [null, null]; ultimoVistoGravado = 0; carregarVistos(c);
+    nossas = []; if (fixa) carregarNossas(c);
+    manuais = [{}, {}]; clearTimeout(timerManual); timerManual = null; $("manualForm").textContent = ""; statusManual("");
+    if (fixa) carregarManuais(c);
+    modelos = []; dengoSel = []; dengoRespondendo = null; $("dengoMeu").hidden = true;
+    if (fixa) carregarModelos(c);
+    humores = []; faixaHumorFechada = false; $("humorNota").value = ""; $("humorNotaBox").hidden = true; $("humorSalvo").textContent = "";
+    if (fixa) carregarHumores(c);
+    filtroHist = "tudo"; diasHist = 30;
+    tracos = []; pilhaMural = []; muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); esconderConvite(); $("muralLegenda").value = ""; filtroMural = "todos";
+    poses = []; carregarPoses(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
+    config = mesclarConfig({}); temDono = false; donoIndice = null; souDono = false; configPronta = false;
+    carregarConfig(c);
   }
 
   // ---------- reencontro e cofre ----------
@@ -503,7 +567,8 @@
 
   function desafioDoDia(dia, jogador) {
     // só as cartas padrão, em ordem fixa, para os dois aparelhos terem exatamente a mesma lista
-    const pool = cartas.filter(c => !c.sala && c.tipo === "desafio" && c.nivel === estado.nivelDiario)
+    const nivel = limitarNivel("desafioDoDia", estado.nivelDiario);
+    const pool = cartas.filter(c => !c.sala && c.tipo === "desafio" && c.nivel === nivel && cartaPermitida(c))
       .sort((a, b) => (a.id < b.id ? -1 : 1));
     if (!pool.length) return null;
     return pool[fnv1a(`${codigo}|${dia}|${jogador}`) % pool.length];
@@ -525,11 +590,15 @@
 
   function desenharDiario() {
     const box = $("diario");
-    if (!estado || !estado.fixa) { box.hidden = true; return; }
+    const cardDia = document.querySelector('.casa-card[data-abre="vDiario"]');
+    if (cardDia) cardDia.hidden = !permitido("desafioDoDia");
+    if (!estado || !estado.fixa || !permitido("desafioDoDia")) { box.hidden = true; return; }
     box.hidden = false;
     const hoje = hojeISO();
     const nomes = estado.jogadores;
     $("nivelDiario").value = estado.nivelDiario;
+    limitarSelectNiveis($("nivelDiario"), v => permitido("desafioDoDia", v));
+    $("nivelDiario").closest("label").hidden = !souDono;   // configuração: só o dono vê
     const meu = cartasOk ? desafioDoDia(hoje, eu) : null;
     $("diarioMeuTitulo").textContent = `Desafio do dia de ${nomes[eu]}`;
     $("diarioMeuTexto").textContent = !cartasOk ? "Carregando…" : meu ? meu.texto : "Sem desafios neste nível.";
@@ -585,21 +654,27 @@
 
   // música do nível da carta; sem música nesse nível, desce até achar; sem nenhuma, null
   function sortearMusica(nivel, evitarUrl) {
+    if (!permitido("trilha")) return null;
+    if (ordCfg(nivel) > ordCfg(efetivo("trilha"))) nivel = efetivo("trilha");   // romântico usa o leve
+    // "Trilha: só as nossas" (com pelo menos 5): ignora o nível
+    const niveisPool = soNossasAtivo() ? [null] : null;
     for (let i = Math.max(0, ORDEM_NIVEIS.indexOf(nivel)); i >= 0; i--) {
-      let pool = musicas.filter(m => m.nivel === ORDEM_NIVEIS[i]);
+      let pool = niveisPool ? musicas.filter(m => ehNossa(m.id)) : musicas.filter(m => m.nivel === ORDEM_NIVEIS[i]);
       if (pool.length > 1 && evitarUrl) pool = pool.filter(m => m.url !== evitarUrl);
       if (pool.length) {
         const m = pool[Math.floor(Math.random() * pool.length)];
-        return m.playlist ? { titulo: m.titulo, artista: m.artista, url: m.url, playlist: m.playlist } : { titulo: m.titulo, artista: m.artista, url: m.url };
+        return m.playlist ? { id: m.id, titulo: m.titulo, artista: m.artista, url: m.url, playlist: m.playlist } : { id: m.id, titulo: m.titulo, artista: m.artista, url: m.url };
       }
+      if (niveisPool) break;
     }
     return null;
   }
 
+
   function desenharTrilha(e) {
     const m = e.musica, c = e.carta;
     const box = $("trilha");
-    const visivel = !!(m && c && !$("card").hidden);
+    const visivel = !!(m && c && !$("card").hidden && permitido("trilha"));
     box.hidden = !visivel;
     if (!visivel) return;
     $("trilhaTitulo").textContent = /m[úu]sica que eu escolher/i.test(c.texto || "") ? "Sugestão para este desafio" : "Trilha da rodada";
@@ -608,6 +683,7 @@
     $("trilhaAbrir").href = m.url;
     $("trilhaOutra").disabled = musicas.length < 2;
     if (tocandoUrl !== m.url) { $("trilhaPlayer").textContent = ""; $("trilhaPlayer").hidden = true; $("trilhaTocar").hidden = false; tocandoUrl = null; }
+    desenharNossas();
   }
 
   function tocarAqui() {
@@ -712,9 +788,11 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural"];
+  const ABAS = { casa: "abaCasa", jogo: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
 
   function mostrarVista(nome) {
+    if (!(estado && estado.fixa)) nome = "jogo";   // sala comum: só o jogo
     vista = nome;
     const naCasa = nome !== "jogo";
     $("telaCasa").hidden = !naCasa;
@@ -722,26 +800,1155 @@
     document.body.classList.toggle("vista-casa", naCasa);
     $("casaGrade").hidden = !(estado && estado.fixa) || nome !== "casa";
     VISTAS_CASA.forEach(v => { if ($(v)) $(v).hidden = v !== nome; });
-    $("abaCasa").setAttribute("aria-current", naCasa ? "page" : "false");
-    $("abaJogo").setAttribute("aria-current", naCasa ? "false" : "page");
+    const aba = ABAS[nome] || "abaCasa";   // as vistas do "Mais" moram no Início
+    Object.values(ABAS).forEach(id => $(id).setAttribute("aria-current", id === aba ? "page" : "false"));
+    desenharNav();
     if (estado) desenharCasa(estado);
     if (nome === "vSemana") desenharSemana();
     if (nome === "vAlbum") desenharAlbum();
     if (nome === "vBaralho") desenharBaralho();
     if (nome === "vConquistas") desenharConquistas();
+    if (nome === "vMapa") desenharMapa();
+    if (nome === "vHistoria") desenharHistoria();
+    if (nome === "vPote") { desenharPote(); $("motivoPapel").hidden = true; }
+    if (nome === "vAbra") desenharAbra();
+    if (nome === "vPlaylist") desenharNossas();
+    if (nome === "vDiarioCasal") { paginasDiario = 1; desenharDiarioCasal(); }
+    if (nome === "vPerfil") desenharPerfil(!editandoManual());
+    if (nome === "vHistorico") { diasHist = 30; desenharHistorico(); }
+    if (vista !== "vMural" && muralJuntos) sairJuntos();
+    if (nome === "vMural") entrarMural();
     window.scrollTo(0, 0);
   }
 
   // cartões da Casa: um resumo de cada canto
   function desenharCasa(e) {
     if (!e.fixa) return;
-    const outro = e.jogadores[1 - eu];
     const hoje = hojeISO();
     $("cardDiarioSub").textContent = cumpriuNoDia(hoje, eu) ? "Cumprido hoje ✓" : "Seu desafio de hoje";
     const pend = cofre.filter(x => !x.feito).length;
     $("cardCofreSub").textContent = cofre.length ? `${pend} ${pend === 1 ? "pendente" : "pendentes"}` : "Guardem cartas para o reencontro";
-    $("cardJogoSub").textContent = e.vencedor !== null ? "Partida encerrada" : e.carta ? "Carta na mesa" : outro && e.vez === eu ? "Sua vez" : "Roleta, cartas e placar";
+    desenharCabecalho(e);
+    desenharDengo();
+    desenharHumor();
+    desenharMuralInicio();
     desenharCasaExtras(e);
+  }
+
+  // ---------- v7: navegação embaixo e cabeçalho do Início ----------
+  let navRecolhida = false;
+  function desenharNav() {
+    const fixa = !!(estado && estado.fixa);
+    ["abaCasa", "abaHistorico", "abaPerfil"].forEach(id => { $(id).hidden = !fixa; });
+    const comCarta = vista === "jogo" && !!(estado && estado.carta);
+    if (!comCarta) navRecolhida = false;   // sem carta na mesa, a barra volta sozinha
+    $("navRecolher").hidden = !comCarta;
+    $("navBaixo").classList.toggle("recolhida", navRecolhida);
+    $("navMostrar").hidden = !navRecolhida;
+  }
+  function recolherNav(v) { navRecolhida = v; desenharNav(); }
+
+  // ---------- v7: Manual de mim (um por pessoa, tabela manuais) ----------
+  let manuais = [{}, {}];            // campos de cada jogador
+  let timerManual = null, salvandoManual = 0;
+  const LINGUAGENS = { palavras: "Palavras de afirmação", tempo: "Tempo de qualidade", presentes: "Presentes", servico: "Atos de serviço", toque: "Toque físico" };
+  const TAMANHOS = [["camiseta", "Camiseta"], ["calca", "Calça"], ["calcado", "Calçado"], ["anel", "Anel"]];
+  // [campo, rótulo, limite, tipo, dica]
+  const CAMPOS_MANUAL = [
+    ["acalma", "O que me acalma", 300, "area"],
+    ["naoFazer", "O que não fazer quando estou mal", 300, "area"],
+    ["linguagemAmor", "Minha linguagem do amor", 0, "sel"],
+    ["comidaConforto", "Comida de conforto", 120],
+    ["doce", "Doce favorito", 80],
+    ["delivery", "Pedido de delivery favorito", 200, "area", "Restaurante e o que pedir"],
+    ["musicaConforto", "Música que me acalma", 200, "txt", "Nome ou link do Spotify"],
+    ["bebida", "Bebida favorita", 80],
+    ["tamanhos", "Tamanhos", 20, "tam"],
+    ["flores", "Flor favorita", 60],
+    ["datas", "Datas importantes para mim", 300, "area"],
+    ["apelidos", "Apelidos de que gosto", 120],
+    ["sonhos", "Coisas que quero fazer um dia", 300, "area"]
+  ];
+  const textoManual = (i, campo) => { const v = (manuais[i] || {})[campo]; return typeof v === "string" ? v.trim() : ""; };
+  // só o que é texto curto e conhecido vai para o banco (e volta de lá)
+  function limparManual(x) {
+    const out = {};
+    if (!x || typeof x !== "object") return out;
+    if (EMOJIS_AVATAR.includes(x.avatar)) out.avatar = x.avatar;
+    if (PALETA_AVATAR.includes(x.avatarCor)) out.avatarCor = x.avatarCor;
+    CAMPOS_MANUAL.forEach(([k, , max, tipo]) => {
+      const v = x[k];
+      if (tipo === "sel") { if (LINGUAGENS[v]) out[k] = v; return; }
+      if (tipo === "tam") {
+        const t = {};
+        if (v && typeof v === "object") TAMANHOS.forEach(([c]) => { if (typeof v[c] === "string" && v[c].trim()) t[c] = v[c].trim().slice(0, max); });
+        if (Object.keys(t).length) out[k] = t;
+        return;
+      }
+      if (typeof v === "string" && v.trim()) out[k] = v.slice(0, max);
+    });
+    return out;
+  }
+  async function carregarManuais(c) {
+    const { data, error } = await sb.from("manuais").select("jogador, campos").eq("sala", c);
+    if (c !== codigo || error || !data) return;
+    data.forEach(r => { if (r.jogador === 0 || r.jogador === 1) manuais[r.jogador] = limparManual(r.campos); });
+    manualMudou(true);
+  }
+  function receberManual(r) {
+    if (!r || (r.jogador !== 0 && r.jogador !== 1) || r.sala !== codigo) return;
+    // o meu, enquanto estou editando, fica como está neste aparelho
+    if (r.jogador === eu && (timerManual || salvandoManual)) return;
+    manuais[r.jogador] = limparManual(r.campos);
+    manualMudou(r.jogador === eu && !editandoManual());
+  }
+  const editandoManual = () => !!(document.activeElement && $("manualForm").contains(document.activeElement));
+  // redesenha tudo que usa o Manual; refazForm: também os campos do meu Manual
+  function manualMudou(refazForm) {
+    if (!estado) return;
+    desenharCabecalho(estado);
+    desenharPlacar(estado, [estado.jogadores[0] || "Pessoa 1", estado.jogadores[1] || "…"]);
+    if (vista === "vPerfil") desenharPerfil(refazForm);
+    manualMudouFns.forEach(f => f());
+  }
+  const manualMudouFns = [];   // dengo, humor… (fases seguintes)
+  function mudarManual(fn) {
+    fn(manuais[eu]);
+    manuais[eu] = limparManual(manuais[eu]);
+    statusManual("");
+    clearTimeout(timerManual);
+    timerManual = setTimeout(salvarManual, 800);
+  }
+  async function salvarManual() {
+    timerManual = null;
+    if (!codigo || (eu !== 0 && eu !== 1)) return;
+    salvandoManual++;
+    statusManual("Salvando…");
+    const c = codigo;
+    const { error } = await sb.from("manuais").upsert({ sala: c, jogador: eu, campos: limparManual(manuais[eu]), atualizado_em: new Date().toISOString() }, { onConflict: "sala,jogador" });
+    salvandoManual--;
+    if (c !== codigo) return;
+    statusManual(error ? "Não consegui salvar. Confira a internet." : "Salvo ✓");
+  }
+  function statusManual(t) { $("manualSalvo").textContent = t; $("manualSalvo").classList.toggle("erro-txt", /Não consegui/.test(t)); }
+
+  function desenharPerfil(refazForm) {
+    if (!estado) return;
+    const pa = $("perfilAvatar");
+    pa.textContent = ""; pa.appendChild(avatarEl(eu, "grande"));
+    $("perfilNome").textContent = estado.jogadores[eu] || "";
+    desenharEscolhaAvatar();
+    if (refazForm || !$("manualForm").childElementCount) desenharManualForm();
+    desenharManualOutro();
+  }
+  function desenharEscolhaAvatar() {
+    const a = avatarDe(eu), g = $("emojiGrade"), c = $("corGrade");
+    g.textContent = ""; c.textContent = "";
+    const sem = el("button", "emoji-op", "Aa"); sem.type = "button";
+    sem.setAttribute("aria-label", "Sem emoji (iniciais)"); sem.setAttribute("aria-pressed", String(!a.emoji));
+    sem.addEventListener("click", () => { mudarManual(m => { delete m.avatar; }); manualMudou(false); });
+    g.appendChild(sem);
+    EMOJIS_AVATAR.forEach(e => {
+      const b = el("button", "emoji-op", e); b.type = "button";
+      b.setAttribute("aria-pressed", String(a.emoji === e));
+      b.addEventListener("click", () => { mudarManual(m => { m.avatar = e; }); manualMudou(false); });
+      g.appendChild(b);
+    });
+    PALETA_AVATAR.forEach(cor => {
+      const b = el("button", "cor-op"); b.type = "button"; b.style.background = cor;
+      b.setAttribute("aria-label", "Cor " + cor); b.setAttribute("aria-pressed", String(a.cor === cor));
+      b.addEventListener("click", () => { mudarManual(m => { m.avatarCor = cor; }); manualMudou(false); });
+      c.appendChild(b);
+    });
+  }
+  function desenharManualForm() {
+    const f = $("manualForm"), m = manuais[eu] || {};
+    f.textContent = "";
+    CAMPOS_MANUAL.forEach(([k, rotulo, max, tipo, dica]) => {
+      const lab = el("label", "field");
+      lab.appendChild(el("span", "", rotulo));
+      if (tipo === "sel") {
+        const s = el("select"); s.id = "man-" + k;
+        s.appendChild(new Option("—", ""));
+        Object.entries(LINGUAGENS).forEach(([v, t]) => s.appendChild(new Option(t, v)));
+        s.value = m[k] || "";
+        s.addEventListener("change", () => mudarManual(x => { x[k] = s.value; }));
+        lab.appendChild(s);
+      } else if (tipo === "tam") {
+        const box = el("div", "manual-tamanhos");
+        TAMANHOS.forEach(([c, t]) => {
+          const l = el("label", "", t), i = el("input"); i.type = "text"; i.maxLength = max; i.id = "man-tam-" + c;
+          i.value = (m.tamanhos && m.tamanhos[c]) || "";
+          i.addEventListener("input", () => mudarManual(x => { x.tamanhos = { ...(x.tamanhos || {}), [c]: i.value }; }));
+          l.appendChild(i); box.appendChild(l);
+        });
+        lab.appendChild(box);
+      } else {
+        const i = tipo === "area" ? el("textarea") : el("input");
+        if (tipo === "area") i.rows = 2; else i.type = "text";
+        i.id = "man-" + k; i.maxLength = max;
+        if (dica) i.placeholder = dica;
+        i.value = m[k] || "";
+        i.addEventListener("input", () => mudarManual(x => { x[k] = i.value; }));
+        lab.appendChild(i);
+      }
+      f.appendChild(lab);
+    });
+  }
+  function desenharManualOutro() {
+    const o = 1 - eu, nome = nomeDe(o), m = manuais[o] || {}, dl = $("manualOutroLista");
+    $("manualOutro").hidden = !nome;
+    $("manualOutroTitulo").textContent = `📗 Manual ${nome ? "de " + nome : ""}`;
+    dl.textContent = "";
+    CAMPOS_MANUAL.forEach(([k, rotulo, , tipo]) => {
+      let v = "";
+      if (tipo === "sel") v = LINGUAGENS[m[k]] || "";
+      else if (tipo === "tam") v = m.tamanhos ? TAMANHOS.filter(([c]) => m.tamanhos[c]).map(([c, t]) => `${t}: ${m.tamanhos[c]}`).join(" · ") : "";
+      else v = textoManual(o, k);
+      if (!v) return;
+      const dt = el("dt", "", rotulo), dd = el("dd", "", v);
+      dt.id = "outro-" + k;
+      dl.append(dt, dd);
+    });
+    const vazio = !dl.childElementCount;
+    $("manualOutroVazio").hidden = !vazio;
+    $("manualOutroVazio").textContent = `${nome} ainda não preencheu o Manual.`;
+  }
+  // ---------- v7: pedir dengo ----------
+  let modelos = [];                  // pedidos_modelos: padrões (sala null) + listas próprias desta sala
+  let dengoSel = [];                 // ids dos modelos marcados (até 6)
+  let dengoRascunho = null;          // itens do diálogo de envio
+  let pedidosRascunho = null;        // lista em edição
+  let dengoRespondendo = null;       // "indo" | "nao" (painel aberto no cartão recebido)
+  const MAX_DENGO = 6;
+  const haQuanto = iso => {
+    const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (min < 1) return "agora";
+    if (min < 60) return `há ${min} min`;
+    const h = Math.round(min / 60);
+    return h < 24 ? `há ${h} h` : dataCurta(iso);
+  };
+  async function carregarModelos(c) {
+    const { data, error } = await sb.from("pedidos_modelos").select("*").or(`sala.is.null,sala.eq.${c}`).order("ordem", { ascending: true });
+    if (c !== codigo || error || !data) return;
+    modelos = data;
+    desenharDengo();
+  }
+  function linhaModelo(ev, row) {
+    if (!row || !row.id) return;
+    const i = modelos.findIndex(x => x.id === row.id);
+    if (ev === "DELETE") { if (i >= 0) modelos.splice(i, 1); }
+    else if (row.sala === codigo) { if (i >= 0) modelos[i] = { ...modelos[i], ...row }; else modelos.push(row); }
+    else return;
+    desenharDengo();
+  }
+  const meusModelos = () => modelos.filter(m => m.sala === codigo && m.jogador === eu).sort((a, b) => a.ordem - b.ordem);
+  const padroes = () => modelos.filter(m => m.sala === null || m.sala === undefined).sort((a, b) => a.ordem - b.ordem);
+  // a lista própria vale a partir da primeira edição; antes, os padrões
+  function minhaLista() { const m = meusModelos(); return (m.length ? m : padroes()).filter(x => x.ativo !== false); }
+  const meuPendente = () => dados.dengos.filter(d => d.de === eu && d.status === "pendente").sort((a, b) => a.criada_em < b.criada_em ? 1 : -1)[0] || null;
+  const pendenteParaMim = () => dados.dengos.filter(d => d.de === 1 - eu && d.status === "pendente").sort((a, b) => a.criada_em < b.criada_em ? 1 : -1)[0] || null;
+  const itensDe = d => Array.isArray(d && d.itens) ? d.itens.filter(x => x && typeof x === "object") : [];
+  const temChave = (d, k) => itensDe(d).some(x => x.chave === k);
+  function lerOk() { const v = lerLocal("lp-dengo-ok"); return Array.isArray(v) ? v : []; }
+  // a resposta mais nova ao meu pedido que eu ainda não fechei (até 24 h)
+  function respostaNova() {
+    const ok = lerOk();
+    return dados.dengos.filter(d => d.de === eu && (d.status === "indo" || d.status === "nao_consigo") && d.respondido_em && !ok.includes(d.id) &&
+      Date.now() - new Date(d.respondido_em).getTime() < 86400000).sort((a, b) => a.respondido_em < b.respondido_em ? 1 : -1)[0] || null;
+  }
+  function itemLi(x) {
+    const li = el("li");
+    li.append(el("span", "ic", x.emoji || "💗"), el("b", "", x.titulo || ""));
+    if (x.detalhe) li.append(el("span", "det", " — " + x.detalhe));
+    return li;
+  }
+
+  function desenharDengo() {
+    desenharAlertaInicio();
+    if (!estado || !estado.fixa) return;
+    const outro = nomeDe(1 - eu) || "seu amor";
+    // pedido pendente para mim (topo do Início)
+    const p = pendenteParaMim(), box = $("dengoRecebido");
+    box.hidden = !p;
+    if (p) {
+      const sozinho = temChave(p, "sozinho");
+      $("drTitulo").textContent = sozinho ? `${outro} precisa de um tempo sozinho(a). Não precisa fazer nada agora 🤍` : `${outro} pediu dengo!`;
+      const ul = $("drItens"); ul.textContent = "";
+      if (!sozinho) itensDe(p).forEach(x => ul.appendChild(itemLi(x)));
+      ul.hidden = sozinho;
+      $("drMsg").hidden = !p.mensagem; $("drMsg").textContent = p.mensagem || "";
+      $("drQuando").textContent = `Pedido ${haQuanto(p.criada_em)}`;
+      const lanche = temChave(p, "lanche") && textoManual(1 - eu, "delivery");
+      $("drDica").hidden = !lanche; $("drDica").textContent = lanche ? `💡 ${outro} costuma pedir: ${lanche}` : "";
+      const ex = $("drExtras"); ex.textContent = "";
+      if (!sozinho && (temChave(p, "ligar") || temChave(p, "dormir"))) {
+        const a = el("a", "wa", "Abrir o WhatsApp"); a.href = "https://wa.me/"; a.target = "_blank"; a.rel = "noopener"; ex.appendChild(a);
+      }
+      if (!sozinho && temChave(p, "musica") && musicasNossas().length) {
+        const b = el("button", "secondary", "Mandar uma da nossa playlist"); b.type = "button";
+        b.addEventListener("click", mandarDaPlaylist); ex.appendChild(b);
+      }
+      $("drAcoes").hidden = sozinho || !!dengoRespondendo;
+      $("drAqui").hidden = !sozinho;
+      $("drRespIndo").hidden = sozinho || dengoRespondendo !== "indo";
+      $("drRespNao").hidden = sozinho || dengoRespondendo !== "nao";
+      box.dataset.id = p.id;
+    } else dengoRespondendo = null;
+
+    // resposta ao meu pedido
+    const r = respostaNova();
+    $("dengoResposta").hidden = !r;
+    if (r) {
+      const indo = r.status === "indo", tempo = temChave(r, "sozinho");
+      $("dengoRespTitulo").textContent = tempo ? `${outro}: ${r.resposta || "Tô aqui quando precisar 🤍"}` : indo ? `${outro} está indo! 💨` : `${outro} não consegue agora`;
+      $("dengoResposta").classList.toggle("indo", indo);
+      const txt = tempo ? "" : r.resposta || "";
+      $("dengoRespTexto").hidden = !txt; $("dengoRespTexto").textContent = txt;
+      $("dengoResposta").dataset.id = r.id;
+    }
+
+    // meu pedido pendente
+    const meu = meuPendente();
+    $("dengoPedir").textContent = meu ? "Ver meu pedido" : "PEDIR DENGO 💗";
+    $("dengoPedir").setAttribute("aria-expanded", String(!!meu && !$("dengoMeu").hidden));
+    if (!meu) $("dengoMeu").hidden = true;
+    else {
+      $("dengoEsperando").textContent = `Pedido enviado 💗, esperando ${outro}…`;
+      const ul = $("dengoMeuItens"); ul.textContent = "";
+      itensDe(meu).forEach(x => ul.appendChild(itemLi(x)));
+      $("dengoAvisar").href = "https://wa.me/?text=" + encodeURIComponent("Te pedi dengo no Longe & Perto 💗");
+    }
+
+    // grade de pedidos rápidos
+    const lista = minhaLista();
+    dengoSel = dengoSel.filter(id => lista.some(m => m.id === id));
+    const g = $("dengoGrade"); g.textContent = "";
+    g.hidden = !!meu;
+    lista.forEach(m => {
+      const b = el("button", "dengo-op"); b.type = "button";
+      b.setAttribute("aria-pressed", String(dengoSel.includes(m.id)));
+      b.append(el("span", "ic", m.emoji), el("b", "", m.titulo));
+      b.addEventListener("click", () => marcarPedido(m));
+      g.appendChild(b);
+    });
+    $("dengoConta").textContent = meu ? "" : dengoSel.length ? `${dengoSel.length} de ${MAX_DENGO} marcados` : "Marque até 6 ou só toque em Pedir";
+    $("dengoEditar").hidden = !!meu;
+  }
+  function marcarPedido(m) {
+    const lista = minhaLista(), sozinhoId = (lista.find(x => x.chave === "sozinho") || {}).id;
+    erro("erroDengo", "");
+    if (dengoSel.includes(m.id)) dengoSel = dengoSel.filter(x => x !== m.id);
+    else if (m.chave === "sozinho") dengoSel = [m.id];          // exclusivo: desmarca os outros
+    else {
+      dengoSel = dengoSel.filter(x => x !== sozinhoId);
+      if (dengoSel.length >= MAX_DENGO) return erro("erroDengo", `Dá para pedir até ${MAX_DENGO} coisas de uma vez.`);
+      dengoSel.push(m.id);
+    }
+    desenharDengo();
+  }
+  function botaoPedir() {
+    if (meuPendente()) { $("dengoMeu").hidden = !$("dengoMeu").hidden; return desenharDengo(); }
+    abrirDengo();
+  }
+  function abrirDengo() {
+    if (!estado || !estado.jogadores[1 - eu]) return erro("erroDengo", "Espere a outra pessoa entrar na sala.");
+    const lista = minhaLista();
+    const escolhidos = dengoSel.map(id => lista.find(m => m.id === id)).filter(Boolean);
+    dengoRascunho = escolhidos.length
+      ? escolhidos.map(m => ({ emoji: m.emoji, titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
+      : [{ emoji: "💗", titulo: "Dengo", detalhe: "", chave: null }];
+    const ul = $("dengoResumo"); ul.textContent = "";
+    dengoRascunho.forEach((x, i) => {
+      const li = el("li");
+      li.append(el("span", "ic", x.emoji), el("b", "", x.titulo));
+      if (x.chave !== "sozinho" && !(dengoRascunho.length === 1 && x.titulo === "Dengo" && !x.chave)) {
+        const inp = el("input"); inp.type = "text"; inp.maxLength = 80; inp.value = x.detalhe.slice(0, 80);
+        inp.placeholder = "Detalhe (opcional)"; inp.setAttribute("aria-label", "Detalhe de " + x.titulo); inp.dataset.i = i;
+        inp.addEventListener("input", () => { dengoRascunho[i].detalhe = inp.value; });
+        li.appendChild(inp);
+      }
+      ul.appendChild(li);
+    });
+    $("dengoMensagem").value = "";
+    erro("erroDlgDengo", "");
+    $("dlgDengo").showModal();
+  }
+  async function enviarDengo(ev) {
+    ev.preventDefault();
+    if (!dengoRascunho || !codigo) return;
+    if (meuPendente()) { $("dlgDengo").close(); return; }
+    // o detalhe sugerido sem nada depois ("O que eu quero: ") não vai
+    const itens = dengoRascunho.map(x => {
+      const d = (x.detalhe || "").trim(), sug = (minhaLista().find(m => m.titulo === x.titulo) || {}).detalhe || "";
+      const o = { emoji: x.emoji, titulo: x.titulo };
+      if (d && d !== sug.trim()) o.detalhe = d.slice(0, 80);
+      if (x.chave) o.chave = x.chave;
+      return o;
+    });
+    const mensagem = $("dengoMensagem").value.trim().slice(0, 200) || null;
+    $("dengoEnviar").disabled = true;
+    const c = codigo;
+    const { data, error } = await sb.from("dengos").insert({ sala: c, de: eu, itens, mensagem }).select().single();
+    $("dengoEnviar").disabled = false;
+    if (error || !data) return erro("erroDlgDengo", "Não consegui enviar. Confira a internet e tente de novo.");
+    $("dlgDengo").close();
+    dengoSel = [];
+    linhaV5("dengos", "INSERT", data);
+    $("dengoMeu").hidden = false;
+    desenharDengo();
+  }
+  async function cancelarDengo() {
+    const meu = meuPendente();
+    if (!meu || !confirm("Cancelar o pedido de dengo?")) return;
+    const { data, error } = await sb.from("dengos").update({ status: "cancelado" }).eq("id", meu.id).eq("status", "pendente").select().maybeSingle();
+    if (error) return erro("erroDengo", "Não consegui cancelar. Confira a internet.");
+    linhaV5("dengos", "UPDATE", data || { ...meu, status: "cancelado" });
+  }
+  async function responderDengo(status, resposta) {
+    const p = pendenteParaMim();
+    if (!p) return;
+    erro("erroDengoResp", "");
+    const txt = (resposta || "").trim().slice(0, 200) || null;
+    const { data, error } = await sb.from("dengos").update({ status, resposta: txt, respondido_em: new Date().toISOString() })
+      .eq("id", p.id).eq("status", "pendente").select().maybeSingle();
+    if (error) return erro("erroDengoResp", "Não consegui responder. Confira a internet e tente de novo.");
+    dengoRespondendo = null;
+    $("drIndoTexto").value = ""; $("drNaoTexto").value = "";
+    if (data) linhaV5("dengos", "UPDATE", data);
+    else desenharDengo();   // já tinha sido respondido ou cancelado
+  }
+  function fecharResposta() {
+    const id = $("dengoResposta").dataset.id;
+    if (id) salvarLocal("lp-dengo-ok", [id, ...lerOk()].slice(0, 50));
+    desenharDengo();
+  }
+  // Nossa playlist (v6): sorteia uma e abre no Spotify
+  const musicasNossas = () => nossas.map(n => musicas.find(m => m.id === n.musica_id)).filter(Boolean);
+  function mandarDaPlaylist() {
+    const l = musicasNossas();
+    if (!l.length) return;
+    const m = l[Math.floor(Math.random() * l.length)];
+    window.open(m.url, "_blank", "noopener");
+  }
+
+  // editar a lista de pedidos rápidos (cópia dos padrões na primeira vez)
+  function abrirPedidos() {
+    const minhas = meusModelos();
+    pedidosRascunho = (minhas.length ? minhas : padroes()).map(m => ({
+      id: minhas.length ? m.id : null, chave: m.chave || null, emoji: m.emoji, titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false }));
+    erro("erroPedidos", "");
+    desenharPedidosEdit();
+    $("dlgPedidos").showModal();
+  }
+  function desenharPedidosEdit() {
+    const ul = $("pedidosEdit"); ul.textContent = "";
+    pedidosRascunho.forEach((p, i) => {
+      const li = el("li", "pedido-edit" + (p.ativo ? "" : " inativo"));
+      const emo = el("input"); emo.type = "text"; emo.value = p.emoji; emo.maxLength = 8; emo.className = "pe-emoji"; emo.setAttribute("aria-label", "Emoji");
+      emo.addEventListener("input", () => { p.emoji = emo.value; });
+      const tit = el("input"); tit.type = "text"; tit.value = p.titulo; tit.maxLength = 40; tit.className = "pe-titulo"; tit.setAttribute("aria-label", "Pedido");
+      tit.addEventListener("input", () => { p.titulo = tit.value; });
+      const det = el("input"); det.type = "text"; det.value = p.detalhe; det.maxLength = 120; det.className = "pe-detalhe"; det.placeholder = "Detalhe sugerido (opcional)";
+      det.setAttribute("aria-label", "Detalhe sugerido");
+      det.addEventListener("input", () => { p.detalhe = det.value; });
+      const ac = el("div", "pe-acoes");
+      const mover = (d, txt, rot) => {
+        const b = el("button", "linkbtn", txt); b.type = "button"; b.setAttribute("aria-label", rot);
+        b.disabled = i + d < 0 || i + d >= pedidosRascunho.length;
+        b.addEventListener("click", () => { const [x] = pedidosRascunho.splice(i, 1); pedidosRascunho.splice(i + d, 0, x); desenharPedidosEdit(); });
+        return b;
+      };
+      const at = el("label", "check"), cb = el("input"); cb.type = "checkbox"; cb.checked = p.ativo;
+      cb.addEventListener("change", () => { p.ativo = cb.checked; li.classList.toggle("inativo", !p.ativo); });
+      at.append(cb, document.createTextNode(" ativo"));
+      ac.append(mover(-1, "↑", "Subir"), mover(1, "↓", "Descer"), at);
+      if (!p.chave) {
+        const x = el("button", "linkbtn", "Apagar"); x.type = "button";
+        x.addEventListener("click", () => { pedidosRascunho.splice(i, 1); desenharPedidosEdit(); });
+        ac.appendChild(x);
+      }
+      li.append(emo, tit, det, ac);
+      ul.appendChild(li);
+    });
+  }
+  async function salvarPedidos() {
+    if (!codigo || !pedidosRascunho) return;
+    const linhas = pedidosRascunho.map((p, i) => ({ id: p.id, sala: codigo, jogador: eu, chave: p.chave, emoji: p.emoji.trim(), titulo: p.titulo.trim(),
+      detalhe: p.detalhe.trim() ? p.detalhe.slice(0, 120) : null, ordem: i + 1, ativo: p.ativo }));
+    if (linhas.some(l => [...l.emoji].length < 1 || l.emoji.length > 8)) return erro("erroPedidos", "Cada pedido precisa de um emoji.");
+    if (linhas.some(l => l.titulo.length < 2)) return erro("erroPedidos", "Cada pedido precisa de um nome (2 letras ou mais).");
+    if (!linhas.some(l => l.ativo)) return erro("erroPedidos", "Deixe pelo menos um pedido ativo.");
+    $("pedidosSalvar").disabled = true;
+    const c = codigo, antes = meusModelos();
+    const tirar = antes.filter(m => !linhas.some(l => l.id === m.id)).map(m => m.id);
+    const velhas = linhas.filter(l => l.id), novas = linhas.filter(l => !l.id).map(({ id, ...l }) => l);
+    let falhou = false;
+    if (tirar.length) falhou = !!(await sb.from("pedidos_modelos").delete().in("id", tirar)).error || falhou;
+    if (velhas.length) falhou = !!(await sb.from("pedidos_modelos").upsert(velhas, { onConflict: "id" })).error || falhou;
+    if (novas.length) falhou = !!(await sb.from("pedidos_modelos").insert(novas)).error || falhou;
+    $("pedidosSalvar").disabled = false;
+    if (c !== codigo) return;
+    await carregarModelos(c);
+    if (falhou) return erro("erroPedidos", "Não consegui salvar tudo. Confira a internet e tente de novo.");
+    $("dlgPedidos").close();
+  }
+  async function restaurarPedidos() {
+    if (!codigo || !confirm("Voltar para os pedidos padrão? A sua lista editada será apagada.")) return;
+    const c = codigo;
+    const { error } = await sb.from("pedidos_modelos").delete().eq("sala", c).eq("jogador", eu);
+    if (error) return erro("erroPedidos", "Não consegui restaurar. Confira a internet.");
+    await carregarModelos(c);
+    $("dlgPedidos").close();
+  }
+  function novoPedido() {
+    if (pedidosRascunho.length >= 30) return erro("erroPedidos", "Dá para ter até 30 pedidos.");
+    pedidosRascunho.push({ id: null, chave: null, emoji: "💗", titulo: "", detalhe: "", ativo: true });
+    desenharPedidosEdit();
+    const ts = $("pedidosEdit").querySelectorAll(".pe-titulo");
+    ts[ts.length - 1].focus();
+  }
+
+  // ---------- v7: humor do dia ----------
+  let humores = [];          // { dia, jogador, valor, nota, atualizado_em } (mais novos primeiro)
+  let sugestoes = [];        // sugestoes_cuidado (só leitura)
+  let faixaHumorFechada = false;
+  const CARAS = { 1: "😣", 2: "😢", 3: "😐", 4: "🙂", 5: "😄" };
+  const LIMITE_HUMORES = 800;
+  const humorDe = (j, dia = hojeISO()) => humores.find(h => h.jogador === j && h.dia === dia) || null;
+  async function carregarHumores(c) {
+    const [h, s] = await Promise.all([
+      sb.from("humores").select("*").eq("sala", c).order("dia", { ascending: false }).limit(LIMITE_HUMORES),
+      sugestoes.length ? { data: sugestoes } : sb.from("sugestoes_cuidado").select("*").order("ordem", { ascending: true })
+    ]);
+    if (c !== codigo) return;
+    if (!h.error && h.data) humores = h.data;
+    if (!s.error && s.data) sugestoes = s.data;
+    humorMudou();
+  }
+  function linhaHumor(row) {
+    if (!row || row.sala !== codigo || (row.jogador !== 0 && row.jogador !== 1) || !row.dia) return;
+    const i = humores.findIndex(h => h.dia === row.dia && h.jogador === row.jogador);
+    if (i >= 0) humores[i] = { ...humores[i], ...row }; else humores.unshift(row);
+    humores.sort((a, b) => a.dia < b.dia ? 1 : a.dia > b.dia ? -1 : 0);
+    humorMudou();
+  }
+  const humorMudouFns = [];   // histórico (Fase 6)
+  function humorMudou() { desenharHumor(); desenharFaixaHumor(); humorMudouFns.forEach(f => f()); }
+  async function gravarHumor(mudar) {
+    if (!codigo || (eu !== 0 && eu !== 1)) return;
+    const dia = hojeISO(), atual = humorDe(eu, dia) || { valor: 3, nota: null };
+    const row = { sala: codigo, dia, jogador: eu, valor: atual.valor, nota: atual.nota || null, atualizado_em: new Date().toISOString() };
+    mudar(row);
+    linhaHumor(row);   // aparece na hora aqui
+    erro("erroHumor", "");
+    const { error } = await sb.from("humores").upsert(row, { onConflict: "sala,dia,jogador" });
+    if (error) return erro("erroHumor", "Não consegui salvar o humor. Confira a internet e tente de novo.");
+    $("humorSalvo").textContent = "Salvo ✓";
+  }
+  function escolherHumor(v) {
+    gravarHumor(r => { r.valor = v; });
+    $("humorNotaBox").hidden = false;
+  }
+  function salvarNotaHumor() {
+    if (!humorDe(eu)) return;
+    const t = $("humorNota").value.trim().slice(0, 140);
+    gravarHumor(r => { r.nota = t || null; });
+  }
+  // atalhos das sugestões de cuidado (a Fase 4 acrescenta o mural)
+  const wa = txt => { const a = el("a", "wa-mini", txt); a.href = "https://wa.me/"; a.target = "_blank"; a.rel = "noopener"; return a; };
+  const ACOES_CUIDADO = {
+    mensagem: () => wa("Abrir o WhatsApp"),
+    audio: () => wa("Abrir o WhatsApp"),
+    ligar: () => wa("Abrir o WhatsApp"),
+    desculpas: () => wa("Abrir o WhatsApp"),
+    abra_quando: () => botaoAcao("Escrever uma carta", () => { mostrarVista("vAbra"); abrirNovaAbra(null); }),
+    pensei: () => botaoAcao("Mandar agora 💭", () => mandarCarinho("pensei")),
+    dengo_lanche: () => {
+      const d = textoManual(1 - eu, "delivery");
+      return el("span", "sug-info", d ? `💡 ${nomeDe(1 - eu)} costuma pedir: ${d}` : `O pedido favorito ainda não está no Manual de ${nomeDe(1 - eu)}.`);
+    },
+    manual: () => botaoAcao("Ver o Manual", () => abrirManualOutro("acalma")),
+    mural: () => botaoAcao("Abrir o mural", () => abrirMural(false)),
+    partida: () => botaoAcao("Ir para o jogo", () => mostrarVista("jogo")),
+    musica: () => musicasNossas().length ? botaoAcao("Sortear da nossa playlist", mandarDaPlaylist) : null,
+    reencontro: () => botaoAcao("Abrir o Cofre", () => mostrarVista("vCofre"))
+  };
+  function botaoAcao(txt, fn) { const b = el("button", "linkbtn", txt); b.type = "button"; b.addEventListener("click", fn); return b; }
+
+  function desenharHumor() {
+    if (!estado || !estado.fixa) return;
+    const meu = humorDe(eu), o = 1 - eu, nome = nomeDe(o);
+    document.querySelectorAll("#humorCaras button").forEach(b => b.setAttribute("aria-pressed", String(!!meu && meu.valor === Number(b.dataset.v))));
+    if (meu && document.activeElement !== $("humorNota")) $("humorNota").value = meu.nota || "";
+    if (!meu) { $("humorNotaBox").hidden = true; $("humorSalvo").textContent = ""; }
+    $("humorOutro").hidden = !nome;
+    if (!nome) return;
+    const h = humorDe(o);
+    $("humorOutroTitulo").textContent = `Humor ${nome ? "de " + nome : ""} hoje`;
+    $("humorOutroCaras").hidden = !h;
+    document.querySelectorAll("#humorOutroCaras span").forEach(s => s.classList.toggle("destaque", !!h && h.valor === Number(s.dataset.v)));
+    $("humorOutroCaras").setAttribute("aria-label", h ? `${nome}: ${CARAS[h.valor]}` : "");
+    $("humorOutroNota").hidden = !(h && h.nota); $("humorOutroNota").textContent = h && h.nota ? `“${h.nota}”` : "";
+    $("humorOutroVazio").hidden = !!h; $("humorOutroVazio").textContent = `${nome} ainda não disse como está hoje`;
+    // dicas do Manual no humor baixo
+    const dicas = $("humorDicas"); dicas.textContent = "";
+    if (h && h.valor <= 2) {
+      const acalma = textoManual(o, "acalma"), evitar = textoManual(o, "naoFazer");
+      if (acalma) dicas.appendChild(el("p", "humor-dica", `💡 O que acalma ${nome}: ${acalma}`));
+      if (evitar) dicas.appendChild(el("p", "humor-dica", `🚫 Evite: ${evitar}`));
+    }
+    // sugestões de cuidado pela faixa do humor
+    const ul = $("humorSug"); ul.textContent = "";
+    if (h) sugestoes.filter(s => s.humor_min <= h.valor && h.valor <= s.humor_max).sort((a, b) => a.ordem - b.ordem).slice(0, 4).forEach(s => {
+      const li = el("li");
+      li.appendChild(el("span", "sug-texto", s.texto));
+      const f = ACOES_CUIDADO[s.acao], x = f ? f() : null;
+      if (x) li.appendChild(x);
+      ul.appendChild(li);
+    });
+  }
+  // no Jogo, com a partida zerada e alguém num dia difícil: sugere Romântico + prendas fofas (sem mudar nada sozinho)
+  function desenharFaixaHumor() {
+    const e = estado, hoje = hojeISO();
+    const dificil = !!e && e.fixa && [0, 1].some(j => { const h = humorDe(j, hoje); return h && h.valor <= 2; });
+    const podeChips = permitido("nivel", "romantico") && (config.chipsQuemMuda !== "dono" || souDono);
+    const jaUsa = !!e && e.prendasFofas && niveisDaPartida(e.niveis).join() === "romantico";
+    $("faixaHumor").hidden = !(dificil && podeChips && !faixaHumorFechada && e && placarZerado(e) && !e.carta && e.vencedor === null && !jaUsa);
+  }
+  function usarFaixaHumor() {
+    if (!permitido("nivel", "romantico") || (config.chipsQuemMuda === "dono" && !souDono)) return;
+    gravar(n => { if (!placarZerado(n)) return; n.niveis = ["romantico"]; n.prendasFofas = true; });
+    faixaHumorFechada = true;
+    desenharFaixaHumor();
+  }
+
+  // ---------- v7: mural de desenho ----------
+  // traços: [{ cor, esp, pts: [[x, y], …] }], x e y de 0 a 1000 (proporção 3:4, igual em qualquer tela)
+  const MURAL_CORES = ["#E0405F", "#FF7EB6", "#FF8A3D", "#2E86DE", "#1FA37A", "#1B1530"];
+  const MURAL_ESP = { 1: 6, 2: 14, 3: 30 };          // espessura em milésimos da largura
+  const MURAL_FUNDOS = ["papel", "quadriculado", "escuro", "rosa"];
+  const MURAL_MAX = 290000;                          // o banco aceita até ~300 KB
+  const MURAL_PASSOS = 30;
+  let tracos = [], pilhaMural = [], muralCor = MURAL_CORES[0], muralEsp = 2, muralBorracha = false, muralFundo = "papel";
+  let tracoAtual = null, muralJuntos = false, muralOutroNoJuntos = false, filtroMural = "todos", muralVendo = null;
+  let loteMural = [], timerLote = null, timerCursor = null, conviteMural = null, contTraco = 0;
+  const remotos = new Map();   // id -> traço sendo desenhado pelo outro
+
+  const tracoValido = t => t && (MURAL_CORES.includes(t.cor) || t.cor === "apagar") && MURAL_ESP[t.esp] && Array.isArray(t.pts);
+  const tracosDe = m => Array.isArray(m && m.tracos) ? m.tracos.filter(tracoValido) : [];
+  function tamanhoMural(ts) {
+    // jsonb::text tem um espaço depois de ":" e ","
+    const s = JSON.stringify(ts.map(t => ({ cor: t.cor, esp: t.esp, pts: t.pts })));
+    let extra = 0;
+    for (let i = 0; i < s.length; i++) if (s[i] === "," || s[i] === ":") extra++;
+    return new TextEncoder().encode(s).length + extra;
+  }
+  function pintarTraco(ctx, t, w, h, de) {
+    const pts = t.pts;
+    if (!pts.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = t.cor === "apagar" ? "destination-out" : "source-over";
+    ctx.strokeStyle = ctx.fillStyle = t.cor === "apagar" ? "#000" : t.cor;
+    ctx.lineWidth = MURAL_ESP[t.esp] * w / 1000;
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    const i0 = Math.max(0, (de || 0) - 1);
+    const p0 = pts[i0];
+    if (pts.length === 1) {
+      ctx.beginPath(); ctx.arc(p0[0] * w / 1000, p0[1] * h / 1000, ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.moveTo(p0[0] * w / 1000, p0[1] * h / 1000);
+      for (let i = i0 + 1; i < pts.length; i++) ctx.lineTo(pts[i][0] * w / 1000, pts[i][1] * h / 1000);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // ajusta o canvas à largura disponível (3:4) e redesenha
+  function prepararCanvas(cv, ts, maxW, maxH) {
+    const ratio = window.devicePixelRatio || 1;
+    let w = Math.max(40, Math.floor(maxW)), h = Math.round(w * 4 / 3);
+    if (maxH && h > maxH) { h = Math.max(60, Math.floor(maxH)); w = Math.round(h * 3 / 4); }
+    cv.style.width = w + "px"; cv.style.height = h + "px";
+    cv.width = Math.round(w * ratio); cv.height = Math.round(h * ratio);
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ts.forEach(t => pintarTraco(ctx, t, w, h));
+    return { w, h };
+  }
+  let muralTam = { w: 300, h: 400 };
+  function redesenharMural() {
+    const q = $("muralQuadro");
+    if (!q || $("vMural").hidden) return;
+    // cabe entre as ferramentas e a barra de baixo
+    const nav = $("navBaixo").offsetHeight || 0, ferr = document.querySelector(".mural-ferramentas").offsetHeight || 0;
+    const livre = Math.max(260, innerHeight - nav - ferr - 40);
+    muralTam = prepararCanvas($("muralCanvas"), tracos, q.parentElement.clientWidth, livre);
+    q.style.width = muralTam.w + "px";
+    MURAL_FUNDOS.forEach(f => q.classList.toggle("fundo-" + f, f === muralFundo));
+  }
+  function miniatura(m, larg) {
+    const box = el("span", "mural-thumb fundo-" + (MURAL_FUNDOS.includes(m.fundo) ? m.fundo : "papel"));
+    const cv = el("canvas");
+    box.appendChild(cv);
+    prepararCanvas(cv, tracosDe(m), larg);
+    return box;
+  }
+  function entrarMural() {
+    $("muralEnviar").textContent = `Enviar para ${nomeDe(1 - eu) || "o outro"} 💌`;
+    desenharFerramentas();
+    requestAnimationFrame(() => { redesenharMural(); document.querySelector(".mural-ferramentas").scrollIntoView({ block: "start" }); });
+    desenharMuralEstado();
+    desenharGaleria();
+  }
+  function abrirMural(juntos) {
+    mostrarVista("vMural");
+    if (juntos && ambosPresentes()) comecarJuntos();
+  }
+  function desenharFerramentas() {
+    const cs = $("muralCores"); cs.textContent = "";
+    MURAL_CORES.forEach(c => {
+      const b = el("button", "mural-cor"); b.type = "button"; b.style.background = c;
+      b.setAttribute("aria-label", "Cor " + c); b.setAttribute("aria-pressed", String(!muralBorracha && c === muralCor));
+      b.addEventListener("click", () => { muralCor = c; muralBorracha = false; desenharFerramentas(); });
+      cs.appendChild(b);
+    });
+    const es = $("muralEsps"); es.textContent = "";
+    [1, 2, 3].forEach(n => {
+      const b = el("button", "mural-esp"); b.type = "button";
+      b.setAttribute("aria-label", ["Fina", "Média", "Grossa"][n - 1]); b.setAttribute("aria-pressed", String(n === muralEsp));
+      const i = el("i"); i.style.width = i.style.height = (4 + n * 5) + "px"; b.appendChild(i);
+      b.addEventListener("click", () => { muralEsp = n; desenharFerramentas(); });
+      es.appendChild(b);
+    });
+    $("muralBorracha").setAttribute("aria-pressed", String(muralBorracha));
+    $("muralFundo").value = muralFundo;
+    $("muralDesfazer").disabled = muralJuntos ? !tracos.some(t => t.de === eu) : !pilhaMural.length;
+  }
+  function desenharMuralEstado() {
+    const outro = nomeDe(1 - eu) || "o outro";
+    $("muralJuntos").hidden = muralJuntos || !ambosPresentes();
+    $("muralSairJuntos").hidden = !muralJuntos;
+    $("muralGuardar").hidden = !muralJuntos;
+    $("muralEnviar").hidden = muralJuntos;
+    $("muralJuntosStatus").hidden = !muralJuntos;
+    $("muralJuntosStatus").textContent = !muralJuntos ? "" : muralOutroNoJuntos ? `🤝 Desenhando junto com ${outro}` : `Esperando ${outro} entrar no desenho…`;
+    $("muralCursor").style.background = avatarDe(1 - eu).cor;
+  }
+  function guardarPasso() {
+    pilhaMural.push(tracos.map(t => ({ ...t, pts: t.pts.slice() })));
+    if (pilhaMural.length > MURAL_PASSOS) pilhaMural.shift();
+  }
+  function pontoDe(ev) {
+    const r = $("muralCanvas").getBoundingClientRect();
+    const x = Math.round((ev.clientX - r.left) / r.width * 1000), y = Math.round((ev.clientY - r.top) / r.height * 1000);
+    return [Math.min(1000, Math.max(0, x)), Math.min(1000, Math.max(0, y))];
+  }
+  function comecarTraco(ev) {
+    if (ev.button !== undefined && ev.button > 0) return;
+    ev.preventDefault();
+    try { $("muralCanvas").setPointerCapture(ev.pointerId); } catch (err) {}
+    if (!muralJuntos) guardarPasso();
+    tracoAtual = { id: `${eu}-${Date.now().toString(36)}-${contTraco++}`, de: eu, cor: muralBorracha ? "apagar" : muralCor, esp: muralEsp, pts: [pontoDe(ev)] };
+    tracos.push(tracoAtual);
+    pintarTraco($("muralCanvas").getContext("2d"), tracoAtual, muralTam.w, muralTam.h);
+    enviarLote(tracoAtual, [tracoAtual.pts[0]]);
+    erro("erroMural", "");
+    desenharFerramentas();
+  }
+  function moverTraco(ev) {
+    if (!tracoAtual) return;
+    ev.preventDefault();
+    const evs = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
+    const novos = [];
+    (evs.length ? evs : [ev]).forEach(e2 => {
+      const p = pontoDe(e2), u = tracoAtual.pts[tracoAtual.pts.length - 1];
+      if (Math.hypot(p[0] - u[0], p[1] - u[1]) < 2) return;   // simplifica: pontos a menos de 2 unidades
+      tracoAtual.pts.push(p); novos.push(p);
+    });
+    if (!novos.length) return;
+    pintarTraco($("muralCanvas").getContext("2d"), tracoAtual, muralTam.w, muralTam.h, tracoAtual.pts.length - novos.length);
+    enviarLote(tracoAtual, novos);
+  }
+  function fimTraco() {
+    if (!tracoAtual) return;
+    enviarLote(tracoAtual, [], true);
+    tracoAtual = null;
+  }
+  // ao vivo: os pontos vão por broadcast em lotes de ~50 ms
+  function enviarLote(t, pts, fim) {
+    if (!muralJuntos) return;
+    const ult = loteMural[loteMural.length - 1];
+    if (ult && ult.id === t.id) { ult.pts.push(...pts); if (fim) ult.fim = true; }
+    else loteMural.push({ id: t.id, cor: t.cor, esp: t.esp, pts: pts.slice(), fim: !!fim });
+    if (fim) return soltarLote();
+    if (!timerLote) timerLote = setTimeout(soltarLote, 50);
+  }
+  function soltarLote() {
+    clearTimeout(timerLote); timerLote = null;
+    const l = loteMural; loteMural = [];
+    l.forEach(x => mandarMural({ t: "pts", ...x }));
+  }
+  function mandarEstadoMural() {
+    const partes = [[]];
+    let tam = 0;
+    tracos.forEach(t => {
+      const n = t.pts.length * 12 + 60;
+      if (tam + n > 60000 && partes[partes.length - 1].length) { partes.push([]); tam = 0; }
+      partes[partes.length - 1].push({ id: t.id, de: t.de, cor: t.cor, esp: t.esp, pts: t.pts });
+      tam += n;
+    });
+    partes.forEach((ts, i) => mandarMural({ t: "estado", parte: i, total: partes.length, tracos: ts, fundo: muralFundo }));
+  }
+  let recebendoEstado = false;
+  function mandarMural(p) {
+    try { canal && canal.send({ type: "broadcast", event: "mural", payload: { ...p, jogador: eu } }); } catch (err) {}
+  }
+  function comecarJuntos() {
+    muralJuntos = true; muralOutroNoJuntos = false;
+    pilhaMural = [];
+    mandarMural({ t: "convite" });
+    desenharMuralEstado(); desenharFerramentas();
+  }
+  function sairJuntos() {
+    if (!muralJuntos) return;
+    soltarLote();
+    muralJuntos = false; muralOutroNoJuntos = false; remotos.clear();
+    mandarMural({ t: "saiu" });
+    $("muralCursor").hidden = true;
+    desenharMuralEstado(); desenharFerramentas();
+  }
+  function entrarNoConvite() {
+    esconderConvite();
+    tracos = []; pilhaMural = []; $("muralLegenda").value = "";
+    muralJuntos = true; muralOutroNoJuntos = true;
+    mostrarVista("vMural");
+    mandarMural({ t: "entrou" });
+    desenharMuralEstado();
+  }
+  function esconderConvite() { conviteMural = null; $("muralConvite").hidden = true; }
+  function receberMural(p) {
+    if (!p || p.jogador !== 1 - eu || !estado || !estado.fixa) return;
+    const outro = nomeDe(1 - eu);
+    if (p.t === "convite") {
+      if (muralJuntos) { muralOutroNoJuntos = true; mandarMural({ t: "entrou" }); mandarEstadoMural(); return desenharMuralEstado(); }
+      conviteMural = Date.now();
+      $("muralConviteTxt").textContent = `${outro} quer desenhar junto com você ✏️`;
+      $("muralConvite").hidden = false;
+      vibrar([60, 40, 60]);
+      return;
+    }
+    if (p.t === "saiu") { esconderConvite(); if (muralJuntos) { muralOutroNoJuntos = false; remotos.clear(); $("muralCursor").hidden = true; desenharMuralEstado(); } return; }
+    if (p.t === "guardado") {
+      if (muralJuntos) { tracos = []; pilhaMural = []; $("muralLegenda").value = ""; muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); redesenharMural(); desenharMuralEstado(); desenharFerramentas(); }
+      return;
+    }
+    if (!muralJuntos) return;
+    if (p.t === "entrou") {
+      muralOutroNoJuntos = true;
+      mandarEstadoMural();
+      return desenharMuralEstado();
+    }
+    if (p.t === "estado") {
+      muralOutroNoJuntos = true;
+      // a primeira parte só vale se o meu quadro está vazio; as seguintes completam
+      if (!p.parte) recebendoEstado = !tracos.length;
+      if (recebendoEstado && Array.isArray(p.tracos)) tracos.push(...p.tracos.filter(tracoValido).map(t => ({ ...t, id: typeof t.id === "string" ? t.id : undefined })));
+      if (!(p.parte + 1 < p.total)) recebendoEstado = false;
+      if (MURAL_FUNDOS.includes(p.fundo)) muralFundo = p.fundo;
+      redesenharMural(); desenharMuralEstado(); desenharFerramentas();
+      return;
+    }
+    if (p.t === "pts" && typeof p.id === "string" && Array.isArray(p.pts)) {
+      let t = remotos.get(p.id);
+      if (!t) {
+        if (!tracoValido({ cor: p.cor, esp: p.esp, pts: [] })) return;
+        t = { id: p.id, de: 1 - eu, cor: p.cor, esp: p.esp, pts: [] };
+        remotos.set(p.id, t); tracos.push(t);
+      }
+      const antes = t.pts.length;
+      p.pts.forEach(q => { if (Array.isArray(q) && q.length === 2 && q.every(Number.isFinite)) t.pts.push([Math.round(q[0]), Math.round(q[1])]); });
+      if (!$("vMural").hidden) {
+        pintarTraco($("muralCanvas").getContext("2d"), t, muralTam.w, muralTam.h, antes);
+        const u = t.pts[t.pts.length - 1];
+        if (u) {
+          const c = $("muralCursor");
+          c.style.left = (u[0] * muralTam.w / 1000) + "px"; c.style.top = (u[1] * muralTam.h / 1000) + "px"; c.hidden = false;
+          clearTimeout(timerCursor); timerCursor = setTimeout(() => { c.hidden = true; }, 1500);
+        }
+      }
+      if (p.fim) remotos.delete(p.id);
+      return;
+    }
+    if (p.t === "tirar" && typeof p.id === "string") { tracos = tracos.filter(t => t.id !== p.id); return redesenharMural(); }
+    if (p.t === "limpar") { tracos = []; remotos.clear(); return redesenharMural(); }
+    if (p.t === "fundo" && MURAL_FUNDOS.includes(p.fundo)) { muralFundo = p.fundo; redesenharMural(); desenharFerramentas(); }
+  }
+  function desfazerMural() {
+    if (muralJuntos) {
+      // juntos: desfaz o meu último traço
+      for (let i = tracos.length - 1; i >= 0; i--) if (tracos[i].de === eu) { mandarMural({ t: "tirar", id: tracos[i].id }); tracos.splice(i, 1); break; }
+    } else if (pilhaMural.length) tracos = pilhaMural.pop();
+    redesenharMural(); desenharFerramentas();
+  }
+  function limparMural() {
+    if (!tracos.length || !confirm("Limpar o desenho?")) return;
+    if (!muralJuntos) guardarPasso();
+    tracos = []; remotos.clear();
+    if (muralJuntos) mandarMural({ t: "limpar" });
+    redesenharMural(); desenharFerramentas();
+  }
+  function mudarFundoMural() {
+    muralFundo = MURAL_FUNDOS.includes($("muralFundo").value) ? $("muralFundo").value : "papel";
+    if (muralJuntos) mandarMural({ t: "fundo", fundo: muralFundo });
+    redesenharMural();
+  }
+  async function salvarMural(juntos) {
+    if (!codigo || !estado) return;
+    const ts = tracos.filter(t => t.pts.length).map(t => ({ cor: t.cor, esp: t.esp, pts: t.pts }));
+    if (!ts.some(t => t.cor !== "apagar")) return erro("erroMural", "Desenhe alguma coisa primeiro.");
+    if (tamanhoMural(ts) > MURAL_MAX) return erro("erroMural", "Desenho muito grande, apague alguns traços");
+    if (!juntos && !estado.jogadores[1 - eu]) return erro("erroMural", "Espere a outra pessoa entrar na sala.");
+    const b = juntos ? $("muralGuardar") : $("muralEnviar");
+    b.disabled = true;
+    const legenda = $("muralLegenda").value.trim().slice(0, 80) || null;
+    const { data, error } = await sb.from("murais").insert({ sala: codigo, de: eu, para: juntos ? null : 1 - eu, tracos: ts, fundo: muralFundo, legenda }).select().single();
+    b.disabled = false;
+    if (error || !data) return erro("erroMural", /check|grande|300000/.test((error && error.message) || "") ? "Desenho muito grande, apague alguns traços" : "Não consegui guardar o desenho. Confira a internet e tente de novo.");
+    linhaV5("murais", "INSERT", data);
+    if (juntos) { mandarMural({ t: "guardado" }); muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); }
+    tracos = []; pilhaMural = []; $("muralLegenda").value = "";
+    erro("erroMural", juntos ? "Guardado ✓" : `Enviado para ${nomeDe(1 - eu)} 💌`);
+    redesenharMural(); desenharMuralEstado(); desenharFerramentas();
+  }
+  const quemMural = m => m.para === null || m.para === undefined ? "Feito juntos" : m.de === eu ? `Para ${nomeDe(m.para)}` : `De ${nomeDe(m.de)}`;
+  function desenharGaleria() {
+    if ($("vMural").hidden) return;
+    document.querySelectorAll("#muralFiltro [data-f]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === filtroMural)));
+    const g = $("muralGaleria"); g.textContent = "";
+    const lista = dados.murais.filter(m => filtroMural === "todos" || (filtroMural === "juntos" ? m.para == null : filtroMural === "enviados" ? m.para != null && m.de === eu : m.para === eu))
+      .sort((a, b) => a.criada_em < b.criada_em ? 1 : -1);
+    $("muralGaleriaVazia").hidden = !!lista.length;
+    const larg = Math.floor((g.clientWidth || 300) / 3) - 8;
+    lista.forEach(m => {
+      const b = el("button", "mural-item"); b.type = "button";
+      b.appendChild(miniatura(m, larg));
+      b.appendChild(el("span", "mural-item-quem", quemMural(m)));
+      if (m.para === eu && !m.visto_em) b.appendChild(el("span", "selo-novo", "novo"));
+      b.addEventListener("click", () => verMural(m));
+      g.appendChild(b);
+    });
+  }
+  function verMural(m) {
+    muralVendo = m;
+    $("muralVerTitulo").textContent = quemMural(m);
+    $("muralVerLegenda").hidden = !m.legenda; $("muralVerLegenda").textContent = m.legenda || "";
+    $("muralVerData").textContent = new Date(m.criada_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const q = $("muralVerQuadro");
+    MURAL_FUNDOS.forEach(f => q.classList.toggle("fundo-" + f, f === (MURAL_FUNDOS.includes(m.fundo) ? m.fundo : "papel")));
+    $("dlgMuralVer").showModal();
+    const tam = prepararCanvas($("muralVerCanvas"), tracosDe(m), Math.min(560, innerWidth - 40), innerHeight - 190);
+    q.style.width = tam.w + "px";
+    if (m.para === eu && !m.visto_em) {
+      const agora = new Date().toISOString();
+      linhaV5("murais", "UPDATE", { ...m, visto_em: agora });
+      sb.from("murais").update({ visto_em: agora }).eq("id", m.id).then(() => {}, () => {});
+    }
+  }
+  async function apagarMural() {
+    const m = muralVendo;
+    if (!m || !confirm("Apagar este desenho? Some para os dois.")) return;
+    const { error } = await sb.from("murais").delete().eq("id", m.id);
+    if (error) return alert("Não consegui apagar. Confira a internet.");
+    linhaV5("murais", "DELETE", { id: m.id });
+    $("dlgMuralVer").close();
+  }
+  // Início: o último desenho recebido (selo se ainda não visto)
+  function desenharAlertaInicio() {
+    const tem = !!(estado && estado.fixa) && (!!pendenteParaMim() || dados.murais.some(m => m.para === eu && !m.visto_em));
+    $("abaCasa").classList.toggle("alerta", tem);
+  }
+  function desenharMuralInicio() {
+    desenharAlertaInicio();
+    if (!estado || !estado.fixa) return;
+    const outro = nomeDe(1 - eu) || "o outro";
+    const recebidos = dados.murais.filter(m => m.para === eu).sort((a, b) => a.criada_em < b.criada_em ? 1 : -1);
+    const novo = recebidos.find(m => !m.visto_em), m = novo || recebidos[0];
+    $("muralInicioTxt").textContent = novo ? `— ${nomeDe(novo.de)} deixou algo para você ❤️` : m ? `— de ${nomeDe(m.de)}` : `— desenhe algo para ${outro}`;
+    $("casaMural").classList.toggle("tem-novo", !!novo);
+    const v = $("muralInicioVer");
+    v.hidden = !m; v.textContent = "";
+    if (m) { v.appendChild(miniatura(m, Math.min(180, ($("casaMural").clientWidth || 300) - 40))); v.onclick = () => verMural(m); }
+    $("muralInicioLegenda").hidden = !(m && m.legenda); $("muralInicioLegenda").textContent = m && m.legenda ? m.legenda : "";
+    const n = dados.murais.filter(x => x.para === eu && !x.visto_em).length;
+    $("cardMuralSub").textContent = n ? `${n} ${n === 1 ? "novo" : "novos"} para você` : dados.murais.length ? `${dados.murais.length} ${dados.murais.length === 1 ? "desenho" : "desenhos"}` : "Desenhos de vocês";
+  }
+  // cartas que pedem um desenho ganham o atalho para o mural
+  const RE_DESENHO = /\bdesenhe\b|\bdesenhar\b/i;
+  function desenharCartaMural(e) {
+    const c = e && e.carta;
+    $("cartaMural").hidden = !(e && e.fixa && c && c.texto && RE_DESENHO.test(c.texto));
+  }
+
+  // ---------- v7: aba Histórico ----------
+  let filtroHist = "tudo", diasHist = 30;
+  const DIAS_SEM = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const diaDe = iso => hojeISO(new Date(iso));
+  function rotuloDia(dia) {
+    const hoje = hojeISO();
+    if (dia === hoje) return "Hoje";
+    if (dia === somarDias(hoje, -1)) return "Ontem";
+    const [a, m, d] = dia.split("-").map(Number), dt = new Date(Date.UTC(a, m - 1, d));
+    return `${DIAS_SEM[dt.getUTCDay()]}, ${d} ${MESES_CURTOS[m - 1]}${a !== Number(hoje.slice(0, 4)) ? " " + a : ""}`;
+  }
+  const horaDe = iso => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Bahia" });
+  function duracao(ms) {
+    const min = Math.max(0, Math.round(ms / 60000));
+    if (min < 1) return "menos de 1 min";
+    if (min < 60) return `${min} min`;
+    const h = Math.floor(min / 60), r = min % 60;
+    return h < 24 ? `${h} h${r ? " " + r + " min" : ""}` : `${Math.round(h / 24)} ${Math.round(h / 24) === 1 ? "dia" : "dias"}`;
+  }
+  const soSozinho = d => itensDe(d).length > 0 && itensDe(d).every(x => x.chave === "sozinho");
+  // tudo que vai para a linha do tempo: { tipo, quando (ISO), dia, el() }
+  function eventosHist() {
+    const ev = [];
+    dados.dengos.forEach(d => { if (d.criada_em) ev.push({ tipo: "dengo", quando: d.criada_em, dia: diaDe(d.criada_em), x: d }); });
+    humores.forEach(h => ev.push({ tipo: "humor", quando: h.atualizado_em || h.dia + "T15:00:00Z", dia: h.dia, x: h }));
+    dados.murais.forEach(m => { if (m.criada_em) ev.push({ tipo: "mural", quando: m.criada_em, dia: diaDe(m.criada_em), x: m }); });
+    partidasSala.forEach(p => { if (p.finalizada_em) ev.push({ tipo: "partida", quando: p.finalizada_em, dia: diaDe(p.finalizada_em), x: p }); });
+    return ev.sort((a, b) => a.quando < b.quando ? 1 : a.quando > b.quando ? -1 : 0);
+  }
+  function itemHist(e) {
+    const li = el("li", "hist-item hist-" + e.tipo), x = e.x;
+    li.appendChild(el("span", "hist-hora", e.tipo === "humor" && !x.atualizado_em ? "" : horaDe(e.quando)));
+    const corpo = el("div", "hist-corpo");
+    if (e.tipo === "dengo") {
+      const quem = nomeDe(x.de), outro = nomeDe(1 - x.de);
+      corpo.appendChild(el("p", "hist-t", `💗 ${quem} pediu dengo`));
+      corpo.appendChild(el("p", "hist-itens", itensDe(x).map(i => `${i.emoji || ""} ${i.titulo || ""}${i.detalhe ? " (" + i.detalhe + ")" : ""}`.trim()).join(" · ")));
+      if (x.mensagem) corpo.appendChild(el("p", "hist-sub", `“${x.mensagem}”`));
+      const tempo = x.respondido_em ? " em " + duracao(new Date(x.respondido_em) - new Date(x.criada_em)) : "";
+      const r = x.status === "indo" ? (soSozinho(x) ? `${outro}: ${x.resposta || "Tô aqui quando precisar 🤍"}` : `${outro} respondeu “Tô indo 💨”${tempo}`)
+        : x.status === "nao_consigo" ? `${outro} não conseguiu${tempo}` : x.status === "cancelado" ? "Cancelado" : "Esperando resposta";
+      corpo.appendChild(el("p", "hist-sub", r + (x.resposta && !soSozinho(x) ? `: “${x.resposta}”` : "")));
+    } else if (e.tipo === "humor") {
+      corpo.appendChild(el("p", "hist-t", `${CARAS[x.valor] || ""} ${nomeDe(x.jogador)} se sentiu ${["", "muito mal", "mal", "mais ou menos", "bem", "muito bem"][x.valor] || ""}`));
+      if (x.nota) corpo.appendChild(el("p", "hist-sub", `“${x.nota}”`));
+    } else if (e.tipo === "mural") {
+      const b = el("button", "hist-mural"); b.type = "button";
+      b.appendChild(miniatura(x, 72));
+      b.setAttribute("aria-label", "Ver o desenho");
+      b.addEventListener("click", () => verMural(x));
+      li.insertBefore(b, null);
+      corpo.appendChild(el("p", "hist-t", x.para == null ? "✏️ Desenho feito juntos" : `✏️ ${nomeDe(x.de)} desenhou para ${nomeDe(x.para)}`));
+      if (x.legenda) corpo.appendChild(el("p", "hist-sub", x.legenda));
+    } else {
+      const j = x.jogadores || [], pts = (x.placar || []).map(p => p && p.pontos);
+      corpo.appendChild(el("p", "hist-t", `🎲 Partida: ${j[0] || ""} ${pts[0] ?? ""} × ${pts[1] ?? ""} ${j[1] || ""}`));
+      if (j[x.vencedor]) corpo.appendChild(el("p", "hist-sub", `Venceu ${j[x.vencedor]}`));
+    }
+    li.insertBefore(corpo, li.children[1] || null);
+    return li;
+  }
+  function desenharLinhaTempo() {
+    document.querySelectorAll("#histFiltro [data-f]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === filtroHist)));
+    const todos = eventosHist().filter(e => filtroHist === "tudo" || e.tipo === filtroHist);
+    const corte = somarDias(hojeISO(), -(diasHist - 1));
+    const vis = todos.filter(e => e.dia >= corte);
+    const box = $("linhaTempo"); box.textContent = "";
+    let dia = null, ul = null;
+    vis.forEach(e => {
+      if (e.dia !== dia) {
+        dia = e.dia;
+        box.appendChild(el("h3", "hist-dia", rotuloDia(dia)));
+        ul = el("ul", "hist-lista"); box.appendChild(ul);
+      }
+      ul.appendChild(itemHist(e));
+    });
+    $("linhaVazia").hidden = !!vis.length;
+    $("linhaVazia").textContent = todos.length ? `Nada nos últimos ${diasHist} dias.` : "Nada por aqui ainda.";
+    $("histMais").hidden = !todos.some(e => e.dia < corte);
+  }
+  // resumo do mês (sem ranking nem comparação entre os dois)
+  function desenharResumoMes() {
+    const mes = hojeISO().slice(0, 7), doMes = iso => iso && diaDe(iso).slice(0, 7) === mes;
+    const m = Number(mes.slice(5));
+    $("histMesTitulo").textContent = `Resumo de ${["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"][m - 1]}`;
+    const dg = dados.dengos.filter(d => doMes(d.criada_em) && d.status !== "cancelado" && !soSozinho(d));
+    const indo = dg.filter(d => d.status === "indo").length;
+    $("histMesDengos").textContent = `Dengos pedidos: ${dg.length} · atendidos com “Tô indo”: ${indo}`;
+    $("histMesMural").textContent = `Desenhos trocados: ${dados.murais.filter(x => doMes(x.criada_em)).length}`;
+    $("histMesPartidas").textContent = `Partidas: ${partidasSala.filter(p => doMes(p.finalizada_em)).length}`;
+  }
+  // gráfico: últimos 7 dias, uma linha por pessoa na cor do avatar; dia sem registro fica em branco
+  function desenharHumorSemana() {
+    const svg = $("humorSemana"); svg.textContent = "";
+    const hoje = hojeISO(), dias = [...Array(7)].map((_, i) => somarDias(hoje, i - 6));
+    const X = i => 30 + i * 46, Y = v => 125 - (v - 1) * 27;
+    [1, 2, 3, 4, 5].forEach(v => {
+      svg.appendChild(svgEl("line", { x1: 22, x2: 312, y1: Y(v), y2: Y(v), class: "hs-grade" }));
+      svg.appendChild(svgEl("text", { x: 2, y: Y(v) + 5, class: "hs-cara" }, CARAS[v]));
+    });
+    dias.forEach((d, i) => {
+      const [a, m, dd] = d.split("-").map(Number);
+      svg.appendChild(svgEl("text", { x: X(i), y: 146, class: "hs-dia", "text-anchor": "middle" }, d === hoje ? "Hoje" : DIAS_SEM[new Date(Date.UTC(a, m - 1, dd)).getUTCDay()]));
+    });
+    const leg = $("humorLegenda"); leg.textContent = "";
+    [0, 1].forEach(j => {
+      if (!nomeDe(j)) return;
+      const cor = avatarDe(j).cor, desloc = j === 0 ? -3 : 3;
+      const vals = dias.map(d => { const h = humorDe(j, d); return h ? h.valor : null; });
+      vals.forEach((v, i) => {
+        if (v === null) return;
+        if (i > 0 && vals[i - 1] !== null) svg.appendChild(svgEl("line", { x1: X(i - 1) + desloc, y1: Y(vals[i - 1]), x2: X(i) + desloc, y2: Y(v), stroke: cor, "stroke-width": 3, "stroke-linecap": "round" }));
+      });
+      vals.forEach((v, i) => { if (v !== null) svg.appendChild(svgEl("circle", { cx: X(i) + desloc, cy: Y(v), r: 5, fill: cor, class: "hs-ponto", "data-j": j, "data-dia": dias[i] })); });
+      const s = el("span", "hs-leg"); const bola = el("i"); bola.style.background = cor;
+      s.append(bola, document.createTextNode(nomeDe(j)));
+      leg.appendChild(s);
+    });
+  }
+  function desenharHistorico() {
+    if (vista !== "vHistorico" || !estado || !estado.fixa) return;
+    desenharResumoMes();
+    desenharHumorSemana();
+    desenharLinhaTempo();
+  }
+
+  // abre o Manual do outro numa parte (ex.: "O que me acalma")
+  function abrirManualOutro(campo) {
+    mostrarVista("vPerfil");
+    const alvo = $("outro-" + campo) || $("manualOutro");
+    if (alvo) { alvo.scrollIntoView({ block: "start" }); alvo.classList.add("destacado"); setTimeout(() => alvo.classList.remove("destacado"), 1600); }
+  }
+
+  // avatar: emoji do Manual (v7) ou as iniciais num círculo colorido
+  const CORES_AVATAR = ["#5B4BDB", "#E0405F"];
+  const PALETA_AVATAR = ["#5B4BDB", "#E0405F", "#FF8A3D", "#1FA37A", "#2E86DE", "#B04BDB", "#C98A00", "#4A4A68"];
+  const EMOJIS_AVATAR = ["😀", "😎", "🥰", "😍", "🤓", "😇", "🥳", "😺", "🐶", "🐱", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐸", "🐵", "🐧", "🦄",
+    "🐝", "🦋", "🐢", "🐙", "🌸", "🌻", "🌈", "⭐", "🌙", "☀️", "🔥", "💧", "🍓", "🍑", "🍕", "🍩", "☕", "🎸", "🎮", "⚽"];
+  function avatarDe(i) {
+    const m = manuais[i] || {};
+    return { emoji: EMOJIS_AVATAR.includes(m.avatar) ? m.avatar : "", cor: PALETA_AVATAR.includes(m.avatarCor) ? m.avatarCor : CORES_AVATAR[i] };
+  }
+  function iniciais(nome) {
+    const p = (nome || "").trim().split(/\s+/).filter(Boolean);
+    return ((p[0] || "?")[0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
+  }
+  function avatarEl(i, classe) {
+    const a = avatarDe(i), x = el("span", "avatar" + (classe ? " " + classe : ""), a.emoji || iniciais(nomeDe(i)));
+    x.style.background = a.cor;
+    if (a.emoji) x.classList.add("emoji");
+    return x;
+  }
+  function desenharCabecalho(e) {
+    $("ola").textContent = `Olá, ${e.jogadores[eu] || ""}`;
+    const box = $("avatares");
+    box.textContent = "";
+    box.append(avatarEl(eu));
+    if (e.jogadores[1 - eu]) box.append(el("span", "coracao", "❤️"), avatarEl(1 - eu));
   }
   // as fases seguintes acrescentam cartões (envelopes, semana, cápsulas…)
   const extrasDaCasa = [];
@@ -755,11 +1962,15 @@
     Object.values(st).forEach(lista => (lista || []).forEach(p => { if (p && (p.jogador === 0 || p.jogador === 1)) agora.add(p.jogador); }));
     const outro = 1 - eu;
     const chegou = !presentes.has(outro) && agora.has(outro);
+    const juntosAntes = presentes.has(0) && presentes.has(1);
     presentes = agora;
+    if (!juntosAntes && agora.has(0) && agora.has(1)) talvezJuntos();   // v6: "Vocês estão juntos agora"
     if (chegou && presencaPronta) vibrar([60, 40, 60]);   // a outra pessoa entrou na sala
     presencaPronta = true;
     desenharPresenca();
     presencaMudou.forEach(f => f());
+    if (vista === "vMural") desenharMuralEstado();
+    if (!agora.has(outro)) { esconderConvite(); if (muralJuntos && muralOutroNoJuntos) { muralOutroNoJuntos = false; desenharMuralEstado(); } }
   }
   const presencaMudou = [];   // envelopes e desafio surpresa escutam aqui
   const ambosPresentes = () => presentes.has(0) && presentes.has(1);
@@ -770,12 +1981,17 @@
     el.hidden = !nome;
     if (!nome) return;
     const on = presentes.has(1 - eu);
-    el.textContent = on ? `💚 ${nome} está aqui agora` : `${nome} está fora`;
+    const visto = !on && vistos[1 - eu] ? quandoVisto(vistos[1 - eu]) : null;
+    el.textContent = on ? `💚 ${nome} está aqui agora` : `${nome} está fora` + (visto ? ` · visto por último ${visto}` : "");
     el.classList.toggle("on", on);
   }
 
   // ---------- tabelas da v5 (só em sala fixa): carga, Realtime e redesenho ----------
-  const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em" };
+  const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
+    carinhos: "criada_em", marcos: "data", motivos: "criada_em", abra_quando: "criada_em", respostas_dia: "dia",
+    dengos: "criada_em", murais: "criada_em" };
+  const LIMITE_TABELA = { carinhos: 500, respostas_dia: 1000, dengos: 500, murais: 200 };   // tabelas que crescem sem parar: só as linhas mais novas
+  const aoCarregar = {};                     // tabela -> fn() depois da primeira carga
   const dados = {};
   Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
   const aoMudar = {};                 // tabela -> [fn(evento, linha, antes)]
@@ -783,6 +1999,20 @@
   const escutar = (t, f) => (aoMudar[t] = aoMudar[t] || []).push(f);
   const redesenhar = (t, f) => (aoDesenhar[t] = aoDesenhar[t] || []).push(f);
   const redesenharV5 = t => { (aoDesenhar[t] || []).forEach(f => f()); if (estado) desenharCasa(estado); };
+  // v7: pedir dengo
+  escutar("dengos", (ev, row, antes) => {
+    // pedido novo para mim: vibra
+    if (ev === "INSERT" && !antes && row.de === 1 - eu && row.status === "pendente") vibrar([100, 50, 100, 50, 200]);
+    // a resposta ao meu pedido chegou
+    if (ev !== "DELETE" && row.de === eu && antes && antes.status === "pendente" && (row.status === "indo" || row.status === "nao_consigo")) vibrar([60, 40, 60]);
+  });
+  redesenhar("dengos", desenharDengo);
+  manualMudouFns.push(desenharDengo);
+  manualMudouFns.push(() => desenharHumor());
+  redesenhar("murais", () => { desenharMuralInicio(); desenharGaleria(); desenharHistorico(); });
+  redesenhar("dengos", desenharHistorico);
+  humorMudouFns.push(desenharHistorico);
+  manualMudouFns.push(desenharHistorico);
 
   // ---------- guia de posições (só texto, sem imagens) ----------
   // posicoes: o guia (só leitura); marcasPos: marcas do casal nesta sala { posicao_id, marca, link }
@@ -797,8 +2027,13 @@
 
   // só aparece com Picante ou Pesado ativos, e só as posições dos níveis ativos
   const niveisGuia = e => (e && e.niveis || []).filter(n => n === "picante" || n === "pesado");
-  const posicoesDoNivel = e => { const ns = niveisGuia(e); return posicoes.filter(p => ns.includes(p.nivel)); };
-  const guiaDisponivel = e => !!(e && niveisGuia(e).length && posicoes.length);
+  const ORDEM_DIF = ["facil", "media", "dificil"];
+  const posicoesDoNivel = e => {
+    const ns = niveisGuia(e), c = config.posicoes;
+    return posicoes.filter(p => ns.includes(p.nivel) && permitido("posicoes", p.nivel) && c.climas.includes(p.clima)
+      && ORDEM_DIF.indexOf(p.dificuldade) <= ORDEM_DIF.indexOf(c.dificuldadeMax));
+  };
+  const guiaDisponivel = e => !!(e && permitido("posicoes") && niveisGuia(e).length && posicoesDoNivel(e).length);
   const marcaPos = (id, m) => marcasPos.find(x => x.posicao_id === id && x.marca === m);
   const linkPos = id => { const x = marcasPos.find(y => y.posicao_id === id && y.link); return x ? x.link : null; };
 
@@ -988,8 +2223,160 @@
     $("posGuardar").textContent = cardapio && cardapio.guardado ? "Guardado no cofre ✓" : "Guardar para o reencontro";
   }
 
+  // ---------- guia de poses para fotos e vídeos (só texto; ícones opcionais em icones/poses/) ----------
+  // O app não recebe, não guarda e não envia fotos ou vídeos: tudo continua no WhatsApp.
+  let poses = [];
+  let poseTeto = null;   // aberto por uma carta: nível máximo que ela permite
+  const POSE_NIVEIS = ["leve", "picante", "pesado"];
+  const POSE_ENQ = { close: "Close", meio: "Meio corpo", inteiro: "Corpo inteiro", espelho: "Espelho", silhueta: "Silhueta" };
+  const RE_POSE = /foto|v[íi]deo|nude|selfie/i;
+  const tetoDaCarta = n => (n === "pesado" ? "pesado" : n === "picante" ? "picante" : "leve");
+  const pedeFotoOuVideo = c => !!(c && c.texto && permitido("poses") && (c.midia === "foto" || c.midia === "video" || RE_POSE.test(c.texto)));
+  const formatoDaCarta = c => (config.poses.video && (c.midia === "video" || (c.midia !== "foto" && /v[íi]deo/i.test(c.texto))) ? "video" : "foto");
+  // teto das poses na sala (romântico e criativo valem como Leve)
+  const tetoPoses = () => tetoDaCarta(efetivo("poses"));
+
+  async function carregarPoses(c) {
+    const { data, error } = await sb.from("poses").select("id, nome, como, tipo, nivel, enquadramento, icone").eq("ativa", true).order("nome", { ascending: true });
+    if (c !== codigo) return;
+    poses = error || !data ? [] : data;
+    if (estado) desenharPoses();
+  }
+
+  function abrirPoses(daCarta) {
+    const c = estado && estado.carta;
+    poseTeto = daCarta && c ? tetoDaCarta(c.nivel) : tetoPoses();
+    if (POSE_NIVEIS.indexOf(poseTeto) > POSE_NIVEIS.indexOf(tetoPoses())) poseTeto = tetoPoses();
+    [...$("poseFiltroTipo").options].forEach(o => { const pode = o.value === "foto" || config.poses.video; o.hidden = !pode; o.disabled = !pode; });
+    const sel = $("poseFiltroNivel");
+    [...sel.options].forEach(o => { o.disabled = !!poseTeto && POSE_NIVEIS.indexOf(o.value) > POSE_NIVEIS.indexOf(poseTeto); });
+    if (daCarta && c) { $("poseFiltroTipo").value = formatoDaCarta(c); sel.value = poseTeto; }
+    else if (!sel.value || sel.options[sel.selectedIndex].disabled) sel.value = poseTeto;
+    if (!config.poses.video) $("poseFiltroTipo").value = "foto";
+    $("poseFiltroEnq").value = "";
+    $("poseCuidados").open = false;
+    erro("erroPoses", "");
+    if (iaPose) iaPose.limpar();
+    if (!$("dlgPoses").open) $("dlgPoses").showModal();
+    desenharPoses();
+  }
+
+  function posesFiltradas() {
+    const t = $("poseFiltroTipo").value, e = $("poseFiltroEnq").value;
+    const ate = POSE_NIVEIS.indexOf(poseTeto && POSE_NIVEIS.indexOf($("poseFiltroNivel").value) > POSE_NIVEIS.indexOf(poseTeto) ? poseTeto : $("poseFiltroNivel").value);
+    return poses.filter(p => (!t || p.tipo === t) && POSE_NIVEIS.indexOf(p.nivel) <= ate && (!e || p.enquadramento === e)
+      && permitido("poses", p.nivel) && (config.poses.video || p.tipo !== "video"));
+  }
+
+  // sortear e "Usar esta": estado.pose aparece embaixo da carta nos dois aparelhos
+  function usarPose(p) {
+    if (!estado || !p) return;
+    gravarFresco(n => {
+      n.pose = { id: p.id || null, nome: String(p.nome).slice(0, 60), como: String(p.como).slice(0, 300), por: eu, chave: n.carta ? n.carta.chave : null };
+      n.aviso = novoAviso(`${n.jogadores[eu]} sugeriu a pose: ${n.pose.nome}`);
+    });
+  }
+  function sortearPose() {
+    const lista = posesFiltradas();
+    if (!lista.length) return erro("erroPoses", "Nenhuma pose com esses filtros.");
+    erro("erroPoses", "");
+    usarPose(lista[Math.floor(Math.random() * lista.length)]);
+  }
+
+  function cartaoPose(p, ia) {
+    const li = el("li", "pos-card pose-card");
+    const topo = el("div", "pose-topo");
+    if (p.icone && /^[a-z0-9-]+\.(svg|png)$/.test(p.icone)) {
+      const img = el("img", "pose-icone");
+      img.src = "icones/poses/" + p.icone; img.alt = p.nome; img.loading = "lazy"; img.width = 56; img.height = 56;
+      topo.appendChild(img);
+    }
+    topo.appendChild(el("h3", "", p.nome));
+    li.appendChild(topo);
+    li.appendChild(el("p", "pos-desc", p.como));
+    const selos = el("div", "pos-selos");
+    if (ia) selos.appendChild(el("span", "selo-pos ia", "✨ IA"));
+    selos.appendChild(el("span", "selo-pos", POSE_ENQ[p.enquadramento] || p.enquadramento));
+    if (p.tipo) selos.appendChild(el("span", "selo-pos", p.tipo === "video" ? "Vídeo" : "Foto"));
+    if (p.nivel) selos.appendChild(el("span", "selo-pos nivel", LEVEL_NAMES[p.nivel] || p.nivel));
+    li.appendChild(selos);
+    const acoes = el("div", "pos-acoes");
+    const b = el("button", "secondary", "Usar esta"); b.type = "button";
+    b.addEventListener("click", () => usarPose(p));
+    acoes.appendChild(b);
+    li.appendChild(acoes);
+    return li;
+  }
+
+  function desenharPoses() {
+    if (!estado) return;
+    $("cardPoses").hidden = !estado.fixa || !poses.length || !permitido("poses");
+    desenharPoseCarta(estado);
+    if (!$("dlgPoses").open) return;
+    const r = estado.pose;
+    $("poseResultado").hidden = !r;
+    $("poseResultado").textContent = r ? `${nomeDe(r.por)} sugeriu a pose: ${r.nome}` : "";
+    const lista = posesFiltradas();
+    $("poseVazio").hidden = !!lista.length;
+    const ul = $("poseLista");
+    ul.textContent = "";
+    lista.forEach(p => ul.appendChild(cartaoPose(p, false)));
+  }
+
+  function desenharPoseCarta(e) {
+    const c = e && e.carta;
+    const pede = pedeFotoOuVideo(c) && poses.length > 0;
+    const r = e && e.pose && c && e.pose.chave === c.chave ? e.pose : null;
+    $("poseCarta").hidden = !pede && !r;
+    $("abrirPoses").hidden = !pede;
+    $("poseEscolhida").hidden = !r;
+    $("poseEscolhida").textContent = r ? `${nomeDe(r.por)} sugeriu a pose: ${r.nome}` : "";
+    $("poseComo").hidden = !r;
+    $("poseComo").textContent = r ? r.como : "";
+  }
+  // ✨ Ideias da IA no guia de poses: sugestões só na tela (somem ao fechar), "Usar esta" grava em estado.pose
+  let iaPose = null;
+  function painelIAPose() {
+    let pedido = 0;
+    const api = {
+      limpar() {
+        pedido++;
+        $("poseIaBotao").hidden = !(estado && estado.fixa && permitido("ia") && config.ia.poses);
+        $("poseIaPainel").hidden = true;
+        $("poseIaTema").value = "";
+        $("poseIaStatus").textContent = "";
+        $("poseIaLista").textContent = "";
+        $("poseIaGerar").textContent = "Gerar";
+        $("poseIaGerar").disabled = false;
+      }
+    };
+    $("poseIaBotao").addEventListener("click", () => { $("poseIaPainel").hidden = !$("poseIaPainel").hidden; });
+    $("poseIaGerar").addEventListener("click", async () => {
+      if (!estado || !estado.fixa) return;
+      const formato = $("poseFiltroTipo").value || "foto";
+      const escolhido = $("poseFiltroNivel").value;
+      const nivel = poseTeto && POSE_NIVEIS.indexOf(escolhido) > POSE_NIVEIS.indexOf(poseTeto) ? poseTeto : escolhido;
+      const tema = $("poseIaTema").value.replace(/[\r\n]+/g, " ").trim().slice(0, 60);
+      const meu = ++pedido;
+      $("poseIaGerar").disabled = true;
+      $("poseIaStatus").textContent = "Pensando…";
+      $("poseIaLista").textContent = "";
+      const r = await gerarIdeias("pose", nivel, tema, { formato });
+      if (meu !== pedido) return;
+      $("poseIaGerar").disabled = false;
+      if (typeof r.usadasHoje === "number" && typeof r.limite === "number") $("poseIaUso").textContent = `${r.usadasHoje} de ${r.limite} hoje`;
+      const lista = Array.isArray(r.poses) ? r.poses.filter(p => p && typeof p.nome === "string" && typeof p.como === "string" && p.nome.trim()) : [];
+      if (r.erro || !lista.length) { $("poseIaStatus").textContent = IA_ERROS[r.erro] || IA_ERROS.falha; return; }
+      $("poseIaStatus").textContent = "";
+      $("poseIaGerar").textContent = "Gerar outras";
+      lista.forEach(p => $("poseIaLista").appendChild(cartaoPose({ nome: p.nome.slice(0, 40), como: p.como.slice(0, 200), enquadramento: POSE_ENQ[p.enquadramento] ? p.enquadramento : "meio", tipo: formato, nivel }, true)));
+    });
+    return api;
+  }
+
   function comTabelasV5(ch, c) {
     ch = comPosicoes(ch, c);
+    ch = comNossas(ch, c);
     Object.keys(TABELAS_V5).forEach(t => {
       ch = ch
         .on("postgres_changes", { event: "*", schema: "public", table: t, filter: `sala=eq.${c}` },
@@ -1001,9 +2388,13 @@
   }
 
   async function carregarTabela(t, c) {
-    const { data, error } = await sb.from(t).select("*").eq("sala", c).order(TABELAS_V5[t], { ascending: true });
+    const lim = LIMITE_TABELA[t];
+    let q = sb.from(t).select("*").eq("sala", c).order(TABELAS_V5[t], { ascending: !lim });
+    if (lim) q = q.limit(lim);
+    const { data, error } = await q;
     if (c !== codigo) return;
-    dados[t] = error || !data ? [] : data;
+    dados[t] = error || !data ? [] : (lim ? data.reverse() : data);
+    if (aoCarregar[t]) aoCarregar[t]();
     redesenharV5(t);
   }
 
@@ -1090,23 +2481,27 @@
     if (!estado || !estado.fixa) return;
     $("formEnvelope").reset();
     tipoDoEnvelope();
+    iaEnvelope.preparar();
     erro("erroEnvelope", "");
     $("envContador").textContent = "0/500";
     $("dlgEnvelope").showModal();
   }
 
   // "🎲 Sugerir": desafio do banco (com o peso do baralho) no campo; na mensagem, só uma ideia acima do campo
-  const sugeridas = { desafio: [], ideia_mensagem: [] };   // últimas 5 de cada, para não repetir
+  const sugeridas = { desafio: [], ideia_mensagem: [] };
+  let iaCarta = null, iaEnvelope = null;   // últimas 5 de cada, para não repetir
   function tipoDoEnvelope() {
     const desafio = document.querySelector('input[name="envTipo"]:checked').value === "desafio";
     $("envNivelRotulo").textContent = desafio ? "Nível do desafio" : "Nível da sugestão";
+    limitarSelectNiveis($("envNivel"), v => (desafio ? permitido("envelopes", v) : permitido("nivel", v)));
     $("envIdeia").hidden = true;
     $("envIdeia").textContent = "";
   }
   function sugerirEnvelope() {
     const desafio = document.querySelector('input[name="envTipo"]:checked').value === "desafio";
-    const tipo = desafio ? "desafio" : "ideia_mensagem", nivel = $("envNivel").value;
-    const pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === nivel));
+    const tipo = desafio ? "desafio" : "ideia_mensagem";
+    const nivel = !desafio && $("envNivel").value === "romantico" ? "leve" : $("envNivel").value;
+    const pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === nivel && cartaPermitida(c)));
     if (!pool.length) return erro("erroEnvelope", desafio ? "Não há desafios desse nível." : "Ainda não há ideias desse nível.");
     erro("erroEnvelope", "");
     const recentes = sugeridas[tipo];
@@ -1128,6 +2523,7 @@
     const tipo = document.querySelector('input[name="envTipo"]:checked').value;
     const texto = $("envTexto").value.trim().slice(0, 500);
     if (texto.length < 3) return erro("erroEnvelope", "Escreva pelo menos 3 letras.");
+    if (tipo === "desafio" && !permitido("envelopes", $("envNivel").value)) return erro("erroEnvelope", "Escolha outro nível.");
     const linha = { sala: codigo, tipo, de: eu, texto, nivel: tipo === "desafio" ? $("envNivel").value : null };
     $("salvarEnvelope").disabled = true;
     const { data, error } = await sb.from("envelopes").insert(linha).select("*").single();
@@ -1169,8 +2565,9 @@
   // Desafio surpresa: vira a primeira carta da próxima vez de quem recebe (quando a vez chega), com os dois presentes
   async function talvezSurpresa() {
     const e = estado;
-    if (!e || !e.fixa || !e.jogadores[1] || e.vez !== eu || e.carta || e.vencedor !== null || girando || !ambosPresentes()) return;
-    const env = dados.envelopes.filter(x => x.tipo === "desafio" && !x.aberto_em && x.de === 1 - eu && !surpresasEmAndamento.has(x.id))
+    if (!e || !e.fixa || !e.jogadores[1] || e.vez !== eu || e.carta || e.vencedor !== null || girando || !ambosPresentes() || !permitido("envelopes")) return;
+    // desafio surpresa acima do nível permitido fica guardado até o dono liberar
+    const env = dados.envelopes.filter(x => x.tipo === "desafio" && !x.aberto_em && x.de === 1 - eu && !surpresasEmAndamento.has(x.id) && permitido("envelopes", x.nivel || "leve"))
       .sort((a, b) => (a.criada_em < b.criada_em ? -1 : 1))[0];
     if (!env) return;
     surpresasEmAndamento.add(env.id);
@@ -1192,6 +2589,7 @@
     const n = contarEnvelopes();
     $("cardEnvSub").textContent = n ? `${n} esperando` : "Nenhum esperando";
     $("cardEnv").classList.toggle("destaque", dados.envelopes.some(x => !x.aberto_em && x.de !== eu && x.tipo === "mensagem"));
+    $("cardEnv").hidden = !permitido("envelopes");
   });
 
   // ---------- cápsula do tempo ----------
@@ -1343,7 +2741,8 @@
 
   // sorteio determinístico (como o desafio do dia): mesma sala + semana + jogador = mesmas cartas nos dois aparelhos
   function poolSemana(tipo) {
-    let pool = cartas.filter(c => !c.sala && c.tipo === tipo && c.nivel === estado.nivelSemana);
+    const nivel = limitarNivel("semana", estado.nivelSemana) || "leve";
+    let pool = cartas.filter(c => !c.sala && c.tipo === tipo && c.nivel === nivel);
     if (!pool.length) pool = cartas.filter(c => !c.sala && c.tipo === tipo && c.nivel === "leve");
     return pool.sort((a, b) => (a.id < b.id ? -1 : 1));
   }
@@ -1434,6 +2833,8 @@
     const outro = 1 - eu, nOutro = nomeDe(outro);
     $("semanaInfo").textContent = `Semana de ${dataBR(semana)} a ${dataBR(somarDias(semana, 6))} · apostas até quarta, conferir a partir de sábado`;
     $("nivelSemana").value = estado.nivelSemana;
+    limitarSelectNiveis($("nivelSemana"), v => permitido("semana", v));
+    $("nivelSemana").closest("label").hidden = !souDono;   // configuração: só o dono vê
     $("titMinhasApostas").textContent = `Suas apostas sobre ${nOutro}`;
     // minhas apostas
     const ul = $("minhasApostas");
@@ -1540,6 +2941,7 @@
     $("cardSemanaSub").textContent = confirmar ? `${nomeDe(outro)} mostrou a missão: confirmar`
       : conferir ? "Confira as apostas sobre você" : faltaApostar ? "Faça suas apostas (até quarta)" : "Apostas e missão da semana";
     $("cardSemana").classList.toggle("destaque", confirmar || conferir || faltaApostar);
+    $("cardSemana").hidden = !permitido("semana");
     if (vista === "vSemana") desenharSemana();
   });
 
@@ -1815,7 +3217,7 @@
   escutar("conquistas", (ev, row, antes) => {
     if (ev !== "INSERT" || antes) return;
     const c = defConquista(row.codigo);
-    if (!c || (c.categoria === "ousadia" && estado && !estado.mostrarOusadia)) return;
+    if (!c || (c.categoria === "ousadia" && !permitido("conquistasOusadia"))) return;
     // várias de uma vez (fim de partida): um aviso só
     filaConquistas.push(`🏆 ${c.titulo}` + (row.jogador === 0 || row.jogador === 1 ? ` (${nomeDe(row.jogador)})` : ""));
     clearTimeout(timerConquistas);
@@ -1851,13 +3253,13 @@
   function desenharConquistas() {
     if (!$("vConquistas") || !estado || !estado.fixa) return;
     const d = dadosConquistas();
-    const mostrar = estado.mostrarOusadia;
+    const mostrar = permitido("conquistasOusadia");
     ["jornada", "ousadia"].forEach(cat => {
       const grade = $(cat === "jornada" ? "conqJornada" : "conqOusadia");
       grade.textContent = "";
       CONQ().filter(c => c.categoria === cat).forEach(c => grade.appendChild(itemConquista(c, d)));
     });
-    $("mostrarOusadia").checked = mostrar;
+    $("tituloOusadia").hidden = !mostrar;
     $("conqOusadia").hidden = !mostrar;
     const visiveis = CONQ().filter(c => mostrar || c.categoria !== "ousadia");
     const total = visiveis.reduce((s, c) => s + (c.escopo === "casal" ? 1 : 2), 0);
@@ -1874,14 +3276,1240 @@
   }
   const tituloDe = (e, i) => {
     const c = e.fixa && e.titulos[i] ? defConquista(e.titulos[i]) : null;
-    return c && linhaConquista(c.codigo, i) && (e.mostrarOusadia || c.categoria !== "ousadia") ? c.titulo : "";
+    return c && linhaConquista(c.codigo, i) && (permitido("conquistasOusadia") || c.categoria !== "ousadia") ? c.titulo : "";
   };
   redesenhar("conquistas", () => { desenharConquistas(); if (estado) desenharPlacar(estado, [estado.jogadores[0] || "Pessoa 1", estado.jogadores[1] || "…"]); });
   extrasDaCasa.push(e => {
-    const n = dados.conquistas.filter(r => { const c = defConquista(r.codigo); return c && (e.mostrarOusadia || c.categoria !== "ousadia"); }).length;
+    const n = dados.conquistas.filter(r => { const c = defConquista(r.codigo); return c && (permitido("conquistasOusadia") || c.categoria !== "ousadia"); }).length;
     $("cardConqSub").textContent = n ? `${n} ${n === 1 ? "desbloqueada" : "desbloqueadas"}` : "Jornada do casal";
     if (vista === "vConquistas") desenharConquistas();
   });
+
+  // ---------- v6: "Vocês estão juntos agora", "Pensei em você" e Mãos juntas (só sala fixa) ----------
+  // juntos agora: quando a presença passa a ter os dois; no máximo uma vez a cada 10 minutos por aparelho
+  let timerJuntos = null;
+  function talvezJuntos() {
+    if (!estado || !estado.fixa || !codigo) return;
+    const k = "lp-juntos-" + codigo;
+    if (Date.now() - (Number(lerLocal(k)) || 0) < 10 * 60 * 1000) return;
+    salvarLocal(k, Date.now());
+    const a = $("juntosAnim");
+    a.classList.remove("anima"); a.hidden = false; void a.offsetWidth; a.classList.add("anima");
+    vibrar([80, 60, 80]);
+    [659, 784, 988].forEach((f, i) => tom(f, 0.3, i * 0.12, "sine", 0.12));
+    clearTimeout(timerJuntos);
+    timerJuntos = setTimeout(() => { a.hidden = true; a.classList.remove("anima"); }, 1800);
+  }
+
+  // carinhos: tocar grava em `carinhos`; quem recebe com o app aberto vê o emoji flutuando
+  const CARINHOS = { pensei: ["💭", "pensou em você"], beijo: ["😘", "mandou um beijo"], abraco: ["🤗", "mandou um abraço"], saudade: ["🥺", "está com saudade"] };
+  let ultimoCarinho = 0, timerCarinho = null, resumoCarinhos = "";
+  const vistoCarinhos = () => "lp-carinho-visto-" + codigo;
+  function marcarCarinhoVisto(iso) {
+    const atual = lerLocal(vistoCarinhos());
+    if (!atual || iso > atual) salvarLocal(vistoCarinhos(), iso);
+  }
+  async function mandarCarinho(tipo) {
+    if (!estado || !estado.fixa || !CARINHOS[tipo]) return;
+    if (Date.now() - ultimoCarinho < 2000) return;   // evita toques repetidos sem querer
+    ultimoCarinho = Date.now();
+    document.querySelectorAll("#carinhoBotoes button").forEach(b => { b.disabled = true; });
+    setTimeout(() => document.querySelectorAll("#carinhoBotoes button").forEach(b => { b.disabled = false; }), 2000);
+    const { data, error } = await sb.from("carinhos").insert({ sala: codigo, de: eu, tipo }).select("*").single();
+    if (error) return erro("erroJogo", "Não consegui mandar o carinho. Confira a internet e tente de novo.");
+    linhaV5("carinhos", "INSERT", data);
+    $("carinhoEnviado").textContent = `${CARINHOS[tipo][0]} enviado`;
+    setTimeout(() => { $("carinhoEnviado").textContent = ""; }, 2000);
+  }
+  function mostrarCarinho(row) {
+    const c = CARINHOS[row.tipo];
+    if (!c) return;
+    $("carinhoEmoji").textContent = c[0];
+    $("carinhoTexto").textContent = `${nomeDe(row.de)} ${c[1]}`;
+    const a = $("carinhoAnim");
+    a.classList.remove("anima"); a.hidden = false; void a.offsetWidth; a.classList.add("anima");
+    vibrar([100, 50, 100]);
+    clearTimeout(timerCarinho);
+    timerCarinho = setTimeout(() => { a.hidden = true; a.classList.remove("anima"); }, 2200);
+  }
+  escutar("carinhos", (ev, row, antes) => {
+    if (ev !== "INSERT" || antes || row.de === eu) return;
+    mostrarCarinho(row);
+    marcarCarinhoVisto(row.criada_em);
+  });
+  // ao abrir: resumo do que chegou enquanto estava fora (o "visto" fica neste aparelho)
+  aoCarregar.carinhos = () => {
+    const visto = lerLocal(vistoCarinhos());
+    const novos = dados.carinhos.filter(x => x.de !== eu && (!visto || x.criada_em > visto));
+    const conta = {};
+    novos.forEach(x => { conta[x.tipo] = (conta[x.tipo] || 0) + 1; });
+    resumoCarinhos = Object.keys(CARINHOS).filter(t => conta[t]).map(t => `${CARINHOS[t][0]} × ${conta[t]}`).join(", ");
+    if (novos.length) marcarCarinhoVisto(novos[novos.length - 1].criada_em);
+    desenharCarinhos();
+  };
+  function desenharCarinhos() {
+    if (!estado || !estado.fixa || !$("carinhoHoje")) return;
+    $("carinhoResumo").hidden = !resumoCarinhos;
+    $("carinhoResumoTexto").textContent = resumoCarinhos ? `Enquanto você estava fora: ${resumoCarinhos}` : "";
+    const hoje = hojeISO();
+    const deHoje = dados.carinhos.filter(x => hojeISO(new Date(x.criada_em)) === hoje);
+    const linha = i => {
+      const conta = {};
+      deHoje.filter(x => x.de === i).forEach(x => { conta[x.tipo] = (conta[x.tipo] || 0) + 1; });
+      const partes = Object.keys(CARINHOS).filter(t => conta[t]).map(t => `${CARINHOS[t][0]} ${conta[t]}`);
+      return `${nomeDe(i)}: ${partes.length ? partes.join(" · ") : "—"}`;
+    };
+    $("carinhoHoje").textContent = deHoje.length ? `Hoje · ${linha(eu)} · ${linha(1 - eu)}` : "Hoje ainda sem carinhos.";
+  }
+  redesenhar("carinhos", desenharCarinhos);
+
+  // mãos juntas: sem banco, por broadcast do Realtime no canal da sala
+  const maos = [false, false];
+  let juntosDesde = null, timerMaos = null, batidaMaos = null, maosNoite = 0, timerMsgMaos = null;
+  const fmtMinSeg = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const fmtTotal = s => { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h} h ${m} min` : m ? `${m} min` : `${s} s`; };
+  function mudarMaos(quem, segurando, souEu) {
+    const antes = maos[0] && maos[1];
+    maos[quem] = segurando;
+    const agora = maos[0] && maos[1];
+    if (!antes && agora) {
+      juntosDesde = Date.now();
+      clearInterval(batidaMaos);
+      batidaMaos = setInterval(() => vibrar(25), 857);   // cerca de 70 batidas por minuto
+      clearInterval(timerMaos);
+      timerMaos = setInterval(desenharMaos, 250);
+    }
+    if (antes && !agora) {
+      const seg = Math.max(0, Math.round((Date.now() - juntosDesde) / 1000));
+      juntosDesde = null;
+      clearInterval(batidaMaos); clearInterval(timerMaos);
+      maosNoite += seg;
+      $("maosMsg").textContent = `Vocês ficaram ${fmtMinSeg(seg)} de mãos dadas`;
+      clearTimeout(timerMsgMaos);
+      timerMsgMaos = setTimeout(() => { $("maosMsg").textContent = ""; }, 6000);
+      // só quem soltou primeiro grava, para não somar duas vezes
+      if (souEu && seg > 0) gravarFresco(n => { n.maosTotal = (Number(n.maosTotal) || 0) + seg; });
+    }
+    desenharMaos();
+  }
+  function segurar(v) {
+    if (!estado || !estado.fixa || maos[eu] === v) return;
+    mudarMaos(eu, v, true);
+    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "mao", jogador: eu, segurando: v } }); } catch (err) {}
+  }
+  function receberMao(p) {
+    if (!p || (p.jogador !== 0 && p.jogador !== 1) || p.jogador === eu) return;
+    mudarMaos(p.jogador, !!p.segurando, false);
+  }
+  // o outro saiu da sala segurando: solta por ele (e este aparelho grava o tempo)
+  presencaMudou.push(() => { const o = 1 - eu; if (maos[o] && !presentes.has(o)) mudarMaos(o, false, true); });
+  function desenharMaos() {
+    if (!estado || !$("maosCoracao")) return;
+    const o = 1 - eu, nOutro = nomeDe(o);
+    const c = $("maosCoracao");
+    c.classList.toggle("juntos", maos[0] && maos[1]);
+    c.classList.toggle("sozinho", maos[eu] && !maos[o]);
+    c.classList.toggle("chamando", !maos[eu] && maos[o]);
+    $("maosStatus").textContent = maos[0] && maos[1] ? `juntos há ${fmtMinSeg(Math.floor((Date.now() - juntosDesde) / 1000))}`
+      : maos[eu] ? `Esperando ${nOutro}…` : maos[o] ? `${nOutro} está segurando. Segure junto!` : "Segure junto";
+    const t = Number(estado.maosTotal) || 0;
+    $("maosTotal").textContent = t ? `Tempo total de mãos dadas: ${fmtTotal(t)}` : "";
+  }
+  extrasDaCasa.push(() => { desenharCarinhos(); desenharMaos(); });
+
+  // ---------- v6: mapa da saudade (sem mapa de verdade: um desenho em SVG) ----------
+  const cidadeValida = x => !!(x && typeof x.nome === "string" && x.nome.trim());
+  const temCoord = x => cidadeValida(x) && Number.isFinite(x.lat) && Number.isFinite(x.lng);
+  function haversineKm(a, b) {
+    const R = 6371, rad = g => g * Math.PI / 180;
+    const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+  }
+  function distanciaKm(e) {
+    const [a, b] = e.cidades;
+    if (temCoord(a) && temCoord(b)) return haversineKm(a, b);
+    return Number.isFinite(e.distanciaManual) ? e.distanciaManual : null;
+  }
+  const resultadosCidade = [[], []];
+  async function buscarCidade(i) {
+    const q = $("cidadeBusca" + i).value.replace(/\s+/g, " ").trim().slice(0, 80);
+    if (q.length < 2) return;
+    erro("erroMapa", "");
+    $("cidadeBuscar" + i).disabled = true;
+    try {
+      const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 10000);
+      const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=pt-BR&q=" + encodeURIComponent(q), { signal: ctrl.signal });
+      clearTimeout(t);
+      if (!r.ok) throw new Error("http");
+      const lista = await r.json();
+      resultadosCidade[i] = (Array.isArray(lista) ? lista : []).map(x => ({
+        nome: String(x.display_name || "").split(",").slice(0, 2).join(",").trim().slice(0, 60),
+        completo: String(x.display_name || "").slice(0, 160),
+        lat: Number(x.lat), lng: Number(x.lon)
+      })).filter(x => x.nome && Number.isFinite(x.lat) && Number.isFinite(x.lng));
+      if (!resultadosCidade[i].length) erro("erroMapa", "Nenhuma cidade encontrada. Confira o nome ou use só o nome.");
+    } catch (err) {
+      resultadosCidade[i] = [];
+      erro("erroMapa", "Não consegui buscar agora. Use só o nome e, se quiser, a distância em km.");
+    }
+    $("cidadeBuscar" + i).disabled = false;
+    desenharMapa();
+  }
+  function escolherCidade(i, c) {
+    resultadosCidade[i] = [];
+    gravar(n => { n.cidades[i] = c; });
+  }
+  function soNomeCidade(i) {
+    const nome = $("cidadeBusca" + i).value.replace(/\s+/g, " ").trim().slice(0, 60);
+    if (nome.length < 2) return erro("erroMapa", "Digite o nome da cidade.");
+    erro("erroMapa", "");
+    escolherCidade(i, { nome, lat: null, lng: null });
+  }
+  function salvarDistanciaManual() {
+    const v = $("distManual").value.trim();
+    const km = v === "" ? null : Math.round(Number(v));
+    if (km !== null && !(km >= 0 && km <= 40000)) return erro("erroMapa", "Distância entre 0 e 40.000 km.");
+    erro("erroMapa", "");
+    gravar(n => { n.distanciaManual = km; });
+  }
+  const SVGNS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs, texto) {
+    const x = document.createElementNS(SVGNS, tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => x.setAttribute(k, v));
+    if (texto !== undefined) x.textContent = texto;
+    return x;
+  }
+  function desenharMapa() {
+    if (!estado || !estado.fixa || !$("mapaSvg")) return;
+    const e = estado, km = distanciaKm(e);
+    const hoje0 = e.reencontro && diasAte(e.reencontro) === 0;
+    const nomes = [0, 1].map(i => (cidadeValida(e.cidades[i]) ? e.cidades[i].nome : nomeDe(i)).split(",")[0].slice(0, 22));
+    const svg = $("mapaSvg");
+    svg.textContent = "";
+    svg.classList.toggle("juntos", !!hoje0);
+    svg.appendChild(svgEl("line", { x1: 50, y1: 60, x2: 270, y2: 60, class: "mapa-linha" }));
+    const g0 = svgEl("g", { class: "mapa-ponto p0" }), g1 = svgEl("g", { class: "mapa-ponto p1" });
+    g0.append(svgEl("circle", { cx: 50, cy: 60, r: 9 }), svgEl("text", { x: 50, y: 95, "text-anchor": "middle" }, nomes[0]));
+    g1.append(svgEl("circle", { cx: 270, cy: 60, r: 9 }), svgEl("text", { x: 270, y: 95, "text-anchor": "middle" }, nomes[1]));
+    svg.append(g0, g1, svgEl("text", { x: 160, y: 68, "text-anchor": "middle", class: "mapa-coracao" }, "❤"));
+    $("mapaKm").textContent = hoje0 ? "Hoje é 0 km 💞" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Digam as cidades de vocês para ver a distância";
+    const r = e.reencontro ? diasAte(e.reencontro) : null;
+    $("mapaReencontro").textContent = r === null || r < 0 ? "" : r === 0 ? "É hoje! 💞" : r === 1 ? "Falta 1 dia para o reencontro" : `Faltam ${r} dias para o reencontro`;
+    // configuração "Nossas cidades"
+    [0, 1].forEach(i => {
+      $("cidadeRotulo" + i).textContent = `Cidade de ${nomeDe(i)}`;
+      $("cidadeAtual" + i).textContent = cidadeValida(e.cidades[i]) ? `📍 ${e.cidades[i].nome}${temCoord(e.cidades[i]) ? "" : " (só o nome)"}` : "";
+      const ul = $("cidadeOpcoes" + i);
+      ul.textContent = "";
+      resultadosCidade[i].forEach(c => {
+        const li = el("li"), b = el("button", "linkbtn", c.completo);
+        b.type = "button";
+        b.addEventListener("click", () => escolherCidade(i, { nome: c.nome, lat: c.lat, lng: c.lng }));
+        li.appendChild(b); ul.appendChild(li);
+      });
+    });
+    const semCoord = !(temCoord(e.cidades[0]) && temCoord(e.cidades[1]));
+    $("distManualBox").hidden = !semCoord;
+    if (document.activeElement !== $("distManual")) $("distManual").value = Number.isFinite(e.distanciaManual) ? String(e.distanciaManual) : "";
+  }
+
+  // ---------- v6: linha do tempo do casal ----------
+  const SUGESTOES_MARCO = [["💘", "Primeiro encontro"], ["💋", "Primeiro beijo"], ["💍", "Pedido"], ["✈️", "Viagem"], ["🎂", "Aniversário"], ["🏠", "Visita"]];
+  const mesesEntre = (de, ate) => {
+    const [a1, m1, d1] = de.split("-").map(Number), [a2, m2, d2] = ate.split("-").map(Number);
+    return (a2 - a1) * 12 + (m2 - m1) - (d2 < d1 ? 1 : 0);
+  };
+  const principal = () => dados.marcos.find(m => m.principal) || null;
+  let marcoEditando = null;
+  function abrirMarco(m) {
+    marcoEditando = m || null;
+    erro("erroMarco", "");
+    $("dlgMarcoTitulo").textContent = m ? "Editar marco" : "Novo marco";
+    $("marcoTitulo").value = m ? m.titulo : "";
+    $("marcoData").value = m ? m.data : "";
+    $("marcoData").max = hojeISO();
+    $("marcoDescricao").value = m && m.descricao ? m.descricao : "";
+    $("marcoEmoji").value = m && m.emoji ? m.emoji : "";
+    $("marcoPrincipal").checked = !!(m && m.principal);
+    $("dlgMarco").showModal();
+  }
+  async function salvarMarco(ev) {
+    ev.preventDefault();
+    const titulo = $("marcoTitulo").value.replace(/\s+/g, " ").trim().slice(0, 80);
+    const data = $("marcoData").value;
+    const descricao = $("marcoDescricao").value.trim().slice(0, 300) || null;
+    const emoji = [...$("marcoEmoji").value.trim()].slice(0, 4).join("").slice(0, 8) || null;
+    const ehPrincipal = $("marcoPrincipal").checked;
+    if (!titulo) return erro("erroMarco", "Dê um título ao marco.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("erroMarco", "Escolha a data.");
+    $("salvarMarco").disabled = true;
+    // só um principal por sala: desmarca o anterior antes
+    const antigo = principal();
+    if (ehPrincipal && antigo && (!marcoEditando || antigo.id !== marcoEditando.id)) {
+      const r = await sb.from("marcos").update({ principal: false }).eq("id", antigo.id);
+      if (!r.error) linhaV5("marcos", "UPDATE", { ...antigo, principal: false });
+    }
+    const campos = { titulo, data, descricao, emoji, principal: ehPrincipal };
+    const { data: linha, error } = marcoEditando
+      ? await sb.from("marcos").update(campos).eq("id", marcoEditando.id).select("*").single()
+      : await sb.from("marcos").insert({ sala: codigo, autor: nomeDe(eu), ...campos }).select("*").single();
+    $("salvarMarco").disabled = false;
+    if (error || !linha) return erro("erroMarco", "Não consegui salvar. Confira a internet e tente de novo.");
+    linhaV5("marcos", marcoEditando ? "UPDATE" : "INSERT", linha);
+    $("dlgMarco").close();
+  }
+  async function apagarMarco(m) {
+    if (!confirm(`Apagar o marco "${m.titulo}"?`)) return;
+    const { error } = await sb.from("marcos").delete().eq("id", m.id);
+    if (error) return erro("erroJogo", "Não consegui apagar. Confira a internet e tente de novo.");
+    linhaV5("marcos", "DELETE", { id: m.id });
+  }
+  function desenharHistoria() {
+    if (!$("listaMarcos")) return;
+    const ul = $("listaMarcos");
+    ul.textContent = "";
+    const lista = dados.marcos.slice().sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0));
+    $("marcosVazio").hidden = !!lista.length;
+    lista.forEach(m => {
+      const li = el("li", "marco" + (m.principal ? " principal" : ""));
+      li.appendChild(el("span", "marco-emoji", m.emoji || "•"));
+      const info = el("div", "info");
+      info.append(el("span", "tag", dataBR(m.data) + (m.principal ? " · início do namoro" : "")), el("span", "t", m.titulo));
+      if (m.descricao) info.appendChild(el("span", "marco-desc", m.descricao));
+      const acoes = el("div", "acoes");
+      const ed = el("button", "linkbtn", "Editar"); ed.type = "button"; ed.addEventListener("click", () => abrirMarco(m));
+      const ap = el("button", "linkbtn", "Apagar"); ap.type = "button"; ap.addEventListener("click", () => apagarMarco(m));
+      acoes.append(ed, ap);
+      info.appendChild(acoes);
+      li.appendChild(info);
+      ul.appendChild(li);
+    });
+  }
+  // topo da Casa: "Juntos há X dias" e os cartões das datas especiais (só no próprio dia)
+  function desenharJuntosHa() {
+    if (!$("juntosHa")) return;
+    const p = principal(), hoje = hojeISO();
+    let txt = "";
+    if (p && p.data <= hoje) {
+      const dias = -diasAte(p.data), meses = mesesEntre(p.data, hoje);
+      txt = `Juntos há ${dias.toLocaleString("pt-BR")} ${dias === 1 ? "dia" : "dias"}`;
+      if (meses >= 12) {
+        const a = Math.floor(meses / 12), m = meses % 12;
+        txt += ` · ${a} ${a === 1 ? "ano" : "anos"}${m ? ` e ${m} ${m === 1 ? "mês" : "meses"}` : ""}`;
+      }
+    }
+    $("juntosHa").textContent = txt;
+    $("juntosHa").hidden = !txt;
+    const cartoes = [];
+    const [ha, hm, hd] = hoje.split("-").map(Number);
+    dados.marcos.forEach(m => {
+      const [a, mm, d] = m.data.split("-").map(Number);
+      if (m.data >= hoje) return;
+      if (mm === hm && d === hd) {
+        const anos = ha - a;
+        cartoes.push(m.principal ? `Feliz ${anos} ${anos === 1 ? "ano" : "anos"} de namoro! 💞` : `Há ${anos} ${anos === 1 ? "ano" : "anos"}: ${m.titulo}`);
+      } else if (m.principal && d === hd) {
+        const meses = mesesEntre(m.data, hoje);
+        cartoes.push(`Feliz mesversário! 🎉 ${meses} ${meses === 1 ? "mês" : "meses"} juntos`);
+      }
+    });
+    const box = $("datasEspeciais");
+    box.textContent = "";
+    cartoes.forEach(t => box.appendChild(el("p", "data-especial", t)));
+    box.hidden = !cartoes.length;
+  }
+  redesenhar("marcos", () => { desenharHistoria(); desenharJuntosHa(); });
+  extrasDaCasa.push(e => {
+    desenharJuntosHa();
+    const km = distanciaKm(e);
+    $("cardMapaSub").textContent = e.reencontro && diasAte(e.reencontro) === 0 ? "Hoje é 0 km 💞" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Nossas cidades";
+    $("distMapaTxt").textContent = "Mapa da saudade" + (km !== null ? ` · ${km.toLocaleString("pt-BR")} km` : "");
+    $("cardHistoriaSub").textContent = dados.marcos.length ? `${dados.marcos.length} ${dados.marcos.length === 1 ? "marco" : "marcos"}` : "Nossa linha do tempo";
+    if (vista === "vMapa") desenharMapa();
+  });
+
+  // ---------- v6: pote de motivos ----------
+  const dataHora = iso => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  async function guardarMotivo() {
+    const texto = $("motivoTexto").value.replace(/\s+/g, " ").trim().slice(0, 280);
+    if (texto.length < 3) return erro("erroPote", "Escreva pelo menos 3 letras.");
+    erro("erroPote", "");
+    $("motivoGuardar").disabled = true;
+    const { data, error } = await sb.from("motivos").insert({ sala: codigo, de: eu, texto }).select("*").single();
+    $("motivoGuardar").disabled = false;
+    if (error) return erro("erroPote", "Não consegui guardar. Confira a internet e tente de novo.");
+    $("motivoTexto").value = "";
+    linhaV5("motivos", "INSERT", data);
+  }
+  async function apagarMotivo(m) {
+    if (m.de !== eu || !confirm("Tirar este motivo do pote?")) return;
+    const { error } = await sb.from("motivos").delete().eq("id", m.id);
+    if (error) return erro("erroPote", "Não consegui apagar. Confira a internet e tente de novo.");
+    linhaV5("motivos", "DELETE", { id: m.id });
+  }
+  // sorteia um motivo escrito pelo outro: primeiro os nunca lidos, depois os menos lidos
+  async function tirarMotivo() {
+    const pool = dados.motivos.filter(m => m.de !== eu);
+    if (!pool.length) return erro("erroPote", `${nomeDe(1 - eu)} ainda não colocou motivos no pote.`);
+    erro("erroPote", "");
+    const menor = Math.min(...pool.map(m => m.vezes || 0));
+    const opcoes = pool.filter(m => (m.vezes || 0) === menor);
+    const m = opcoes[Math.floor(Math.random() * opcoes.length)];
+    const campos = { vezes: (m.vezes || 0) + 1, sorteado_em: new Date().toISOString() };
+    $("motivoTirar").disabled = true;
+    const { error } = await sb.from("motivos").update(campos).eq("id", m.id);
+    $("motivoTirar").disabled = false;
+    if (error) return erro("erroPote", "Não consegui tirar agora. Confira a internet e tente de novo.");
+    linhaV5("motivos", "UPDATE", { ...m, ...campos });
+    $("motivoPapelTexto").textContent = m.texto;
+    $("motivoPapelDe").textContent = `— ${nomeDe(m.de)}`;
+    const papel = $("motivoPapel");
+    papel.classList.remove("anima"); papel.hidden = false; void papel.offsetWidth; papel.classList.add("anima");
+  }
+  // o autor fica sabendo (sem saber qual)
+  escutar("motivos", (ev, row, antes) => {
+    if (ev === "UPDATE" && antes && row.de === eu && (row.vezes || 0) > (antes.vezes || 0))
+      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} tirou um motivo seu do pote 🥰`), false);
+  });
+  function desenharPote() {
+    if (!estado || !estado.fixa || !$("poteSvg")) return;
+    const outro = 1 - eu;
+    const paraMim = dados.motivos.filter(m => m.de === outro);
+    const naoLidos = paraMim.filter(m => !(m.vezes > 0)).length;
+    $("poteConta").textContent = `No pote: ${paraMim.length} ${paraMim.length === 1 ? "motivo" : "motivos"} · ${naoLidos} ainda não ${naoLidos === 1 ? "lido" : "lidos"}`;
+    // o pote enche até 40 motivos
+    const nivel = Math.min(1, paraMim.length / 40), alto = 120 * nivel;
+    const svg = $("poteSvg");
+    svg.textContent = "";
+    const defs = svgEl("defs"), clip = svgEl("clipPath", { id: "poteClip" });
+    const forma = "M40 30 h80 v10 q14 8 14 26 v70 q0 18 -18 18 h-72 q-18 0 -18 -18 v-70 q0 -18 14 -26 z";
+    clip.appendChild(svgEl("path", { d: forma }));
+    defs.appendChild(clip);
+    svg.append(defs, svgEl("rect", { x: 20, y: 164 - alto, width: 120, height: alto, class: "pote-cheio", "clip-path": "url(#poteClip)" }),
+      svgEl("path", { d: forma, class: "pote-vidro" }), svgEl("rect", { x: 36, y: 20, width: 88, height: 12, rx: 4, class: "pote-tampa" }));
+    for (let i = 0; i < Math.min(paraMim.length, 14); i++)
+      svg.appendChild(svgEl("text", { x: 44 + (i * 23) % 76, y: 156 - Math.floor(i / 4) * 16, class: "pote-coracao" }, "❤"));
+    $("motivoTirar").disabled = !paraMim.length;
+    $("motivoRotulo").textContent = `Um motivo pelo qual eu te amo, ${nomeDe(outro)}`;
+    const meus = dados.motivos.filter(m => m.de === eu).slice().reverse();
+    $("meusMotivosQtd").textContent = meus.length ? `(${meus.length})` : "";
+    const ul = $("meusMotivos");
+    ul.textContent = "";
+    meus.forEach(m => {
+      const li = el("li"), info = el("div", "info");
+      info.append(el("span", "t", m.texto), el("span", "tag", m.vezes > 0 ? `lido ${m.vezes}×` : "ainda não lido"));
+      const ap = el("button", "linkbtn", "Apagar"); ap.type = "button"; ap.addEventListener("click", () => apagarMotivo(m));
+      li.append(info, ap); ul.appendChild(li);
+    });
+  }
+  redesenhar("motivos", desenharPote);
+
+  // ---------- v6: cartas "Abra quando…" (abre sozinho, sem precisar dos dois) ----------
+  const OCASIOES = ["você estiver triste", "sentir saudade", "não conseguir dormir", "o dia for difícil", "estiver feliz", "precisar rir", "brigarmos", "faltar uma semana para o reencontro"];
+  let abraEditando = null;
+  function abrirNovaAbra(x) {
+    abraEditando = x || null;
+    erro("erroAbra", "");
+    $("dlgAbraTitulo").textContent = x ? "Editar carta Abra quando…" : "Nova carta Abra quando…";
+    const conhecida = x && OCASIOES.includes(x.ocasiao);
+    $("abraOcasiao").value = !x ? OCASIOES[0] : conhecida ? x.ocasiao : "outra";
+    $("abraOutra").value = x && !conhecida ? x.ocasiao : "";
+    $("abraOutraLinha").hidden = $("abraOcasiao").value !== "outra";
+    $("abraTexto").value = x ? x.texto : "";
+    $("abraContador").textContent = `${$("abraTexto").value.length}/1000`;
+    $("dlgAbra").showModal();
+  }
+  async function salvarAbra(ev) {
+    ev.preventDefault();
+    const ocasiao = ($("abraOcasiao").value === "outra" ? $("abraOutra").value : $("abraOcasiao").value).replace(/\s+/g, " ").trim().slice(0, 60);
+    const texto = $("abraTexto").value.trim().slice(0, 1000);
+    if (ocasiao.length < 2) return erro("erroAbra", "Escreva a ocasião.");
+    if (texto.length < 3) return erro("erroAbra", "Escreva a carta (pelo menos 3 letras).");
+    $("salvarAbra").disabled = true;
+    // editar só enquanto estiver fechada
+    const { data, error } = abraEditando
+      ? await sb.from("abra_quando").update({ ocasiao, texto }).eq("id", abraEditando.id).is("aberto_em", null).select("*").maybeSingle()
+      : await sb.from("abra_quando").insert({ sala: codigo, de: eu, ocasiao, texto }).select("*").single();
+    $("salvarAbra").disabled = false;
+    if (error) return erro("erroAbra", "Não consegui salvar. Confira a internet e tente de novo.");
+    if (!data) return erro("erroAbra", "Essa carta já foi aberta e não pode mais ser editada.");
+    linhaV5("abra_quando", abraEditando ? "UPDATE" : "INSERT", data);
+    $("dlgAbra").close();
+  }
+  async function apagarAbra(x) {
+    if (x.de !== eu || x.aberto_em || !confirm("Apagar esta carta? Ela ainda não foi aberta.")) return;
+    const { error } = await sb.from("abra_quando").delete().eq("id", x.id).is("aberto_em", null);
+    if (error) return erro("erroJogo", "Não consegui apagar. Confira a internet e tente de novo.");
+    linhaV5("abra_quando", "DELETE", { id: x.id });
+  }
+  async function abrirAbra(x) {
+    if (x.de === eu || x.aberto_em) return;
+    if (!confirm("É mesmo a hora?")) return;
+    const agora = new Date().toISOString();
+    const { data, error } = await sb.from("abra_quando").update({ aberto_em: agora }).eq("id", x.id).is("aberto_em", null).select("*").maybeSingle();
+    if (error) return erro("erroJogo", "Não consegui abrir agora. Confira a internet e tente de novo.");
+    const linha = data || { ...x, aberto_em: agora };
+    linhaV5("abra_quando", "UPDATE", linha);
+    lerAbra(linha);
+  }
+  function lerAbra(x) {
+    $("abraLerOcasiao").textContent = `Abra quando… ${x.ocasiao}`;
+    $("abraLerTexto").textContent = x.texto;
+    $("abraLerDe").textContent = `— ${nomeDe(x.de)}`;
+    $("dlgAbraLer").showModal();
+  }
+  escutar("abra_quando", (ev, row, antes) => {
+    if (ev === "UPDATE" && antes && !antes.aberto_em && row.aberto_em && row.de === eu)
+      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} abriu a carta "Abra quando… ${row.ocasiao}" 💌`), false);
+  });
+  function desenharAbra() {
+    if (!estado || !estado.fixa || !$("abraFechadas")) return;
+    const outro = 1 - eu;
+    const paraMim = dados.abra_quando.filter(x => x.de === outro && !x.aberto_em);
+    const minhas = dados.abra_quando.filter(x => x.de === eu).slice().reverse();
+    const abertas = dados.abra_quando.filter(x => x.aberto_em).sort((a, b) => (a.aberto_em < b.aberto_em ? 1 : -1));
+    $("abraParaMimTitulo").textContent = `De ${nomeDe(outro)} para você`;
+    $("abraVazio").hidden = !!paraMim.length;
+    const uf = $("abraFechadas");
+    uf.textContent = "";
+    paraMim.forEach(x => {
+      const li = el("li"), b = el("button", "abra-envelope", `Abra quando… ${x.ocasiao}`);
+      b.type = "button"; b.addEventListener("click", () => abrirAbra(x));
+      li.appendChild(b); uf.appendChild(li);
+    });
+    const um = $("abraMinhas");
+    um.textContent = "";
+    minhas.forEach(x => {
+      const li = el("li"), info = el("div", "info");
+      info.append(el("span", "t", `Abra quando… ${x.ocasiao}`), el("span", "tag", x.aberto_em ? `aberta em ${dataHora(x.aberto_em)}` : "fechada"));
+      li.appendChild(info);
+      if (!x.aberto_em) {
+        const acoes = el("div", "acoes");
+        const ed = el("button", "linkbtn", "Editar"); ed.type = "button"; ed.addEventListener("click", () => abrirNovaAbra(x));
+        const ap = el("button", "linkbtn", "Apagar"); ap.type = "button"; ap.addEventListener("click", () => apagarAbra(x));
+        acoes.append(ed, ap); li.appendChild(acoes);
+      }
+      um.appendChild(li);
+    });
+    $("abraAbertasQtd").textContent = abertas.length ? `(${abertas.length})` : "";
+    const ua = $("abraAbertas");
+    ua.textContent = "";
+    abertas.forEach(x => {
+      const li = el("li"), info = el("div", "info");
+      info.append(el("span", "tag", `De ${nomeDe(x.de)} · aberta em ${dataHora(x.aberto_em)}`), el("span", "t", `Abra quando… ${x.ocasiao}`), el("span", "abra-texto", x.texto));
+      li.appendChild(info); ua.appendChild(li);
+    });
+  }
+  redesenhar("abra_quando", desenharAbra);
+  extrasDaCasa.push(() => {
+    const outro = 1 - eu;
+    const naoLidos = dados.motivos.filter(m => m.de === outro && !(m.vezes > 0)).length;
+    $("cardPoteSub").textContent = naoLidos ? `${naoLidos} ${naoLidos === 1 ? "motivo novo" : "motivos novos"}` : "Motivos de um para o outro";
+    $("cardPote").classList.toggle("destaque", naoLidos > 0);
+    const fechadas = dados.abra_quando.filter(x => x.de === outro && !x.aberto_em).length;
+    $("cardAbraSub").textContent = fechadas ? `${fechadas} ${fechadas === 1 ? "carta fechada" : "cartas fechadas"} para você` : "Cartas para a hora certa";
+  });
+
+  // ---------- v6: pergunta do dia a dois (sem sequência e sem pontos) ----------
+  // Mesma pergunta nos dois: hash de codigo + dia (como o desafio do dia), evitando as dos 30 dias anteriores.
+  // Se alguém já respondeu hoje, vale a pergunta gravada na resposta.
+  function perguntaDeHoje() {
+    const hoje = hojeISO();
+    const gravada = dados.respostas_dia.find(r => r.dia === hoje);
+    if (gravada) return gravada.pergunta;
+    const pool = cartas.filter(c => c.tipo === "pergunta_dia" && !c.sala).sort((a, b) => (a.id < b.id ? -1 : 1));
+    if (!pool.length) return null;
+    const limite = somarDias(hoje, -30);
+    const recentes = new Set(dados.respostas_dia.filter(r => r.dia < hoje && r.dia >= limite).map(r => r.pergunta));
+    const livres = pool.filter(c => !recentes.has(c.texto));
+    const lista = livres.length ? livres : pool;
+    return lista[fnv1a(`${codigo}|${hoje}|pergunta`) % lista.length].texto;
+  }
+  let editandoResposta = false, paginasDiario = 1;
+  async function responderPergunta() {
+    const pergunta = perguntaDeHoje();
+    const resposta = $("pdResposta").value.trim().slice(0, 500);
+    if (!pergunta) return;
+    if (!resposta) return erro("erroPergunta", "Escreva a sua resposta.");
+    erro("erroPergunta", "");
+    const hoje = hojeISO(), minha = dados.respostas_dia.find(r => r.dia === hoje && r.jogador === eu);
+    $("pdResponder").disabled = true;
+    const { data, error } = minha
+      ? await sb.from("respostas_dia").update({ resposta }).eq("id", minha.id).select("*").single()
+      : await sb.from("respostas_dia").insert({ sala: codigo, dia: hoje, jogador: eu, pergunta, resposta }).select("*").single();
+    $("pdResponder").disabled = false;
+    if (error) {
+      if (error.code === "23505") { carregarTabela("respostas_dia", codigo); return erro("erroPergunta", "Sua resposta já estava guardada. Confira abaixo."); }
+      return erro("erroPergunta", "Não consegui guardar. Confira a internet e tente de novo.");
+    }
+    editandoResposta = false;
+    linhaV5("respostas_dia", minha ? "UPDATE" : "INSERT", data);
+  }
+  escutar("respostas_dia", (ev, row, antes) => {
+    if (ev !== "INSERT" || antes || row.dia !== hojeISO()) return;
+    const hoje = hojeISO();
+    if ([0, 1].every(i => dados.respostas_dia.some(r => r.dia === hoje && r.jogador === i)))
+      mostrarAviso(novoAviso("As respostas de hoje estão abertas 💬"), false);
+  });
+  function desenharPergunta() {
+    if (!estado || !estado.fixa || !$("pdPergunta")) return;
+    const hoje = hojeISO(), outro = 1 - eu;
+    const p = perguntaDeHoje();
+    $("pdPergunta").textContent = p || "Carregando…";
+    const minha = dados.respostas_dia.find(r => r.dia === hoje && r.jogador === eu);
+    const dele = dados.respostas_dia.find(r => r.dia === hoje && r.jogador === outro);
+    const escrevendo = !minha || editandoResposta;
+    $("pdForm").hidden = !escrevendo || !p;
+    if (escrevendo && minha && document.activeElement !== $("pdResposta") && !$("pdResposta").value) $("pdResposta").value = minha.resposta;
+    $("pdResponder").textContent = minha ? "Salvar" : "Responder";
+    // a resposta do outro fica escondida até você responder
+    $("pdAviso").textContent = !minha && dele ? `${nomeDe(outro)} já respondeu! Responda para ver 👀` : minha && !dele ? `Esperando ${nomeDe(outro)} responder…` : "";
+    const lado = $("pdLado");
+    lado.textContent = "";
+    lado.hidden = !(minha && dele) || editandoResposta;
+    if (minha && dele && !editandoResposta) {
+      [[eu, minha], [outro, dele]].forEach(([i, r]) => {
+        const b = el("div", "pd-resposta");
+        b.append(el("span", "quem", i === eu ? "Você" : nomeDe(i)), el("p", "", r.resposta));
+        lado.appendChild(b);
+      });
+    }
+    $("pdMinha").hidden = !(minha && !dele) || editandoResposta;
+    $("pdMinha").textContent = minha ? `Sua resposta: ${minha.resposta}` : "";
+    $("pdEditar").hidden = !minha || editandoResposta;   // editável até o fim do dia
+  }
+  function desenharDiarioCasal() {
+    if (!$("listaDiario")) return;
+    const hoje = hojeISO();
+    const dias = [...new Set(dados.respostas_dia.filter(r => r.dia < hoje).map(r => r.dia))].sort().reverse();
+    $("diarioVazio").hidden = !!dias.length;
+    const ul = $("listaDiario");
+    ul.textContent = "";
+    dias.slice(0, paginasDiario * 30).forEach(d => {
+      const rs = dados.respostas_dia.filter(r => r.dia === d);
+      const li = el("li", "diario-dia");
+      li.append(el("span", "tag", dataBR(d)), el("p", "pd-pergunta", rs[0].pergunta));
+      [0, 1].forEach(i => {
+        const r = rs.find(x => x.jogador === i);
+        const b = el("div", "pd-resposta" + (r ? "" : " vazia"));
+        b.append(el("span", "quem", nomeDe(i)), el("p", "", r ? r.resposta : "sem resposta"));
+        li.appendChild(b);
+      });
+      ul.appendChild(li);
+    });
+    $("diarioMais").hidden = dias.length <= paginasDiario * 30;
+  }
+  redesenhar("respostas_dia", () => { desenharPergunta(); desenharDiarioCasal(); });
+  extrasDaCasa.push(() => {
+    desenharPergunta();
+    const n = new Set(dados.respostas_dia.filter(r => r.dia < hojeISO()).map(r => r.dia)).size;
+    $("cardDiarioCasalSub").textContent = n ? `${n} ${n === 1 ? "dia" : "dias"} de conversa` : "As perguntas dos outros dias";
+  });
+
+  // ---------- v6: encerramento da noite e Boa noite (qualquer sala; o álbum só na fixa) ----------
+  // estado.encerrando = { id, por, frases: [null | texto | false (pulou)], frase (boa noite, a mesma nos dois) }
+  function encerrarNoite() {
+    if (!estado || !estado.jogadores[1] || estado.encerrando) return;
+    if (!confirm("Encerrar a noite? A tela abre para os dois.")) return;
+    const pool = cartas.filter(c => c.tipo === "boa_noite");
+    gravar(n => {
+      if (n.encerrando) return;
+      const f = pool.length ? pool[Math.floor(Math.random() * pool.length)].texto : "Boa noite, meu amor.";
+      n.encerrando = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), por: eu, frases: [null, null], frase: f };
+      n.aviso = novoAviso(`${n.jogadores[eu]} quer encerrar a noite 🌙`);
+    });
+  }
+  function enviarFraseNoite(pular) {
+    const e = estado && estado.encerrando;
+    if (!e || e.frases[eu] !== null) return;
+    const txt = pular ? false : $("noiteFrase").value.replace(/\s+/g, " ").trim().slice(0, 200);
+    if (!pular && !txt) return erro("erroNoite", "Escreva uma frase ou toque em Pular.");
+    erro("erroNoite", "");
+    const id = e.id;
+    // os dois podem enviar ao mesmo tempo: guarda como pendente e reenvia se sumir
+    pendente("noite", x => !x.encerrando || x.encerrando.id !== id, x => x.encerrando.frases[eu] !== null, () => gravarFraseNoite(txt, id));
+    gravarFraseNoite(txt, id);
+    // na sala fixa, a frase vira um momento do álbum
+    if (txt && estado.fixa) {
+      sb.from("momentos").insert({ sala: codigo, carta_texto: `Nossa noite em ${dataBR(hojeISO())}`, carta_tipo: "encerramento", frase: txt, autor: nomeDe(eu) })
+        .select("*").single().then(({ data }) => { if (data) linhaV5("momentos", "INSERT", data); }, () => {});
+    }
+  }
+  function gravarFraseNoite(txt, id) {
+    gravarFresco(n => { if (n.encerrando && n.encerrando.id === id && n.encerrando.frases[eu] === null) n.encerrando.frases[eu] = txt; });
+  }
+  // tocou sem querer: qualquer um dos dois cancela antes das frases ficarem prontas (o placar não muda)
+  function cancelarNoite() {
+    const enc = estado && estado.encerrando;
+    if (!enc) return;
+    const id = enc.id;
+    gravar(n => {
+      if (!n.encerrando || n.encerrando.id !== id) return;
+      n.encerrando = null;
+      n.aviso = novoAviso(`${n.jogadores[eu]} cancelou o encerramento da noite.`);
+    });
+  }
+  function boaNoite() {
+    if (!estado || !estado.encerrando) return;
+    gravar(n => { n.encerrando = null; });
+  }
+  let noiteAtual = null;
+  function desenharNoite(e) {
+    const box = $("noite");
+    const enc = e && e.encerrando;
+    box.hidden = !enc;
+    if (!enc) { noiteAtual = null; return; }
+    if (noiteAtual !== enc.id) { noiteAtual = enc.id; $("noiteFrase").value = ""; erro("erroNoite", ""); }
+    const outro = 1 - eu, prontos = enc.frases.every(f => f !== null);
+    $("noiteCancelar").hidden = prontos;
+    $("noiteEscrever").hidden = enc.frases[eu] !== null;
+    $("noiteEsperando").hidden = enc.frases[eu] === null || prontos;
+    $("noiteEsperando").textContent = `Esperando ${nomeDe(outro)}…`;
+    // a frase do outro só aparece depois dos dois enviarem ou pularem
+    $("noiteFrases").hidden = !prontos;
+    $("noiteBoa").hidden = !prontos;
+    if (!prontos) return;
+    const ul = $("noiteFrases");
+    ul.textContent = "";
+    [eu, outro].forEach(i => {
+      const li = el("li", enc.frases[i] ? "" : "pulou");
+      li.append(el("span", "quem", i === eu ? "Você" : nomeDe(i)), el("p", "", enc.frases[i] || "pulou"));
+      ul.appendChild(li);
+    });
+    $("noiteBoaFrase").textContent = enc.frase || "";
+    const r = e.reencontro ? diasAte(e.reencontro) : null;
+    $("noiteReencontro").textContent = r === null || r < 0 ? "" : r === 0 ? "O reencontro é hoje 💞" : r === 1 ? "Falta 1 dia para o reencontro" : `Faltam ${r} dias para o reencontro`;
+    $("noiteMaos").textContent = maosNoite > 0 ? `Hoje vocês ficaram ${fmtMinSeg(maosNoite)} de mãos dadas` : "";
+  }
+
+  // ---------- v6: nossa playlist (só sala fixa) ----------
+  let nossas = [];   // { musica_id, marcado_por, criada_em }
+  const idMusicaAtual = m => (m && (m.id || (musicas.find(x => x.url === m.url) || {}).id)) || null;
+  const ehNossa = id => nossas.some(x => x.musica_id === id);
+  async function carregarNossas(c) {
+    const { data, error } = await sb.from("musicas_nossas").select("musica_id, marcado_por, criada_em, sala").eq("sala", c);
+    if (c !== codigo) return;
+    nossas = error || !data ? [] : data;
+    desenharNossas();
+  }
+  function comNossas(ch, c) {
+    const mudou = (ev, row) => {
+      if (!row || row.sala !== codigo) return;
+      nossas = nossas.filter(x => x.musica_id !== row.musica_id);
+      if (ev !== "DELETE") nossas.push({ musica_id: row.musica_id, marcado_por: row.marcado_por, criada_em: row.criada_em, sala: row.sala });
+      desenharNossas();
+    };
+    return ch
+      .on("postgres_changes", { event: "*", schema: "public", table: "musicas_nossas", filter: `sala=eq.${c}` }, p => mudou(p.eventType, p.eventType === "DELETE" ? p.old : p.new))
+      // DELETE não é filtrável: a linha antiga vem inteira (replica identity full) e traz a sala
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "musicas_nossas" }, p => mudou("DELETE", p.old));
+  }
+  async function alternarNossa(id) {
+    if (!estado || !estado.fixa || !id) return;
+    const tinha = ehNossa(id);
+    $("trilhaNossa").disabled = true;
+    const { error } = tinha
+      ? await sb.from("musicas_nossas").delete().eq("sala", codigo).eq("musica_id", id)
+      : await sb.from("musicas_nossas").insert({ sala: codigo, musica_id: id, marcado_por: nomeDe(eu) });
+    $("trilhaNossa").disabled = false;
+    if (error && error.code !== "23505") return erro("erroJogo", "Não consegui marcar a música. Confira a internet e tente de novo.");
+    nossas = nossas.filter(x => x.musica_id !== id);
+    if (!tinha) nossas.push({ musica_id: id, marcado_por: nomeDe(eu), criada_em: new Date().toISOString(), sala: codigo });
+    desenharNossas();
+  }
+  // "Trilha: só as nossas" vale com pelo menos 5 marcadas
+  const soNossasAtivo = () => !!(estado && estado.fixa && estado.playlistSoNossas && nossas.length >= 5);
+  let tocandoNossa = null;
+  function desenharNossas() {
+    if (!estado) return;
+    const m = estado.musica, id = idMusicaAtual(m);
+    const b = $("trilhaNossa");
+    b.hidden = !estado.fixa || !id;
+    const marcada = !!id && ehNossa(id);
+    b.textContent = marcada ? "❤️ Nossa" : "🤍 Nossa";
+    b.setAttribute("aria-pressed", String(marcada));
+    $("soNossasLinha").hidden = !estado.fixa || !permitido("trilha");
+    $("cardPlaylist").hidden = !permitido("trilha");
+    $("soNossas").checked = !!estado.playlistSoNossas;
+    $("soNossasAviso").hidden = !(estado.fixa && estado.playlistSoNossas && nossas.length < 5);
+    $("cardPlaylistSub").textContent = nossas.length ? `${nossas.length} ${nossas.length === 1 ? "música" : "músicas"}` : "Marque com 🤍 na trilha";
+    if (!$("listaNossas")) return;
+    const porId = new Map(musicas.map(x => [x.id, x]));
+    const lista = nossas.filter(x => porId.has(x.musica_id)).sort((a, b) => (a.criada_em < b.criada_em ? 1 : -1));
+    $("nossasVazio").hidden = !!lista.length;
+    const ul = $("listaNossas");
+    ul.textContent = "";
+    lista.forEach(x => {
+      const mu = porId.get(x.musica_id);
+      const li = el("li", "nossa-musica"), info = el("div", "info");
+      info.append(el("span", "t", mu.titulo), el("span", "tag", `${mu.artista} · marcada por ${x.marcado_por}`));
+      const acoes = el("div", "acoes");
+      const a = el("a", "spotify", "Abrir no Spotify"); a.href = mu.url; a.target = "_blank"; a.rel = "noopener";
+      const t = el("button", "linkbtn", "Tocar aqui"); t.type = "button";
+      const player = el("div", "trilha-player");
+      t.addEventListener("click", () => {
+        const fid = idFaixa(mu.url);
+        if (!fid) return;
+        document.querySelectorAll("#listaNossas .trilha-player").forEach(p => { p.textContent = ""; });
+        const f = document.createElement("iframe");
+        f.src = "https://open.spotify.com/embed/track/" + encodeURIComponent(fid);
+        f.width = "100%"; f.height = "80"; f.loading = "lazy";
+        f.allow = "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
+        f.title = "Player do Spotify";
+        player.appendChild(f);
+        tocandoNossa = x.musica_id;
+      });
+      acoes.append(a, t);
+      info.appendChild(acoes);
+      li.append(info);
+      li.appendChild(player);
+      ul.appendChild(li);
+    });
+  }
+
+  // ---------- configurações da sala (controladas pelo dono) ----------
+  // A config fica em `salas_config` (fora do `estado`): todo mundo lê, só o dono muda (função sala_config_salvar,
+  // que confere o token). O token do dono fica só no localStorage deste aparelho; o banco guarda o hash.
+  const ORDEM_CFG = ["romantico", "leve", "criativo", "picante", "pesado"];
+  const ordCfg = n => ORDEM_CFG.indexOf(n);
+  const CONFIG_PADRAO = {
+    versao: 1,
+    niveis: { romantico: true, leve: true, criativo: true, picante: false, pesado: false },
+    chipsQuemMuda: "todos",
+    midia: { ativo: false },
+    posicoes: { ativo: false, nivelMax: "picante", climas: ["romantica"], dificuldadeMax: "facil" },
+    poses: { ativo: false, nivelMax: "leve", video: false },
+    ia: { ativo: false, nivelMax: "leve", poses: false },
+    eventos: { ativo: false, nivelMax: "leve", tipos: { efeito: true, duelo: true, sintonia: true, missao_dupla: true } },
+    missaoSecreta: { ativo: false, nivelMax: "leve" },
+    reverso: { ativo: true },
+    trilha: { ativo: true, nivelMax: "leve" },
+    desafioDoDia: { ativo: true, nivelMax: "leve" },
+    semana: { ativo: true, nivelMax: "leve" },
+    envelopes: { ativo: true, desafioNivelMax: "leve" },
+    cartasDeVoces: { ativo: true, nivelMax: "leve" },
+    conquistasOusadia: { ativo: false }
+  };
+  // merge profundo: o padrão preenche o que faltar (e o que vier com tipo errado)
+  function mesclar(pad, x) {
+    if (Array.isArray(pad)) return Array.isArray(x) ? x.filter(v => typeof v === "string") : pad.slice();
+    if (pad && typeof pad === "object") {
+      const out = {}, obj = x && typeof x === "object" && !Array.isArray(x) ? x : {};
+      Object.keys(pad).forEach(k => { out[k] = mesclar(pad[k], obj[k]); });
+      return out;
+    }
+    return typeof x === typeof pad ? x : pad;
+  }
+  function mesclarConfig(x) {
+    const c = mesclar(CONFIG_PADRAO, x);
+    if (!ORDEM_CFG.some(n => c.niveis[n])) c.niveis = { ...CONFIG_PADRAO.niveis };   // pelo menos um nível
+    if (!["todos", "dono"].includes(c.chipsQuemMuda)) c.chipsQuemMuda = "todos";
+    Object.keys(c).forEach(k => {
+      const m = c[k];
+      if (m && typeof m === "object") ["nivelMax", "desafioNivelMax"].forEach(ch => { if (ch in m && ordCfg(m[ch]) < 0) m[ch] = CONFIG_PADRAO[k][ch]; });
+    });
+    if (!["facil", "media", "dificil"].includes(c.posicoes.dificuldadeMax)) c.posicoes.dificuldadeMax = "facil";
+    return c;
+  }
+  let config = mesclarConfig({});
+  let temDono = false, donoIndice = null, souDono = false, configPronta = false;
+
+  // nível máximo da sala e nível efetivo de cada modo (o menor entre o nivelMax do modo e o da sala)
+  const nivelMaxSala = () => ORDEM_CFG.filter(n => config.niveis[n]).pop() || "leve";
+  function efetivo(recurso) {
+    const m = config[recurso] || {};
+    const n = m.desafioNivelMax || m.nivelMax || "pesado";
+    return ordCfg(n) <= ordCfg(nivelMaxSala()) ? n : nivelMaxSala();
+  }
+  // modos cujo conteúdo são cartas: o nível também precisa existir na sala
+  const MODO_DE_CARTAS = new Set(["eventos", "missaoSecreta", "desafioDoDia", "semana", "envelopes", "cartasDeVoces", "ia"]);
+  // A regra central: tudo que aparece ou é sorteado passa por aqui.
+  function permitido(recurso, nivel) {
+    if (recurso === "nivel") return !!config.niveis[nivel];
+    const m = config[recurso];
+    if (!m || !m.ativo) return false;
+    if (nivel === undefined || nivel === null) return true;
+    if (ordCfg(nivel) < 0 || ordCfg(nivel) > ordCfg(efetivo(recurso))) return false;
+    return MODO_DE_CARTAS.has(recurso) ? !!config.niveis[nivel] : true;
+  }
+  // uma carta do baralho pode sair nesta sala?
+  function cartaPermitida(c) {
+    if (!c || !permitido("nivel", c.nivel)) return false;
+    if (c.midia && !permitido("midia")) return false;
+    if (c.sala && !permitido("cartasDeVoces", c.nivel)) return false;
+    return true;
+  }
+  // o nível permitido mais alto até `nivel` (ou o mais leve permitido, se nenhum abaixo)
+  function limitarNivel(recurso, nivel) {
+    const ok = ORDEM_CFG.filter(n => (recurso === "nivel" ? permitido("nivel", n) : permitido(recurso, n)));
+    if (!ok.length) return null;
+    const abaixo = ok.filter(n => ordCfg(n) <= ordCfg(nivel));
+    return abaixo.length ? abaixo[abaixo.length - 1] : ok[0];
+  }
+  // seletores de nível: esconde o que não pode e ajusta o valor para o permitido mais alto abaixo
+  function limitarSelectNiveis(sel, pode) {
+    if (!sel) return;
+    [...sel.options].forEach(o => { const ok = pode(o.value); o.hidden = !ok; o.disabled = !ok; });
+    if (!pode(sel.value)) {
+      const oks = [...sel.options].filter(o => !o.disabled);
+      const abaixo = oks.filter(o => ordCfg(o.value) <= ordCfg(sel.value));
+      if (oks.length) sel.value = (abaixo.length ? abaixo[abaixo.length - 1] : oks[0]).value;
+    }
+  }
+  const maisLeve = () => (config.niveis.leve ? "leve" : ORDEM_CFG.find(n => config.niveis[n]) || "leve");
+  const niveisDaPartida = lista => { const l = (lista || []).filter(n => config.niveis[n]); return l.length ? l : [maisLeve()]; };
+
+  // token do dono: 24 caracteres sem letras ambíguas, mostrado em blocos de 4
+  const ALFABETO_TOKEN = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  function novoToken() {
+    const b = new Uint8Array(24);
+    crypto.getRandomValues(b);
+    return Array.from(b, x => ALFABETO_TOKEN[x % ALFABETO_TOKEN.length]).join("");
+  }
+  const chaveToken = c => "lp-dono-" + c;
+  const lerToken = c => { try { return localStorage.getItem(chaveToken(c)) || null; } catch (err) { return null; } };
+  const salvarToken = (c, t) => { try { localStorage.setItem(chaveToken(c), t); } catch (err) {} };
+  const formatarCodigo = t => (t.match(/.{1,4}/g) || []).join("-");
+  const normalizarCodigo = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+  async function carregarConfig(c) {
+    const { data, error } = await sb.from("salas_config").select("config, dono").eq("sala", c).maybeSingle();
+    if (c !== codigo) return;
+    aplicarLinhaConfig(error ? null : data);
+    conferirDono(c);
+  }
+  function aplicarLinhaConfig(row) {
+    if (!(timerSalvarCfg || salvandoCfg)) config = mesclarConfig(row && row.config);
+    temDono = !!row && (row.dono === 0 || row.dono === 1);
+    donoIndice = temDono ? row.dono : null;
+    configPronta = true;
+    redesenharConfig();
+  }
+  async function conferirDono(c) {
+    const t = lerToken(c);
+    let sou = false;
+    if (t) {
+      const { data, error } = await sb.rpc("sala_sou_dono", { p_sala: c, p_token: t });
+      sou = !error && data === true;
+    }
+    if (c !== codigo || lerToken(c) !== t) return;   // mudou no meio do caminho
+    if (sou !== souDono) { souDono = sou; redesenharConfig(); }
+  }
+  // assumir a sala (criar ou sala antiga sem dono): gera o token, reivindica e mostra o código uma vez
+  async function assumirDono(jogador) {
+    const c = codigo;
+    if (!c) return false;
+    const t = novoToken();
+    const { data, error } = await sb.rpc("sala_reivindicar", { p_sala: c, p_token: t, p_jogador: jogador, p_config: mesclarConfig({}) });
+    if (c !== codigo) return false;
+    if (error) { erro("erroDono", "Não consegui assumir agora. Confira a internet e tente de novo."); return false; }
+    if (data !== true) { erro("erroDono", "Esta sala já tem dono."); carregarConfig(c); return false; }
+    salvarToken(c, t);
+    souDono = true; temDono = true; donoIndice = jogador;
+    erro("erroDono", "");
+    mostrarCodigoDono(t);
+    carregarConfig(c);
+    return true;
+  }
+  function mostrarCodigoDono(t) {
+    $("codigoDono").textContent = formatarCodigo(t);
+    $("codigoDonoCopiado").textContent = "";
+    $("dlgCodigoDono").showModal();
+  }
+  async function copiarCodigoDono() {
+    try { await navigator.clipboard.writeText($("codigoDono").textContent); $("codigoDonoCopiado").textContent = "Copiado ✓"; }
+    catch (err) { $("codigoDonoCopiado").textContent = "Não consegui copiar. Anote o código."; }
+  }
+  // "👑 Entrar como dono": só o campo do código; com o código certo, este aparelho vira dono
+  function abrirEntrarDono() {
+    $("entrarDonoCodigo").value = "";
+    erro("erroEntrarDono", "");
+    $("dlgEntrarDono").showModal();
+  }
+  async function entrarComoDono(ev) {
+    ev.preventDefault();
+    const c = codigo, t = normalizarCodigo($("entrarDonoCodigo").value);
+    if (!c || t.length < 20) return erro("erroEntrarDono", "Código inválido");
+    $("entrarDonoOk").disabled = true;
+    const { data, error } = await sb.rpc("sala_sou_dono", { p_sala: c, p_token: t });
+    $("entrarDonoOk").disabled = false;
+    if (error) return erro("erroEntrarDono", "Não consegui conferir agora. Confira a internet e tente de novo.");
+    if (data !== true) return erro("erroEntrarDono", "Código inválido");
+    salvarToken(c, t);
+    souDono = true;
+    $("dlgEntrarDono").close();
+    redesenharConfig();
+  }
+  // redesenha tudo que depende da config (quem chama: carga, Realtime, mudanças do dono)
+  function redesenharConfig() {
+    if (!estado) return;
+    $("semDono").hidden = !configPronta || temDono;
+    $("entrarDono").hidden = !configPronta || !temDono || souDono;
+    if (typeof desenharEntradaConfig === "function") desenharEntradaConfig();
+    aplicar(estado, true, true);
+    desenharCasa(estado);
+    desenharDiario();
+    desenharExtras();
+    desenharConquistas();
+    desenharNossas();
+  }
+
+  // ---------- tela de Configurações (só existe no DOM do aparelho do dono) ----------
+  let timerSalvarCfg = null, salvandoCfg = 0, statusCfg = "", avisoNiveisCfg = "";
+  // entradas: "⚙️ Configurações" no menu da sala e um card na Casa, criados só para o dono
+  function desenharEntradaConfig() {
+    const menu = document.querySelector(".ajustes");
+    let bm = $("abrirConfigMenu"), bc = $("cardConfig");
+    if (souDono) {
+      if (!bm && menu) {
+        bm = el("button", "linkbtn", "⚙️ Configurações"); bm.id = "abrirConfigMenu"; bm.type = "button";
+        bm.addEventListener("click", abrirConfig);
+        menu.insertBefore(bm, $("som").nextSibling);
+      }
+      if (!bc) {
+        bc = el("button", "casa-card"); bc.id = "cardConfig"; bc.type = "button";
+        bc.append(el("span", "ic", "⚙️"), el("b", "", "Configurações"), el("span", "sub", "Só você vê"));
+        bc.addEventListener("click", abrirConfig);
+        $("perfilConfig").appendChild(bc);
+      }
+    } else {
+      if (bm) bm.remove();
+      if (bc) bc.remove();
+      const d = $("dlgConfig");
+      if (d) { d.close(); d.remove(); }
+    }
+  }
+  function abrirConfig() {
+    if (!souDono) return;
+    let d = $("dlgConfig");
+    if (!d) {
+      d = el("dialog", "dlg-posicoes dlg-config"); d.id = "dlgConfig";
+      d.setAttribute("aria-label", "Configurações da sala");
+      d.addEventListener("close", () => d.remove());
+      document.body.appendChild(d);
+    }
+    statusCfg = "";
+    desenharTelaConfig();
+    if (!d.open) d.showModal();
+  }
+  // cada mudança: aplica as regras, redesenha e salva a config inteira (juntando toques em 500 ms)
+  const NIVEL_INICIAL_MODO = { posicoes: "picante" };
+  function mudarConfig(fn) {
+    if (!souDono) return;
+    const novo = structuredClone(config);
+    fn(novo);
+    config = mesclarConfig(novo);
+    statusCfg = "Salvando…";
+    avisoNiveisCfg = "";
+    clearTimeout(timerSalvarCfg);
+    timerSalvarCfg = setTimeout(salvarConfig, 500);
+    redesenharConfig();
+    desenharTelaConfig();
+  }
+  function ligarModo(cfg, recurso, ligar) {
+    const m = cfg[recurso];
+    if (ligar && !m.ativo) {
+      // ao ligar, começa no nível mais baixo que o modo aceita
+      if ("nivelMax" in m) m.nivelMax = NIVEL_INICIAL_MODO[recurso] || "leve";
+      if ("desafioNivelMax" in m) m.desafioNivelMax = "leve";
+      if (recurso === "posicoes") { m.dificuldadeMax = "facil"; if (!m.climas.length) m.climas = ["romantica"]; }
+    }
+    m.ativo = !!ligar;
+  }
+  async function salvarConfig() {
+    timerSalvarCfg = null;
+    const c = codigo, t = lerToken(c);
+    salvandoCfg++;
+    const { error } = await sb.rpc("sala_config_salvar", { p_sala: c, p_token: t, p_config: config });
+    salvandoCfg--;
+    if (c !== codigo) return;
+    statusCfg = error ? "Não consegui salvar. Confira a internet e tente de novo." : "Salvo ✓";
+    if (error && /dono/.test(error.message || "")) { statusCfg = "Este aparelho não é mais o dono."; conferirDono(c); }
+    const s = $("cfgStatus");
+    if (s) s.textContent = statusCfg;
+  }
+  async function gerarNovoCodigo() {
+    if (!confirm("Gerar um novo código? O código antigo para de funcionar em todos os aparelhos.")) return;
+    const c = codigo, t = lerToken(c), novo = novoToken();
+    const { error } = await sb.rpc("sala_dono_trocar", { p_sala: c, p_token_atual: t, p_token_novo: novo });
+    if (error) { statusCfg = "Não consegui gerar o código. Confira a internet e tente de novo."; return desenharTelaConfig(); }
+    salvarToken(c, novo);
+    mostrarCodigoDono(novo);
+    // regrava a config para os outros aparelhos conferirem se ainda são donos
+    sb.rpc("sala_config_salvar", { p_sala: c, p_token: novo, p_config: config }).then(() => {}, () => {});
+  }
+  async function passarCoroa() {
+    const outro = 1 - (donoIndice === null ? eu : donoIndice);
+    if (!estado.jogadores[outro]) return;
+    const { error } = await sb.rpc("sala_dono_indice", { p_sala: codigo, p_token: lerToken(codigo), p_jogador: outro });
+    statusCfg = error ? "Não consegui passar o 👑." : `O 👑 agora aparece para ${nomeDe(outro)}.`;
+    if (!error) donoIndice = outro;
+    desenharTelaConfig();
+  }
+
+  // peças da tela
+  function cfgInterruptor(rotulo, ligado, aoMudar, chave) {
+    const l = el("label", "cfg-item");
+    const i = el("input"); i.type = "checkbox"; i.checked = !!ligado;
+    if (chave) i.dataset.cfg = chave;
+    i.addEventListener("change", () => aoMudar(i.checked));
+    l.append(i, el("span", "", rotulo));
+    return l;
+  }
+  function cfgSeletor(rotulo, opcoes, valor, aoMudar, chave) {
+    const l = el("label", "cfg-sel");
+    l.appendChild(el("span", "", rotulo));
+    const s = el("select");
+    if (chave) s.dataset.cfg = chave;
+    opcoes.forEach(([v, t]) => { const o = el("option", "", t); o.value = v; s.appendChild(o); });
+    s.value = opcoes.some(([v]) => v === valor) ? valor : (opcoes[0] || [""])[0];
+    s.addEventListener("change", () => aoMudar(s.value));
+    l.appendChild(s);
+    return l;
+  }
+  // níveis oferecidos num seletor: só os que existem na sala (e os que o modo aceita)
+  const NIVEIS_DO_MODO = { posicoes: ["picante", "pesado"], poses: ["leve", "picante", "pesado"] };
+  function cfgNivelModo(recurso, rotulo) {
+    const chave = recurso === "envelopes" ? "desafioNivelMax" : "nivelMax";
+    const aceitos = NIVEIS_DO_MODO[recurso] || ORDEM_CFG;
+    const opcoes = aceitos.filter(n => (NIVEIS_DO_MODO[recurso] ? ordCfg(n) <= ordCfg(nivelMaxSala()) : config.niveis[n])).map(n => [n, LEVEL_NAMES[n]]);
+    if (!opcoes.length) return el("p", "extras-sub", recurso === "posicoes" ? "Ligue o nível Picante ou Pesado da sala para o guia aparecer." : "Nenhum nível disponível para isto com os níveis da sala.");
+    return cfgSeletor(rotulo || "Nível máximo", opcoes, efetivo(recurso), v => mudarConfig(c => { c[recurso][chave] = v; }), recurso + "." + chave);
+  }
+  function cfgModo(recurso, rotulo, extras) {
+    const box = el("div", "cfg-modo");
+    box.appendChild(cfgInterruptor(rotulo, config[recurso].ativo, v => mudarConfig(c => ligarModo(c, recurso, v)), recurso + ".ativo"));
+    if (config[recurso].ativo && extras) {
+      const dentro = el("div", "cfg-dentro");
+      extras(dentro);
+      box.appendChild(dentro);
+    }
+    return box;
+  }
+  function cfgSecao(titulo) { const s = el("section", "cfg-secao"); s.appendChild(el("h3", "casa-h3", titulo)); return s; }
+
+  function desenharTelaConfig() {
+    const d = $("dlgConfig");
+    if (!d || !souDono) return;
+    const rolagem = d.scrollTop;
+    d.textContent = "";
+    const topo = el("div", "pos-topo");
+    topo.appendChild(el("h2", "", "⚙️ Configurações"));
+    const fechar = el("button", "linkbtn", "Fechar"); fechar.type = "button"; fechar.addEventListener("click", () => d.close());
+    topo.appendChild(fechar);
+    d.appendChild(topo);
+    const dono = el("div", "cfg-dono");
+    dono.appendChild(el("p", "cfg-dono-titulo", "Você é o dono desta sala 👑"));
+    if (donoIndice !== null && estado.jogadores[donoIndice]) dono.appendChild(el("p", "extras-sub", `O 👑 aparece para ${nomeDe(donoIndice)}.`));
+    const botoes = el("div", "cfg-botoes");
+    const mostrar = el("button", "secondary", "Mostrar código de dono"); mostrar.type = "button";
+    mostrar.addEventListener("click", () => { if (confirm("Mostrar o código de dono na tela?")) mostrarCodigoDono(lerToken(codigo)); });
+    const gerar = el("button", "secondary", "Gerar novo código"); gerar.type = "button"; gerar.addEventListener("click", gerarNovoCodigo);
+    botoes.append(mostrar, gerar);
+    const outro = 1 - (donoIndice === null ? eu : donoIndice);
+    if (estado.jogadores[outro]) {
+      const passar = el("button", "secondary", `Passar o 👑 para ${nomeDe(outro)}`); passar.type = "button"; passar.addEventListener("click", passarCoroa);
+      botoes.appendChild(passar);
+    }
+    dono.appendChild(botoes);
+    const st = el("p", "cfg-status", statusCfg); st.id = "cfgStatus"; st.setAttribute("aria-live", "polite");
+    dono.appendChild(st);
+    d.appendChild(dono);
+
+    // níveis da sala
+    const sn = cfgSecao("Níveis da sala");
+    if (!config.niveis.picante || !config.niveis.pesado) sn.appendChild(el("p", "cfg-aviso", "Níveis mais ousados estão desligados nesta sala"));
+    if (avisoNiveisCfg) sn.appendChild(el("p", "erro", avisoNiveisCfg));
+    ORDEM_CFG.forEach(n => sn.appendChild(cfgInterruptor(LEVEL_NAMES[n], config.niveis[n], v => {
+      if (!v && ORDEM_CFG.filter(x => config.niveis[x]).length <= 1) { avisoNiveisCfg = "Pelo menos um nível precisa ficar ligado."; return desenharTelaConfig(); }
+      mudarConfig(c => { c.niveis[n] = v; });
+    }, "niveis." + n)));
+    sn.appendChild(cfgSeletor("Quem muda os níveis na partida", [["todos", "Os dois"], ["dono", "Só o dono"]], config.chipsQuemMuda, v => mudarConfig(c => { c.chipsQuemMuda = v; }), "chipsQuemMuda"));
+    d.appendChild(sn);
+
+    const sc = cfgSecao("Conteúdo");
+    sc.appendChild(cfgModo("midia", "Cartas com foto, vídeo e áudio"));
+    sc.appendChild(cfgModo("conquistasOusadia", "Conquistas de ousadia"));
+    d.appendChild(sc);
+
+    const sm = cfgSecao("Modos de jogo");
+    sm.appendChild(cfgModo("eventos", "Eventos especiais", box => {
+      box.appendChild(cfgNivelModo("eventos"));
+      Object.keys(config.eventos.tipos).forEach(t => box.appendChild(cfgInterruptor(TIPO_NOMES[t] || t, config.eventos.tipos[t], v => mudarConfig(c => { c.eventos.tipos[t] = v; }), "eventos.tipos." + t)));
+    }));
+    sm.appendChild(cfgModo("missaoSecreta", "Missão secreta", box => box.appendChild(cfgNivelModo("missaoSecreta"))));
+    sm.appendChild(cfgModo("reverso", "Reverso"));
+    d.appendChild(sm);
+
+    const sg = cfgSecao("Guias");
+    sg.appendChild(cfgModo("posicoes", "Guia de posições", box => {
+      box.appendChild(cfgNivelModo("posicoes"));
+      const climas = el("div", "cfg-climas");
+      climas.appendChild(el("span", "", "Climas"));
+      Object.entries(POS_CLIMA).forEach(([k, t]) => climas.appendChild(cfgInterruptor(t, config.posicoes.climas.includes(k), v => mudarConfig(c => {
+        c.posicoes.climas = v ? [...new Set([...c.posicoes.climas, k])] : c.posicoes.climas.filter(x => x !== k);
+      }), "posicoes.climas." + k)));
+      box.appendChild(climas);
+      box.appendChild(cfgSeletor("Dificuldade máxima", Object.entries(POS_DIF), config.posicoes.dificuldadeMax, v => mudarConfig(c => { c.posicoes.dificuldadeMax = v; }), "posicoes.dificuldadeMax"));
+    }));
+    sg.appendChild(cfgModo("poses", "Guia de poses", box => {
+      box.appendChild(cfgNivelModo("poses"));
+      box.appendChild(cfgInterruptor("Incluir vídeos", config.poses.video, v => mudarConfig(c => { c.poses.video = v; }), "poses.video"));
+    }));
+    d.appendChild(sg);
+
+    const si = cfgSecao("IA");
+    si.appendChild(cfgModo("ia", "Ideias da IA", box => {
+      box.appendChild(cfgNivelModo("ia"));
+      box.appendChild(cfgInterruptor("Ideias de pose pela IA", config.ia.poses, v => mudarConfig(c => { c.ia.poses = v; }), "ia.poses"));
+    }));
+    d.appendChild(si);
+
+    const se = cfgSecao("Entre chamadas");
+    se.appendChild(cfgModo("trilha", "Trilha da rodada", box => box.appendChild(cfgNivelModo("trilha"))));
+    se.appendChild(cfgModo("desafioDoDia", "Desafio do dia", box => box.appendChild(cfgNivelModo("desafioDoDia"))));
+    se.appendChild(cfgModo("semana", "Semana (apostas e missão de observação)", box => box.appendChild(cfgNivelModo("semana"))));
+    se.appendChild(cfgModo("envelopes", "Envelopes", box => box.appendChild(cfgNivelModo("envelopes", "Desafio surpresa até"))));
+    se.appendChild(cfgModo("cartasDeVoces", "Cartas de vocês", box => box.appendChild(cfgNivelModo("cartasDeVoces"))));
+    d.appendChild(se);
+    d.scrollTop = rolagem;
+  }
+
+  // ---------- "visto por último" (tabela `vistos`: uma linha por jogador na sala) ----------
+  // Este aparelho grava a hora em que está com o app aberto: ao entrar, a cada minuto e ao sair.
+  let vistos = [null, null], ultimoVistoGravado = 0;
+  async function carregarVistos(c) {
+    const { data, error } = await sb.from("vistos").select("jogador, visto_em").eq("sala", c);
+    if (c !== codigo || error || !data) return;
+    vistos = [null, null];
+    data.forEach(r => { if (r.jogador === 0 || r.jogador === 1) vistos[r.jogador] = r.visto_em; });
+    desenharPresenca();
+  }
+  function marcarVisto(forcar) {
+    if (!codigo || (eu !== 0 && eu !== 1) || document.hidden && !forcar) return;
+    if (!forcar && Date.now() - ultimoVistoGravado < 55000) return;
+    ultimoVistoGravado = Date.now();
+    const agora = new Date().toISOString();
+    vistos[eu] = agora;
+    sb.from("vistos").upsert({ sala: codigo, jogador: eu, visto_em: agora }, { onConflict: "sala,jogador" }).then(() => {}, () => {});
+  }
+  // "há 5 min", "hoje às 21:43", "ontem às 23:10", "12/10 às 08:00"
+  function quandoVisto(iso) {
+    const d = new Date(iso), seg = (Date.now() - d.getTime()) / 1000;
+    if (!(seg >= -60)) return null;
+    if (seg < 90) return "agora há pouco";
+    if (seg < 3600) return `há ${Math.round(seg / 60)} min`;
+    const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const dia = x => x.toLocaleDateString("pt-BR");
+    const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+    if (dia(d) === dia(new Date())) return `hoje às ${hora}`;
+    if (dia(d) === dia(ontem)) return `ontem às ${hora}`;
+    return `${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} às ${hora}`;
+  }
+  setInterval(() => { marcarVisto(false); if (estado) desenharPresenca(); }, 60000);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) marcarVisto(true); else { marcarVisto(true); desenharPresenca(); } });
+  addEventListener("pagehide", () => marcarVisto(true));
 
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
@@ -1954,9 +4582,11 @@
       li.append(data_, res);
       ul.appendChild(li);
     });
+    desenharHistorico();
   }
 
   function sair() {
+    marcarVisto(true);
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null; ultimoVencedor = null; ultimaRevelada = null;
     presentes = new Set(); presencaPronta = false;
@@ -2005,6 +4635,7 @@
     if (!LEVEL_NAMES[e.nivelDiario]) e.nivelDiario = "leve";
     if (!e.diario || typeof e.diario !== "object" || Array.isArray(e.diario)) e.diario = {};
     if (typeof e.notaAdversario !== "boolean") e.notaAdversario = true;
+    if (typeof e.prendasFofas !== "boolean") e.prendasFofas = false;
     if (!(e.eventos in CHANCE_EVENTO)) e.eventos = "normal";
     if (!Array.isArray(e.efeitos)) e.efeitos = [];
     if (!e.prendaPendente || ![0, 1].includes(e.prendaPendente.dono)) e.prendaPendente = null;
@@ -2017,7 +4648,13 @@
     if (!Array.isArray(e.historico)) e.historico = [];
     if (!e.posicao || typeof e.posicao !== "object" || !e.posicao.nome) e.posicao = null;
     if (!e.cardapio || typeof e.cardapio !== "object" || !Array.isArray(e.cardapio.itens)) e.cardapio = null;
-    if (typeof e.mostrarOusadia !== "boolean") e.mostrarOusadia = true;
+    if (!e.pose || typeof e.pose !== "object" || !e.pose.nome) e.pose = null;
+    if (!(Number(e.maosTotal) >= 0)) e.maosTotal = 0;
+    if (!Array.isArray(e.cidades) || e.cidades.length !== 2) e.cidades = [null, null];
+    e.cidades = e.cidades.map(x => (x && typeof x.nome === "string" && x.nome.trim() ? { nome: x.nome.slice(0, 60), lat: Number.isFinite(x.lat) ? x.lat : null, lng: Number.isFinite(x.lng) ? x.lng : null } : null));
+    if (!Number.isFinite(e.distanciaManual)) e.distanciaManual = null;
+    if (typeof e.playlistSoNossas !== "boolean") e.playlistSoNossas = false;
+    if (!e.encerrando || typeof e.encerrando !== "object" || !Array.isArray(e.encerrando.frases) || e.encerrando.frases.length !== 2) e.encerrando = null;
     if (!Array.isArray(e.titulos) || e.titulos.length !== 2) e.titulos = [null, null];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
@@ -2037,7 +4674,11 @@
   // Nível da prenda. Final: o mais alto ativo. Por pulo: desafio sobe um nível, verdade fica no mesmo.
   // Nunca acima do mais alto ativo (a descida quando falta prenda fica no sortearPrenda).
   function nivelDaPrenda(n, motivo, pulada) {
-    const teto = ORDEM_NIVEIS.indexOf(nivelMaisAlto(n.niveis));
+    if (pulada && pulada.nivel === "romantico") return "romantico";   // romântica não sobe de nível
+    const niv = niveisDaPartida(n.niveis);                           // só os níveis que a sala tem
+    // só o Romântico ligado: a prenda final também é romântica
+    if (!ORDEM_NIVEIS.some(x => niv.includes(x)) && niv.includes("romantico")) return "romantico";
+    const teto = ORDEM_NIVEIS.indexOf(nivelMaisAlto(niv));
     if (motivo === "final" || !pulada) return ORDEM_NIVEIS[teto];
     const base = Math.max(0, ORDEM_NIVEIS.indexOf(pulada.nivel));
     return ORDEM_NIVEIS[Math.min(base + (pulada.tipo === "desafio" ? 1 : 0), ORDEM_NIVEIS.length - 1, teto)];
@@ -2045,7 +4686,7 @@
 
   // sorteia a prenda, marca como usada e devolve
   function prendaPara(n, motivo, pulada) {
-    const carta = sortearPrenda(nivelDaPrenda(n, motivo, pulada), n.usados || []);
+    const carta = sortearPrenda(nivelDaPrenda(n, motivo, pulada), n.usados || [], n);
     if (!carta) return null;
     registrarUso(n, carta);
     carta.motivo = motivo;
@@ -2090,7 +4731,7 @@
     }
     const pend = n.prendaPendente;
     if (pend && pend.dono === dono && !n.carta) {
-      const carta = sortearPrenda(pend.nivel, n.usados || []);
+      const carta = sortearPrenda(pend.nivel, n.usados || [], n);
       if (carta) {
         registrarUso(n, carta);
         carta.motivo = "quebra";
@@ -2112,6 +4753,7 @@
     nomes.forEach((n, i) => {
       const th = document.createElement("th");
       th.textContent = n;
+      if (e.fixa) th.prepend(avatarEl(i, "mini"));
       const titulo = tituloDe(e, i);
       if (titulo) th.appendChild(el("small", "titulo-placar", titulo));
       th.className = (i === eu ? "me " : "") + (i === e.vez && e.jogadores[1] ? "vez" : "");
@@ -2128,7 +4770,7 @@
       ["Duelos vencidos", p => p.duelos],
       ["Sintonias certeiras", p => p.sintonias],
       ["Missões em dupla", p => p.duplas],
-      ["Reverso", p => p.reverso === false ? "Usado" : "Disponível"],
+      ...(permitido("reverso") ? [["Reverso", p => p.reverso === false ? "Usado" : "Disponível"]] : []),
       ["Pulos grátis de verdade", p => `${p.livresV}/${e.pulosMax}`],
       ["Pulos grátis de desafio", p => `${p.livresD}/${e.pulosMax}`]
     ];
@@ -2155,9 +4797,11 @@
     $("pulosMax").value = String(e.pulosMax);
     const zerado = placarZerado(e);
     $("notaAdv").checked = e.notaAdversario;
+    $("prendasFofas").checked = e.prendasFofas;
     $("eventos").value = e.eventos;
-    $("meta").disabled = $("pulosMax").disabled = $("notaAdv").disabled = $("eventos").disabled = !zerado;
-    $("configDica").textContent = zerado ? "" : "Meta, pulos, eventos e nota só mudam com o placar zerado (em Nova partida).";
+    $("eventos").closest("label").hidden = !(souDono && permitido("eventos"));
+    $("meta").disabled = $("pulosMax").disabled = $("notaAdv").disabled = $("eventos").disabled = $("prendasFofas").disabled = !zerado;
+    $("configDica").textContent = zerado ? "" : "Meta, pulos, eventos, nota e prendas fofas só mudam com o placar zerado (em Nova partida).";
 
     const fim = $("fim");
     fim.hidden = e.vencedor === null;
@@ -2185,7 +4829,13 @@
 
     $("convite").hidden = completa;
 
-    document.querySelectorAll("#niveis input").forEach(i => { i.checked = e.niveis.includes(i.value); });
+    // chips: só os níveis que a sala tem; com "só o dono", só ele muda
+    const niv = niveisDaPartida(e.niveis);
+    document.querySelectorAll("#niveis input").forEach(i => {
+      i.closest("label").hidden = !permitido("nivel", i.value);
+      i.checked = niv.includes(i.value);
+      i.disabled = config.chipsQuemMuda === "dono" && !souDono;
+    });
 
     const vez = $("vez");
     vez.innerHTML = "";
@@ -2197,13 +4847,18 @@
     if (s) s.textContent = nomes[e.vez];
 
     desenharPlacar(e, nomes);
+    desenharNoite(e);
     desenharPosicoes();
+    desenharPoses();
     desenharPresenca();
     if (vista !== "jogo") desenharCasa(e);
     desenharEfeitos(e);
     desenharSecretas(e);
     desenharReencontro(e);
     desenharDiario();
+    desenharNav();
+    desenharFaixaHumor();
+    desenharCartaMural(e);
 
     // giro novo? anima nos dois celulares
     const g = e.giro;
@@ -2238,6 +4893,8 @@
   }
 
   function desenharExtras() {
+    $("abrirCarta").hidden = !permitido("cartasDeVoces");
+    $("extras").hidden = !permitido("cartasDeVoces");
     const extras = cartas.filter(c => c.sala);
     $("extrasQtd").textContent = extras.length ? `(${extras.length})` : "";
     $("extrasVazio").hidden = extras.length > 0;
@@ -2344,6 +5001,7 @@
     card.hidden = false;
     desenharMarcas(c);
     desenharPosCarta(e);
+    desenharPoseCarta(e);
     $("selo").hidden = !c.evento;
     $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "⚡ Evento especial · 🤝 Missão em dupla" : "⚡ Evento especial";
     $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
@@ -2589,12 +5247,13 @@
   // ---------- eventos especiais ----------
   // Tipo pelos pesos; nível entre os ativos que têm carta daquele tipo; sem carta, tenta outro tipo.
   function sortearEvento(n) {
-    let tipos = PESOS_EVENTO.filter(([t]) => t !== "efeito" || (n.efeitos || []).filter(x => x.dono === n.vez).length < 2);
+    if (!permitido("eventos")) return null;
+    let tipos = PESOS_EVENTO.filter(([t]) => config.eventos.tipos[t] && (t !== "efeito" || (n.efeitos || []).filter(x => x.dono === n.vez).length < 2));
     while (tipos.length) {
       const total = tipos.reduce((s, [, w]) => s + w, 0);
       let r = Math.random() * total, tipo = tipos[tipos.length - 1][0];
       for (const [t, w] of tipos) { if ((r -= w) < 0) { tipo = t; break; } }
-      const niveis = n.niveis.filter(nv => cartas.some(c => c.tipo === tipo && c.nivel === nv));
+      const niveis = niveisDaPartida(n.niveis).filter(nv => nv !== "romantico" && permitido("eventos", nv) && cartas.some(c => c.tipo === tipo && c.nivel === nv && cartaPermitida(c)));
       if (niveis.length) {
         const carta = sortear(tipo, [niveis[Math.floor(Math.random() * niveis.length)]], n.usados || []);
         if (carta) {
@@ -2631,7 +5290,7 @@
     gravar(n => {
       const c = n.carta;
       if (!c || c.tipo !== "efeito") return;
-      const prenda = sortearPrenda(c.nivel, n.usados || []);
+      const prenda = sortearPrenda(c.nivel, n.usados || [], n);
       if (!prenda) { n.carta = null; passarVez(n, c); return; }
       registrarUso(n, prenda);
       prenda.motivo = "pulo";
@@ -2743,7 +5402,7 @@
       n.aviso = novoAviso(`${n.jogadores[venc]} venceu o duelo! +2`);
       if (conferirMeta(n)) return;
       // o perdedor paga uma prenda na hora; depois a vez segue a partir de quem girou
-      const prenda = sortearPrenda(c.nivel, n.usados || []);
+      const prenda = sortearPrenda(c.nivel, n.usados || [], n);
       if (prenda) {
         registrarUso(n, prenda);
         prenda.motivo = "duelo";
@@ -2912,8 +5571,11 @@
   // ---------- missão secreta da partida ----------
   // Duas missões diferentes, dos níveis ativos (se faltar, de qualquer nível). Cada um vê só a sua.
   function sortearSecretas(n) {
-    let pool = cartas.filter(c => c.tipo === "missao_secreta" && n.niveis.includes(c.nivel));
-    if (pool.length < 2) pool = cartas.filter(c => c.tipo === "missao_secreta");
+    if (!permitido("missaoSecreta")) return [];
+    const nv = niveisDaPartida(n.niveis).map(x => (x === "romantico" ? "leve" : x));
+    const podem = cartas.filter(c => c.tipo === "missao_secreta" && permitido("missaoSecreta", c.nivel) && cartaPermitida(c));
+    let pool = podem.filter(c => nv.includes(c.nivel));
+    if (pool.length < 2) pool = podem;
     if (pool.length < 2) return [];
     const i = Math.floor(Math.random() * pool.length);
     let j = Math.floor(Math.random() * (pool.length - 1));
@@ -2952,7 +5614,7 @@
   function desenharSecretas(e) {
     const box = $("secretasBox");
     const ms = e.secretas;
-    box.hidden = !e.jogadores[1] || ms.length < 2;
+    box.hidden = !e.jogadores[1] || ms.length < 2 || !permitido("missaoSecreta");
     const lista = $("missoesReveladas");
     lista.textContent = "";
     if (box.hidden) return;
@@ -3006,7 +5668,7 @@
           // devolve pulos ao contador do tipo pulado, sem passar de pulosMax
           const campo = origemDe(c) === "desafio" ? "livresD" : "livresV";
           const antes = p[campo];
-          p[campo] = Math.min(n.pulosMax, antes + (DEVOLVE[c.nivel] || 0));
+          p[campo] = Math.min(n.pulosMax, antes + (DEVOLVE[c.nivelOriginal || c.nivel] || 0));
           const volta = p[campo] - antes;
           if (volta > 0) n.aviso = novoAviso(`${n.jogadores[n.vez]} recuperou ${volta} ${volta === 1 ? "pulo" : "pulos"} de ${origemDe(c)}.`);
         }
@@ -3044,6 +5706,12 @@
     });
   }
 
+  function mudarPrendasFofas() {
+    const v = $("prendasFofas").checked;
+    if (!estado || !placarZerado(estado)) return;
+    gravar(n => { if (placarZerado(n)) n.prendasFofas = v; });
+  }
+
   function mudarNota() {
     const v = $("notaAdv").checked;
     if (!estado || !placarZerado(estado)) return;
@@ -3075,7 +5743,7 @@
   // O outro resolve com as próprias regras e pontos, e depois a vez continua com ele (joga duas seguidas).
   function podeReverter(e) {
     const c = e && e.carta;
-    return !!(c && e.jogadores[1] && e.vez === eu && !c.evento && !c.reversa && !e.avaliacao && e.vencedor === null
+    return !!(c && permitido("reverso") && e.jogadores[1] && e.vez === eu && !c.evento && !c.reversa && !e.avaliacao && e.vencedor === null
       && (c.tipo === "verdade" || c.tipo === "desafio") && e.placar[e.vez].reverso !== false);
   }
 
@@ -3113,6 +5781,7 @@
     if (!estado || estado.vencedor === null) return;
     gravar(n => {
       n.vez = 1 - n.vencedor;                           // quem perdeu começa
+      n.niveis = [maisLeve()];                          // começa só com o chip mais leve disponível
       n.placar = [placarVazio(0, n.pulosMax), placarVazio(0, n.pulosMax)];
       n.pontos = [0, 0];
       n.vencedor = null;
@@ -3125,6 +5794,7 @@
       n.dupla = null;
       n.secretas = sortearSecretas(n);
       n.historico = [];
+      n.encerrando = null;
     });
     missaoAberta = false;
   }
@@ -3161,6 +5831,73 @@
     desenharExtras();
   }
 
+  // ---------- ideias da IA (Edge Function "gerar-cartas"; a chave da Mistral fica no servidor) ----------
+  const IA_ERROS = {
+    limite: "A IA já trabalhou bastante hoje. Volte amanhã.",
+    recusado: "A IA não conseguiu criar essa. Tente outro tema ou escreva a sua.",
+    falha: "Não deu para gerar agora. Tente de novo."
+  };
+  async function gerarIdeias(tipo, nivel, tema, extra) {
+    // nunca pede à IA acima do nível permitido para ela
+    let permitidoIA = limitarNivel("ia", nivel) || "leve";
+    if (tipo === "pose" && ordCfg(permitidoIA) > ordCfg(nivel)) permitidoIA = nivel;
+    const corpo = { sala: codigo, tipo, nivel: permitidoIA === "romantico" ? "leve" : permitidoIA, tema, quantidade: 3, ...(extra || {}) };
+    const tempo = new Promise(res => setTimeout(() => res({ data: { erro: "falha" } }), 20000));
+    try {
+      const { data, error } = await Promise.race([sb.functions.invoke("gerar-cartas", { body: corpo }), tempo]);
+      if (error || !data) return { erro: "falha" };
+      return data;
+    } catch (err) { return { erro: "falha" }; }
+  }
+  // p: prefixo dos elementos; contexto(): { tipo, nivel }; escolher(carta): põe o texto no dialog
+  function painelIA(p, contexto, escolher) {
+    const q = s => $(p + s);
+    let pedido = 0;   // reabrir o dialog descarta a resposta de um pedido antigo
+    const api = {
+      preparar() {
+        pedido++;
+        q("IaBotao").hidden = !(estado && estado.fixa && permitido("ia"));
+        q("IaPainel").hidden = true;
+        q("IaTema").value = "";
+        q("IaStatus").textContent = "";
+        q("IaLista").textContent = "";
+        q("IaGerar").textContent = "Gerar";
+        q("IaGerar").disabled = false;
+      }
+    };
+    q("IaBotao").addEventListener("click", () => { q("IaPainel").hidden = !q("IaPainel").hidden; if (!q("IaPainel").hidden) q("IaTema").focus(); });
+    q("IaGerar").addEventListener("click", async () => {
+      if (!estado || !estado.fixa) return;
+      const { tipo, nivel } = contexto();
+      const tema = q("IaTema").value.replace(/[\r\n]+/g, " ").trim().slice(0, 60);
+      const meu = ++pedido;
+      q("IaGerar").disabled = true;
+      q("IaStatus").textContent = "Pensando…";
+      q("IaLista").textContent = "";
+      const r = await gerarIdeias(tipo, nivel, tema);
+      if (meu !== pedido) return;
+      q("IaGerar").disabled = false;
+      if (typeof r.usadasHoje === "number" && typeof r.limite === "number") q("IaUso").textContent = `${r.usadasHoje} de ${r.limite} hoje`;
+      const cartasIA = Array.isArray(r.cartas) ? r.cartas.filter(c => c && typeof c.texto === "string" && c.texto.trim()) : [];
+      if (r.erro || !cartasIA.length) { q("IaStatus").textContent = IA_ERROS[r.erro] || IA_ERROS.falha; return; }
+      q("IaStatus").textContent = "Toque numa para usar. Dá para editar antes de salvar.";
+      q("IaGerar").textContent = "Gerar outras";
+      cartasIA.forEach(c => {
+        const li = el("li");
+        const b = el("button", "", c.texto);
+        b.type = "button";
+        b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", () => {
+          q("IaLista").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+          escolher(c);
+        });
+        li.appendChild(b);
+        q("IaLista").appendChild(li);
+      });
+    });
+    return api;
+  }
+
   function contarTexto() {
     $("contadorCarta").textContent = $("textoCarta").value.length + "/280";
   }
@@ -3169,8 +5906,11 @@
     if (!estado) return;
     $("formCarta").reset();
     $("midiaCarta").hidden = true;
+    $("temMidia").closest("label").hidden = !permitido("midia");
+    limitarSelectNiveis($("nivelCarta"), v => permitido("cartasDeVoces", v));
     erro("erroCarta", "");
     contarTexto();
+    iaCarta.preparar();
     $("dlgCarta").showModal();
     $("textoCarta").focus();
   }
@@ -3185,7 +5925,7 @@
       tipo: document.querySelector('input[name="tipoCarta"]:checked').value,
       nivel: $("nivelCarta").value,
       texto: texto.slice(0, 280),
-      midia: $("temMidia").checked ? $("midiaCarta").value : null,
+      midia: $("temMidia").checked && permitido("midia") ? $("midiaCarta").value : null,
       autor: (estado.jogadores[eu] || "").trim().slice(0, 20)
     };
     const btn = $("salvarCarta");
@@ -3215,8 +5955,9 @@
   }
 
   function mudarNiveis() {
-    const sel = [...document.querySelectorAll("#niveis input:checked")].map(i => i.value);
-    gravar(n => { n.niveis = sel.length ? sel : ["leve"]; });
+    if (config.chipsQuemMuda === "dono" && !souDono) return;
+    const sel = [...document.querySelectorAll("#niveis input:checked")].map(i => i.value).filter(v => permitido("nivel", v));
+    gravar(n => { n.niveis = sel.length ? sel : [maisLeve()]; });
   }
 
   // ---------- instalar app (PWA) ----------
@@ -3255,6 +5996,13 @@
     $("cancelarCapsula").addEventListener("click", () => $("dlgCapsula").close());
     $("formMomento").addEventListener("submit", salvarMomento);
     $("abrirPosicoes").addEventListener("click", () => abrirGuia());
+    $("abrirPoses").addEventListener("click", () => abrirPoses(true));
+    $("cardPoses").addEventListener("click", () => abrirPoses(false));
+    $("fecharPoses").addEventListener("click", () => $("dlgPoses").close());
+    iaPose = painelIAPose();
+    $("dlgPoses").addEventListener("close", () => iaPose.limpar());
+    $("sortearPose").addEventListener("click", sortearPose);
+    ["poseFiltroTipo", "poseFiltroNivel", "poseFiltroEnq"].forEach(id => $(id).addEventListener("change", desenharPoses));
     $("montarCardapio").addEventListener("click", () => abrirGuia("cardapio"));
     $("abrirPosicoesSala").addEventListener("click", () => abrirGuia());
     $("cardPosicoes").addEventListener("click", () => abrirGuia());
@@ -3262,7 +6010,6 @@
     $("sortearPosicao").addEventListener("click", sortearPosicao);
     $("posGuardar").addEventListener("click", guardarCardapio);
     ["posFiltroDif", "posFiltroClima", "posFiltroMarca"].forEach(id => $(id).addEventListener("change", desenharPosicoes));
-    $("mostrarOusadia").addEventListener("change", () => { const v = $("mostrarOusadia").checked; gravar(n => { n.mostrarOusadia = v; }); });
     $("meuTitulo").addEventListener("change", () => { const v = $("meuTitulo").value || null; gravar(n => { n.titulos[eu] = v; }); });
     document.querySelectorAll("#marcas [data-marca]").forEach(b => b.addEventListener("click", () => marcarCarta(estado && estado.carta && estado.carta.id, b.dataset.marca)));
     $("cancelarMomento").addEventListener("click", () => $("dlgMomento").close());
@@ -3273,8 +6020,105 @@
       const b = ev.target.closest && ev.target.closest("[data-abre]");
       if (b && $("jogo").contains(b)) mostrarVista(b.dataset.abre);
     });
-    addEventListener("pagehide", () => { try { if (canal) canal.untrack(); } catch (err) {} });
+    addEventListener("pagehide", () => { segurar(false); try { if (canal) canal.untrack(); } catch (err) {} });
+    [0, 1].forEach(i => {
+      $("cidadeBuscar" + i).addEventListener("click", () => buscarCidade(i));
+      $("cidadeBusca" + i).addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); buscarCidade(i); } });
+      $("cidadeSoNome" + i).addEventListener("click", () => soNomeCidade(i));
+    });
+    $("distManualSalvar").addEventListener("click", salvarDistanciaManual);
+    $("novoMarco").addEventListener("click", () => abrirMarco(null));
+    $("motivoGuardar").addEventListener("click", guardarMotivo);
+    $("encerrarNoite").addEventListener("click", encerrarNoite);
+    $("assumirDono").addEventListener("click", () => assumirDono(eu));
+    $("entrarDono").addEventListener("click", abrirEntrarDono);
+    $("formEntrarDono").addEventListener("submit", entrarComoDono);
+    $("cancelarEntrarDono").addEventListener("click", () => $("dlgEntrarDono").close());
+    $("copiarCodigoDono").addEventListener("click", copiarCodigoDono);
+    $("fecharCodigoDono").addEventListener("click", () => $("dlgCodigoDono").close());
+    $("trilhaNossa").addEventListener("click", () => alternarNossa(idMusicaAtual(estado && estado.musica)));
+    $("soNossas").addEventListener("change", () => { const v = $("soNossas").checked; gravar(n => { n.playlistSoNossas = v; }); });
+    $("encerrarNoiteFim").addEventListener("click", encerrarNoite);
+    $("noiteEnviar").addEventListener("click", () => enviarFraseNoite(false));
+    $("noitePular").addEventListener("click", () => enviarFraseNoite(true));
+    $("noiteDormir").addEventListener("click", boaNoite);
+    $("noiteCancelar").addEventListener("click", cancelarNoite);
+    $("pdResponder").addEventListener("click", responderPergunta);
+    $("pdEditar").addEventListener("click", () => { editandoResposta = true; $("pdResposta").value = ""; desenharPergunta(); $("pdResposta").focus(); });
+    $("diarioMais").addEventListener("click", () => { paginasDiario++; desenharDiarioCasal(); });
+    $("motivoTirar").addEventListener("click", tirarMotivo);
+    $("motivoPapel").addEventListener("click", () => { $("motivoPapel").hidden = true; });
+    $("novaAbra").addEventListener("click", () => abrirNovaAbra(null));
+    $("formAbra").addEventListener("submit", salvarAbra);
+    $("cancelarAbra").addEventListener("click", () => $("dlgAbra").close());
+    $("abraOcasiao").addEventListener("change", () => { $("abraOutraLinha").hidden = $("abraOcasiao").value !== "outra"; });
+    $("abraTexto").addEventListener("input", () => { $("abraContador").textContent = `${$("abraTexto").value.length}/1000`; });
+    $("fecharAbraLer").addEventListener("click", () => $("dlgAbraLer").close());
+    $("formMarco").addEventListener("submit", salvarMarco);
+    $("cancelarMarco").addEventListener("click", () => $("dlgMarco").close());
+    document.querySelectorAll("#marcoSugestoes [data-emoji]").forEach(b => b.addEventListener("click", () => {
+      $("marcoEmoji").value = b.dataset.emoji;
+      if (!$("marcoTitulo").value.trim()) $("marcoTitulo").value = b.dataset.titulo;
+    }));
+    document.querySelectorAll("#carinhoBotoes [data-carinho]").forEach(b => b.addEventListener("click", () => mandarCarinho(b.dataset.carinho)));
+    $("carinhoResumoFechar").addEventListener("click", () => { resumoCarinhos = ""; desenharCarinhos(); });
+    const coracao = $("maosCoracao");
+    coracao.addEventListener("pointerdown", ev => { ev.preventDefault(); try { coracao.setPointerCapture(ev.pointerId); } catch (err) {} segurar(true); });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => coracao.addEventListener(t, () => segurar(false)));
+    coracao.addEventListener("contextmenu", ev => ev.preventDefault());
+    document.addEventListener("visibilitychange", () => { if (document.hidden) segurar(false); });
     $("camera").addEventListener("change", mudarCamera);
+    $("navRecolher").addEventListener("click", () => recolherNav(true));
+    $("dengoPedir").addEventListener("click", botaoPedir);
+    document.querySelectorAll("#histFiltro [data-f]").forEach(b => b.addEventListener("click", () => { filtroHist = b.dataset.f; desenharLinhaTempo(); }));
+    $("histMais").addEventListener("click", () => { diasHist += 30; desenharLinhaTempo(); });
+    const cv = $("muralCanvas");
+    cv.addEventListener("pointerdown", comecarTraco);
+    cv.addEventListener("pointermove", moverTraco);
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => cv.addEventListener(t, fimTraco));
+    $("muralBorracha").addEventListener("click", () => { muralBorracha = !muralBorracha; desenharFerramentas(); });
+    $("muralDesfazer").addEventListener("click", desfazerMural);
+    $("muralLimpar").addEventListener("click", limparMural);
+    $("muralFundo").addEventListener("change", mudarFundoMural);
+    $("muralEnviar").addEventListener("click", () => salvarMural(false));
+    $("muralGuardar").addEventListener("click", () => salvarMural(true));
+    $("muralJuntos").addEventListener("click", comecarJuntos);
+    $("muralSairJuntos").addEventListener("click", () => sairJuntos());
+    $("muralConviteEntrar").addEventListener("click", entrarNoConvite);
+    $("muralConviteFechar").addEventListener("click", esconderConvite);
+    $("muralInicioDesenhar").addEventListener("click", () => abrirMural(false));
+    $("fecharMuralVer").addEventListener("click", () => $("dlgMuralVer").close());
+    $("muralApagar").addEventListener("click", apagarMural);
+    $("cartaMural").addEventListener("click", () => abrirMural(ambosPresentes()));
+    document.querySelectorAll("#muralFiltro [data-f]").forEach(b => b.addEventListener("click", () => { filtroMural = b.dataset.f; desenharGaleria(); }));
+    addEventListener("resize", () => { if (vista === "vMural") redesenharMural(); });
+    document.querySelectorAll("#humorCaras button").forEach(b => b.addEventListener("click", () => escolherHumor(Number(b.dataset.v))));
+    $("humorNotaSalvar").addEventListener("click", salvarNotaHumor);
+    $("humorNota").addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); salvarNotaHumor(); } });
+    $("faixaHumorUsar").addEventListener("click", usarFaixaHumor);
+    $("faixaHumorFechar").addEventListener("click", () => { faixaHumorFechada = true; desenharFaixaHumor(); });
+    $("formDengo").addEventListener("submit", enviarDengo);
+    $("dengoVoltar").addEventListener("click", () => $("dlgDengo").close());
+    $("dengoCancelar").addEventListener("click", cancelarDengo);
+    $("dengoRespOk").addEventListener("click", fecharResposta);
+    $("drIndo").addEventListener("click", () => { dengoRespondendo = "indo"; desenharDengo(); $("drIndoTexto").focus(); });
+    $("drNao").addEventListener("click", () => { dengoRespondendo = "nao"; desenharDengo(); });
+    $("drIndoEnviar").addEventListener("click", () => responderDengo("indo", $("drIndoTexto").value));
+    $("drNaoEnviar").addEventListener("click", () => {
+      const t = $("drNaoTexto").value.trim();
+      if (!t) return erro("erroDengoResp", "Escolha uma frase ou escreva uma resposta.");
+      responderDengo("nao_consigo", t);
+    });
+    document.querySelectorAll("#drFrases button").forEach(b => b.addEventListener("click", () => responderDengo("nao_consigo", b.textContent)));
+    $("drAqui").addEventListener("click", () => responderDengo("indo", "Tô aqui quando precisar 🤍"));
+    $("dengoEditar").addEventListener("click", abrirPedidos);
+    $("fecharPedidos").addEventListener("click", () => $("dlgPedidos").close());
+    $("pedidosSalvar").addEventListener("click", salvarPedidos);
+    $("pedidosRestaurar").addEventListener("click", restaurarPedidos);
+    $("pedidoNovo").addEventListener("click", novoPedido);
+    setInterval(() => { if (vista === "casa" && !document.hidden) desenharDengo(); }, 60000);   // "há X min"
+    $("navMostrar").addEventListener("click", () => recolherNav(false));
+    try { new ResizeObserver(() => document.documentElement.style.setProperty("--nav", $("navBaixo").offsetHeight + "px")).observe($("navBaixo")); } catch (err) {}
     // reserva o espaço da barra fixa no fim da página
     try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) {}
     desenharRoleta();
@@ -3322,6 +6166,7 @@
     $("liberar").addEventListener("click", liberar);
     $("avaliar").addEventListener("click", ev => { const k = Number(ev.target.dataset && ev.target.dataset.n); if (k) avaliar(k); });
     $("notaAdv").addEventListener("change", mudarNota);
+    $("prendasFofas").addEventListener("change", mudarPrendasFofas);
     $("timerIniciar").addEventListener("click", () => iniciarTimer(Number($("timerIniciar").dataset.seg)));
     $("timerAbrir").addEventListener("click", () => { $("timerOpcoes").hidden = !$("timerOpcoes").hidden; });
     $("timerOpcoes").addEventListener("click", ev => { const s = Number(ev.target.dataset && ev.target.dataset.seg); if (s) iniciarTimer(s); });
@@ -3346,6 +6191,18 @@
     $("pulosMax").addEventListener("change", mudarPulosMax);
     $("niveis").addEventListener("change", mudarNiveis);
     $("abrirCarta").addEventListener("click", abrirDialogo);
+    iaCarta = painelIA("carta", () => ({ tipo: document.querySelector('input[name="tipoCarta"]:checked').value, nivel: $("nivelCarta").value }), c => {
+      $("textoCarta").value = c.texto.slice(0, 280);
+      contarTexto();
+      const m = ["foto", "video", "audio"].includes(c.midia) ? c.midia : null;
+      $("temMidia").checked = !!m;
+      $("midiaCarta").hidden = !m;
+      if (m) $("midiaCarta").value = m;
+    });
+    iaEnvelope = painelIA("env", () => ({ tipo: document.querySelector('input[name="envTipo"]:checked').value === "desafio" ? "desafio" : "ideia_mensagem", nivel: $("envNivel").value }), c => {
+      $("envTexto").value = c.texto.slice(0, 500);
+      $("envContador").textContent = `${$("envTexto").value.length}/500`;
+    });
     $("formCarta").addEventListener("submit", salvarCarta);
     $("cancelarCarta").addEventListener("click", () => $("dlgCarta").close());
     $("textoCarta").addEventListener("input", contarTexto);

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=35">
+<link rel="stylesheet" href="style.css?v=49">
 </head>
 <body>
 <main>
@@ -62,6 +62,8 @@
     <div class="ajustes">
       <button class="som" id="som" type="button" aria-pressed="true" aria-label="Som e vibração ligados">🔊</button>
       <button class="linkbtn" id="abrirPosicoesSala" type="button" hidden>📖 Posições</button>
+      <button class="linkbtn" id="encerrarNoite" type="button">🌙 Encerrar a noite</button>
+      <button class="linkbtn entrar-dono" id="entrarDono" type="button" hidden>👑 Entrar como dono</button>
       <label>📷 Câmera do WhatsApp
         <select id="camera">
           <option value="direita">Direita</option>
@@ -91,17 +93,137 @@
       </div>
     </div>
 
-    <nav class="abas" id="abas" aria-label="Seções da sala">
-      <button type="button" data-abre="casa" id="abaCasa">🏠 Casa</button>
-      <button type="button" data-abre="jogo" id="abaJogo">🎲 Jogar</button>
-    </nav>
     <p class="presenca" id="presenca" hidden></p>
+    <div class="sem-dono" id="semDono" hidden>
+      <p>Esta sala ainda não tem dono.</p>
+      <button class="secondary" id="assumirDono" type="button">Assumir como dono desta sala</button>
+      <p class="erro" id="erroDono" role="alert"></p>
+    </div>
     <p class="erro" id="erroJogo" role="alert"></p>
 
     <section class="casa" id="telaCasa" hidden aria-label="Casa do casal">
       <p class="casa-convite" id="casaConvite" hidden>Crie uma sala fixa para guardar envelopes, álbum e conquistas. No início, toque em "Criar sala fixa".</p>
       <div class="casa-grade" id="casaGrade">
-        <button type="button" class="casa-card" data-abre="jogo"><span class="ic">🎲</span><b>Jogar</b><span class="sub" id="cardJogoSub">Roleta, cartas e placar</span></button>
+        <header class="inicio-topo" id="inicioTopo">
+          <p class="ola" id="ola"></p>
+          <div class="avatares" id="avatares" aria-hidden="true"></div>
+        </header>
+        <div class="casa-bloco dengo-recebido" id="dengoRecebido" hidden role="alert">
+          <p class="dr-titulo" id="drTitulo"></p>
+          <ul class="dengo-itens" id="drItens"></ul>
+          <p class="dr-msg" id="drMsg" hidden></p>
+          <p class="dr-quando" id="drQuando"></p>
+          <p class="dr-dica" id="drDica" hidden></p>
+          <div class="dr-extras" id="drExtras"></div>
+          <div class="dr-acoes" id="drAcoes">
+            <button class="primary dr-indo" id="drIndo" type="button">TÔ INDO 💨</button>
+            <button class="secondary" id="drNao" type="button">Agora não consigo</button>
+          </div>
+          <div class="dr-resp" id="drRespIndo" hidden>
+            <input type="text" id="drIndoTexto" maxlength="200" placeholder="Te ligo em 5 min" aria-label="Resposta (opcional)">
+            <button class="primary" id="drIndoEnviar" type="button">Enviar "Tô indo"</button>
+          </div>
+          <div class="dr-resp" id="drRespNao" hidden>
+            <div class="dr-frases" id="drFrases">
+              <button type="button" class="chip-btn">Tô no trabalho, te ligo às 18h</button>
+              <button type="button" class="chip-btn">Tô sem sinal agora</button>
+              <button type="button" class="chip-btn">Já já eu volto, te amo</button>
+            </div>
+            <input type="text" id="drNaoTexto" maxlength="200" placeholder="Ou escreva…" aria-label="Resposta">
+            <button class="secondary" id="drNaoEnviar" type="button">Enviar</button>
+          </div>
+          <button class="primary" id="drAqui" type="button" hidden>Tô aqui quando precisar 🤍</button>
+          <p class="erro" id="erroDengoResp" role="alert"></p>
+        </div>
+        <div class="casa-bloco dengo" id="casaDengo">
+          <div class="dengo-resposta" id="dengoResposta" hidden role="status">
+            <p class="dengo-resp-titulo" id="dengoRespTitulo"></p>
+            <p class="dengo-resp-texto" id="dengoRespTexto" hidden></p>
+            <button class="secondary" id="dengoRespOk" type="button">Ok</button>
+          </div>
+          <button class="primary dengo-botao" id="dengoPedir" type="button">PEDIR DENGO 💗</button>
+          <div class="dengo-meu" id="dengoMeu" hidden>
+            <p class="dengo-esperando" id="dengoEsperando"></p>
+            <ul class="dengo-itens" id="dengoMeuItens"></ul>
+            <div class="row">
+              <a class="wa" id="dengoAvisar" target="_blank" rel="noopener">Avisar no WhatsApp</a>
+              <button class="secondary" id="dengoCancelar" type="button">Cancelar pedido</button>
+            </div>
+          </div>
+          <div class="dengo-grade" id="dengoGrade" role="group" aria-label="Pedidos rápidos"></div>
+          <div class="dengo-rodape">
+            <span class="dengo-conta" id="dengoConta"></span>
+            <button class="linkbtn" id="dengoEditar" type="button">✏️ Editar pedidos</button>
+          </div>
+          <p class="erro" id="erroDengo" role="alert"></p>
+        </div>
+        <div class="casa-bloco humor" id="casaHumor">
+          <p class="humor-titulo">Como você se sente hoje?</p>
+          <div class="humor-caras" id="humorCaras" role="group" aria-label="Seu humor hoje">
+            <button type="button" data-v="1" aria-label="Muito mal" aria-pressed="false">😣</button>
+            <button type="button" data-v="2" aria-label="Mal" aria-pressed="false">😢</button>
+            <button type="button" data-v="3" aria-label="Mais ou menos" aria-pressed="false">😐</button>
+            <button type="button" data-v="4" aria-label="Bem" aria-pressed="false">🙂</button>
+            <button type="button" data-v="5" aria-label="Muito bem" aria-pressed="false">😄</button>
+          </div>
+          <div class="humor-nota" id="humorNotaBox" hidden>
+            <input type="text" id="humorNota" maxlength="140" placeholder="Quer contar por quê?" aria-label="Quer contar por quê? (opcional)">
+            <button class="secondary" id="humorNotaSalvar" type="button">Salvar</button>
+          </div>
+          <p class="humor-salvo" id="humorSalvo" aria-live="polite"></p>
+          <div class="humor-outro" id="humorOutro">
+            <p class="humor-titulo" id="humorOutroTitulo"></p>
+            <div class="humor-caras outro" id="humorOutroCaras" hidden><span data-v="1">😣</span><span data-v="2">😢</span><span data-v="3">😐</span><span data-v="4">🙂</span><span data-v="5">😄</span></div>
+            <p class="humor-outro-nota" id="humorOutroNota" hidden></p>
+            <p class="extras-sub" id="humorOutroVazio" hidden></p>
+            <div class="humor-dicas" id="humorDicas"></div>
+            <ul class="humor-sug" id="humorSug"></ul>
+          </div>
+          <p class="erro" id="erroHumor" role="alert"></p>
+        </div>
+        <div class="casa-bloco mural-inicio" id="casaMural">
+          <p class="mural-inicio-titulo"><b>Mural</b> <span id="muralInicioTxt"></span></p>
+          <button type="button" class="mural-mini" id="muralInicioVer" hidden aria-label="Ver o desenho"></button>
+          <p class="extras-sub mural-legenda" id="muralInicioLegenda" hidden></p>
+          <button class="secondary" type="button" id="muralInicioDesenhar">✏️ Desenhar</button>
+        </div>
+        <div class="casa-bloco carinhos" id="casaCarinhos">
+          <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo">✕</button></p>
+          <div class="carinho-botoes" id="carinhoBotoes">
+            <button type="button" data-carinho="pensei"><span class="ic">💭</span>Pensei em você</button>
+            <button type="button" data-carinho="beijo"><span class="ic">😘</span>Beijo</button>
+            <button type="button" data-carinho="abraco"><span class="ic">🤗</span>Abraço</button>
+            <button type="button" data-carinho="saudade"><span class="ic">🥺</span>Saudade</button>
+          </div>
+          <p class="carinho-hoje"><span id="carinhoHoje"></span> <span class="carinho-enviado" id="carinhoEnviado" aria-live="polite"></span></p>
+          <div class="maos">
+            <button class="maos-coracao" id="maosCoracao" type="button" aria-label="Segure junto">❤</button>
+            <p class="maos-status" id="maosStatus" aria-live="polite">Segure junto</p>
+            <p class="maos-msg" id="maosMsg" aria-live="polite"></p>
+            <p class="maos-total" id="maosTotal"></p>
+          </div>
+        </div>
+        <div class="casa-bloco distancia" id="casaDistancia">
+          <div id="lugarReencontro"></div>
+          <p class="juntos-ha" id="juntosHa" hidden></p>
+          <div class="datas-especiais" id="datasEspeciais" hidden></div>
+          <button type="button" class="linkbtn" data-abre="vMapa" id="distMapa">🗺️ <span id="distMapaTxt">Mapa da saudade</span></button>
+        </div>
+        <div class="casa-bloco pergunta-dia" id="casaPergunta">
+          <p class="pd-titulo">💬 Pergunta de hoje</p>
+          <p class="pd-pergunta" id="pdPergunta"></p>
+          <p class="pd-aviso" id="pdAviso"></p>
+          <div id="pdForm">
+            <textarea id="pdResposta" maxlength="500" rows="3" aria-label="Sua resposta"></textarea>
+            <button class="secondary" id="pdResponder" type="button">Responder</button>
+          </div>
+          <p class="pd-minha" id="pdMinha" hidden></p>
+          <div class="pd-lado" id="pdLado" hidden></div>
+          <button class="linkbtn" id="pdEditar" type="button" hidden>Editar minha resposta</button>
+          <p class="erro" id="erroPergunta" role="alert"></p>
+        </div>
+        <h3 class="casa-mais" id="casaMais">Mais</h3>
+        <button type="button" class="casa-card" data-abre="vMural" id="cardMural"><span class="ic">✏️</span><b>Mural</b><span class="sub" id="cardMuralSub">Desenhos de vocês</span></button>
         <button type="button" class="casa-card" data-abre="vDiario"><span class="ic">🔥</span><b>Desafio do dia</b><span class="sub" id="cardDiarioSub"></span></button>
         <button type="button" class="casa-card" data-abre="vEnvelopes" id="cardEnv"><span class="ic">💌</span><b>Envelopes</b><span class="sub" id="cardEnvSub"></span></button>
         <button type="button" class="casa-card" data-abre="vSemana" id="cardSemana"><span class="ic">📅</span><b>Semana</b><span class="sub" id="cardSemanaSub"></span></button>
@@ -109,11 +231,18 @@
         <button type="button" class="casa-card" data-abre="vAlbum" id="cardAlbum"><span class="ic">📸</span><b>Álbum</b><span class="sub" id="cardAlbumSub"></span></button>
         <button type="button" class="casa-card" data-abre="vBaralho" id="cardBaralho"><span class="ic">🃏</span><b>Baralho</b><span class="sub" id="cardBaralhoSub"></span></button>
         <button type="button" class="casa-card" data-abre="vConquistas" id="cardConq"><span class="ic">🏆</span><b>Conquistas</b><span class="sub" id="cardConqSub"></span></button>
+        <button type="button" class="casa-card" id="cardPoses" hidden><span class="ic">📸</span><b>Poses</b><span class="sub">Ideias para fotos e vídeos</span></button>
         <button type="button" class="casa-card" id="cardPosicoes" hidden><span class="ic">📖</span><b>Posições</b><span class="sub">Guia para escolher e sortear</span></button>
+        <button type="button" class="casa-card" data-abre="vMapa" id="cardMapa"><span class="ic">🗺️</span><b>Mapa da saudade</b><span class="sub" id="cardMapaSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vHistoria" id="cardHistoria"><span class="ic">📜</span><b>Nossa história</b><span class="sub" id="cardHistoriaSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vPote" id="cardPote"><span class="ic">🫙</span><b>Pote de motivos</b><span class="sub" id="cardPoteSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vAbra" id="cardAbra"><span class="ic">💌</span><b>Abra quando…</b><span class="sub" id="cardAbraSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="ic">📖</span><b>Diário</b><span class="sub" id="cardDiarioCasalSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vPlaylist" id="cardPlaylist"><span class="ic">🎵</span><b>Nossa playlist</b><span class="sub" id="cardPlaylistSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <section class="diario" id="diario" hidden aria-label="Desafio do dia">
           <div class="diario-topo">
             <h2>Desafio do dia</h2>
@@ -143,7 +272,7 @@
         </section>
       </section>
       <section class="casa-vista" id="vEnvelopes" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Envelopes</h2>
         <p class="extras-sub">Uma mensagem fechada ou um desafio surpresa. A mensagem só abre com os dois aqui; o desafio vira a primeira carta da próxima partida.</p>
         <button class="primary" id="novoEnvelope" type="button">Novo envelope</button>
@@ -156,7 +285,7 @@
         </details>
       </section>
       <section class="casa-vista" id="vSemana" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>A semana</h2>
         <p class="extras-sub" id="semanaInfo"></p>
         <label class="field nivel-semana">Nível da semana
@@ -180,7 +309,7 @@
         </details>
       </section>
       <section class="casa-vista" id="vCapsulas" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Cápsulas do tempo</h2>
         <p class="extras-sub">A mesma pergunta, respondida agora e de novo numa data futura. Ninguém vê nada até lá.</p>
         <button class="primary" id="novaCapsula" type="button">Nova cápsula</button>
@@ -191,7 +320,7 @@
         <div id="capGrupo-aberta" hidden><h3 class="casa-h3">Abertas</h3><ul class="lista-extras" id="capAbertas"></ul></div>
       </section>
       <section class="casa-vista" id="vAlbum" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Álbum de momentos</h2>
         <div class="filtro" id="albumFiltro" role="group" aria-label="Filtro do álbum">
           <button type="button" data-filtro="todos" aria-pressed="true">Todos</button>
@@ -201,7 +330,7 @@
         <ul class="lista-extras" id="listaAlbum"></ul>
       </section>
       <section class="casa-vista" id="vBaralho" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Baralho</h2>
         <p class="extras-sub">As cartas lembram o que já saiu: as menos vistas aparecem mais, as favoritas aparecem mais e as aposentadas não aparecem.</p>
         <h3 class="casa-h3">⭐ Favoritas <span id="baralhoFavQtd"></span></h3>
@@ -212,7 +341,7 @@
         <ul class="lista-extras" id="baralhoVistas"></ul>
       </section>
       <section class="casa-vista" id="vConquistas" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Conquistas</h2>
         <p class="extras-sub" id="conqResumo"></p>
         <label class="field meu-titulo">Seu título no placar
@@ -220,19 +349,203 @@
         </label>
         <h3 class="casa-h3">Jornada</h3>
         <div class="conq-grade" id="conqJornada"></div>
-        <h3 class="casa-h3">Ousadia</h3>
-        <label class="toggle"><input type="checkbox" id="mostrarOusadia"> Mostrar conquistas de ousadia</label>
+        <h3 class="casa-h3" id="tituloOusadia">Ousadia</h3>
         <div class="conq-grade" id="conqOusadia"></div>
       </section>
+      <section class="casa-vista" id="vMapa" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>Mapa da saudade</h2>
+        <svg class="mapa-svg" id="mapaSvg" viewBox="0 0 320 110" role="img" aria-label="Distância entre as cidades de vocês"></svg>
+        <p class="mapa-km" id="mapaKm"></p>
+        <p class="extras-sub" id="mapaReencontro"></p>
+        <h3 class="casa-h3">Nossas cidades</h3>
+        <div class="cidade-campo">
+          <label class="field"><span id="cidadeRotulo0">Cidade</span>
+            <input type="text" id="cidadeBusca0" maxlength="80" placeholder="Ex.: Salvador">
+          </label>
+          <div class="row"><button class="secondary" id="cidadeBuscar0" type="button">Buscar</button><button class="linkbtn" id="cidadeSoNome0" type="button">Usar só o nome</button></div>
+          <p class="cidade-atual" id="cidadeAtual0"></p>
+          <ul class="cidade-opcoes" id="cidadeOpcoes0"></ul>
+        </div>
+        <div class="cidade-campo">
+          <label class="field"><span id="cidadeRotulo1">Cidade</span>
+            <input type="text" id="cidadeBusca1" maxlength="80" placeholder="Ex.: Curitiba">
+          </label>
+          <div class="row"><button class="secondary" id="cidadeBuscar1" type="button">Buscar</button><button class="linkbtn" id="cidadeSoNome1" type="button">Usar só o nome</button></div>
+          <p class="cidade-atual" id="cidadeAtual1"></p>
+          <ul class="cidade-opcoes" id="cidadeOpcoes1"></ul>
+        </div>
+        <div id="distManualBox" hidden>
+          <label class="field">Distância em km (se a busca não funcionar)
+            <input type="number" id="distManual" min="0" max="40000" inputmode="numeric">
+          </label>
+          <button class="secondary" id="distManualSalvar" type="button">Salvar distância</button>
+        </div>
+        <p class="erro" id="erroMapa" role="alert"></p>
+        <p class="osm-credito">Busca de cidades: © OpenStreetMap</p>
+      </section>
+      <section class="casa-vista" id="vHistoria" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>Nossa história</h2>
+        <button class="secondary" id="novoMarco" type="button">+ Novo marco</button>
+        <p class="extras-sub" id="marcosVazio">Nenhum marco ainda. Comece pelo primeiro encontro.</p>
+        <ul class="linha-tempo" id="listaMarcos"></ul>
+      </section>
+      <section class="casa-vista" id="vPote" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>Pote de motivos</h2>
+        <svg class="pote-svg" id="poteSvg" viewBox="0 0 160 170" role="img" aria-label="Pote de motivos"></svg>
+        <p class="pote-conta" id="poteConta"></p>
+        <button class="primary" id="motivoTirar" type="button">Tirar um motivo do pote</button>
+        <div class="motivo-papel" id="motivoPapel" hidden role="status">
+          <p class="motivo-texto" id="motivoPapelTexto"></p>
+          <p class="motivo-de" id="motivoPapelDe"></p>
+        </div>
+        <p class="erro" id="erroPote" role="alert"></p>
+        <label class="field"><span id="motivoRotulo">Um motivo pelo qual eu te amo</span>
+          <textarea id="motivoTexto" maxlength="280" rows="3"></textarea>
+        </label>
+        <button class="secondary" id="motivoGuardar" type="button">Colocar no pote</button>
+        <details class="extras">
+          <summary>Os motivos que você escreveu <span id="meusMotivosQtd"></span></summary>
+          <ul class="lista-extras" id="meusMotivos"></ul>
+        </details>
+      </section>
+      <section class="casa-vista" id="vAbra" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>Abra quando…</h2>
+        <button class="secondary" id="novaAbra" type="button">+ Nova carta Abra quando…</button>
+        <h3 class="casa-h3" id="abraParaMimTitulo">Para você</h3>
+        <p class="extras-sub" id="abraVazio">Nenhuma carta fechada para você agora.</p>
+        <ul class="abra-lista" id="abraFechadas"></ul>
+        <h3 class="casa-h3">As que você escreveu</h3>
+        <ul class="lista-extras" id="abraMinhas"></ul>
+        <details class="extras">
+          <summary>Já abertas <span id="abraAbertasQtd"></span></summary>
+          <ul class="lista-extras" id="abraAbertas"></ul>
+        </details>
+      </section>
+      <section class="casa-vista" id="vDiarioCasal" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>Diário do casal</h2>
+        <p class="extras-sub" id="diarioVazio">Os dias anteriores da pergunta do dia aparecem aqui.</p>
+        <ul class="diario-lista" id="listaDiario"></ul>
+        <button class="secondary" id="diarioMais" type="button" hidden>Ver mais</button>
+      </section>
+      <section class="casa-vista" id="vPlaylist" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>Nossa playlist</h2>
+        <p class="extras-sub">Abra cada música no Spotify e adicione a uma playlist de vocês.</p>
+        <p class="extras-sub" id="nossasVazio">Nenhuma música ainda. Na trilha da rodada, toque em "🤍 Nossa".</p>
+        <ul class="lista-extras" id="listaNossas"></ul>
+      </section>
+      <section class="casa-vista" id="vMural" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>✏️ Mural</h2>
+        <p class="mural-juntos-status" id="muralJuntosStatus" hidden aria-live="polite"></p>
+        <div class="mural-ferramentas" role="toolbar" aria-label="Ferramentas de desenho">
+          <div class="mural-cores" id="muralCores"></div>
+          <div class="mural-esps" id="muralEsps"></div>
+          <button type="button" class="mural-ferr" id="muralBorracha" aria-pressed="false">🧽 Borracha</button>
+          <button type="button" class="mural-ferr" id="muralDesfazer">↶ Desfazer</button>
+          <button type="button" class="mural-ferr" id="muralLimpar">🗑️ Limpar</button>
+          <label class="mural-fundo-sel">Fundo
+            <select id="muralFundo">
+              <option value="papel">Papel</option>
+              <option value="quadriculado">Quadriculado</option>
+              <option value="escuro">Escuro</option>
+              <option value="rosa">Rosa</option>
+            </select>
+          </label>
+        </div>
+        <div class="mural-quadro fundo-papel" id="muralQuadro">
+          <canvas id="muralCanvas" aria-label="Área de desenho"></canvas>
+          <span class="mural-cursor" id="muralCursor" hidden></span>
+        </div>
+        <label class="field mural-leg">Legenda (opcional)
+          <input type="text" id="muralLegenda" maxlength="80">
+        </label>
+        <p class="erro" id="erroMural" role="alert"></p>
+        <div class="mural-acoes">
+          <button class="primary" id="muralEnviar" type="button"></button>
+          <button class="primary" id="muralGuardar" type="button" hidden>Guardar o desenho</button>
+          <button class="secondary" id="muralJuntos" type="button" hidden>🤝 Desenhar juntos</button>
+          <button class="secondary" id="muralSairJuntos" type="button" hidden>Sair do desenho juntos</button>
+        </div>
+        <h3 class="casa-h3">Galeria</h3>
+        <div class="filtro" id="muralFiltro" role="group" aria-label="Filtro da galeria">
+          <button type="button" data-f="todos" aria-pressed="true">Todos</button>
+          <button type="button" data-f="recebidos" aria-pressed="false">Recebidos</button>
+          <button type="button" data-f="enviados" aria-pressed="false">Enviados</button>
+          <button type="button" data-f="juntos" aria-pressed="false">Juntos</button>
+        </div>
+        <p class="extras-sub" id="muralGaleriaVazia" hidden>Nenhum desenho ainda.</p>
+        <div class="mural-galeria" id="muralGaleria"></div>
+      </section>
+      <section class="casa-vista aba-vista" id="vHistorico" hidden>
+        <h2>🕘 Histórico</h2>
+        <div class="hist-mes" id="histMes">
+          <p class="hist-mes-titulo" id="histMesTitulo"></p>
+          <p id="histMesDengos"></p>
+          <p id="histMesMural"></p>
+          <p id="histMesPartidas"></p>
+        </div>
+        <div class="hist-semana">
+          <p class="hist-mes-titulo">Humor da semana</p>
+          <svg class="humor-svg" id="humorSemana" viewBox="0 0 320 150" role="img" aria-label="Humor dos dois nos últimos 7 dias"></svg>
+          <p class="hist-legenda" id="humorLegenda"></p>
+        </div>
+        <div class="filtro" id="histFiltro" role="group" aria-label="Filtro do histórico">
+          <button type="button" data-f="tudo" aria-pressed="true">Tudo</button>
+          <button type="button" data-f="dengo" aria-pressed="false">Dengos</button>
+          <button type="button" data-f="humor" aria-pressed="false">Humor</button>
+          <button type="button" data-f="mural" aria-pressed="false">Mural</button>
+          <button type="button" data-f="partida" aria-pressed="false">Partidas</button>
+        </div>
+        <p class="extras-sub" id="linhaVazia" hidden>Nada por aqui ainda.</p>
+        <div class="hist-linha" id="linhaTempo"></div>
+        <button class="secondary" id="histMais" type="button" hidden>Ver mais 30 dias</button>
+        <h3 class="casa-h3">Placar geral</h3>
+        <div id="lugarHistorico"></div>
+      </section>
+      <section class="casa-vista aba-vista" id="vPerfil" hidden>
+        <h2>👤 Perfil</h2>
+        <div class="perfil-eu">
+          <span class="perfil-avatar" id="perfilAvatar"></span>
+          <p class="perfil-nome" id="perfilNome"></p>
+        </div>
+        <details class="perfil-bloco" id="perfilAvatarBox">
+          <summary>Meu avatar</summary>
+          <div class="emoji-grade" id="emojiGrade" role="group" aria-label="Emoji do avatar"></div>
+          <div class="cor-grade" id="corGrade" role="group" aria-label="Cor do avatar"></div>
+        </details>
+        <section class="perfil-bloco" id="meuManual" aria-labelledby="meuManualTitulo">
+          <h3 class="casa-h3" id="meuManualTitulo">📘 Meu Manual <span class="manual-salvo" id="manualSalvo" aria-live="polite"></span></h3>
+          <p class="config-dica">O Manual fica visível para os dois e, como todo o resto, pode ser lido por quem tiver o código da sala. Não coloque dados de saúde.</p>
+          <div class="manual-form" id="manualForm"></div>
+        </section>
+        <section class="perfil-bloco" id="manualOutro" aria-labelledby="manualOutroTitulo">
+          <h3 class="casa-h3" id="manualOutroTitulo">📗 Manual</h3>
+          <p class="extras-sub" id="manualOutroVazio" hidden></p>
+          <dl class="manual-ler" id="manualOutroLista"></dl>
+        </section>
+        <div class="perfil-config" id="perfilConfig"></div>
+      </section>
       <section class="casa-vista" id="vCofre" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <div id="lugarCofre"></div>
       </section>
     </section>
 
     <div id="telaJogo">
+    <div class="faixa-humor" id="faixaHumor" hidden role="status">
+      <p>Dia difícil? Que tal Romântico e prendas fofas hoje?</p>
+      <button class="secondary" id="faixaHumorUsar" type="button">Usar</button>
+      <button class="linkbtn" id="faixaHumorFechar" type="button" aria-label="Fechar sugestão">✕</button>
+    </div>
 
     <div class="chips" id="niveis" aria-label="Níveis">
+      <label class="chip"><input type="checkbox" value="romantico"><span>💗 Romântico</span></label>
       <label class="chip"><input type="checkbox" value="leve"><span>Leve</span></label>
       <label class="chip"><input type="checkbox" value="criativo"><span>Criativo</span></label>
       <label class="chip"><input type="checkbox" value="picante"><span>Picante</span></label>
@@ -271,6 +584,9 @@
       </label>
     </div>
     <label class="check nota-cfg"><input type="checkbox" id="notaAdv"> Nota do adversário (★ valem pontos nos desafios)</label>
+    <label class="check nota-cfg"><input type="checkbox" id="prendasFofas"> Prendas fofas (toda prenda sai do nível Romântico)</label>
+    <label class="check nota-cfg" id="soNossasLinha" hidden><input type="checkbox" id="soNossas"> Trilha: só as nossas</label>
+    <p class="config-dica" id="soNossasAviso" hidden>Marquem pelo menos 5 músicas com 🤍 Nossa para usar "só as nossas".</p>
     <p class="config-dica" id="configDica"></p>
 
     <div class="secretas" id="secretasBox" hidden>
@@ -307,6 +623,14 @@
       <p class="level" id="level"></p>
       <p class="text" id="text"></p>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
+      <button class="secondary carta-mural" id="cartaMural" type="button" hidden>✏️ Desenhar no mural</button>
+      <div class="pos-carta" id="poseCarta" hidden>
+        <div class="pos-carta-botoes">
+          <button class="secondary" id="abrirPoses" type="button">📸 Ideias de pose</button>
+        </div>
+        <p class="pos-escolhida" id="poseEscolhida" hidden></p>
+        <p class="pose-como" id="poseComo" hidden></p>
+      </div>
       <div class="pos-carta" id="posCarta" hidden>
         <div class="pos-carta-botoes">
           <button class="secondary" id="abrirPosicoes" type="button">📖 Posições</button>
@@ -374,6 +698,7 @@
         <a class="spotify" id="trilhaAbrir" target="_blank" rel="noopener">Abrir no Spotify</a>
         <button class="secondary" id="trilhaTocar" type="button">Tocar aqui</button>
         <button class="secondary" id="trilhaOutra" type="button">Outra música</button>
+        <button class="secondary" id="trilhaNossa" type="button" aria-pressed="false" hidden>🤍 Nossa</button>
       </div>
       <div class="trilha-player" id="trilhaPlayer" hidden></div>
     </section>
@@ -386,6 +711,7 @@
         <ul class="lista-extras" id="fimRodadas"></ul>
       </div>
       <button class="primary" id="novaPartida" type="button">Nova partida</button>
+      <button class="secondary" id="encerrarNoiteFim" type="button">🌙 Encerrar a noite</button>
     </div>
 
     <div class="placar">
@@ -477,7 +803,64 @@
         </div>
       </div>
     </div>
+    <nav class="nav-baixo" id="navBaixo" aria-label="Seções da sala">
+      <div class="nav-in">
+        <button type="button" data-abre="casa" id="abaCasa"><span class="ic">🏠</span>Início</button>
+        <button type="button" data-abre="jogo" id="abaJogo"><span class="ic">🎲</span>Jogo</button>
+        <button type="button" data-abre="vHistorico" id="abaHistorico"><span class="ic">🕘</span>Histórico</button>
+        <button type="button" data-abre="vPerfil" id="abaPerfil"><span class="ic">👤</span>Perfil</button>
+        <button type="button" class="nav-recolher" id="navRecolher" aria-label="Recolher a barra" hidden>▾</button>
+      </div>
+      <button type="button" class="nav-mostrar" id="navMostrar" hidden>▴ Menu</button>
+    </nav>
   </section>
+
+  <dialog id="dlgMuralVer" class="dlg-mural" aria-labelledby="muralVerTitulo">
+    <div class="pos-topo">
+      <h2 id="muralVerTitulo"></h2>
+      <button class="linkbtn" id="fecharMuralVer" type="button">Fechar</button>
+    </div>
+    <div class="mural-quadro" id="muralVerQuadro"><canvas id="muralVerCanvas"></canvas></div>
+    <p class="mural-ver-legenda" id="muralVerLegenda" hidden></p>
+    <p class="extras-sub" id="muralVerData"></p>
+    <button class="linkbtn" id="muralApagar" type="button">Apagar este desenho</button>
+  </dialog>
+
+  <div class="mural-convite" id="muralConvite" hidden role="alert">
+    <p id="muralConviteTxt"></p>
+    <button class="primary" id="muralConviteEntrar" type="button">Entrar</button>
+    <button class="linkbtn" id="muralConviteFechar" type="button">Agora não</button>
+  </div>
+
+  <dialog id="dlgDengo" aria-labelledby="dlgDengoTitulo">
+    <form id="formDengo" method="dialog">
+      <h2 id="dlgDengoTitulo">Pedir dengo 💗</h2>
+      <ul class="dengo-resumo" id="dengoResumo"></ul>
+      <label class="field">Quer dizer mais alguma coisa?
+        <textarea id="dengoMensagem" maxlength="200" rows="2"></textarea>
+      </label>
+      <p class="erro" id="erroDlgDengo" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="dengoEnviar" type="submit">Enviar pedido 💗</button>
+        <button class="secondary" id="dengoVoltar" type="button">Voltar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgPedidos" class="dlg-posicoes" aria-labelledby="dlgPedidosTitulo">
+    <div class="pos-topo">
+      <h2 id="dlgPedidosTitulo">✏️ Meus pedidos</h2>
+      <button class="linkbtn" id="fecharPedidos" type="button">Fechar</button>
+    </div>
+    <p class="config-dica">Só a sua lista muda; a de quem você ama continua a mesma.</p>
+    <ul class="pedidos-edit" id="pedidosEdit"></ul>
+    <button class="secondary" id="pedidoNovo" type="button">+ Novo pedido</button>
+    <p class="erro" id="erroPedidos" role="alert"></p>
+    <div class="row">
+      <button class="primary" id="pedidosSalvar" type="button">Salvar</button>
+      <button class="linkbtn" id="pedidosRestaurar" type="button">Restaurar padrões</button>
+    </div>
+  </dialog>
 
   <dialog id="dlgEnvelope" aria-labelledby="dlgEnvTitulo">
     <form id="formEnvelope" method="dialog">
@@ -488,7 +871,8 @@
       </div>
       <label class="field"><span id="envNivelRotulo">Nível da sugestão</span>
         <select id="envNivel">
-          <option value="leve">Leve</option>
+          <option value="romantico">Romântico</option>
+          <option value="leve" selected>Leve</option>
           <option value="criativo">Criativo</option>
           <option value="picante">Picante</option>
           <option value="pesado">Pesado +18</option>
@@ -498,6 +882,18 @@
         <button class="secondary" id="envSugerir" type="button">🎲 Sugerir</button>
       </div>
       <p class="env-ideia" id="envIdeia" hidden aria-live="polite"></p>
+      <button class="linkbtn ia-botao" id="envIaBotao" type="button" hidden>✨ Ideias da IA</button>
+      <div class="ia-painel" id="envIaPainel" hidden>
+        <label class="field">Tema (opcional)
+          <input type="text" id="envIaTema" maxlength="60" placeholder="Ex.: praia, cozinha, nosso primeiro encontro">
+        </label>
+        <div class="ia-linha">
+          <button class="secondary" id="envIaGerar" type="button">Gerar</button>
+          <span class="ia-uso" id="envIaUso"></span>
+        </div>
+        <p class="ia-status" id="envIaStatus" aria-live="polite"></p>
+        <ul class="ia-lista" id="envIaLista"></ul>
+      </div>
       <label class="field">Texto
         <textarea id="envTexto" maxlength="500" rows="5"></textarea>
         <span class="contador" id="envContador">0/500</span>
@@ -508,6 +904,67 @@
         <button class="secondary" id="cancelarEnvelope" type="button">Cancelar</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="dlgPoses" class="dlg-posicoes" aria-labelledby="dlgPoseTitulo">
+    <div class="pos-topo">
+      <h2 id="dlgPoseTitulo">📸 Ideias de pose</h2>
+      <button class="linkbtn" id="fecharPoses" type="button">Fechar</button>
+    </div>
+    <details class="pose-cuidados" id="poseCuidados">
+      <summary>Cuidados antes de mandar</summary>
+      <ul>
+        <li>Deixe o rosto, tatuagens e objetos que identifiquem você fora do quadro nas fotos mais ousadas.</li>
+        <li>Mande sempre em visualização única e não salve o que receber.</li>
+        <li>Veja se a galeria não faz backup automático na nuvem (Google Fotos, por exemplo) ou use uma pasta bloqueada.</li>
+        <li>Ninguém é obrigado a mandar: dá para pular e pagar a prenda.</li>
+      </ul>
+    </details>
+    <div class="pos-filtros">
+      <label>Tipo
+        <select id="poseFiltroTipo">
+          <option value="foto">Foto</option>
+          <option value="video">Vídeo</option>
+          <option value="">Os dois</option>
+        </select>
+      </label>
+      <label>Nível
+        <select id="poseFiltroNivel">
+          <option value="leve">Leve</option>
+          <option value="picante">Até Picante</option>
+          <option value="pesado" selected>Até Pesado</option>
+        </select>
+      </label>
+      <label>Enquadramento
+        <select id="poseFiltroEnq">
+          <option value="">Todos</option>
+          <option value="close">Close</option>
+          <option value="meio">Meio corpo</option>
+          <option value="inteiro">Corpo inteiro</option>
+          <option value="espelho">Espelho</option>
+          <option value="silhueta">Silhueta</option>
+        </select>
+      </label>
+    </div>
+    <div class="pose-botoes">
+      <button class="primary" id="sortearPose" type="button">🎲 Sortear pose</button>
+      <button class="secondary" id="poseIaBotao" type="button" hidden>✨ Ideias da IA</button>
+    </div>
+    <div class="ia-painel" id="poseIaPainel" hidden>
+      <label class="field">Tema (opcional)
+        <input type="text" id="poseIaTema" maxlength="60" placeholder="Ex.: luz de vela, banheiro, roupa vermelha">
+      </label>
+      <div class="ia-linha">
+        <button class="secondary" id="poseIaGerar" type="button">Gerar</button>
+        <span class="ia-uso" id="poseIaUso"></span>
+      </div>
+      <p class="ia-status" id="poseIaStatus" aria-live="polite"></p>
+      <ul class="pos-lista" id="poseIaLista"></ul>
+    </div>
+    <p class="pos-escolhida" id="poseResultado" hidden aria-live="polite"></p>
+    <p class="erro" id="erroPoses" role="alert"></p>
+    <p class="extras-sub" id="poseVazio" hidden>Nenhuma pose com esses filtros.</p>
+    <ul class="pos-lista" id="poseLista"></ul>
   </dialog>
 
   <dialog id="dlgPosicoes" class="dlg-posicoes" aria-labelledby="dlgPosTitulo">
@@ -549,6 +1006,76 @@
     <ul class="pos-lista" id="posLista"></ul>
   </dialog>
 
+  <dialog id="dlgAbra" aria-labelledby="dlgAbraTitulo">
+    <form id="formAbra" method="dialog">
+      <h2 id="dlgAbraTitulo">Nova carta Abra quando…</h2>
+      <label class="field">Abra quando…
+        <select id="abraOcasiao">
+            <option value="você estiver triste">você estiver triste</option>
+            <option value="sentir saudade">sentir saudade</option>
+            <option value="não conseguir dormir">não conseguir dormir</option>
+            <option value="o dia for difícil">o dia for difícil</option>
+            <option value="estiver feliz">estiver feliz</option>
+            <option value="precisar rir">precisar rir</option>
+            <option value="brigarmos">brigarmos</option>
+            <option value="faltar uma semana para o reencontro">faltar uma semana para o reencontro</option>
+            <option value="outra">Outra ocasião…</option>
+        </select>
+      </label>
+      <label class="field" id="abraOutraLinha" hidden>Qual ocasião?
+        <input type="text" id="abraOutra" maxlength="60" placeholder="Ex.: chegar do trabalho cansado(a)">
+      </label>
+      <label class="field">Carta
+        <textarea id="abraTexto" maxlength="1000" rows="7"></textarea>
+        <span class="contador" id="abraContador">0/1000</span>
+      </label>
+      <p class="erro" id="erroAbra" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarAbra" type="submit">Guardar carta</button>
+        <button class="secondary" id="cancelarAbra" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgAbraLer" class="dlg-abra-ler" aria-labelledby="abraLerOcasiao">
+    <p class="abra-ocasiao" id="abraLerOcasiao"></p>
+    <p class="abra-texto" id="abraLerTexto"></p>
+    <p class="motivo-de" id="abraLerDe"></p>
+    <button class="primary" id="fecharAbraLer" type="button">Fechar</button>
+  </dialog>
+
+  <dialog id="dlgMarco" aria-labelledby="dlgMarcoTitulo">
+    <form id="formMarco" method="dialog">
+      <h2 id="dlgMarcoTitulo">Novo marco</h2>
+      <div class="marco-sugestoes" id="marcoSugestoes">
+        <button type="button" data-emoji="💘" data-titulo="Primeiro encontro">💘 primeiro encontro</button>
+        <button type="button" data-emoji="💋" data-titulo="Primeiro beijo">💋 primeiro beijo</button>
+        <button type="button" data-emoji="💍" data-titulo="Pedido">💍 pedido</button>
+        <button type="button" data-emoji="✈️" data-titulo="Viagem">✈️ viagem</button>
+        <button type="button" data-emoji="🎂" data-titulo="Aniversário">🎂 aniversário</button>
+        <button type="button" data-emoji="🏠" data-titulo="Visita">🏠 visita</button>
+      </div>
+      <label class="field">Título
+        <input type="text" id="marcoTitulo" maxlength="80">
+      </label>
+      <label class="field">Data
+        <input type="date" id="marcoData">
+      </label>
+      <label class="field">Emoji
+        <input type="text" id="marcoEmoji" maxlength="8" class="marco-emoji-campo">
+      </label>
+      <label class="field">Descrição (opcional)
+        <textarea id="marcoDescricao" maxlength="300" rows="3"></textarea>
+      </label>
+      <label class="check"><input type="checkbox" id="marcoPrincipal"> Este é o início do namoro</label>
+      <p class="erro" id="erroMarco" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="salvarMarco" type="submit">Salvar</button>
+        <button class="secondary" id="cancelarMarco" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="dlgMomento" aria-labelledby="dlgMomentoTitulo">
     <form id="formMomento" method="dialog">
       <h2 id="dlgMomentoTitulo">📸 Guardar no álbum</h2>
@@ -587,6 +1114,65 @@
       </div>
     </form>
   </dialog>
+
+  <dialog id="dlgCodigoDono" aria-labelledby="dlgCodigoDonoTitulo">
+    <h2 id="dlgCodigoDonoTitulo">Código de dono 👑</h2>
+    <p class="codigo-dono" id="codigoDono"></p>
+    <p>Guarde este código. Sem ele, se você trocar de celular ou limpar o navegador, perde o controle das configurações.</p>
+    <p class="extras-sub" id="codigoDonoCopiado" aria-live="polite"></p>
+    <div class="row">
+      <button class="primary" id="copiarCodigoDono" type="button">Copiar</button>
+      <button class="secondary" id="fecharCodigoDono" type="button">Fechar</button>
+    </div>
+  </dialog>
+
+  <dialog id="dlgEntrarDono" aria-labelledby="dlgEntrarDonoTitulo">
+    <form id="formEntrarDono" method="dialog">
+      <h2 id="dlgEntrarDonoTitulo">👑 Entrar como dono</h2>
+      <label class="field">Código de dono
+        <input type="text" id="entrarDonoCodigo" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX">
+      </label>
+      <p class="erro" id="erroEntrarDono" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="entrarDonoOk" type="submit">Entrar</button>
+        <button class="secondary" id="cancelarEntrarDono" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="noite" id="noite" hidden role="dialog" aria-modal="true" aria-labelledby="noiteTitulo">
+    <div class="noite-estrelas" aria-hidden="true"></div>
+    <div class="noite-conteudo">
+      <button class="linkbtn noite-cancelar" id="noiteCancelar" type="button">Cancelar</button>
+      <h2 id="noiteTitulo">Como foi a nossa noite?</h2>
+      <div id="noiteEscrever">
+        <input type="text" id="noiteFrase" maxlength="200" placeholder="Uma frase sobre hoje" aria-label="Uma frase sobre a noite">
+        <div class="row">
+          <button class="primary" id="noiteEnviar" type="button">Enviar</button>
+          <button class="secondary" id="noitePular" type="button">Pular</button>
+        </div>
+        <p class="erro" id="erroNoite" role="alert"></p>
+      </div>
+      <p class="noite-esperando" id="noiteEsperando" hidden></p>
+      <ul class="noite-frases" id="noiteFrases" hidden></ul>
+      <div class="noite-boa" id="noiteBoa" hidden>
+        <p class="noite-lua" aria-hidden="true">🌙</p>
+        <p class="noite-boa-frase" id="noiteBoaFrase"></p>
+        <p class="noite-info" id="noiteReencontro"></p>
+        <p class="noite-info" id="noiteMaos"></p>
+        <button class="primary" id="noiteDormir" type="button">Boa noite 💤</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="juntos-anim" id="juntosAnim" hidden aria-live="polite">
+    <div class="juntos-par" aria-hidden="true"><span class="c1">💗</span><span class="c2">💗</span></div>
+    <p>Vocês estão juntos agora 💞</p>
+  </div>
+  <div class="carinho-anim" id="carinhoAnim" hidden aria-live="polite">
+    <span class="carinho-emoji" id="carinhoEmoji" aria-hidden="true"></span>
+    <p id="carinhoTexto"></p>
+  </div>
 
   <div class="env-abrindo" id="envAbrindo" hidden role="dialog" aria-label="Envelope aberto">
     <div class="env-papel">
@@ -649,12 +1235,25 @@
       </div>
       <label class="field">Nível
         <select id="nivelCarta">
-          <option value="leve">Leve</option>
+          <option value="romantico">Romântico</option>
+          <option value="leve" selected>Leve</option>
           <option value="criativo">Criativo</option>
           <option value="picante">Picante</option>
           <option value="pesado">Pesado +18</option>
         </select>
       </label>
+      <button class="linkbtn ia-botao" id="cartaIaBotao" type="button" hidden>✨ Ideias da IA</button>
+      <div class="ia-painel" id="cartaIaPainel" hidden>
+        <label class="field">Tema (opcional)
+          <input type="text" id="cartaIaTema" maxlength="60" placeholder="Ex.: praia, cozinha, nosso primeiro encontro">
+        </label>
+        <div class="ia-linha">
+          <button class="secondary" id="cartaIaGerar" type="button">Gerar</button>
+          <span class="ia-uso" id="cartaIaUso"></span>
+        </div>
+        <p class="ia-status" id="cartaIaStatus" aria-live="polite"></p>
+        <ul class="ia-lista" id="cartaIaLista"></ul>
+      </div>
       <label class="field">Texto
         <textarea id="textoCarta" maxlength="280" rows="4" placeholder="Ex.: Me conta um sonho que você teve comigo"></textarea>
         <span class="contador" id="contadorCarta">0/280</span>
@@ -675,9 +1274,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=35"></script>
-<script src="conquistas.js?v=35"></script>
-<script src="app.js?v=35"></script>
+<script src="config.js?v=49"></script>
+<script src="conquistas.js?v=49"></script>
+<script src="app.js?v=49"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
