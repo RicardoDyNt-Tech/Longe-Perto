@@ -351,6 +351,7 @@
       ;
     canal = comTabelasV5(canal, c)
       .on("broadcast", { event: "mao" }, m => receberMao(m && m.payload))
+      .on("broadcast", { event: "mural" }, m => receberMural(m && m.payload))
       .on("postgres_changes", { event: "*", schema: "public", table: "vistos", filter: `sala=eq.${c}` }, p => {
         const r = p.new;
         if (c !== codigo || !r || (r.jogador !== 0 && r.jogador !== 1) || r.jogador === eu) return;
@@ -404,6 +405,7 @@
     if (fixa) carregarModelos(c);
     humores = []; faixaHumorFechada = false; $("humorNota").value = ""; $("humorNotaBox").hidden = true; $("humorSalvo").textContent = "";
     if (fixa) carregarHumores(c);
+    tracos = []; pilhaMural = []; muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); esconderConvite(); $("muralLegenda").value = ""; filtroMural = "todos";
     poses = []; carregarPoses(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
     config = mesclarConfig({}); temDono = false; donoIndice = null; souDono = false; configPronta = false;
@@ -785,7 +787,7 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural"];
   const ABAS = { casa: "abaCasa", jogo: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
 
   function mostrarVista(nome) {
@@ -812,6 +814,8 @@
     if (nome === "vPlaylist") desenharNossas();
     if (nome === "vDiarioCasal") { paginasDiario = 1; desenharDiarioCasal(); }
     if (nome === "vPerfil") desenharPerfil(!editandoManual());
+    if (vista !== "vMural" && muralJuntos) sairJuntos();
+    if (nome === "vMural") entrarMural();
     window.scrollTo(0, 0);
   }
 
@@ -825,6 +829,7 @@
     desenharCabecalho(e);
     desenharDengo();
     desenharHumor();
+    desenharMuralInicio();
     desenharCasaExtras(e);
   }
 
@@ -1361,6 +1366,7 @@
       return el("span", "sug-info", d ? `💡 ${nomeDe(1 - eu)} costuma pedir: ${d}` : `O pedido favorito ainda não está no Manual de ${nomeDe(1 - eu)}.`);
     },
     manual: () => botaoAcao("Ver o Manual", () => abrirManualOutro("acalma")),
+    mural: () => botaoAcao("Abrir o mural", () => abrirMural(false)),
     partida: () => botaoAcao("Ir para o jogo", () => mostrarVista("jogo")),
     musica: () => musicasNossas().length ? botaoAcao("Sortear da nossa playlist", mandarDaPlaylist) : null,
     reencontro: () => botaoAcao("Abrir o Cofre", () => mostrarVista("vCofre"))
@@ -1412,6 +1418,353 @@
     gravar(n => { if (!placarZerado(n)) return; n.niveis = ["romantico"]; n.prendasFofas = true; });
     faixaHumorFechada = true;
     desenharFaixaHumor();
+  }
+
+  // ---------- v7: mural de desenho ----------
+  // traços: [{ cor, esp, pts: [[x, y], …] }], x e y de 0 a 1000 (proporção 3:4, igual em qualquer tela)
+  const MURAL_CORES = ["#E0405F", "#FF7EB6", "#FF8A3D", "#2E86DE", "#1FA37A", "#1B1530"];
+  const MURAL_ESP = { 1: 6, 2: 14, 3: 30 };          // espessura em milésimos da largura
+  const MURAL_FUNDOS = ["papel", "quadriculado", "escuro", "rosa"];
+  const MURAL_MAX = 290000;                          // o banco aceita até ~300 KB
+  const MURAL_PASSOS = 30;
+  let tracos = [], pilhaMural = [], muralCor = MURAL_CORES[0], muralEsp = 2, muralBorracha = false, muralFundo = "papel";
+  let tracoAtual = null, muralJuntos = false, muralOutroNoJuntos = false, filtroMural = "todos", muralVendo = null;
+  let loteMural = [], timerLote = null, timerCursor = null, conviteMural = null, contTraco = 0;
+  const remotos = new Map();   // id -> traço sendo desenhado pelo outro
+
+  const tracoValido = t => t && (MURAL_CORES.includes(t.cor) || t.cor === "apagar") && MURAL_ESP[t.esp] && Array.isArray(t.pts);
+  const tracosDe = m => Array.isArray(m && m.tracos) ? m.tracos.filter(tracoValido) : [];
+  function tamanhoMural(ts) {
+    // jsonb::text tem um espaço depois de ":" e ","
+    const s = JSON.stringify(ts.map(t => ({ cor: t.cor, esp: t.esp, pts: t.pts })));
+    let extra = 0;
+    for (let i = 0; i < s.length; i++) if (s[i] === "," || s[i] === ":") extra++;
+    return new TextEncoder().encode(s).length + extra;
+  }
+  function pintarTraco(ctx, t, w, h, de) {
+    const pts = t.pts;
+    if (!pts.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = t.cor === "apagar" ? "destination-out" : "source-over";
+    ctx.strokeStyle = ctx.fillStyle = t.cor === "apagar" ? "#000" : t.cor;
+    ctx.lineWidth = MURAL_ESP[t.esp] * w / 1000;
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    const i0 = Math.max(0, (de || 0) - 1);
+    const p0 = pts[i0];
+    if (pts.length === 1) {
+      ctx.beginPath(); ctx.arc(p0[0] * w / 1000, p0[1] * h / 1000, ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.moveTo(p0[0] * w / 1000, p0[1] * h / 1000);
+      for (let i = i0 + 1; i < pts.length; i++) ctx.lineTo(pts[i][0] * w / 1000, pts[i][1] * h / 1000);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // ajusta o canvas à largura disponível (3:4) e redesenha
+  function prepararCanvas(cv, ts, maxW, maxH) {
+    const ratio = window.devicePixelRatio || 1;
+    let w = Math.max(40, Math.floor(maxW)), h = Math.round(w * 4 / 3);
+    if (maxH && h > maxH) { h = Math.max(60, Math.floor(maxH)); w = Math.round(h * 3 / 4); }
+    cv.style.width = w + "px"; cv.style.height = h + "px";
+    cv.width = Math.round(w * ratio); cv.height = Math.round(h * ratio);
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ts.forEach(t => pintarTraco(ctx, t, w, h));
+    return { w, h };
+  }
+  let muralTam = { w: 300, h: 400 };
+  function redesenharMural() {
+    const q = $("muralQuadro");
+    if (!q || $("vMural").hidden) return;
+    // cabe entre as ferramentas e a barra de baixo
+    const nav = $("navBaixo").offsetHeight || 0, ferr = document.querySelector(".mural-ferramentas").offsetHeight || 0;
+    const livre = Math.max(260, innerHeight - nav - ferr - 40);
+    muralTam = prepararCanvas($("muralCanvas"), tracos, q.parentElement.clientWidth, livre);
+    q.style.width = muralTam.w + "px";
+    MURAL_FUNDOS.forEach(f => q.classList.toggle("fundo-" + f, f === muralFundo));
+  }
+  function miniatura(m, larg) {
+    const box = el("span", "mural-thumb fundo-" + (MURAL_FUNDOS.includes(m.fundo) ? m.fundo : "papel"));
+    const cv = el("canvas");
+    box.appendChild(cv);
+    prepararCanvas(cv, tracosDe(m), larg);
+    return box;
+  }
+  function entrarMural() {
+    $("muralEnviar").textContent = `Enviar para ${nomeDe(1 - eu) || "o outro"} 💌`;
+    desenharFerramentas();
+    requestAnimationFrame(() => { redesenharMural(); document.querySelector(".mural-ferramentas").scrollIntoView({ block: "start" }); });
+    desenharMuralEstado();
+    desenharGaleria();
+  }
+  function abrirMural(juntos) {
+    mostrarVista("vMural");
+    if (juntos && ambosPresentes()) comecarJuntos();
+  }
+  function desenharFerramentas() {
+    const cs = $("muralCores"); cs.textContent = "";
+    MURAL_CORES.forEach(c => {
+      const b = el("button", "mural-cor"); b.type = "button"; b.style.background = c;
+      b.setAttribute("aria-label", "Cor " + c); b.setAttribute("aria-pressed", String(!muralBorracha && c === muralCor));
+      b.addEventListener("click", () => { muralCor = c; muralBorracha = false; desenharFerramentas(); });
+      cs.appendChild(b);
+    });
+    const es = $("muralEsps"); es.textContent = "";
+    [1, 2, 3].forEach(n => {
+      const b = el("button", "mural-esp"); b.type = "button";
+      b.setAttribute("aria-label", ["Fina", "Média", "Grossa"][n - 1]); b.setAttribute("aria-pressed", String(n === muralEsp));
+      const i = el("i"); i.style.width = i.style.height = (4 + n * 5) + "px"; b.appendChild(i);
+      b.addEventListener("click", () => { muralEsp = n; desenharFerramentas(); });
+      es.appendChild(b);
+    });
+    $("muralBorracha").setAttribute("aria-pressed", String(muralBorracha));
+    $("muralFundo").value = muralFundo;
+    $("muralDesfazer").disabled = muralJuntos ? !tracos.some(t => t.de === eu) : !pilhaMural.length;
+  }
+  function desenharMuralEstado() {
+    const outro = nomeDe(1 - eu) || "o outro";
+    $("muralJuntos").hidden = muralJuntos || !ambosPresentes();
+    $("muralSairJuntos").hidden = !muralJuntos;
+    $("muralGuardar").hidden = !muralJuntos;
+    $("muralEnviar").hidden = muralJuntos;
+    $("muralJuntosStatus").hidden = !muralJuntos;
+    $("muralJuntosStatus").textContent = !muralJuntos ? "" : muralOutroNoJuntos ? `🤝 Desenhando junto com ${outro}` : `Esperando ${outro} entrar no desenho…`;
+    $("muralCursor").style.background = avatarDe(1 - eu).cor;
+  }
+  function guardarPasso() {
+    pilhaMural.push(tracos.map(t => ({ ...t, pts: t.pts.slice() })));
+    if (pilhaMural.length > MURAL_PASSOS) pilhaMural.shift();
+  }
+  function pontoDe(ev) {
+    const r = $("muralCanvas").getBoundingClientRect();
+    const x = Math.round((ev.clientX - r.left) / r.width * 1000), y = Math.round((ev.clientY - r.top) / r.height * 1000);
+    return [Math.min(1000, Math.max(0, x)), Math.min(1000, Math.max(0, y))];
+  }
+  function comecarTraco(ev) {
+    if (ev.button !== undefined && ev.button > 0) return;
+    ev.preventDefault();
+    try { $("muralCanvas").setPointerCapture(ev.pointerId); } catch (err) {}
+    if (!muralJuntos) guardarPasso();
+    tracoAtual = { id: `${eu}-${Date.now().toString(36)}-${contTraco++}`, de: eu, cor: muralBorracha ? "apagar" : muralCor, esp: muralEsp, pts: [pontoDe(ev)] };
+    tracos.push(tracoAtual);
+    pintarTraco($("muralCanvas").getContext("2d"), tracoAtual, muralTam.w, muralTam.h);
+    enviarLote(tracoAtual, [tracoAtual.pts[0]]);
+    erro("erroMural", "");
+    desenharFerramentas();
+  }
+  function moverTraco(ev) {
+    if (!tracoAtual) return;
+    ev.preventDefault();
+    const evs = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
+    const novos = [];
+    (evs.length ? evs : [ev]).forEach(e2 => {
+      const p = pontoDe(e2), u = tracoAtual.pts[tracoAtual.pts.length - 1];
+      if (Math.hypot(p[0] - u[0], p[1] - u[1]) < 2) return;   // simplifica: pontos a menos de 2 unidades
+      tracoAtual.pts.push(p); novos.push(p);
+    });
+    if (!novos.length) return;
+    pintarTraco($("muralCanvas").getContext("2d"), tracoAtual, muralTam.w, muralTam.h, tracoAtual.pts.length - novos.length);
+    enviarLote(tracoAtual, novos);
+  }
+  function fimTraco() {
+    if (!tracoAtual) return;
+    enviarLote(tracoAtual, [], true);
+    tracoAtual = null;
+  }
+  // ao vivo: os pontos vão por broadcast em lotes de ~50 ms
+  function enviarLote(t, pts, fim) {
+    if (!muralJuntos) return;
+    const ult = loteMural[loteMural.length - 1];
+    if (ult && ult.id === t.id) { ult.pts.push(...pts); if (fim) ult.fim = true; }
+    else loteMural.push({ id: t.id, cor: t.cor, esp: t.esp, pts: pts.slice(), fim: !!fim });
+    if (fim) return soltarLote();
+    if (!timerLote) timerLote = setTimeout(soltarLote, 50);
+  }
+  function soltarLote() {
+    clearTimeout(timerLote); timerLote = null;
+    const l = loteMural; loteMural = [];
+    l.forEach(x => mandarMural({ t: "pts", ...x }));
+  }
+  function mandarMural(p) {
+    try { canal && canal.send({ type: "broadcast", event: "mural", payload: { ...p, jogador: eu } }); } catch (err) {}
+  }
+  function comecarJuntos() {
+    muralJuntos = true; muralOutroNoJuntos = false;
+    pilhaMural = [];
+    mandarMural({ t: "convite" });
+    desenharMuralEstado(); desenharFerramentas();
+  }
+  function sairJuntos() {
+    if (!muralJuntos) return;
+    soltarLote();
+    muralJuntos = false; muralOutroNoJuntos = false; remotos.clear();
+    mandarMural({ t: "saiu" });
+    $("muralCursor").hidden = true;
+    desenharMuralEstado(); desenharFerramentas();
+  }
+  function entrarNoConvite() {
+    esconderConvite();
+    tracos = []; pilhaMural = []; $("muralLegenda").value = "";
+    muralJuntos = true; muralOutroNoJuntos = true;
+    mostrarVista("vMural");
+    mandarMural({ t: "entrou" });
+    desenharMuralEstado();
+  }
+  function esconderConvite() { conviteMural = null; $("muralConvite").hidden = true; }
+  function receberMural(p) {
+    if (!p || p.jogador !== 1 - eu || !estado || !estado.fixa) return;
+    const outro = nomeDe(1 - eu);
+    if (p.t === "convite") {
+      if (muralJuntos) { muralOutroNoJuntos = true; mandarMural({ t: "entrou" }); mandarMural({ t: "estado", tracos, fundo: muralFundo }); return desenharMuralEstado(); }
+      conviteMural = Date.now();
+      $("muralConviteTxt").textContent = `${outro} quer desenhar junto com você ✏️`;
+      $("muralConvite").hidden = false;
+      vibrar([60, 40, 60]);
+      return;
+    }
+    if (p.t === "saiu") { esconderConvite(); if (muralJuntos) { muralOutroNoJuntos = false; remotos.clear(); $("muralCursor").hidden = true; desenharMuralEstado(); } return; }
+    if (p.t === "guardado") {
+      if (muralJuntos) { tracos = []; pilhaMural = []; $("muralLegenda").value = ""; muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); redesenharMural(); desenharMuralEstado(); desenharFerramentas(); }
+      return;
+    }
+    if (!muralJuntos) return;
+    if (p.t === "entrou") {
+      muralOutroNoJuntos = true;
+      mandarMural({ t: "estado", tracos, fundo: muralFundo });
+      return desenharMuralEstado();
+    }
+    if (p.t === "estado") {
+      muralOutroNoJuntos = true;
+      if (Array.isArray(p.tracos) && !tracos.length) tracos = p.tracos.filter(tracoValido);
+      if (MURAL_FUNDOS.includes(p.fundo)) muralFundo = p.fundo;
+      redesenharMural(); desenharMuralEstado(); desenharFerramentas();
+      return;
+    }
+    if (p.t === "pts" && typeof p.id === "string" && Array.isArray(p.pts)) {
+      let t = remotos.get(p.id);
+      if (!t) {
+        if (!tracoValido({ cor: p.cor, esp: p.esp, pts: [] })) return;
+        t = { id: p.id, de: 1 - eu, cor: p.cor, esp: p.esp, pts: [] };
+        remotos.set(p.id, t); tracos.push(t);
+      }
+      const antes = t.pts.length;
+      p.pts.forEach(q => { if (Array.isArray(q) && q.length === 2 && q.every(Number.isFinite)) t.pts.push([Math.round(q[0]), Math.round(q[1])]); });
+      if (!$("vMural").hidden) {
+        pintarTraco($("muralCanvas").getContext("2d"), t, muralTam.w, muralTam.h, antes);
+        const u = t.pts[t.pts.length - 1];
+        if (u) {
+          const c = $("muralCursor");
+          c.style.left = (u[0] * muralTam.w / 1000) + "px"; c.style.top = (u[1] * muralTam.h / 1000) + "px"; c.hidden = false;
+          clearTimeout(timerCursor); timerCursor = setTimeout(() => { c.hidden = true; }, 1500);
+        }
+      }
+      if (p.fim) remotos.delete(p.id);
+      return;
+    }
+    if (p.t === "tirar" && typeof p.id === "string") { tracos = tracos.filter(t => t.id !== p.id); return redesenharMural(); }
+    if (p.t === "limpar") { tracos = []; remotos.clear(); return redesenharMural(); }
+    if (p.t === "fundo" && MURAL_FUNDOS.includes(p.fundo)) { muralFundo = p.fundo; redesenharMural(); desenharFerramentas(); }
+  }
+  function desfazerMural() {
+    if (muralJuntos) {
+      // juntos: desfaz o meu último traço
+      for (let i = tracos.length - 1; i >= 0; i--) if (tracos[i].de === eu) { mandarMural({ t: "tirar", id: tracos[i].id }); tracos.splice(i, 1); break; }
+    } else if (pilhaMural.length) tracos = pilhaMural.pop();
+    redesenharMural(); desenharFerramentas();
+  }
+  function limparMural() {
+    if (!tracos.length || !confirm("Limpar o desenho?")) return;
+    if (!muralJuntos) guardarPasso();
+    tracos = []; remotos.clear();
+    if (muralJuntos) mandarMural({ t: "limpar" });
+    redesenharMural(); desenharFerramentas();
+  }
+  function mudarFundoMural() {
+    muralFundo = MURAL_FUNDOS.includes($("muralFundo").value) ? $("muralFundo").value : "papel";
+    if (muralJuntos) mandarMural({ t: "fundo", fundo: muralFundo });
+    redesenharMural();
+  }
+  async function salvarMural(juntos) {
+    if (!codigo || !estado) return;
+    const ts = tracos.filter(t => t.pts.length).map(t => ({ cor: t.cor, esp: t.esp, pts: t.pts }));
+    if (!ts.some(t => t.cor !== "apagar")) return erro("erroMural", "Desenhe alguma coisa primeiro.");
+    if (tamanhoMural(ts) > MURAL_MAX) return erro("erroMural", "Desenho muito grande, apague alguns traços");
+    if (!juntos && !estado.jogadores[1 - eu]) return erro("erroMural", "Espere a outra pessoa entrar na sala.");
+    const b = juntos ? $("muralGuardar") : $("muralEnviar");
+    b.disabled = true;
+    const legenda = $("muralLegenda").value.trim().slice(0, 80) || null;
+    const { data, error } = await sb.from("murais").insert({ sala: codigo, de: eu, para: juntos ? null : 1 - eu, tracos: ts, fundo: muralFundo, legenda }).select().single();
+    b.disabled = false;
+    if (error || !data) return erro("erroMural", /check|grande|300000/.test((error && error.message) || "") ? "Desenho muito grande, apague alguns traços" : "Não consegui guardar o desenho. Confira a internet e tente de novo.");
+    linhaV5("murais", "INSERT", data);
+    if (juntos) { mandarMural({ t: "guardado" }); muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); }
+    tracos = []; pilhaMural = []; $("muralLegenda").value = "";
+    erro("erroMural", juntos ? "Guardado ✓" : `Enviado para ${nomeDe(1 - eu)} 💌`);
+    redesenharMural(); desenharMuralEstado(); desenharFerramentas();
+  }
+  const quemMural = m => m.para === null || m.para === undefined ? "Feito juntos" : m.de === eu ? `Para ${nomeDe(m.para)}` : `De ${nomeDe(m.de)}`;
+  function desenharGaleria() {
+    if ($("vMural").hidden) return;
+    document.querySelectorAll("#muralFiltro [data-f]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === filtroMural)));
+    const g = $("muralGaleria"); g.textContent = "";
+    const lista = dados.murais.filter(m => filtroMural === "todos" || (filtroMural === "juntos" ? m.para == null : filtroMural === "enviados" ? m.para != null && m.de === eu : m.para === eu))
+      .sort((a, b) => a.criada_em < b.criada_em ? 1 : -1);
+    $("muralGaleriaVazia").hidden = !!lista.length;
+    const larg = Math.floor((g.clientWidth || 300) / 3) - 8;
+    lista.forEach(m => {
+      const b = el("button", "mural-item"); b.type = "button";
+      b.appendChild(miniatura(m, larg));
+      b.appendChild(el("span", "mural-item-quem", quemMural(m)));
+      if (m.para === eu && !m.visto_em) b.appendChild(el("span", "selo-novo", "novo"));
+      b.addEventListener("click", () => verMural(m));
+      g.appendChild(b);
+    });
+  }
+  function verMural(m) {
+    muralVendo = m;
+    $("muralVerTitulo").textContent = quemMural(m);
+    $("muralVerLegenda").hidden = !m.legenda; $("muralVerLegenda").textContent = m.legenda || "";
+    $("muralVerData").textContent = new Date(m.criada_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const q = $("muralVerQuadro");
+    MURAL_FUNDOS.forEach(f => q.classList.toggle("fundo-" + f, f === (MURAL_FUNDOS.includes(m.fundo) ? m.fundo : "papel")));
+    $("dlgMuralVer").showModal();
+    const tam = prepararCanvas($("muralVerCanvas"), tracosDe(m), Math.min(560, innerWidth - 40), innerHeight - 190);
+    q.style.width = tam.w + "px";
+    if (m.para === eu && !m.visto_em) {
+      const agora = new Date().toISOString();
+      linhaV5("murais", "UPDATE", { ...m, visto_em: agora });
+      sb.from("murais").update({ visto_em: agora }).eq("id", m.id).then(() => {}, () => {});
+    }
+  }
+  async function apagarMural() {
+    const m = muralVendo;
+    if (!m || !confirm("Apagar este desenho? Some para os dois.")) return;
+    const { error } = await sb.from("murais").delete().eq("id", m.id);
+    if (error) return alert("Não consegui apagar. Confira a internet.");
+    linhaV5("murais", "DELETE", { id: m.id });
+    $("dlgMuralVer").close();
+  }
+  // Início: o último desenho recebido (selo se ainda não visto)
+  function desenharMuralInicio() {
+    if (!estado || !estado.fixa) return;
+    const outro = nomeDe(1 - eu) || "o outro";
+    const recebidos = dados.murais.filter(m => m.para === eu).sort((a, b) => a.criada_em < b.criada_em ? 1 : -1);
+    const novo = recebidos.find(m => !m.visto_em), m = novo || recebidos[0];
+    $("muralInicioTxt").textContent = novo ? `— ${nomeDe(novo.de)} deixou algo para você ❤️` : m ? `— de ${nomeDe(m.de)}` : `— desenhe algo para ${outro}`;
+    $("casaMural").classList.toggle("tem-novo", !!novo);
+    const v = $("muralInicioVer");
+    v.hidden = !m; v.textContent = "";
+    if (m) { v.appendChild(miniatura(m, Math.min(180, ($("casaMural").clientWidth || 300) - 40))); v.onclick = () => verMural(m); }
+    $("muralInicioLegenda").hidden = !(m && m.legenda); $("muralInicioLegenda").textContent = m && m.legenda ? m.legenda : "";
+    const n = dados.murais.filter(x => x.para === eu && !x.visto_em).length;
+    $("cardMuralSub").textContent = n ? `${n} ${n === 1 ? "novo" : "novos"} para você` : dados.murais.length ? `${dados.murais.length} ${dados.murais.length === 1 ? "desenho" : "desenhos"}` : "Desenhos de vocês";
+  }
+  // cartas que pedem um desenho ganham o atalho para o mural
+  const RE_DESENHO = /\bdesenhe\b|\bdesenhar\b/i;
+  function desenharCartaMural(e) {
+    const c = e && e.carta;
+    $("cartaMural").hidden = !(e && e.fixa && c && c.texto && RE_DESENHO.test(c.texto));
   }
 
   // abre o Manual do outro numa parte (ex.: "O que me acalma")
@@ -1466,6 +1819,8 @@
     presencaPronta = true;
     desenharPresenca();
     presencaMudou.forEach(f => f());
+    if (vista === "vMural") desenharMuralEstado();
+    if (!agora.has(outro)) { esconderConvite(); if (muralJuntos && muralOutroNoJuntos) { muralOutroNoJuntos = false; desenharMuralEstado(); } }
   }
   const presencaMudou = [];   // envelopes e desafio surpresa escutam aqui
   const ambosPresentes = () => presentes.has(0) && presentes.has(1);
@@ -1484,8 +1839,8 @@
   // ---------- tabelas da v5 (só em sala fixa): carga, Realtime e redesenho ----------
   const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
     carinhos: "criada_em", marcos: "data", motivos: "criada_em", abra_quando: "criada_em", respostas_dia: "dia",
-    dengos: "criada_em" };
-  const LIMITE_TABELA = { carinhos: 500, respostas_dia: 1000, dengos: 500 };   // tabelas que crescem sem parar: só as linhas mais novas
+    dengos: "criada_em", murais: "criada_em" };
+  const LIMITE_TABELA = { carinhos: 500, respostas_dia: 1000, dengos: 500, murais: 200 };   // tabelas que crescem sem parar: só as linhas mais novas
   const aoCarregar = {};                     // tabela -> fn() depois da primeira carga
   const dados = {};
   Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
@@ -1504,6 +1859,7 @@
   redesenhar("dengos", desenharDengo);
   manualMudouFns.push(desenharDengo);
   manualMudouFns.push(() => desenharHumor());
+  redesenhar("murais", () => { desenharMuralInicio(); desenharGaleria(); });
 
   // ---------- guia de posições (só texto, sem imagens) ----------
   // posicoes: o guia (só leitura); marcasPos: marcas do casal nesta sala { posicao_id, marca, link }
@@ -4348,6 +4704,7 @@
     desenharDiario();
     desenharNav();
     desenharFaixaHumor();
+    desenharCartaMural(e);
 
     // giro novo? anima nos dois celulares
     const g = e.giro;
@@ -5559,6 +5916,26 @@
     $("camera").addEventListener("change", mudarCamera);
     $("navRecolher").addEventListener("click", () => recolherNav(true));
     $("dengoPedir").addEventListener("click", botaoPedir);
+    const cv = $("muralCanvas");
+    cv.addEventListener("pointerdown", comecarTraco);
+    cv.addEventListener("pointermove", moverTraco);
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => cv.addEventListener(t, fimTraco));
+    $("muralBorracha").addEventListener("click", () => { muralBorracha = !muralBorracha; desenharFerramentas(); });
+    $("muralDesfazer").addEventListener("click", desfazerMural);
+    $("muralLimpar").addEventListener("click", limparMural);
+    $("muralFundo").addEventListener("change", mudarFundoMural);
+    $("muralEnviar").addEventListener("click", () => salvarMural(false));
+    $("muralGuardar").addEventListener("click", () => salvarMural(true));
+    $("muralJuntos").addEventListener("click", comecarJuntos);
+    $("muralSairJuntos").addEventListener("click", () => sairJuntos());
+    $("muralConviteEntrar").addEventListener("click", entrarNoConvite);
+    $("muralConviteFechar").addEventListener("click", esconderConvite);
+    $("muralInicioDesenhar").addEventListener("click", () => abrirMural(false));
+    $("fecharMuralVer").addEventListener("click", () => $("dlgMuralVer").close());
+    $("muralApagar").addEventListener("click", apagarMural);
+    $("cartaMural").addEventListener("click", () => abrirMural(ambosPresentes()));
+    document.querySelectorAll("#muralFiltro [data-f]").forEach(b => b.addEventListener("click", () => { filtroMural = b.dataset.f; desenharGaleria(); }));
+    addEventListener("resize", () => { if (vista === "vMural") redesenharMural(); });
     document.querySelectorAll("#humorCaras button").forEach(b => b.addEventListener("click", () => escolherHumor(Number(b.dataset.v))));
     $("humorNotaSalvar").addEventListener("click", salvarNotaHumor);
     $("humorNota").addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); salvarNotaHumor(); } });

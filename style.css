@@ -685,3 +685,40 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 .faixa-humor{display:flex; align-items:center; gap:8px; margin:12px 0 0; padding:10px 12px; border-radius:14px; border:1.5px solid var(--desafio); background:color-mix(in srgb, var(--desafio) 10%, var(--surface))}
 .faixa-humor p{flex:1; margin:0; font-weight:700; font-size:.9rem}
 .faixa-humor .secondary{width:auto; padding:6px 12px}
+/* v7: mural de desenho */
+.mural-ferramentas{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 10px}
+.mural-cores, .mural-esps{display:flex; gap:6px}
+.mural-cor{width:30px; height:30px; border-radius:50%; border:2px solid var(--surface); padding:0}
+.mural-esp{width:34px; height:34px; display:grid; place-items:center; background:var(--surface); border:1.5px solid var(--line); border-radius:10px; padding:0}
+.mural-esp i{display:block; border-radius:50%; background:var(--ink)}
+.mural-cor[aria-pressed="true"], .mural-esp[aria-pressed="true"], .mural-ferr[aria-pressed="true"]{outline:3px solid var(--lamp); outline-offset:1px}
+.mural-ferr{background:var(--surface); color:var(--ink); border:1.5px solid var(--line); border-radius:10px; padding:6px 10px; font-size:.82rem}
+.mural-ferr:disabled{opacity:.45}
+.mural-fundo-sel{font-size:.82rem; font-weight:600}
+.mural-fundo-sel select{width:auto; margin-left:4px; padding:4px 6px; background:var(--surface)}
+.mural-quadro{position:relative; margin:0 auto; border-radius:14px; overflow:hidden; border:1.5px solid var(--line); line-height:0}
+.mural-quadro canvas{display:block; touch-action:none}
+.fundo-papel{background:#FFFDF7}
+.fundo-quadriculado{background-color:#FFFFFF; background-image:linear-gradient(#DCE6F5 1px, transparent 1px), linear-gradient(90deg, #DCE6F5 1px, transparent 1px); background-size:20px 20px}
+.fundo-escuro{background:#1E1A33}
+.fundo-rosa{background:#FFE3EE}
+.mural-cursor{position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.3); pointer-events:none}
+.mural-leg{margin-top:10px}
+.mural-acoes{display:grid; gap:8px}
+.mural-juntos-status{margin:0 0 8px; font-weight:800; color:#1FAF55}
+.mural-galeria{display:grid; grid-template-columns:repeat(3, 1fr); gap:8px}
+.mural-item{position:relative; display:flex; flex-direction:column; align-items:center; gap:4px; background:transparent; color:var(--ink); padding:0; font-size:.72rem}
+.mural-thumb{display:block; border-radius:10px; overflow:hidden; border:1.5px solid var(--line); line-height:0}
+.mural-item-quem{color:var(--muted); overflow-wrap:anywhere; text-align:center}
+.selo-novo{position:absolute; top:4px; right:4px; background:var(--desafio); color:var(--on-color); font-weight:800; font-size:.65rem; padding:1px 6px; border-radius:99px}
+.mural-inicio-titulo{margin:0 0 8px; overflow-wrap:anywhere}
+.mural-inicio.tem-novo{border-color:var(--desafio)}
+.mural-mini{display:block; background:transparent; padding:0; margin:0 0 8px}
+.mural-legenda{margin:0 0 8px}
+.dlg-mural .mural-quadro{margin:8px auto}
+.mural-ver-legenda{font-weight:700; text-align:center; overflow-wrap:anywhere}
+.mural-convite{position:fixed; left:12px; right:12px; top:calc(12px + env(safe-area-inset-top,0px)); z-index:70; max-width:480px; margin:0 auto;
+  background:var(--surface); border:2px solid var(--lamp); border-radius:16px; padding:12px 14px; box-shadow:0 12px 30px rgba(0,0,0,.25); display:flex; flex-wrap:wrap; align-items:center; gap:8px}
+.mural-convite p{flex:1 1 100%; margin:0; font-weight:800}
+.mural-convite .primary{width:auto; padding:8px 16px}
+.carta-mural{margin-top:8px}

@@ -181,6 +181,12 @@
           </div>
           <p class="erro" id="erroHumor" role="alert"></p>
         </div>
+        <div class="casa-bloco mural-inicio" id="casaMural">
+          <p class="mural-inicio-titulo"><b>Mural</b> <span id="muralInicioTxt"></span></p>
+          <button type="button" class="mural-mini" id="muralInicioVer" hidden aria-label="Ver o desenho"></button>
+          <p class="extras-sub mural-legenda" id="muralInicioLegenda" hidden></p>
+          <button class="secondary" type="button" id="muralInicioDesenhar">✏️ Desenhar</button>
+        </div>
         <div class="casa-bloco carinhos" id="casaCarinhos">
           <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo">✕</button></p>
           <div class="carinho-botoes" id="carinhoBotoes">
@@ -217,6 +223,7 @@
           <p class="erro" id="erroPergunta" role="alert"></p>
         </div>
         <h3 class="casa-mais" id="casaMais">Mais</h3>
+        <button type="button" class="casa-card" data-abre="vMural" id="cardMural"><span class="ic">✏️</span><b>Mural</b><span class="sub" id="cardMuralSub">Desenhos de vocês</span></button>
         <button type="button" class="casa-card" data-abre="vDiario"><span class="ic">🔥</span><b>Desafio do dia</b><span class="sub" id="cardDiarioSub"></span></button>
         <button type="button" class="casa-card" data-abre="vEnvelopes" id="cardEnv"><span class="ic">💌</span><b>Envelopes</b><span class="sub" id="cardEnvSub"></span></button>
         <button type="button" class="casa-card" data-abre="vSemana" id="cardSemana"><span class="ic">📅</span><b>Semana</b><span class="sub" id="cardSemanaSub"></span></button>
@@ -432,6 +439,49 @@
         <p class="extras-sub" id="nossasVazio">Nenhuma música ainda. Na trilha da rodada, toque em "🤍 Nossa".</p>
         <ul class="lista-extras" id="listaNossas"></ul>
       </section>
+      <section class="casa-vista" id="vMural" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>✏️ Mural</h2>
+        <p class="mural-juntos-status" id="muralJuntosStatus" hidden aria-live="polite"></p>
+        <div class="mural-ferramentas" role="toolbar" aria-label="Ferramentas de desenho">
+          <div class="mural-cores" id="muralCores"></div>
+          <div class="mural-esps" id="muralEsps"></div>
+          <button type="button" class="mural-ferr" id="muralBorracha" aria-pressed="false">🧽 Borracha</button>
+          <button type="button" class="mural-ferr" id="muralDesfazer">↶ Desfazer</button>
+          <button type="button" class="mural-ferr" id="muralLimpar">🗑️ Limpar</button>
+          <label class="mural-fundo-sel">Fundo
+            <select id="muralFundo">
+              <option value="papel">Papel</option>
+              <option value="quadriculado">Quadriculado</option>
+              <option value="escuro">Escuro</option>
+              <option value="rosa">Rosa</option>
+            </select>
+          </label>
+        </div>
+        <div class="mural-quadro fundo-papel" id="muralQuadro">
+          <canvas id="muralCanvas" aria-label="Área de desenho"></canvas>
+          <span class="mural-cursor" id="muralCursor" hidden></span>
+        </div>
+        <label class="field mural-leg">Legenda (opcional)
+          <input type="text" id="muralLegenda" maxlength="80">
+        </label>
+        <p class="erro" id="erroMural" role="alert"></p>
+        <div class="mural-acoes">
+          <button class="primary" id="muralEnviar" type="button"></button>
+          <button class="primary" id="muralGuardar" type="button" hidden>Guardar o desenho</button>
+          <button class="secondary" id="muralJuntos" type="button" hidden>🤝 Desenhar juntos</button>
+          <button class="secondary" id="muralSairJuntos" type="button" hidden>Sair do desenho juntos</button>
+        </div>
+        <h3 class="casa-h3">Galeria</h3>
+        <div class="filtro" id="muralFiltro" role="group" aria-label="Filtro da galeria">
+          <button type="button" data-f="todos" aria-pressed="true">Todos</button>
+          <button type="button" data-f="recebidos" aria-pressed="false">Recebidos</button>
+          <button type="button" data-f="enviados" aria-pressed="false">Enviados</button>
+          <button type="button" data-f="juntos" aria-pressed="false">Juntos</button>
+        </div>
+        <p class="extras-sub" id="muralGaleriaVazia" hidden>Nenhum desenho ainda.</p>
+        <div class="mural-galeria" id="muralGaleria"></div>
+      </section>
       <section class="casa-vista aba-vista" id="vHistorico" hidden>
         <h2>🕘 Histórico</h2>
         <div id="lugarHistorico"></div>
@@ -551,6 +601,7 @@
       <p class="level" id="level"></p>
       <p class="text" id="text"></p>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
+      <button class="secondary carta-mural" id="cartaMural" type="button" hidden>✏️ Desenhar no mural</button>
       <div class="pos-carta" id="poseCarta" hidden>
         <div class="pos-carta-botoes">
           <button class="secondary" id="abrirPoses" type="button">📸 Ideias de pose</button>
@@ -741,6 +792,23 @@
       <button type="button" class="nav-mostrar" id="navMostrar" hidden>▴ Menu</button>
     </nav>
   </section>
+
+  <dialog id="dlgMuralVer" class="dlg-mural" aria-labelledby="muralVerTitulo">
+    <div class="pos-topo">
+      <h2 id="muralVerTitulo"></h2>
+      <button class="linkbtn" id="fecharMuralVer" type="button">Fechar</button>
+    </div>
+    <div class="mural-quadro" id="muralVerQuadro"><canvas id="muralVerCanvas"></canvas></div>
+    <p class="mural-ver-legenda" id="muralVerLegenda" hidden></p>
+    <p class="extras-sub" id="muralVerData"></p>
+    <button class="linkbtn" id="muralApagar" type="button">Apagar este desenho</button>
+  </dialog>
+
+  <div class="mural-convite" id="muralConvite" hidden role="alert">
+    <p id="muralConviteTxt"></p>
+    <button class="primary" id="muralConviteEntrar" type="button">Entrar</button>
+    <button class="linkbtn" id="muralConviteFechar" type="button">Agora não</button>
+  </div>
 
   <dialog id="dlgDengo" aria-labelledby="dlgDengoTitulo">
     <form id="formDengo" method="dialog">
