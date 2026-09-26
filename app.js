@@ -351,13 +351,19 @@
       ;
     canal = comTabelasV5(canal, c)
       .on("broadcast", { event: "mao" }, m => receberMao(m && m.payload))
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistos", filter: `sala=eq.${c}` }, p => {
+        const r = p.new;
+        if (c !== codigo || !r || (r.jogador !== 0 && r.jogador !== 1) || r.jogador === eu) return;
+        vistos[r.jogador] = r.visto_em;
+        desenharPresenca();
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "salas_config", filter: `sala=eq.${c}` }, p => {
         if (c !== codigo || p.eventType === "DELETE" || !p.new) return;
         aplicarLinhaConfig(p.new);
         conferirDono(c);   // ex.: "Gerar novo código" em outro aparelho
       })
       .subscribe(status => {
-        if (status === "SUBSCRIBED" && canal) canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {});
+        if (status === "SUBSCRIBED" && canal) { canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {}); marcarVisto(true); }
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
           erro("erroJogo", "A conexão ao vivo caiu. Recarregue a página se a roleta parar de sincronizar.");
       });
@@ -376,6 +382,7 @@
     Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
     marcas = new Map(); vistas = new Map(); partidasSala = [];
     posicoes = []; marcasPos = []; carregarPosicoes(c);
+    vistos = [null, null]; ultimoVistoGravado = 0; carregarVistos(c);
     nossas = []; if (fixa) carregarNossas(c);
     poses = []; carregarPoses(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
@@ -824,7 +831,8 @@
     el.hidden = !nome;
     if (!nome) return;
     const on = presentes.has(1 - eu);
-    el.textContent = on ? `💚 ${nome} está aqui agora` : `${nome} está fora`;
+    const visto = !on && vistos[1 - eu] ? quandoVisto(vistos[1 - eu]) : null;
+    el.textContent = on ? `💚 ${nome} está aqui agora` : `${nome} está fora` + (visto ? ` · visto por último ${visto}` : "");
     el.classList.toggle("on", on);
   }
 
@@ -3302,6 +3310,41 @@
     d.scrollTop = rolagem;
   }
 
+  // ---------- "visto por último" (tabela `vistos`: uma linha por jogador na sala) ----------
+  // Este aparelho grava a hora em que está com o app aberto: ao entrar, a cada minuto e ao sair.
+  let vistos = [null, null], ultimoVistoGravado = 0;
+  async function carregarVistos(c) {
+    const { data, error } = await sb.from("vistos").select("jogador, visto_em").eq("sala", c);
+    if (c !== codigo || error || !data) return;
+    vistos = [null, null];
+    data.forEach(r => { if (r.jogador === 0 || r.jogador === 1) vistos[r.jogador] = r.visto_em; });
+    desenharPresenca();
+  }
+  function marcarVisto(forcar) {
+    if (!codigo || (eu !== 0 && eu !== 1) || document.hidden && !forcar) return;
+    if (!forcar && Date.now() - ultimoVistoGravado < 55000) return;
+    ultimoVistoGravado = Date.now();
+    const agora = new Date().toISOString();
+    vistos[eu] = agora;
+    sb.from("vistos").upsert({ sala: codigo, jogador: eu, visto_em: agora }, { onConflict: "sala,jogador" }).then(() => {}, () => {});
+  }
+  // "há 5 min", "hoje às 21:43", "ontem às 23:10", "12/10 às 08:00"
+  function quandoVisto(iso) {
+    const d = new Date(iso), seg = (Date.now() - d.getTime()) / 1000;
+    if (!(seg >= -60)) return null;
+    if (seg < 90) return "agora há pouco";
+    if (seg < 3600) return `há ${Math.round(seg / 60)} min`;
+    const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const dia = x => x.toLocaleDateString("pt-BR");
+    const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+    if (dia(d) === dia(new Date())) return `hoje às ${hora}`;
+    if (dia(d) === dia(ontem)) return `ontem às ${hora}`;
+    return `${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} às ${hora}`;
+  }
+  setInterval(() => { marcarVisto(false); if (estado) desenharPresenca(); }, 60000);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) marcarVisto(true); else { marcarVisto(true); desenharPresenca(); } });
+  addEventListener("pagehide", () => marcarVisto(true));
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -3376,6 +3419,7 @@
   }
 
   function sair() {
+    marcarVisto(true);
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null; ultimoVencedor = null; ultimaRevelada = null;
     presentes = new Set(); presencaPronta = false;
