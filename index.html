@@ -157,6 +157,30 @@
           </div>
           <p class="erro" id="erroDengo" role="alert"></p>
         </div>
+        <div class="casa-bloco humor" id="casaHumor">
+          <p class="humor-titulo">Como você se sente hoje?</p>
+          <div class="humor-caras" id="humorCaras" role="group" aria-label="Seu humor hoje">
+            <button type="button" data-v="1" aria-label="Muito mal" aria-pressed="false">😣</button>
+            <button type="button" data-v="2" aria-label="Mal" aria-pressed="false">😢</button>
+            <button type="button" data-v="3" aria-label="Mais ou menos" aria-pressed="false">😐</button>
+            <button type="button" data-v="4" aria-label="Bem" aria-pressed="false">🙂</button>
+            <button type="button" data-v="5" aria-label="Muito bem" aria-pressed="false">😄</button>
+          </div>
+          <div class="humor-nota" id="humorNotaBox" hidden>
+            <input type="text" id="humorNota" maxlength="140" placeholder="Quer contar por quê?" aria-label="Quer contar por quê? (opcional)">
+            <button class="secondary" id="humorNotaSalvar" type="button">Salvar</button>
+          </div>
+          <p class="humor-salvo" id="humorSalvo" aria-live="polite"></p>
+          <div class="humor-outro" id="humorOutro">
+            <p class="humor-titulo" id="humorOutroTitulo"></p>
+            <div class="humor-caras outro" id="humorOutroCaras" hidden><span data-v="1">😣</span><span data-v="2">😢</span><span data-v="3">😐</span><span data-v="4">🙂</span><span data-v="5">😄</span></div>
+            <p class="humor-outro-nota" id="humorOutroNota" hidden></p>
+            <p class="extras-sub" id="humorOutroVazio" hidden></p>
+            <div class="humor-dicas" id="humorDicas"></div>
+            <ul class="humor-sug" id="humorSug"></ul>
+          </div>
+          <p class="erro" id="erroHumor" role="alert"></p>
+        </div>
         <div class="casa-bloco carinhos" id="casaCarinhos">
           <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo">✕</button></p>
           <div class="carinho-botoes" id="carinhoBotoes">
@@ -442,6 +466,11 @@
     </section>
 
     <div id="telaJogo">
+    <div class="faixa-humor" id="faixaHumor" hidden role="status">
+      <p>Dia difícil? Que tal Romântico e prendas fofas hoje?</p>
+      <button class="secondary" id="faixaHumorUsar" type="button">Usar</button>
+      <button class="linkbtn" id="faixaHumorFechar" type="button" aria-label="Fechar sugestão">✕</button>
+    </div>
 
     <div class="chips" id="niveis" aria-label="Níveis">
       <label class="chip"><input type="checkbox" value="romantico"><span>💗 Romântico</span></label>

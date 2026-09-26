@@ -663,3 +663,25 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 .pe-emoji{text-align:center}
 .pe-detalhe{grid-column:1 / -1; font-size:.85rem !important}
 .pe-acoes{grid-column:1 / -1; display:flex; align-items:center; gap:12px; font-size:.85rem}
+/* v7: humor do dia */
+.humor-titulo{margin:0 0 8px; font-weight:800}
+.humor-caras{display:flex; justify-content:space-between; gap:6px}
+.humor-caras button{flex:1; font-size:1.8rem; padding:6px 0; background:var(--bg); border:1.5px solid var(--line); border-radius:14px; filter:grayscale(.6); opacity:.75}
+.humor-caras button[aria-pressed="true"]{filter:none; opacity:1; border-color:var(--lamp); box-shadow:0 0 0 3px color-mix(in srgb, var(--lamp) 30%, transparent); transform:scale(1.06)}
+.humor-caras.outro span{flex:1; text-align:center; font-size:1.8rem; filter:grayscale(1); opacity:.3}
+.humor-caras.outro span.destaque{filter:none; opacity:1; transform:scale(1.25)}
+.humor-nota{display:flex; gap:8px; margin-top:10px}
+.humor-nota input{flex:1; min-width:0; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:8px 10px}
+.humor-nota button{width:auto; padding:8px 14px}
+.humor-salvo{margin:4px 0 0; min-height:1em; font-size:.8rem; color:#1FAF55; font-weight:600}
+.humor-outro{margin-top:14px; padding-top:12px; border-top:1.5px dashed var(--line)}
+.humor-outro-nota{margin:8px 0 0; font-style:italic; overflow-wrap:anywhere}
+.humor-dica{margin:8px 0 0; font-weight:700; overflow-wrap:anywhere}
+.humor-sug{list-style:none; padding:0; margin:10px 0 0; display:grid; gap:8px}
+.humor-sug li{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 10px; padding:8px 10px; border-radius:12px; background:var(--bg)}
+.sug-texto{flex:1 1 60%; font-size:.9rem}
+.sug-info{flex:1 1 100%; font-size:.85rem; font-weight:700; overflow-wrap:anywhere}
+.wa-mini{font-size:.85rem; font-weight:700; color:#1FAF55}
+.faixa-humor{display:flex; align-items:center; gap:8px; margin:12px 0 0; padding:10px 12px; border-radius:14px; border:1.5px solid var(--desafio); background:color-mix(in srgb, var(--desafio) 10%, var(--surface))}
+.faixa-humor p{flex:1; margin:0; font-weight:700; font-size:.9rem}
+.faixa-humor .secondary{width:auto; padding:6px 12px}

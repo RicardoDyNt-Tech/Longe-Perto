@@ -361,6 +361,9 @@
         if (c === codigo) linhaModelo(p.eventType, p.eventType === "DELETE" ? p.old : p.new);
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "pedidos_modelos" }, p => { if (c === codigo) linhaModelo("DELETE", p.old); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "humores", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo && p.eventType !== "DELETE") linhaHumor(p.new);
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "manuais", filter: `sala=eq.${c}` }, p => {
         if (c === codigo && p.eventType !== "DELETE") receberManual(p.new);
       })
@@ -399,6 +402,8 @@
     if (fixa) carregarManuais(c);
     modelos = []; dengoSel = []; dengoRespondendo = null; $("dengoMeu").hidden = true;
     if (fixa) carregarModelos(c);
+    humores = []; faixaHumorFechada = false; $("humorNota").value = ""; $("humorNotaBox").hidden = true; $("humorSalvo").textContent = "";
+    if (fixa) carregarHumores(c);
     poses = []; carregarPoses(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
     config = mesclarConfig({}); temDono = false; donoIndice = null; souDono = false; configPronta = false;
@@ -819,6 +824,7 @@
     $("cardCofreSub").textContent = cofre.length ? `${pend} ${pend === 1 ? "pendente" : "pendentes"}` : "Guardem cartas para o reencontro";
     desenharCabecalho(e);
     desenharDengo();
+    desenharHumor();
     desenharCasaExtras(e);
   }
 
@@ -1295,6 +1301,119 @@
     ts[ts.length - 1].focus();
   }
 
+  // ---------- v7: humor do dia ----------
+  let humores = [];          // { dia, jogador, valor, nota, atualizado_em } (mais novos primeiro)
+  let sugestoes = [];        // sugestoes_cuidado (só leitura)
+  let faixaHumorFechada = false;
+  const CARAS = { 1: "😣", 2: "😢", 3: "😐", 4: "🙂", 5: "😄" };
+  const LIMITE_HUMORES = 800;
+  const humorDe = (j, dia = hojeISO()) => humores.find(h => h.jogador === j && h.dia === dia) || null;
+  async function carregarHumores(c) {
+    const [h, s] = await Promise.all([
+      sb.from("humores").select("*").eq("sala", c).order("dia", { ascending: false }).limit(LIMITE_HUMORES),
+      sugestoes.length ? { data: sugestoes } : sb.from("sugestoes_cuidado").select("*").order("ordem", { ascending: true })
+    ]);
+    if (c !== codigo) return;
+    if (!h.error && h.data) humores = h.data;
+    if (!s.error && s.data) sugestoes = s.data;
+    humorMudou();
+  }
+  function linhaHumor(row) {
+    if (!row || row.sala !== codigo || (row.jogador !== 0 && row.jogador !== 1) || !row.dia) return;
+    const i = humores.findIndex(h => h.dia === row.dia && h.jogador === row.jogador);
+    if (i >= 0) humores[i] = { ...humores[i], ...row }; else humores.unshift(row);
+    humores.sort((a, b) => a.dia < b.dia ? 1 : a.dia > b.dia ? -1 : 0);
+    humorMudou();
+  }
+  const humorMudouFns = [];   // histórico (Fase 6)
+  function humorMudou() { desenharHumor(); desenharFaixaHumor(); humorMudouFns.forEach(f => f()); }
+  async function gravarHumor(mudar) {
+    if (!codigo || (eu !== 0 && eu !== 1)) return;
+    const dia = hojeISO(), atual = humorDe(eu, dia) || { valor: 3, nota: null };
+    const row = { sala: codigo, dia, jogador: eu, valor: atual.valor, nota: atual.nota || null, atualizado_em: new Date().toISOString() };
+    mudar(row);
+    linhaHumor(row);   // aparece na hora aqui
+    erro("erroHumor", "");
+    const { error } = await sb.from("humores").upsert(row, { onConflict: "sala,dia,jogador" });
+    if (error) return erro("erroHumor", "Não consegui salvar o humor. Confira a internet e tente de novo.");
+    $("humorSalvo").textContent = "Salvo ✓";
+  }
+  function escolherHumor(v) {
+    gravarHumor(r => { r.valor = v; });
+    $("humorNotaBox").hidden = false;
+  }
+  function salvarNotaHumor() {
+    if (!humorDe(eu)) return;
+    const t = $("humorNota").value.trim().slice(0, 140);
+    gravarHumor(r => { r.nota = t || null; });
+  }
+  // atalhos das sugestões de cuidado (a Fase 4 acrescenta o mural)
+  const wa = txt => { const a = el("a", "wa-mini", txt); a.href = "https://wa.me/"; a.target = "_blank"; a.rel = "noopener"; return a; };
+  const ACOES_CUIDADO = {
+    mensagem: () => wa("Abrir o WhatsApp"),
+    audio: () => wa("Abrir o WhatsApp"),
+    ligar: () => wa("Abrir o WhatsApp"),
+    desculpas: () => wa("Abrir o WhatsApp"),
+    abra_quando: () => botaoAcao("Escrever uma carta", () => { mostrarVista("vAbra"); abrirNovaAbra(null); }),
+    pensei: () => botaoAcao("Mandar agora 💭", () => mandarCarinho("pensei")),
+    dengo_lanche: () => {
+      const d = textoManual(1 - eu, "delivery");
+      return el("span", "sug-info", d ? `💡 ${nomeDe(1 - eu)} costuma pedir: ${d}` : `O pedido favorito ainda não está no Manual de ${nomeDe(1 - eu)}.`);
+    },
+    manual: () => botaoAcao("Ver o Manual", () => abrirManualOutro("acalma")),
+    partida: () => botaoAcao("Ir para o jogo", () => mostrarVista("jogo")),
+    musica: () => musicasNossas().length ? botaoAcao("Sortear da nossa playlist", mandarDaPlaylist) : null,
+    reencontro: () => botaoAcao("Abrir o Cofre", () => mostrarVista("vCofre"))
+  };
+  function botaoAcao(txt, fn) { const b = el("button", "linkbtn", txt); b.type = "button"; b.addEventListener("click", fn); return b; }
+
+  function desenharHumor() {
+    if (!estado || !estado.fixa) return;
+    const meu = humorDe(eu), o = 1 - eu, nome = nomeDe(o);
+    document.querySelectorAll("#humorCaras button").forEach(b => b.setAttribute("aria-pressed", String(!!meu && meu.valor === Number(b.dataset.v))));
+    if (meu && document.activeElement !== $("humorNota")) $("humorNota").value = meu.nota || "";
+    if (!meu) { $("humorNotaBox").hidden = true; $("humorSalvo").textContent = ""; }
+    $("humorOutro").hidden = !nome;
+    if (!nome) return;
+    const h = humorDe(o);
+    $("humorOutroTitulo").textContent = `Humor ${nome ? "de " + nome : ""} hoje`;
+    $("humorOutroCaras").hidden = !h;
+    document.querySelectorAll("#humorOutroCaras span").forEach(s => s.classList.toggle("destaque", !!h && h.valor === Number(s.dataset.v)));
+    $("humorOutroCaras").setAttribute("aria-label", h ? `${nome}: ${CARAS[h.valor]}` : "");
+    $("humorOutroNota").hidden = !(h && h.nota); $("humorOutroNota").textContent = h && h.nota ? `“${h.nota}”` : "";
+    $("humorOutroVazio").hidden = !!h; $("humorOutroVazio").textContent = `${nome} ainda não disse como está hoje`;
+    // dicas do Manual no humor baixo
+    const dicas = $("humorDicas"); dicas.textContent = "";
+    if (h && h.valor <= 2) {
+      const acalma = textoManual(o, "acalma"), evitar = textoManual(o, "naoFazer");
+      if (acalma) dicas.appendChild(el("p", "humor-dica", `💡 O que acalma ${nome}: ${acalma}`));
+      if (evitar) dicas.appendChild(el("p", "humor-dica", `🚫 Evite: ${evitar}`));
+    }
+    // sugestões de cuidado pela faixa do humor
+    const ul = $("humorSug"); ul.textContent = "";
+    if (h) sugestoes.filter(s => s.humor_min <= h.valor && h.valor <= s.humor_max).sort((a, b) => a.ordem - b.ordem).slice(0, 4).forEach(s => {
+      const li = el("li");
+      li.appendChild(el("span", "sug-texto", s.texto));
+      const f = ACOES_CUIDADO[s.acao], x = f ? f() : null;
+      if (x) li.appendChild(x);
+      ul.appendChild(li);
+    });
+  }
+  // no Jogo, com a partida zerada e alguém num dia difícil: sugere Romântico + prendas fofas (sem mudar nada sozinho)
+  function desenharFaixaHumor() {
+    const e = estado, hoje = hojeISO();
+    const dificil = !!e && e.fixa && [0, 1].some(j => { const h = humorDe(j, hoje); return h && h.valor <= 2; });
+    const podeChips = permitido("nivel", "romantico") && (config.chipsQuemMuda !== "dono" || souDono);
+    const jaUsa = !!e && e.prendasFofas && niveisDaPartida(e.niveis).join() === "romantico";
+    $("faixaHumor").hidden = !(dificil && podeChips && !faixaHumorFechada && e && placarZerado(e) && !e.carta && e.vencedor === null && !jaUsa);
+  }
+  function usarFaixaHumor() {
+    if (!permitido("nivel", "romantico") || (config.chipsQuemMuda === "dono" && !souDono)) return;
+    gravar(n => { if (!placarZerado(n)) return; n.niveis = ["romantico"]; n.prendasFofas = true; });
+    faixaHumorFechada = true;
+    desenharFaixaHumor();
+  }
+
   // abre o Manual do outro numa parte (ex.: "O que me acalma")
   function abrirManualOutro(campo) {
     mostrarVista("vPerfil");
@@ -1384,6 +1503,7 @@
   });
   redesenhar("dengos", desenharDengo);
   manualMudouFns.push(desenharDengo);
+  manualMudouFns.push(() => desenharHumor());
 
   // ---------- guia de posições (só texto, sem imagens) ----------
   // posicoes: o guia (só leitura); marcasPos: marcas do casal nesta sala { posicao_id, marca, link }
@@ -4227,6 +4347,7 @@
     desenharReencontro(e);
     desenharDiario();
     desenharNav();
+    desenharFaixaHumor();
 
     // giro novo? anima nos dois celulares
     const g = e.giro;
@@ -5438,6 +5559,11 @@
     $("camera").addEventListener("change", mudarCamera);
     $("navRecolher").addEventListener("click", () => recolherNav(true));
     $("dengoPedir").addEventListener("click", botaoPedir);
+    document.querySelectorAll("#humorCaras button").forEach(b => b.addEventListener("click", () => escolherHumor(Number(b.dataset.v))));
+    $("humorNotaSalvar").addEventListener("click", salvarNotaHumor);
+    $("humorNota").addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); salvarNotaHumor(); } });
+    $("faixaHumorUsar").addEventListener("click", usarFaixaHumor);
+    $("faixaHumorFechar").addEventListener("click", () => { faixaHumorFechada = true; desenharFaixaHumor(); });
     $("formDengo").addEventListener("submit", enviarDengo);
     $("dengoVoltar").addEventListener("click", () => $("dlgDengo").close());
     $("dengoCancelar").addEventListener("click", cancelarDengo);
