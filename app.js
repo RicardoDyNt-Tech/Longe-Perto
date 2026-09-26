@@ -111,9 +111,10 @@
   // ---------- sorteio ----------
   // chaves antigas em `usados` (de antes das cartas irem para o banco) não batem com nenhum id e são ignoradas
   function sortear(tipo, niveis, usados) {
-    const lista = niveis.length ? niveis : ["leve"];
-    let pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && lista.includes(c.nivel)).map(c => ({ ...c, chave: c.id })));
-    if (!pool.length) pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === "leve").map(c => ({ ...c, chave: c.id })));
+    const lista = niveisDaPartida(niveis);
+    const doTipo = cartas.filter(c => c.tipo === tipo && cartaPermitida(c));   // config da sala primeiro
+    let pool = filtrarBaralho(doTipo.filter(c => lista.includes(c.nivel)).map(c => ({ ...c, chave: c.id })));
+    if (!pool.length) pool = filtrarBaralho(doTipo.filter(c => c.nivel === maisLeve()).map(c => ({ ...c, chave: c.id })));
     if (!pool.length) return null;
     const usadosSet = new Set(usados);
     let livres = pool.filter(p => !usadosSet.has(p.chave));
@@ -266,7 +267,7 @@
     const inicial = {
       fixa: !!fixa,
       jogadores: [nome, null],
-      niveis: ["leve", "criativo"],
+      niveis: ["leve"],
       vez: 0,
       pontos: [0, 0],
       placar: [placarVazio(0, 3), placarVazio(0, 3)],
@@ -281,7 +282,7 @@
     for (let t = 0; t < 4; t++) {
       const c = fixa ? base + "-" + gerarSufixo() : gerarCodigo();
       const { error } = await sb.from("salas").insert({ codigo: c, estado: inicial });
-      if (!error) return abrirSala(c, 0, inicial);
+      if (!error) { abrirSala(c, 0, inicial); assumirDono(0); return; }
       if (error.code !== "23505") return erro("erroLobby", "Não consegui criar a sala: " + error.message);
     }
     erro("erroLobby", "Não consegui gerar um código livre. Tente de novo.");
@@ -349,6 +350,11 @@
       ;
     canal = comTabelasV5(canal, c)
       .on("broadcast", { event: "mao" }, m => receberMao(m && m.payload))
+      .on("postgres_changes", { event: "*", schema: "public", table: "salas_config", filter: `sala=eq.${c}` }, p => {
+        if (c !== codigo || p.eventType === "DELETE" || !p.new) return;
+        aplicarLinhaConfig(p.new);
+        conferirDono(c);   // ex.: "Gerar novo código" em outro aparelho
+      })
       .subscribe(status => {
         if (status === "SUBSCRIBED" && canal) canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {});
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
@@ -372,6 +378,8 @@
     nossas = []; if (fixa) carregarNossas(c);
     poses = []; carregarPoses(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
+    config = mesclarConfig({}); temDono = false; donoIndice = null; souDono = false; configPronta = false;
+    carregarConfig(c);
   }
 
   // ---------- reencontro e cofre ----------
@@ -2845,6 +2853,179 @@
     });
   }
 
+  // ---------- configurações da sala (controladas pelo dono) ----------
+  // A config fica em `salas_config` (fora do `estado`): todo mundo lê, só o dono muda (função sala_config_salvar,
+  // que confere o token). O token do dono fica só no localStorage deste aparelho; o banco guarda o hash.
+  const ORDEM_CFG = ["romantico", "leve", "criativo", "picante", "pesado"];
+  const ordCfg = n => ORDEM_CFG.indexOf(n);
+  const CONFIG_PADRAO = {
+    versao: 1,
+    niveis: { romantico: true, leve: true, criativo: true, picante: false, pesado: false },
+    chipsQuemMuda: "todos",
+    midia: { ativo: false },
+    posicoes: { ativo: false, nivelMax: "picante", climas: ["romantica"], dificuldadeMax: "facil" },
+    poses: { ativo: false, nivelMax: "leve", video: false },
+    ia: { ativo: false, nivelMax: "leve", poses: false },
+    eventos: { ativo: false, nivelMax: "leve", tipos: { efeito: true, duelo: true, sintonia: true, missao_dupla: true } },
+    missaoSecreta: { ativo: false, nivelMax: "leve" },
+    reverso: { ativo: true },
+    trilha: { ativo: true, nivelMax: "leve" },
+    desafioDoDia: { ativo: true, nivelMax: "leve" },
+    semana: { ativo: true, nivelMax: "leve" },
+    envelopes: { ativo: true, desafioNivelMax: "leve" },
+    cartasDeVoces: { ativo: true, nivelMax: "leve" },
+    conquistasOusadia: { ativo: false }
+  };
+  // merge profundo: o padrão preenche o que faltar (e o que vier com tipo errado)
+  function mesclar(pad, x) {
+    if (Array.isArray(pad)) return Array.isArray(x) ? x.filter(v => typeof v === "string") : pad.slice();
+    if (pad && typeof pad === "object") {
+      const out = {}, obj = x && typeof x === "object" && !Array.isArray(x) ? x : {};
+      Object.keys(pad).forEach(k => { out[k] = mesclar(pad[k], obj[k]); });
+      return out;
+    }
+    return typeof x === typeof pad ? x : pad;
+  }
+  function mesclarConfig(x) {
+    const c = mesclar(CONFIG_PADRAO, x);
+    if (!ORDEM_CFG.some(n => c.niveis[n])) c.niveis = { ...CONFIG_PADRAO.niveis };   // pelo menos um nível
+    if (!["todos", "dono"].includes(c.chipsQuemMuda)) c.chipsQuemMuda = "todos";
+    Object.keys(c).forEach(k => {
+      const m = c[k];
+      if (m && typeof m === "object") ["nivelMax", "desafioNivelMax"].forEach(ch => { if (ch in m && ordCfg(m[ch]) < 0) m[ch] = CONFIG_PADRAO[k][ch]; });
+    });
+    if (!["facil", "media", "dificil"].includes(c.posicoes.dificuldadeMax)) c.posicoes.dificuldadeMax = "facil";
+    return c;
+  }
+  let config = mesclarConfig({});
+  let temDono = false, donoIndice = null, souDono = false, configPronta = false;
+
+  // nível máximo da sala e nível efetivo de cada modo (o menor entre o nivelMax do modo e o da sala)
+  const nivelMaxSala = () => ORDEM_CFG.filter(n => config.niveis[n]).pop() || "leve";
+  function efetivo(recurso) {
+    const m = config[recurso] || {};
+    const n = m.desafioNivelMax || m.nivelMax || "pesado";
+    return ordCfg(n) <= ordCfg(nivelMaxSala()) ? n : nivelMaxSala();
+  }
+  // modos cujo conteúdo são cartas: o nível também precisa existir na sala
+  const MODO_DE_CARTAS = new Set(["eventos", "missaoSecreta", "desafioDoDia", "semana", "envelopes", "cartasDeVoces", "ia"]);
+  // A regra central: tudo que aparece ou é sorteado passa por aqui.
+  function permitido(recurso, nivel) {
+    if (recurso === "nivel") return !!config.niveis[nivel];
+    const m = config[recurso];
+    if (!m || !m.ativo) return false;
+    if (nivel === undefined || nivel === null) return true;
+    if (ordCfg(nivel) < 0 || ordCfg(nivel) > ordCfg(efetivo(recurso))) return false;
+    return MODO_DE_CARTAS.has(recurso) ? !!config.niveis[nivel] : true;
+  }
+  // uma carta do baralho pode sair nesta sala?
+  function cartaPermitida(c) {
+    if (!c || !permitido("nivel", c.nivel)) return false;
+    if (c.midia && !permitido("midia")) return false;
+    if (c.sala && !permitido("cartasDeVoces", c.nivel)) return false;
+    return true;
+  }
+  // o nível permitido mais alto até `nivel` (ou o mais leve permitido, se nenhum abaixo)
+  function limitarNivel(recurso, nivel) {
+    const ok = ORDEM_CFG.filter(n => (recurso === "nivel" ? permitido("nivel", n) : permitido(recurso, n)));
+    if (!ok.length) return null;
+    const abaixo = ok.filter(n => ordCfg(n) <= ordCfg(nivel));
+    return abaixo.length ? abaixo[abaixo.length - 1] : ok[0];
+  }
+  const maisLeve = () => (config.niveis.leve ? "leve" : ORDEM_CFG.find(n => config.niveis[n]) || "leve");
+  const niveisDaPartida = lista => { const l = (lista || []).filter(n => config.niveis[n]); return l.length ? l : [maisLeve()]; };
+
+  // token do dono: 24 caracteres sem letras ambíguas, mostrado em blocos de 4
+  const ALFABETO_TOKEN = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  function novoToken() {
+    const b = new Uint8Array(24);
+    crypto.getRandomValues(b);
+    return Array.from(b, x => ALFABETO_TOKEN[x % ALFABETO_TOKEN.length]).join("");
+  }
+  const chaveToken = c => "lp-dono-" + c;
+  const lerToken = c => { try { return localStorage.getItem(chaveToken(c)) || null; } catch (err) { return null; } };
+  const salvarToken = (c, t) => { try { localStorage.setItem(chaveToken(c), t); } catch (err) {} };
+  const formatarCodigo = t => (t.match(/.{1,4}/g) || []).join("-");
+  const normalizarCodigo = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+  async function carregarConfig(c) {
+    const { data, error } = await sb.from("salas_config").select("config, dono").eq("sala", c).maybeSingle();
+    if (c !== codigo) return;
+    aplicarLinhaConfig(error ? null : data);
+    conferirDono(c);
+  }
+  function aplicarLinhaConfig(row) {
+    config = mesclarConfig(row && row.config);
+    temDono = !!row && (row.dono === 0 || row.dono === 1);
+    donoIndice = temDono ? row.dono : null;
+    configPronta = true;
+    redesenharConfig();
+  }
+  async function conferirDono(c) {
+    const t = lerToken(c);
+    let sou = false;
+    if (t) {
+      const { data, error } = await sb.rpc("sala_sou_dono", { p_sala: c, p_token: t });
+      sou = !error && data === true;
+    }
+    if (c !== codigo || lerToken(c) !== t) return;   // mudou no meio do caminho
+    if (sou !== souDono) { souDono = sou; redesenharConfig(); }
+  }
+  // assumir a sala (criar ou sala antiga sem dono): gera o token, reivindica e mostra o código uma vez
+  async function assumirDono(jogador) {
+    const c = codigo;
+    if (!c) return false;
+    const t = novoToken();
+    const { data, error } = await sb.rpc("sala_reivindicar", { p_sala: c, p_token: t, p_jogador: jogador, p_config: mesclarConfig({}) });
+    if (c !== codigo) return false;
+    if (error) { erro("erroDono", "Não consegui assumir agora. Confira a internet e tente de novo."); return false; }
+    if (data !== true) { erro("erroDono", "Esta sala já tem dono."); carregarConfig(c); return false; }
+    salvarToken(c, t);
+    souDono = true; temDono = true; donoIndice = jogador;
+    erro("erroDono", "");
+    mostrarCodigoDono(t);
+    carregarConfig(c);
+    return true;
+  }
+  function mostrarCodigoDono(t) {
+    $("codigoDono").textContent = formatarCodigo(t);
+    $("codigoDonoCopiado").textContent = "";
+    $("dlgCodigoDono").showModal();
+  }
+  async function copiarCodigoDono() {
+    try { await navigator.clipboard.writeText($("codigoDono").textContent); $("codigoDonoCopiado").textContent = "Copiado ✓"; }
+    catch (err) { $("codigoDonoCopiado").textContent = "Não consegui copiar. Anote o código."; }
+  }
+  // "👑 Entrar como dono": só o campo do código; com o código certo, este aparelho vira dono
+  function abrirEntrarDono() {
+    $("entrarDonoCodigo").value = "";
+    erro("erroEntrarDono", "");
+    $("dlgEntrarDono").showModal();
+  }
+  async function entrarComoDono(ev) {
+    ev.preventDefault();
+    const c = codigo, t = normalizarCodigo($("entrarDonoCodigo").value);
+    if (!c || t.length < 20) return erro("erroEntrarDono", "Código inválido");
+    $("entrarDonoOk").disabled = true;
+    const { data, error } = await sb.rpc("sala_sou_dono", { p_sala: c, p_token: t });
+    $("entrarDonoOk").disabled = false;
+    if (error) return erro("erroEntrarDono", "Não consegui conferir agora. Confira a internet e tente de novo.");
+    if (data !== true) return erro("erroEntrarDono", "Código inválido");
+    salvarToken(c, t);
+    souDono = true;
+    $("dlgEntrarDono").close();
+    redesenharConfig();
+  }
+  // redesenha tudo que depende da config (quem chama: carga, Realtime, mudanças do dono)
+  function redesenharConfig() {
+    if (!estado) return;
+    $("semDono").hidden = !configPronta || temDono;
+    $("entrarDono").hidden = !configPronta || !temDono || souDono;
+    if (typeof desenharEntradaConfig === "function") desenharEntradaConfig();
+    aplicar(estado, true, true);
+    desenharCasa(estado);
+  }
+
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
   function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
@@ -4340,6 +4521,12 @@
     $("novoMarco").addEventListener("click", () => abrirMarco(null));
     $("motivoGuardar").addEventListener("click", guardarMotivo);
     $("encerrarNoite").addEventListener("click", encerrarNoite);
+    $("assumirDono").addEventListener("click", () => assumirDono(eu));
+    $("entrarDono").addEventListener("click", abrirEntrarDono);
+    $("formEntrarDono").addEventListener("submit", entrarComoDono);
+    $("cancelarEntrarDono").addEventListener("click", () => $("dlgEntrarDono").close());
+    $("copiarCodigoDono").addEventListener("click", copiarCodigoDono);
+    $("fecharCodigoDono").addEventListener("click", () => $("dlgCodigoDono").close());
     $("trilhaNossa").addEventListener("click", () => alternarNossa(idMusicaAtual(estado && estado.musica)));
     $("soNossas").addEventListener("change", () => { const v = $("soNossas").checked; gravar(n => { n.playlistSoNossas = v; }); });
     $("encerrarNoiteFim").addEventListener("click", encerrarNoite);

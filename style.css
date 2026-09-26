@@ -544,3 +544,11 @@ input[type=number]{width:100%; font:inherit; color:var(--ink); background:var(--
 .nossa-musica .acoes{display:flex; gap:14px; align-items:center; margin-top:4px}
 .nossa-musica .trilha-player:empty{display:none}
 .nossa-musica .trilha-player{margin-top:6px}
+
+/* configurações da sala: dono */
+.sem-dono{margin:8px 0; padding:12px 14px; border:1.5px dashed var(--lamp); border-radius:14px; background:var(--surface)}
+.sem-dono p{margin:0 0 8px; font-weight:700}
+.sem-dono button{width:auto}
+.sem-dono .erro{margin:6px 0 0; font-weight:400}
+.codigo-dono{font:800 1.25rem ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing:.06em; text-align:center; padding:12px; border-radius:12px; background:var(--surface); border:1.5px solid var(--line); overflow-wrap:anywhere; user-select:all}
+#entrarDonoCodigo{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; text-transform:uppercase}

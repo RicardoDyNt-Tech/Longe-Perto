@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=44">
+<link rel="stylesheet" href="style.css?v=45">
 </head>
 <body>
 <main>
@@ -63,6 +63,7 @@
       <button class="som" id="som" type="button" aria-pressed="true" aria-label="Som e vibração ligados">🔊</button>
       <button class="linkbtn" id="abrirPosicoesSala" type="button" hidden>📖 Posições</button>
       <button class="linkbtn" id="encerrarNoite" type="button">🌙 Encerrar a noite</button>
+      <button class="linkbtn entrar-dono" id="entrarDono" type="button" hidden>👑 Entrar como dono</button>
       <label>📷 Câmera do WhatsApp
         <select id="camera">
           <option value="direita">Direita</option>
@@ -97,6 +98,11 @@
       <button type="button" data-abre="jogo" id="abaJogo">🎲 Jogar</button>
     </nav>
     <p class="presenca" id="presenca" hidden></p>
+    <div class="sem-dono" id="semDono" hidden>
+      <p>Esta sala ainda não tem dono.</p>
+      <button class="secondary" id="assumirDono" type="button">Assumir como dono desta sala</button>
+      <p class="erro" id="erroDono" role="alert"></p>
+    </div>
     <p class="erro" id="erroJogo" role="alert"></p>
 
     <section class="casa" id="telaCasa" hidden aria-label="Casa do casal">
@@ -871,6 +877,31 @@
     </form>
   </dialog>
 
+  <dialog id="dlgCodigoDono" aria-labelledby="dlgCodigoDonoTitulo">
+    <h2 id="dlgCodigoDonoTitulo">Código de dono 👑</h2>
+    <p class="codigo-dono" id="codigoDono"></p>
+    <p>Guarde este código. Sem ele, se você trocar de celular ou limpar o navegador, perde o controle das configurações.</p>
+    <p class="extras-sub" id="codigoDonoCopiado" aria-live="polite"></p>
+    <div class="row">
+      <button class="primary" id="copiarCodigoDono" type="button">Copiar</button>
+      <button class="secondary" id="fecharCodigoDono" type="button">Fechar</button>
+    </div>
+  </dialog>
+
+  <dialog id="dlgEntrarDono" aria-labelledby="dlgEntrarDonoTitulo">
+    <form id="formEntrarDono" method="dialog">
+      <h2 id="dlgEntrarDonoTitulo">👑 Entrar como dono</h2>
+      <label class="field">Código de dono
+        <input type="text" id="entrarDonoCodigo" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX">
+      </label>
+      <p class="erro" id="erroEntrarDono" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="entrarDonoOk" type="submit">Entrar</button>
+        <button class="secondary" id="cancelarEntrarDono" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="noite" id="noite" hidden role="dialog" aria-modal="true" aria-labelledby="noiteTitulo">
     <div class="noite-estrelas" aria-hidden="true"></div>
     <div class="noite-conteudo">
@@ -1004,9 +1035,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=44"></script>
-<script src="conquistas.js?v=44"></script>
-<script src="app.js?v=44"></script>
+<script src="config.js?v=45"></script>
+<script src="conquistas.js?v=45"></script>
+<script src="app.js?v=45"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
