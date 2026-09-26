@@ -771,3 +771,18 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 @keyframes virarCega{0%{transform:rotateY(90deg)} 100%{transform:none}}
 @media (prefers-reduced-motion:reduce){.card.cega-virada{animation:none}}
 .cega-nivel{font-size:.8rem; opacity:.9}
+/* v8: roteiro */
+.roteiro-entrada{margin:12px 0 0}
+.roteiro-entrada .secondary{width:100%}
+.faixa-roteiro{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin:12px 0 0; padding:10px 12px; border-radius:14px;
+  background:color-mix(in srgb, var(--verdade) 12%, var(--surface)); border:1.5px solid var(--verdade)}
+.faixa-roteiro.concluido{border-color:var(--lamp); background:color-mix(in srgb, var(--lamp) 16%, var(--surface))}
+.fr-texto{flex:1 1 100%; margin:0; font-weight:800; font-size:.9rem; overflow-wrap:anywhere}
+.fr-acoes{display:flex; flex-wrap:wrap; gap:8px}
+.fr-acoes .secondary{width:auto; padding:6px 12px}
+.roteiros-lista{list-style:none; padding:0; margin:0; display:grid; gap:10px}
+.roteiro-op{width:100%; display:flex; flex-direction:column; align-items:flex-start; gap:4px; text-align:left; background:var(--surface); color:var(--ink);
+  border:1.5px solid var(--line); border-radius:16px; padding:12px 14px}
+.ro-nome{font-weight:800; font-size:1.05rem}
+.ro-desc{font-size:.88rem}
+.ro-etapas{font-size:.8rem; color:var(--muted)}

@@ -544,6 +544,18 @@
       <button class="linkbtn" id="faixaHumorFechar" type="button" aria-label="Fechar sugestão">✕</button>
     </div>
 
+    <div class="faixa-roteiro" id="faixaRoteiro" hidden role="status">
+      <p class="fr-texto" id="faixaRoteiroTexto"></p>
+      <div class="fr-acoes">
+        <button class="secondary" id="roteiroContinuar" type="button" hidden>Continuar jogando</button>
+        <button class="secondary" id="roteiroCofre" type="button" hidden>💞 Guardar a última carta</button>
+        <button class="linkbtn" id="roteiroSair" type="button" hidden>Sair do roteiro</button>
+      </div>
+    </div>
+    <div class="roteiro-entrada">
+      <button class="secondary" id="roteiroAbrir" type="button" hidden>🎬 Jogar com roteiro</button>
+      <p class="config-dica" id="roteiroEscolhendo" hidden></p>
+    </div>
     <div class="chips" id="niveis" aria-label="Níveis">
       <label class="chip"><input type="checkbox" value="romantico"><span>💗 Romântico</span></label>
       <label class="chip"><input type="checkbox" value="leve"><span>Leve</span></label>
@@ -826,6 +838,15 @@
       <button type="button" class="nav-mostrar" id="navMostrar" hidden>▴ Menu</button>
     </nav>
   </section>
+
+  <dialog id="dlgRoteiros" class="dlg-posicoes" aria-labelledby="dlgRoteirosTitulo">
+    <div class="pos-topo">
+      <h2 id="dlgRoteirosTitulo">🎬 Jogar com roteiro</h2>
+      <button class="linkbtn" id="fecharRoteiros" type="button">Fechar</button>
+    </div>
+    <p class="config-dica">Uma partida com começo, meio e fim. Os níveis de cada etapa seguem as configurações da sala.</p>
+    <ul class="roteiros-lista" id="roteirosLista"></ul>
+  </dialog>
 
   <dialog id="dlgMuralVer" class="dlg-mural" aria-labelledby="muralVerTitulo">
     <div class="pos-topo">

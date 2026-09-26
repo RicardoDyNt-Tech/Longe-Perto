@@ -175,13 +175,14 @@
     mudar(novo);
     // começou uma vez nova (sem carta na mesa): conta as rodadas dos efeitos e traz a prenda pendente
     const novaVez = novo.vez !== estado.vez || (estado.carta && estado.carta.novaVez && !novo.carta);
-    if (novaVez && novo.vencedor == null && !novo.carta && novo.jogadores[1]) inicioDaVez(novo);
+    if (novaVez && novo.vencedor == null && !novo.carta && novo.jogadores[1]) { inicioDaVez(novo); contarVezRoteiro(novo); }
     // o cronômetro pertence à carta: saiu a carta (cumpri, pular, liberar, nova carta), sai o timer
     if ((novo.carta && novo.carta.chave) !== (estado.carta && estado.carta.chave)) {
       novo.timer = null;
       // a posição e o cardápio pertencem à carta
       if (estado.carta) { novo.posicao = null; novo.cardapio = null; novo.pose = null; }
       if (novo.fixa && estado.carta) guardarNoHistorico(novo, estado);
+      if (novo.roteiro && estado.carta && estado.carta.tipo !== "prenda" && estado.carta.texto) novo.roteiro.ultima = estado.carta.texto;
       // carta nova sorteada aqui: conta a visualização e, se era "jogar de novo", tira a marca
       if (novo.fixa && novo.carta && novo.carta.id && cartas.some(x => x.id === novo.carta.id)) {
         contarVista(novo.carta.id, true);
@@ -415,6 +416,7 @@
     filtroHist = "tudo"; diasHist = 30;
     tracos = []; pilhaMural = []; muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); esconderConvite(); $("muralLegenda").value = ""; filtroMural = "todos";
     poses = []; carregarPoses(c);
+    roteiros = []; carregarRoteiros(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
     config = mesclarConfig({}); temDono = false; donoIndice = null; souDono = false; configPronta = false;
     carregarConfig(c);
@@ -523,9 +525,10 @@
     });
   }
 
-  function abrirGuardar() {
-    if (!estado || !estado.carta) return;
-    $("cofreCarta").textContent = estado.carta.texto;
+  function abrirGuardar(txt) {
+    const t = typeof txt === "string" ? txt : estado && estado.carta && estado.carta.texto;
+    if (!t) return;
+    $("cofreCarta").textContent = t;
     $("cofreNota").value = "";
     erro("erroCofre", "");
     $("dlgCofre").showModal();
@@ -3919,13 +3922,14 @@
   function encerrarNoite() {
     if (!estado || !estado.jogadores[1] || estado.encerrando) return;
     if (!confirm("Encerrar a noite? A tela abre para os dois.")) return;
+    gravar(n => comecarEncerrando(n));
+  }
+  function comecarEncerrando(n) {
+    if (n.encerrando) return;
     const pool = cartas.filter(c => c.tipo === "boa_noite");
-    gravar(n => {
-      if (n.encerrando) return;
-      const f = pool.length ? pool[Math.floor(Math.random() * pool.length)].texto : "Boa noite, meu amor.";
-      n.encerrando = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), por: eu, frases: [null, null], frase: f };
-      n.aviso = novoAviso(`${n.jogadores[eu]} quer encerrar a noite 🌙`);
-    });
+    const f = pool.length ? pool[Math.floor(Math.random() * pool.length)].texto : "Boa noite, meu amor.";
+    n.encerrando = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), por: eu, frases: [null, null], frase: f };
+    n.aviso = novoAviso(`${n.jogadores[eu]} quer encerrar a noite 🌙`);
   }
   function enviarFraseNoite(pular) {
     const e = estado && estado.encerrando;
@@ -4667,6 +4671,8 @@
     if (!Array.isArray(e.obsPedida) || e.obsPedida.length !== 2) e.obsPedida = [null, null];
     if (!Array.isArray(e.historico)) e.historico = [];
     if (typeof e.escolhaCegas !== "boolean") e.escolhaCegas = false;
+    if (!e.roteiro || typeof e.roteiro !== "object" || !etapasRoteiroOk(e.roteiro.etapas) || !(e.roteiro.etapa >= 0)) e.roteiro = null;
+    if (e.roteiroEscolhendo !== 0 && e.roteiroEscolhendo !== 1) e.roteiroEscolhendo = null;
     if (!Array.isArray(e.cegas) || e.cegas.length !== 2 || e.carta || e.vencedor !== null) e.cegas = null;
     if (!e.posicao || typeof e.posicao !== "object" || !e.posicao.nome) e.posicao = null;
     if (!e.cardapio || typeof e.cardapio !== "object" || !Array.isArray(e.cardapio.itens)) e.cardapio = null;
@@ -4859,7 +4865,7 @@
     document.querySelectorAll("#niveis input").forEach(i => {
       i.closest("label").hidden = !permitido("nivel", i.value);
       i.checked = niv.includes(i.value);
-      i.disabled = config.chipsQuemMuda === "dono" && !souDono;
+      i.disabled = (config.chipsQuemMuda === "dono" && !souDono) || !!etapaDoRoteiro(e);   // no roteiro, a etapa manda
     });
 
     const vez = $("vez");
@@ -4882,6 +4888,8 @@
     desenharReencontro(e);
     desenharDiario();
     desenharNav();
+    desenharRoteiro(e);
+    talvezCofreRoteiro(e, inicial);
     desenharFaixaHumor();
     desenharCartaMural(e);
 
@@ -4982,6 +4990,8 @@
     $("acoesCarta").hidden = !c || girando;
     $("spin").disabled = travado;
     $("pickV").disabled = $("pickD").disabled = travado;
+    const etr = etapaDoRoteiro(estado);                  // no roteiro, "escolher" só o que a etapa tem
+    if (etr) { $("pickV").disabled = travado || !etr.tipos.includes("verdade"); $("pickD").disabled = travado || !etr.tipos.includes("desafio"); }
 
     // Pular: só em verdade/desafio; mostra quantos pulos grátis restam daquele tipo
     const p = estado.placar[estado.vez];
@@ -5241,8 +5251,18 @@
   // ---------- ações ----------
   function girar() {
     if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null) return;
-    const k = Math.floor(Math.random() * SEGMENTOS);
+    let k = Math.floor(Math.random() * SEGMENTOS);
     const passo = 360 / SEGMENTOS;
+    // roteiro: a etapa define os tipos (verdade/desafio pela roleta; os outros saem direto, como evento)
+    const et = etapaDoRoteiro(estado);
+    let tipoEvento = null;
+    if (et) {
+      const vd = et.tipos.filter(t => t === "verdade" || t === "desafio"), evs = et.tipos.filter(t => EVENTOS_ROTEIRO.includes(t));
+      const pick = evs.length ? et.tipos[Math.floor(Math.random() * et.tipos.length)] : null;
+      if (pick && EVENTOS_ROTEIRO.includes(pick)) tipoEvento = pick;
+      const quer = pick && !tipoEvento ? pick : vd.length === 1 ? vd[0] : null;
+      if (quer && (k % 2 === 0 ? "verdade" : "desafio") !== quer) k = (k + 1) % SEGMENTOS;   // a roleta para no tipo da etapa
+    }
     const alvoSeg = k * passo + passo / 2;
     const atual = ((rotacao % 360) + 360) % 360;
     let delta = (360 - alvoSeg) - atual;
@@ -5254,7 +5274,8 @@
       if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
       let carta = sortear(tipo, n.niveis, n.usados || []);
       // com a chance configurada, o giro vira um evento especial (a roleta continua mostrando Verdade/Desafio)
-      if (Math.random() < CHANCE_EVENTO[n.eventos]) carta = sortearEvento(n) || carta;
+      if (tipoEvento) carta = sortearEvento(n, tipoEvento) || carta;                 // roteiro: evento da etapa
+      else if (!et && Math.random() < CHANCE_EVENTO[n.eventos]) carta = sortearEvento(n) || carta;
       const cegas = !carta.evento && n.escolhaCegas ? duasCegas(n, tipo, carta) : null;
       if (cegas) { n.cegas = cegas; n.carta = null; n.musica = null; }
       else {
@@ -5280,9 +5301,9 @@
 
   // ---------- eventos especiais ----------
   // Tipo pelos pesos; nível entre os ativos que têm carta daquele tipo; sem carta, tenta outro tipo.
-  function sortearEvento(n) {
+  function sortearEvento(n, soTipo) {
     if (!permitido("eventos")) return null;
-    let tipos = PESOS_EVENTO.filter(([t]) => config.eventos.tipos[t] && (t !== "efeito" || (n.efeitos || []).filter(x => x.dono === n.vez).length < 2));
+    let tipos = PESOS_EVENTO.filter(([t]) => (!soTipo || t === soTipo) && config.eventos.tipos[t] && (t !== "efeito" || (n.efeitos || []).filter(x => x.dono === n.vez).length < 2));
     while (tipos.length) {
       const total = tipos.reduce((s, [, w]) => s + w, 0);
       let r = Math.random() * total, tipo = tipos[tipos.length - 1][0];
@@ -5775,6 +5796,131 @@
     gravar(n => { if (placarZerado(n)) n.escolhaCegas = v; });
   }
 
+  // ---------- v8: sessão com roteiro ----------
+  const EVENTOS_ROTEIRO = ["duelo", "sintonia", "missao_dupla", "efeito", "sequencia"];
+  const FECHAMENTOS = ["encerrar", "cofre"];
+  const TIPOS_ROTEIRO = ["verdade", "desafio", ...EVENTOS_ROTEIRO, ...FECHAMENTOS];
+  let roteiros = [];
+  const cofreDoRoteiro = new Set();   // roteiros cujo "Guardar para o reencontro" já abriu aqui
+  function etapasRoteiroOk(et) {
+    return Array.isArray(et) && et.length >= 1 && et.every(x => x && typeof x.nome === "string" && Number.isInteger(x.rodadas) && x.rodadas >= 0 && x.rodadas <= 20
+      && Array.isArray(x.niveis) && x.niveis.length && x.niveis.every(nv => LEVEL_NAMES[nv])
+      && Array.isArray(x.tipos) && x.tipos.length && x.tipos.every(t => TIPOS_ROTEIRO.includes(t)));
+  }
+  async function carregarRoteiros(c) {
+    const { data, error } = await sb.from("roteiros").select("*").eq("ativo", true).order("ordem", { ascending: true });
+    if (c !== codigo || error || !data) return;
+    roteiros = data.filter(r => r && r.id && LEVEL_NAMES[r.nivel_max] && etapasRoteiroOk(r.etapas));
+    if (estado) desenharRoteiro(estado);
+  }
+  const tipoRoteiroPermitido = t => t === "verdade" || t === "desafio" || FECHAMENTOS.includes(t) || (permitido("eventos") && !!config.eventos.tipos[t]);
+  // o nível máximo cabe na sala e todos os tipos estão permitidos
+  const roteiroPermitido = r => ordCfg(r.nivel_max) <= ordCfg(nivelMaxSala()) && r.etapas.every(et => et.tipos.every(tipoRoteiroPermitido));
+  const podeChipsAqui = () => config.chipsQuemMuda !== "dono" || souDono;
+  // etapa em andamento (null: sem roteiro, roteiro concluído ou pausado pela morte súbita)
+  function etapaDoRoteiro(e) {
+    const r = e && e.roteiro;
+    if (!r || r.concluido || e.emMorteSubita) return null;
+    const et = r.etapas[r.etapa];
+    return et && et.rodadas > 0 ? et : null;
+  }
+  // nível pedido pela etapa; desligado na sala, vale o permitido mais alto abaixo
+  function niveisEtapa(et) {
+    const l = [...new Set(et.niveis.map(nv => limitarNivel("nivel", nv)).filter(Boolean))];
+    return l.length ? l : [maisLeve()];
+  }
+  function escolherRoteiro(r) {
+    if (!estado || !podeChipsAqui() || !roteiroPermitido(r)) return;
+    $("dlgRoteiros").close();
+    gravar(n => {
+      if (!placarZerado(n) || n.roteiro || n.carta || n.vencedor !== null) return;
+      const et = r.etapas[0];
+      n.roteiro = { id: r.id, nome: r.nome, emoji: r.emoji, etapas: r.etapas, etapa: 0, rodadaNaEtapa: 0, vezes: 0, inicio: Date.now().toString(36) };
+      n.roteiroEscolhendo = null;
+      n.niveis = niveisEtapa(et);
+      n.aviso = novoAviso(`🎬 ${r.nome} · Etapa 1: ${et.nome}`);
+      if (!et.rodadas) proximaEtapa(n, true);
+    });
+  }
+  // uma rodada = uma vez de cada jogador
+  function contarVezRoteiro(n) {
+    const r = n.roteiro;
+    if (!etapaDoRoteiro(n)) return;
+    r.vezes = (r.vezes || 0) + 1;
+    if (r.vezes < 2) return;
+    r.vezes = 0;
+    r.rodadaNaEtapa++;
+    if (r.rodadaNaEtapa >= r.etapas[r.etapa].rodadas) proximaEtapa(n);
+  }
+  function proximaEtapa(n, mesma) {
+    const r = n.roteiro;
+    if (!mesma) r.etapa++;
+    r.rodadaNaEtapa = 0; r.vezes = 0;
+    const et = r.etapas[r.etapa];
+    if (!et || !et.rodadas) {
+      // fim, ou etapa de fechamento (rodadas: 0)
+      r.concluido = true;
+      r.fechamento = et ? et.tipos.find(t => FECHAMENTOS.includes(t)) || null : null;
+      n.aviso = novoAviso(`${r.emoji} ${r.nome}: roteiro concluído 🎬`);
+      if (r.fechamento === "encerrar" && n.jogadores[1] && n.vencedor === null) comecarEncerrando(n);
+      return;
+    }
+    n.niveis = niveisEtapa(et);
+    n.aviso = novoAviso(`🎬 Etapa ${r.etapa + 1}: ${et.nome}`);
+  }
+  function sairRoteiro() {
+    if (!estado || !estado.roteiro || !podeChipsAqui()) return;
+    if (!estado.roteiro.concluido && !confirm("Sair do roteiro? O placar continua.")) return;
+    gravar(n => { n.roteiro = null; });
+  }
+  function abrirRoteiros() {
+    if (!estado || !podeChipsAqui()) return;
+    const ul = $("roteirosLista"); ul.textContent = "";
+    roteiros.filter(roteiroPermitido).forEach(r => {
+      const li = el("li"), b = el("button", "roteiro-op"); b.type = "button";
+      b.append(el("span", "ro-nome", `${r.emoji} ${r.nome}`), el("span", "ro-desc", r.descricao || ""),
+        el("span", "ro-etapas", r.etapas.map(et => et.nome).join(" → ")));
+      b.addEventListener("click", () => escolherRoteiro(r));
+      li.appendChild(b); ul.appendChild(li);
+    });
+    if (!ul.childElementCount) ul.appendChild(el("li", "extras-sub", "Nenhum roteiro combina com as configurações desta sala."));
+    $("dlgRoteiros").showModal();
+    if (estado.roteiroEscolhendo !== eu) gravar(n => { n.roteiroEscolhendo = eu; });
+  }
+  function fecharRoteiros() {
+    if (estado && estado.roteiroEscolhendo === eu) gravar(n => { if (n.roteiroEscolhendo === eu) n.roteiroEscolhendo = null; });
+  }
+  function desenharRoteiro(e) {
+    const r = e.roteiro, completa = !!e.jogadores[1];
+    const pode = !r && completa && placarZerado(e) && !e.carta && !e.cegas && e.vencedor === null && roteiros.some(roteiroPermitido);
+    $("roteiroAbrir").hidden = !(pode && podeChipsAqui());
+    const outroEscolhe = !r && e.roteiroEscolhendo === 1 - eu && pode;
+    $("roteiroEscolhendo").hidden = !outroEscolhe;
+    $("roteiroEscolhendo").textContent = outroEscolhe ? `${e.jogadores[1 - eu]} está escolhendo o roteiro` : "";
+    const f = $("faixaRoteiro");
+    f.hidden = !r;
+    if (!r) return;
+    const et = r.etapas[r.etapa];
+    let txt;
+    if (r.concluido) {
+      const pts = e.placar.map(p => p.pontos);
+      txt = `Roteiro concluído 🎬 · ${r.emoji} ${r.nome} · ${e.jogadores[0]} ${pts[0]} × ${pts[1]} ${e.jogadores[1] || ""}`;
+    } else if (e.emMorteSubita) txt = `🎬 ${r.nome} · pausado pela morte súbita`;
+    else txt = `🎬 ${r.nome} · Etapa ${r.etapa + 1} de ${r.etapas.length}: ${et.nome} · rodada ${Math.min(r.rodadaNaEtapa + 1, et.rodadas)} de ${et.rodadas}`;
+    $("faixaRoteiroTexto").textContent = txt;
+    f.classList.toggle("concluido", !!r.concluido);
+    $("roteiroContinuar").hidden = !r.concluido;
+    $("roteiroCofre").hidden = !(r.concluido && r.fechamento === "cofre" && r.ultima);
+    $("roteiroSair").hidden = !!r.concluido || !podeChipsAqui();
+  }
+  // fechamento "cofre": abre o "Guardar para o reencontro" com a última carta, uma vez em cada aparelho
+  function talvezCofreRoteiro(e, inicial) {
+    const r = e.roteiro;
+    if (!r || !r.concluido || r.fechamento !== "cofre" || !r.ultima || cofreDoRoteiro.has(r.inicio)) return;
+    cofreDoRoteiro.add(r.inicio);
+    if (!inicial && !$("dlgCofre").open) abrirGuardar(r.ultima);
+  }
+
   // ---------- missão secreta da partida ----------
   // Duas missões diferentes, dos níveis ativos (se faltar, de qualquer nível). Cada um vê só a sua.
   function sortearSecretas(n) {
@@ -6003,6 +6149,8 @@
       n.historico = [];
       n.encerrando = null;
       n.cegas = null;                                   // a opção escolhaCegas continua como estava
+      n.roteiro = null;
+      n.roteiroEscolhendo = null;
     });
     missaoAberta = false;
   }
@@ -6164,6 +6312,7 @@
 
   function mudarNiveis() {
     if (config.chipsQuemMuda === "dono" && !souDono) return;
+    if (etapaDoRoteiro(estado)) return aplicar(estado, true, true);
     const sel = [...document.querySelectorAll("#niveis input:checked")].map(i => i.value).filter(v => permitido("nivel", v));
     gravar(n => { n.niveis = sel.length ? sel : [maisLeve()]; });
   }
@@ -6279,6 +6428,12 @@
     $("navRecolher").addEventListener("click", () => recolherNav(true));
     $("dengoPedir").addEventListener("click", botaoPedir);
     $("seqFeito").addEventListener("click", feitoEtapa);
+    $("roteiroAbrir").addEventListener("click", abrirRoteiros);
+    $("fecharRoteiros").addEventListener("click", () => $("dlgRoteiros").close());
+    $("dlgRoteiros").addEventListener("close", fecharRoteiros);
+    $("roteiroSair").addEventListener("click", sairRoteiro);
+    $("roteiroContinuar").addEventListener("click", sairRoteiro);
+    $("roteiroCofre").addEventListener("click", () => estado && estado.roteiro && abrirGuardar(estado.roteiro.ultima));
     $("seqParar").addEventListener("click", pararSequencia);
     document.querySelectorAll("#histFiltro [data-f]").forEach(b => b.addEventListener("click", () => { filtroHist = b.dataset.f; desenharLinhaTempo(); }));
     $("histMais").addEventListener("click", () => { diasHist += 30; desenharLinhaTempo(); });
