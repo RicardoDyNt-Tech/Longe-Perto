@@ -571,3 +571,27 @@ input[type=number]{width:100%; font:inherit; color:var(--ink); background:var(--
 .cfg-climas{display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px}
 .cfg-climas > span{font-weight:600; width:100%}
 .noite .noite-cancelar{position:absolute; top:14px; left:20px; width:auto; color:#c9c4ea}
+/* v7: navegação embaixo (Início · Jogo · Histórico · Perfil) */
+.nav-baixo{position:fixed; left:0; right:0; bottom:0; z-index:25; background:var(--surface); border-top:1.5px solid var(--line);
+  padding:4px 8px calc(4px + env(safe-area-inset-bottom,0px))}
+.nav-in{max-width:520px; margin:0 auto; display:flex; gap:4px}
+.nav-in button{flex:1; min-width:0; background:transparent; color:var(--muted); display:flex; flex-direction:column; align-items:center; gap:1px;
+  font-size:.74rem; font-weight:700; padding:6px 2px; border-radius:12px}
+.nav-in button .ic{font-size:1.25rem; line-height:1.15}
+.nav-in button[aria-current="page"]{color:var(--ink); background:color-mix(in srgb, var(--lamp) 28%, transparent)}
+.nav-in .nav-recolher{flex:0 0 34px; font-size:1rem; justify-content:center}
+.nav-baixo.recolhida .nav-in{display:none}
+.nav-mostrar{display:block; margin:0 auto; background:transparent; color:var(--muted); font-size:.8rem; font-weight:700; padding:2px 14px}
+.barra-acoes{bottom:var(--nav,0px); padding-bottom:10px}
+#jogo{padding-bottom:calc(var(--barra, 130px) + var(--nav, 0px) + 12px)}
+body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
+/* cabeçalho do Início */
+.inicio-topo{grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:10px}
+.ola{margin:0; font-size:1.5rem; font-weight:800; overflow-wrap:anywhere; min-width:0}
+.avatares{display:flex; align-items:center; gap:4px; flex:0 0 auto}
+.avatares .coracao{font-size:.9rem}
+.avatar{display:inline-grid; place-items:center; width:40px; height:40px; border-radius:50%; color:#fff; font-weight:800; font-size:.95rem; flex:0 0 auto}
+.avatar.emoji{font-size:1.4rem}
+.casa-mais{grid-column:1 / -1; margin:8px 0 0; font-size:1rem}
+.distancia #reencontro{margin:0 0 8px}
+.distancia .juntos-ha, .distancia .datas-especiais{margin:0 0 6px}

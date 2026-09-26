@@ -372,6 +372,10 @@
     const fixa = !!e.fixa;
     if (fixa) $("lugarCofre").appendChild($("cofre")); else $("musicas").before($("cofre"));
     $("cofre").open = fixa;
+    // v7: na sala fixa, o reencontro mora no Início e o histórico de partidas na aba Histórico
+    if (fixa) { $("lugarReencontro").appendChild($("reencontro")); $("lugarHistorico").appendChild($("historico")); }
+    else { $("convite").before($("reencontro")); $("cofre").before($("historico")); }
+    $("historico").open = fixa;
     $("casaConvite").hidden = fixa;
     $("casaGrade").hidden = !fixa;
     aplicar(e, true);
@@ -765,9 +769,11 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil"];
+  const ABAS = { casa: "abaCasa", jogo: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
 
   function mostrarVista(nome) {
+    if (!(estado && estado.fixa)) nome = "jogo";   // sala comum: só o jogo
     vista = nome;
     const naCasa = nome !== "jogo";
     $("telaCasa").hidden = !naCasa;
@@ -775,8 +781,9 @@
     document.body.classList.toggle("vista-casa", naCasa);
     $("casaGrade").hidden = !(estado && estado.fixa) || nome !== "casa";
     VISTAS_CASA.forEach(v => { if ($(v)) $(v).hidden = v !== nome; });
-    $("abaCasa").setAttribute("aria-current", naCasa ? "page" : "false");
-    $("abaJogo").setAttribute("aria-current", naCasa ? "false" : "page");
+    const aba = ABAS[nome] || "abaCasa";   // as vistas do "Mais" moram no Início
+    Object.values(ABAS).forEach(id => $(id).setAttribute("aria-current", id === aba ? "page" : "false"));
+    desenharNav();
     if (estado) desenharCasa(estado);
     if (nome === "vSemana") desenharSemana();
     if (nome === "vAlbum") desenharAlbum();
@@ -794,13 +801,46 @@
   // cartões da Casa: um resumo de cada canto
   function desenharCasa(e) {
     if (!e.fixa) return;
-    const outro = e.jogadores[1 - eu];
     const hoje = hojeISO();
     $("cardDiarioSub").textContent = cumpriuNoDia(hoje, eu) ? "Cumprido hoje ✓" : "Seu desafio de hoje";
     const pend = cofre.filter(x => !x.feito).length;
     $("cardCofreSub").textContent = cofre.length ? `${pend} ${pend === 1 ? "pendente" : "pendentes"}` : "Guardem cartas para o reencontro";
-    $("cardJogoSub").textContent = e.vencedor !== null ? "Partida encerrada" : e.carta ? "Carta na mesa" : outro && e.vez === eu ? "Sua vez" : "Roleta, cartas e placar";
+    desenharCabecalho(e);
     desenharCasaExtras(e);
+  }
+
+  // ---------- v7: navegação embaixo e cabeçalho do Início ----------
+  let navRecolhida = false;
+  function desenharNav() {
+    const fixa = !!(estado && estado.fixa);
+    ["abaCasa", "abaHistorico", "abaPerfil"].forEach(id => { $(id).hidden = !fixa; });
+    const comCarta = vista === "jogo" && !!(estado && estado.carta);
+    if (!comCarta) navRecolhida = false;   // sem carta na mesa, a barra volta sozinha
+    $("navRecolher").hidden = !comCarta;
+    $("navBaixo").classList.toggle("recolhida", navRecolhida);
+    $("navMostrar").hidden = !navRecolhida;
+  }
+  function recolherNav(v) { navRecolhida = v; desenharNav(); }
+
+  // avatar: emoji do Manual (v7) ou as iniciais num círculo colorido
+  const CORES_AVATAR = ["#5B4BDB", "#E0405F"];
+  const avatarDe = i => ({ emoji: "", cor: CORES_AVATAR[i] });
+  function iniciais(nome) {
+    const p = (nome || "").trim().split(/\s+/).filter(Boolean);
+    return ((p[0] || "?")[0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
+  }
+  function avatarEl(i, classe) {
+    const a = avatarDe(i), x = el("span", "avatar" + (classe ? " " + classe : ""), a.emoji || iniciais(nomeDe(i)));
+    x.style.background = a.cor;
+    if (a.emoji) x.classList.add("emoji");
+    return x;
+  }
+  function desenharCabecalho(e) {
+    $("ola").textContent = `Olá, ${e.jogadores[eu] || ""}`;
+    const box = $("avatares");
+    box.textContent = "";
+    box.append(avatarEl(eu));
+    if (e.jogadores[1 - eu]) box.append(el("span", "coracao", "❤️"), avatarEl(1 - eu));
   }
   // as fases seguintes acrescentam cartões (envelopes, semana, cápsulas…)
   const extrasDaCasa = [];
@@ -2459,6 +2499,7 @@
     desenharJuntosHa();
     const km = distanciaKm(e);
     $("cardMapaSub").textContent = e.reencontro && diasAte(e.reencontro) === 0 ? "Hoje é 0 km 💞" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Nossas cidades";
+    $("distMapaTxt").textContent = "Mapa da saudade" + (km !== null ? ` · ${km.toLocaleString("pt-BR")} km` : "");
     $("cardHistoriaSub").textContent = dados.marcos.length ? `${dados.marcos.length} ${dados.marcos.length === 1 ? "marco" : "marcos"}` : "Nossa linha do tempo";
     if (vista === "vMapa") desenharMapa();
   });
@@ -3105,7 +3146,7 @@
         bc = el("button", "casa-card"); bc.id = "cardConfig"; bc.type = "button";
         bc.append(el("span", "ic", "⚙️"), el("b", "", "Configurações"), el("span", "sub", "Só você vê"));
         bc.addEventListener("click", abrirConfig);
-        $("casaGrade").appendChild(bc);
+        $("perfilConfig").appendChild(bc);
       }
     } else {
       if (bm) bm.remove();
@@ -3688,6 +3729,7 @@
     desenharSecretas(e);
     desenharReencontro(e);
     desenharDiario();
+    desenharNav();
 
     // giro novo? anima nos dois celulares
     const g = e.giro;
@@ -4897,6 +4939,9 @@
     coracao.addEventListener("contextmenu", ev => ev.preventDefault());
     document.addEventListener("visibilitychange", () => { if (document.hidden) segurar(false); });
     $("camera").addEventListener("change", mudarCamera);
+    $("navRecolher").addEventListener("click", () => recolherNav(true));
+    $("navMostrar").addEventListener("click", () => recolherNav(false));
+    try { new ResizeObserver(() => document.documentElement.style.setProperty("--nav", $("navBaixo").offsetHeight + "px")).observe($("navBaixo")); } catch (err) {}
     // reserva o espaço da barra fixa no fim da página
     try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) {}
     desenharRoleta();

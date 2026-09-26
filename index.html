@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=48">
+<link rel="stylesheet" href="style.css?v=49">
 </head>
 <body>
 <main>
@@ -93,10 +93,6 @@
       </div>
     </div>
 
-    <nav class="abas" id="abas" aria-label="Seções da sala">
-      <button type="button" data-abre="casa" id="abaCasa">🏠 Casa</button>
-      <button type="button" data-abre="jogo" id="abaJogo">🎲 Jogar</button>
-    </nav>
     <p class="presenca" id="presenca" hidden></p>
     <div class="sem-dono" id="semDono" hidden>
       <p>Esta sala ainda não tem dono.</p>
@@ -108,21 +104,10 @@
     <section class="casa" id="telaCasa" hidden aria-label="Casa do casal">
       <p class="casa-convite" id="casaConvite" hidden>Crie uma sala fixa para guardar envelopes, álbum e conquistas. No início, toque em "Criar sala fixa".</p>
       <div class="casa-grade" id="casaGrade">
-        <p class="juntos-ha" id="juntosHa" hidden></p>
-        <div class="datas-especiais" id="datasEspeciais" hidden></div>
-        <div class="casa-bloco pergunta-dia" id="casaPergunta">
-          <p class="pd-titulo">💬 Pergunta de hoje</p>
-          <p class="pd-pergunta" id="pdPergunta"></p>
-          <p class="pd-aviso" id="pdAviso"></p>
-          <div id="pdForm">
-            <textarea id="pdResposta" maxlength="500" rows="3" aria-label="Sua resposta"></textarea>
-            <button class="secondary" id="pdResponder" type="button">Responder</button>
-          </div>
-          <p class="pd-minha" id="pdMinha" hidden></p>
-          <div class="pd-lado" id="pdLado" hidden></div>
-          <button class="linkbtn" id="pdEditar" type="button" hidden>Editar minha resposta</button>
-          <p class="erro" id="erroPergunta" role="alert"></p>
-        </div>
+        <header class="inicio-topo" id="inicioTopo">
+          <p class="ola" id="ola"></p>
+          <div class="avatares" id="avatares" aria-hidden="true"></div>
+        </header>
         <div class="casa-bloco carinhos" id="casaCarinhos">
           <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo">✕</button></p>
           <div class="carinho-botoes" id="carinhoBotoes">
@@ -139,7 +124,26 @@
             <p class="maos-total" id="maosTotal"></p>
           </div>
         </div>
-        <button type="button" class="casa-card" data-abre="jogo"><span class="ic">🎲</span><b>Jogar</b><span class="sub" id="cardJogoSub">Roleta, cartas e placar</span></button>
+        <div class="casa-bloco distancia" id="casaDistancia">
+          <div id="lugarReencontro"></div>
+          <p class="juntos-ha" id="juntosHa" hidden></p>
+          <div class="datas-especiais" id="datasEspeciais" hidden></div>
+          <button type="button" class="linkbtn" data-abre="vMapa" id="distMapa">🗺️ <span id="distMapaTxt">Mapa da saudade</span></button>
+        </div>
+        <div class="casa-bloco pergunta-dia" id="casaPergunta">
+          <p class="pd-titulo">💬 Pergunta de hoje</p>
+          <p class="pd-pergunta" id="pdPergunta"></p>
+          <p class="pd-aviso" id="pdAviso"></p>
+          <div id="pdForm">
+            <textarea id="pdResposta" maxlength="500" rows="3" aria-label="Sua resposta"></textarea>
+            <button class="secondary" id="pdResponder" type="button">Responder</button>
+          </div>
+          <p class="pd-minha" id="pdMinha" hidden></p>
+          <div class="pd-lado" id="pdLado" hidden></div>
+          <button class="linkbtn" id="pdEditar" type="button" hidden>Editar minha resposta</button>
+          <p class="erro" id="erroPergunta" role="alert"></p>
+        </div>
+        <h3 class="casa-mais" id="casaMais">Mais</h3>
         <button type="button" class="casa-card" data-abre="vDiario"><span class="ic">🔥</span><b>Desafio do dia</b><span class="sub" id="cardDiarioSub"></span></button>
         <button type="button" class="casa-card" data-abre="vEnvelopes" id="cardEnv"><span class="ic">💌</span><b>Envelopes</b><span class="sub" id="cardEnvSub"></span></button>
         <button type="button" class="casa-card" data-abre="vSemana" id="cardSemana"><span class="ic">📅</span><b>Semana</b><span class="sub" id="cardSemanaSub"></span></button>
@@ -158,7 +162,7 @@
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <section class="diario" id="diario" hidden aria-label="Desafio do dia">
           <div class="diario-topo">
             <h2>Desafio do dia</h2>
@@ -188,7 +192,7 @@
         </section>
       </section>
       <section class="casa-vista" id="vEnvelopes" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Envelopes</h2>
         <p class="extras-sub">Uma mensagem fechada ou um desafio surpresa. A mensagem só abre com os dois aqui; o desafio vira a primeira carta da próxima partida.</p>
         <button class="primary" id="novoEnvelope" type="button">Novo envelope</button>
@@ -201,7 +205,7 @@
         </details>
       </section>
       <section class="casa-vista" id="vSemana" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>A semana</h2>
         <p class="extras-sub" id="semanaInfo"></p>
         <label class="field nivel-semana">Nível da semana
@@ -225,7 +229,7 @@
         </details>
       </section>
       <section class="casa-vista" id="vCapsulas" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Cápsulas do tempo</h2>
         <p class="extras-sub">A mesma pergunta, respondida agora e de novo numa data futura. Ninguém vê nada até lá.</p>
         <button class="primary" id="novaCapsula" type="button">Nova cápsula</button>
@@ -236,7 +240,7 @@
         <div id="capGrupo-aberta" hidden><h3 class="casa-h3">Abertas</h3><ul class="lista-extras" id="capAbertas"></ul></div>
       </section>
       <section class="casa-vista" id="vAlbum" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Álbum de momentos</h2>
         <div class="filtro" id="albumFiltro" role="group" aria-label="Filtro do álbum">
           <button type="button" data-filtro="todos" aria-pressed="true">Todos</button>
@@ -246,7 +250,7 @@
         <ul class="lista-extras" id="listaAlbum"></ul>
       </section>
       <section class="casa-vista" id="vBaralho" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Baralho</h2>
         <p class="extras-sub">As cartas lembram o que já saiu: as menos vistas aparecem mais, as favoritas aparecem mais e as aposentadas não aparecem.</p>
         <h3 class="casa-h3">⭐ Favoritas <span id="baralhoFavQtd"></span></h3>
@@ -257,7 +261,7 @@
         <ul class="lista-extras" id="baralhoVistas"></ul>
       </section>
       <section class="casa-vista" id="vConquistas" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Conquistas</h2>
         <p class="extras-sub" id="conqResumo"></p>
         <label class="field meu-titulo">Seu título no placar
@@ -269,7 +273,7 @@
         <div class="conq-grade" id="conqOusadia"></div>
       </section>
       <section class="casa-vista" id="vMapa" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Mapa da saudade</h2>
         <svg class="mapa-svg" id="mapaSvg" viewBox="0 0 320 110" role="img" aria-label="Distância entre as cidades de vocês"></svg>
         <p class="mapa-km" id="mapaKm"></p>
@@ -301,14 +305,14 @@
         <p class="osm-credito">Busca de cidades: © OpenStreetMap</p>
       </section>
       <section class="casa-vista" id="vHistoria" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Nossa história</h2>
         <button class="secondary" id="novoMarco" type="button">+ Novo marco</button>
         <p class="extras-sub" id="marcosVazio">Nenhum marco ainda. Comece pelo primeiro encontro.</p>
         <ul class="linha-tempo" id="listaMarcos"></ul>
       </section>
       <section class="casa-vista" id="vPote" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Pote de motivos</h2>
         <svg class="pote-svg" id="poteSvg" viewBox="0 0 160 170" role="img" aria-label="Pote de motivos"></svg>
         <p class="pote-conta" id="poteConta"></p>
@@ -328,7 +332,7 @@
         </details>
       </section>
       <section class="casa-vista" id="vAbra" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Abra quando…</h2>
         <button class="secondary" id="novaAbra" type="button">+ Nova carta Abra quando…</button>
         <h3 class="casa-h3" id="abraParaMimTitulo">Para você</h3>
@@ -342,21 +346,29 @@
         </details>
       </section>
       <section class="casa-vista" id="vDiarioCasal" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Diário do casal</h2>
         <p class="extras-sub" id="diarioVazio">Os dias anteriores da pergunta do dia aparecem aqui.</p>
         <ul class="diario-lista" id="listaDiario"></ul>
         <button class="secondary" id="diarioMais" type="button" hidden>Ver mais</button>
       </section>
       <section class="casa-vista" id="vPlaylist" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Nossa playlist</h2>
         <p class="extras-sub">Abra cada música no Spotify e adicione a uma playlist de vocês.</p>
         <p class="extras-sub" id="nossasVazio">Nenhuma música ainda. Na trilha da rodada, toque em "🤍 Nossa".</p>
         <ul class="lista-extras" id="listaNossas"></ul>
       </section>
+      <section class="casa-vista aba-vista" id="vHistorico" hidden>
+        <h2>🕘 Histórico</h2>
+        <div id="lugarHistorico"></div>
+      </section>
+      <section class="casa-vista aba-vista" id="vPerfil" hidden>
+        <h2>👤 Perfil</h2>
+        <div class="perfil-config" id="perfilConfig"></div>
+      </section>
       <section class="casa-vista" id="vCofre" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Casa</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <div id="lugarCofre"></div>
       </section>
     </section>
@@ -621,6 +633,16 @@
         </div>
       </div>
     </div>
+    <nav class="nav-baixo" id="navBaixo" aria-label="Seções da sala">
+      <div class="nav-in">
+        <button type="button" data-abre="casa" id="abaCasa"><span class="ic">🏠</span>Início</button>
+        <button type="button" data-abre="jogo" id="abaJogo"><span class="ic">🎲</span>Jogo</button>
+        <button type="button" data-abre="vHistorico" id="abaHistorico"><span class="ic">🕘</span>Histórico</button>
+        <button type="button" data-abre="vPerfil" id="abaPerfil"><span class="ic">👤</span>Perfil</button>
+        <button type="button" class="nav-recolher" id="navRecolher" aria-label="Recolher a barra" hidden>▾</button>
+      </div>
+      <button type="button" class="nav-mostrar" id="navMostrar" hidden>▴ Menu</button>
+    </nav>
   </section>
 
   <dialog id="dlgEnvelope" aria-labelledby="dlgEnvTitulo">
@@ -1035,9 +1057,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=48"></script>
-<script src="conquistas.js?v=48"></script>
-<script src="app.js?v=48"></script>
+<script src="config.js?v=49"></script>
+<script src="conquistas.js?v=49"></script>
+<script src="app.js?v=49"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
