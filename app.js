@@ -122,8 +122,13 @@
     let reset = false;
     if (!livres.length) { livres = pool; reset = true; }
     const { p, repetir } = escolherComPeso(pool, livres);
-    const carta = { tipo, nivel: p.nivel, texto: p.texto, chave: p.chave, reset, doPool: pool.map(x => x.chave) };
+    const carta = montarCarta(p, tipo);
+    carta.reset = reset; carta.doPool = pool.map(x => x.chave);
     if (repetir) carta.repetir = true;
+    return carta;
+  }
+  function montarCarta(p, tipo) {
+    const carta = { tipo, nivel: p.nivel, texto: p.texto, chave: p.chave || p.id };
     if (p.id) carta.id = p.id;
     if (p.midia) carta.midia = p.midia;
     if (p.autor) carta.autor = p.autor;
@@ -4661,6 +4666,8 @@
     if (!LEVEL_NAMES[e.nivelSemana]) e.nivelSemana = "leve";
     if (!Array.isArray(e.obsPedida) || e.obsPedida.length !== 2) e.obsPedida = [null, null];
     if (!Array.isArray(e.historico)) e.historico = [];
+    if (typeof e.escolhaCegas !== "boolean") e.escolhaCegas = false;
+    if (!Array.isArray(e.cegas) || e.cegas.length !== 2 || e.carta || e.vencedor !== null) e.cegas = null;
     if (!e.posicao || typeof e.posicao !== "object" || !e.posicao.nome) e.posicao = null;
     if (!e.cardapio || typeof e.cardapio !== "object" || !Array.isArray(e.cardapio.itens)) e.cardapio = null;
     if (!e.pose || typeof e.pose !== "object" || !e.pose.nome) e.pose = null;
@@ -4812,6 +4819,9 @@
     $("pulosMax").value = String(e.pulosMax);
     const zerado = placarZerado(e);
     $("notaAdv").checked = e.notaAdversario;
+    $("escolhaCegas").checked = e.escolhaCegas;
+    $("escolhaCegas").disabled = !zerado;
+    $("escolhaCegasLinha").hidden = config.chipsQuemMuda === "dono" && !souDono;   // quem pode mudar a partida
     $("prendasFofas").checked = e.prendasFofas;
     $("eventos").value = e.eventos;
     $("eventos").closest("label").hidden = !(souDono && permitido("eventos"));
@@ -4888,7 +4898,7 @@
         girando = true;
         $("card").hidden = true;
         requestAnimationFrame(() => { posicionarRoleta(g.alvo, true); tiquesDaRoleta(); });
-        timerCarta = setTimeout(() => { girando = false; mostrarCarta(estado); atualizarBotoes(); desenharTimer(estado, false); desenharTrilha(estado); revelarCarta(estado, false); }, GIRO_MS());
+        timerCarta = setTimeout(() => { girando = false; mostrarCarta(estado); atualizarBotoes(); desenharCegas(estado); desenharTimer(estado, false); desenharTrilha(estado); revelarCarta(estado, false); }, GIRO_MS());
       }
     } else if (!girando) {
       mostrarCarta(e);
@@ -4966,7 +4976,7 @@
     const minhaVez = completa && estado.vez === eu;
     const c = estado.carta;
     const acabou = estado.vencedor !== null;
-    const travado = !minhaVez || girando || !!c || !cartasOk || acabou;
+    const travado = !minhaVez || girando || !!c || !cartasOk || acabou || !!estado.cegas;
     // barra de baixo: sem carta, Girar/Escolher; com carta (depois do giro), as ações da carta
     $("acoesGiro").hidden = !!c;
     $("acoesCarta").hidden = !c || girando;
@@ -4986,6 +4996,7 @@
     desenharSintonia(estado);
     desenharDupla(estado);
     desenharSequencia(estado);
+    desenharCegas(estado);
     // Nota do adversário: quem não cumpriu dá as estrelas
     $("avaliar").hidden = !completa || minhaVez || !avaliando;
     if (c && !evento && c.tipo !== "prenda") {
@@ -5013,7 +5024,7 @@
     const card = $("card");
     if (!c) { card.hidden = true; return; }
     const nome = PARA_OS_DOIS.includes(c.tipo) ? "os dois" : e.jogadores[e.vez] || "";
-    card.className = "card " + c.tipo + (c.evento ? " evento" : "") + (c.reversa ? " reversa" : "");
+    card.className = "card " + c.tipo + (c.evento ? " evento" : "") + (c.reversa ? " reversa" : "") + (c.cega ? " cega-virada" : "");
     card.hidden = false;
     desenharMarcas(c);
     desenharPosCarta(e);
@@ -5028,6 +5039,7 @@
       : c.motivo === "sequencia" ? "Prenda por parar a carta em etapas"
       : c.surpresa ? `🎲 Desafio surpresa de ${e.jogadores[c.surpresaDe] || ""}`
       : c.reversa ? `🔄 Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
+      : c.cega ? `🂠 Escolhida às cegas · ${TIPO_NOMES[c.tipo] || c.tipo}`
       : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
       + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome
@@ -5243,9 +5255,13 @@
       let carta = sortear(tipo, n.niveis, n.usados || []);
       // com a chance configurada, o giro vira um evento especial (a roleta continua mostrando Verdade/Desafio)
       if (Math.random() < CHANCE_EVENTO[n.eventos]) carta = sortearEvento(n) || carta;
-      registrarUso(n, carta);
-      n.carta = carta;
-      n.musica = sortearMusica(carta.nivel);
+      const cegas = !carta.evento && n.escolhaCegas ? duasCegas(n, tipo, carta) : null;
+      if (cegas) { n.cegas = cegas; n.carta = null; n.musica = null; }
+      else {
+        registrarUso(n, carta);
+        n.carta = carta;
+        n.musica = sortearMusica(carta.nivel);
+      }
       n.giro = { id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), alvo };
     });
   }
@@ -5697,6 +5713,68 @@
     });
   }
 
+  // ---------- v8: escolha às cegas ----------
+  const TEMAS = { camera: "📸 Câmera", provocacao: "🔥 Provocação", criatividade: "🎨 Criatividade", carinho: "💗 Carinho", conversa: "🗣️ Conversa", diversao: "😂 Diversão" };
+  function temaDe(c) {
+    const t = c.texto || "";
+    if (c.midia || /c[âa]mera|mostre|foto|v[íi]deo/i.test(t)) return "camera";
+    if (c.nivel === "picante" || c.nivel === "pesado") return "provocacao";
+    if (c.nivel === "criativo" || /desenhe|invente|imite|crie\b/i.test(t)) return "criatividade";
+    if (c.nivel === "romantico") return "carinho";
+    if (c.tipo === "verdade") return "conversa";
+    return "diversao";
+  }
+  const formatoDe = c => (c.midia ? "enviar pelo WhatsApp" : c.tipo === "verdade" ? "falando" : "ao vivo");
+  const opcaoCega = c => ({ id: c.id || c.chave, tipo: c.tipo, nivel: c.nivel, tema: temaDe(c), formato: formatoDe(c), pontos: (PONTOS[c.tipo] || {})[c.nivel] || 0 });
+  // duas cartas diferentes no nível ou no tema; sem isso em 5 tentativas, fica a carta única
+  function duasCegas(n, tipo, primeira) {
+    if (!primeira || !primeira.id) return null;
+    const usados = [...(n.usados || []), primeira.chave];
+    for (let i = 0; i < 5; i++) {
+      const outra = sortear(tipo, n.niveis, usados);
+      if (!outra || !outra.id || outra.chave === primeira.chave) continue;
+      if (outra.nivel !== primeira.nivel || temaDe(outra) !== temaDe(primeira)) return Math.random() < 0.5 ? [opcaoCega(primeira), opcaoCega(outra)] : [opcaoCega(outra), opcaoCega(primeira)];
+    }
+    return null;
+  }
+  function escolherCega(i) {
+    if (!estado || !estado.cegas || estado.vez !== eu || girando) return;
+    gravar(n => {
+      const op = n.cegas && n.cegas[i];
+      if (!op || n.carta) return;
+      const p = cartas.find(x => x.id === op.id);
+      // a carta sumiu ou a sala deixou de permitir: sorteia outra do mesmo tipo
+      const carta = p && cartaPermitida(p) ? montarCarta({ ...p, chave: p.id }, op.tipo) : sortear(op.tipo, n.niveis, n.usados || []);
+      n.cegas = null;
+      if (!carta) return;
+      carta.cega = true;
+      registrarUso(n, carta);                           // só a escolhida entra em usados
+      n.carta = carta;
+      n.musica = sortearMusica(carta.nivel);
+    });
+  }
+  function desenharCegas(e) {
+    const box = $("cegasBox"), ops = e && e.cegas;
+    box.hidden = !ops || girando;
+    if (box.hidden) return;
+    const minha = e.vez === eu;
+    $("cegasTitulo").textContent = minha ? "Escolha uma carta às cegas" : `${e.jogadores[e.vez] || ""} está escolhendo uma carta…`;
+    const g = $("cegasOpcoes"); g.textContent = "";
+    ops.forEach((o, i) => {
+      const b = el("button", "cega"); b.type = "button"; b.disabled = !minha;
+      b.append(el("span", "cega-letra", i ? "B" : "A"), el("span", "cega-tema", TEMAS[o.tema] || ""), el("span", "cega-nivel", LEVEL_NAMES[o.nivel] || ""), el("span", "cega-formato", o.formato),
+        el("span", "cega-pontos", `${o.pontos} ${o.pontos === 1 ? "ponto" : "pontos"}`));
+      b.setAttribute("aria-label", `Opção ${i ? "B" : "A"}: ${TEMAS[o.tema] || ""}, nível ${LEVEL_NAMES[o.nivel] || ""}, ${o.formato}, ${o.pontos} pontos`);
+      b.addEventListener("click", () => escolherCega(i));
+      g.appendChild(b);
+    });
+  }
+  function mudarCegas() {
+    const v = $("escolhaCegas").checked;
+    if (!estado || !placarZerado(estado) || (config.chipsQuemMuda === "dono" && !souDono)) return;
+    gravar(n => { if (placarZerado(n)) n.escolhaCegas = v; });
+  }
+
   // ---------- missão secreta da partida ----------
   // Duas missões diferentes, dos níveis ativos (se faltar, de qualquer nível). Cada um vê só a sua.
   function sortearSecretas(n) {
@@ -5924,6 +6002,7 @@
       n.secretas = sortearSecretas(n);
       n.historico = [];
       n.encerrando = null;
+      n.cegas = null;                                   // a opção escolhaCegas continua como estava
     });
     missaoAberta = false;
   }
@@ -6297,6 +6376,7 @@
     $("liberar").addEventListener("click", liberar);
     $("avaliar").addEventListener("click", ev => { const k = Number(ev.target.dataset && ev.target.dataset.n); if (k) avaliar(k); });
     $("notaAdv").addEventListener("change", mudarNota);
+    $("escolhaCegas").addEventListener("change", mudarCegas);
     $("prendasFofas").addEventListener("change", mudarPrendasFofas);
     $("timerIniciar").addEventListener("click", () => iniciarTimer(Number($("timerIniciar").dataset.seg)));
     $("timerAbrir").addEventListener("click", () => { $("timerOpcoes").hidden = !$("timerOpcoes").hidden; });

@@ -584,6 +584,7 @@
       </label>
     </div>
     <label class="check nota-cfg"><input type="checkbox" id="notaAdv"> Nota do adversário (★ valem pontos nos desafios)</label>
+    <label class="check nota-cfg" id="escolhaCegasLinha"><input type="checkbox" id="escolhaCegas"> Escolha às cegas (escolher entre duas cartas viradas)</label>
     <label class="check nota-cfg"><input type="checkbox" id="prendasFofas"> Prendas fofas (toda prenda sai do nível Romântico)</label>
     <label class="check nota-cfg" id="soNossasLinha" hidden><input type="checkbox" id="soNossas"> Trilha: só as nossas</label>
     <p class="config-dica" id="soNossasAviso" hidden>Marquem pelo menos 5 músicas com 🤍 Nossa para usar "só as nossas".</p>
@@ -616,6 +617,11 @@
     </div>
 
     <p class="aviso" id="aviso" role="status" hidden></p>
+
+    <section class="cegas" id="cegasBox" hidden aria-label="Escolha às cegas">
+      <p class="cegas-titulo" id="cegasTitulo"></p>
+      <div class="cegas-opcoes" id="cegasOpcoes"></div>
+    </section>
 
     <article class="card" id="card" hidden aria-live="polite">
       <p class="selo" id="selo" hidden></p>
