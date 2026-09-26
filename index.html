@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=45">
+<link rel="stylesheet" href="style.css?v=46">
 </head>
 <body>
 <main>
@@ -265,8 +265,7 @@
         </label>
         <h3 class="casa-h3">Jornada</h3>
         <div class="conq-grade" id="conqJornada"></div>
-        <h3 class="casa-h3">Ousadia</h3>
-        <label class="toggle"><input type="checkbox" id="mostrarOusadia"> Mostrar conquistas de ousadia</label>
+        <h3 class="casa-h3" id="tituloOusadia">Ousadia</h3>
         <div class="conq-grade" id="conqOusadia"></div>
       </section>
       <section class="casa-vista" id="vMapa" hidden>
@@ -1035,9 +1034,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=45"></script>
-<script src="conquistas.js?v=45"></script>
-<script src="app.js?v=45"></script>
+<script src="config.js?v=46"></script>
+<script src="conquistas.js?v=46"></script>
+<script src="app.js?v=46"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

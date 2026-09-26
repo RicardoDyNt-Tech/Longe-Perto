@@ -134,7 +134,7 @@
   // prenda do nível pedido; se não houver prenda nesse nível, desce um nível até encontrar.
   // Romântico fica fora da ordem de subida. Com "Prendas fofas", toda prenda sai romântica,
   // guardando em nivelOriginal o nível que ela teria (para a devolução de pulos).
-  const temPrendaRomantica = () => cartas.some(c => c.tipo === "prenda" && c.nivel === "romantico");
+  const temPrendaRomantica = () => cartas.some(c => c.tipo === "prenda" && c.nivel === "romantico" && cartaPermitida(c));
   function sortearPrenda(nivel, usados, n) {
     if (n && n.prendasFofas && temPrendaRomantica()) {
       const fofa = sortear("prenda", ["romantico"], usados);
@@ -145,11 +145,12 @@
       if (temPrendaRomantica()) return sortear("prenda", ["romantico"], usados);
       nivel = "leve";
     }
+    // nível que a sala não tem (ou sem prenda): desce até o permitido mais alto; sem nada, a romântica
     for (let i = ORDEM_NIVEIS.indexOf(nivel); i >= 0; i--) {
-      const n = ORDEM_NIVEIS[i];
-      if (cartas.some(c => c.tipo === "prenda" && c.nivel === n)) return sortear("prenda", [n], usados);
+      const x = ORDEM_NIVEIS[i];
+      if (cartas.some(c => c.tipo === "prenda" && c.nivel === x && cartaPermitida(c))) return sortear("prenda", [x], usados);
     }
-    return null;
+    return temPrendaRomantica() ? sortear("prenda", ["romantico"], usados) : null;
   }
 
   function registrarUso(novo, carta) {
@@ -536,7 +537,8 @@
 
   function desafioDoDia(dia, jogador) {
     // só as cartas padrão, em ordem fixa, para os dois aparelhos terem exatamente a mesma lista
-    const pool = cartas.filter(c => !c.sala && c.tipo === "desafio" && c.nivel === estado.nivelDiario)
+    const nivel = limitarNivel("desafioDoDia", estado.nivelDiario);
+    const pool = cartas.filter(c => !c.sala && c.tipo === "desafio" && c.nivel === nivel && cartaPermitida(c))
       .sort((a, b) => (a.id < b.id ? -1 : 1));
     if (!pool.length) return null;
     return pool[fnv1a(`${codigo}|${dia}|${jogador}`) % pool.length];
@@ -558,11 +560,15 @@
 
   function desenharDiario() {
     const box = $("diario");
-    if (!estado || !estado.fixa) { box.hidden = true; return; }
+    const cardDia = document.querySelector('.casa-card[data-abre="vDiario"]');
+    if (cardDia) cardDia.hidden = !permitido("desafioDoDia");
+    if (!estado || !estado.fixa || !permitido("desafioDoDia")) { box.hidden = true; return; }
     box.hidden = false;
     const hoje = hojeISO();
     const nomes = estado.jogadores;
     $("nivelDiario").value = estado.nivelDiario;
+    limitarSelectNiveis($("nivelDiario"), v => permitido("desafioDoDia", v));
+    $("nivelDiario").closest("label").hidden = !souDono;   // configuração: só o dono vê
     const meu = cartasOk ? desafioDoDia(hoje, eu) : null;
     $("diarioMeuTitulo").textContent = `Desafio do dia de ${nomes[eu]}`;
     $("diarioMeuTexto").textContent = !cartasOk ? "Carregando…" : meu ? meu.texto : "Sem desafios neste nível.";
@@ -618,6 +624,8 @@
 
   // música do nível da carta; sem música nesse nível, desce até achar; sem nenhuma, null
   function sortearMusica(nivel, evitarUrl) {
+    if (!permitido("trilha")) return null;
+    if (ordCfg(nivel) > ordCfg(efetivo("trilha"))) nivel = efetivo("trilha");   // romântico usa o leve
     // "Trilha: só as nossas" (com pelo menos 5): ignora o nível
     const niveisPool = soNossasAtivo() ? [null] : null;
     for (let i = Math.max(0, ORDEM_NIVEIS.indexOf(nivel)); i >= 0; i--) {
@@ -636,7 +644,7 @@
   function desenharTrilha(e) {
     const m = e.musica, c = e.carta;
     const box = $("trilha");
-    const visivel = !!(m && c && !$("card").hidden);
+    const visivel = !!(m && c && !$("card").hidden && permitido("trilha"));
     box.hidden = !visivel;
     if (!visivel) return;
     $("trilhaTitulo").textContent = /m[úu]sica que eu escolher/i.test(c.texto || "") ? "Sugestão para este desafio" : "Trilha da rodada";
@@ -846,8 +854,13 @@
 
   // só aparece com Picante ou Pesado ativos, e só as posições dos níveis ativos
   const niveisGuia = e => (e && e.niveis || []).filter(n => n === "picante" || n === "pesado");
-  const posicoesDoNivel = e => { const ns = niveisGuia(e); return posicoes.filter(p => ns.includes(p.nivel)); };
-  const guiaDisponivel = e => !!(e && niveisGuia(e).length && posicoes.length);
+  const ORDEM_DIF = ["facil", "media", "dificil"];
+  const posicoesDoNivel = e => {
+    const ns = niveisGuia(e), c = config.posicoes;
+    return posicoes.filter(p => ns.includes(p.nivel) && permitido("posicoes", p.nivel) && c.climas.includes(p.clima)
+      && ORDEM_DIF.indexOf(p.dificuldade) <= ORDEM_DIF.indexOf(c.dificuldadeMax));
+  };
+  const guiaDisponivel = e => !!(e && permitido("posicoes") && niveisGuia(e).length && posicoesDoNivel(e).length);
   const marcaPos = (id, m) => marcasPos.find(x => x.posicao_id === id && x.marca === m);
   const linkPos = id => { const x = marcasPos.find(y => y.posicao_id === id && y.link); return x ? x.link : null; };
 
@@ -1045,8 +1058,10 @@
   const POSE_ENQ = { close: "Close", meio: "Meio corpo", inteiro: "Corpo inteiro", espelho: "Espelho", silhueta: "Silhueta" };
   const RE_POSE = /foto|v[íi]deo|nude|selfie/i;
   const tetoDaCarta = n => (n === "pesado" ? "pesado" : n === "picante" ? "picante" : "leve");
-  const pedeFotoOuVideo = c => !!(c && c.texto && (c.midia === "foto" || c.midia === "video" || RE_POSE.test(c.texto)));
-  const formatoDaCarta = c => (c.midia === "video" || (c.midia !== "foto" && /v[íi]deo/i.test(c.texto)) ? "video" : "foto");
+  const pedeFotoOuVideo = c => !!(c && c.texto && permitido("poses") && (c.midia === "foto" || c.midia === "video" || RE_POSE.test(c.texto)));
+  const formatoDaCarta = c => (config.poses.video && (c.midia === "video" || (c.midia !== "foto" && /v[íi]deo/i.test(c.texto))) ? "video" : "foto");
+  // teto das poses na sala (romântico e criativo valem como Leve)
+  const tetoPoses = () => tetoDaCarta(efetivo("poses"));
 
   async function carregarPoses(c) {
     const { data, error } = await sb.from("poses").select("id, nome, como, tipo, nivel, enquadramento, icone").eq("ativa", true).order("nome", { ascending: true });
@@ -1057,11 +1072,14 @@
 
   function abrirPoses(daCarta) {
     const c = estado && estado.carta;
-    poseTeto = daCarta && c ? tetoDaCarta(c.nivel) : null;
+    poseTeto = daCarta && c ? tetoDaCarta(c.nivel) : tetoPoses();
+    if (POSE_NIVEIS.indexOf(poseTeto) > POSE_NIVEIS.indexOf(tetoPoses())) poseTeto = tetoPoses();
+    [...$("poseFiltroTipo").options].forEach(o => { const pode = o.value === "foto" || config.poses.video; o.hidden = !pode; o.disabled = !pode; });
     const sel = $("poseFiltroNivel");
     [...sel.options].forEach(o => { o.disabled = !!poseTeto && POSE_NIVEIS.indexOf(o.value) > POSE_NIVEIS.indexOf(poseTeto); });
     if (daCarta && c) { $("poseFiltroTipo").value = formatoDaCarta(c); sel.value = poseTeto; }
-    else if (!sel.value || sel.options[sel.selectedIndex].disabled) sel.value = "pesado";
+    else if (!sel.value || sel.options[sel.selectedIndex].disabled) sel.value = poseTeto;
+    if (!config.poses.video) $("poseFiltroTipo").value = "foto";
     $("poseFiltroEnq").value = "";
     $("poseCuidados").open = false;
     erro("erroPoses", "");
@@ -1073,7 +1091,8 @@
   function posesFiltradas() {
     const t = $("poseFiltroTipo").value, e = $("poseFiltroEnq").value;
     const ate = POSE_NIVEIS.indexOf(poseTeto && POSE_NIVEIS.indexOf($("poseFiltroNivel").value) > POSE_NIVEIS.indexOf(poseTeto) ? poseTeto : $("poseFiltroNivel").value);
-    return poses.filter(p => (!t || p.tipo === t) && POSE_NIVEIS.indexOf(p.nivel) <= ate && (!e || p.enquadramento === e));
+    return poses.filter(p => (!t || p.tipo === t) && POSE_NIVEIS.indexOf(p.nivel) <= ate && (!e || p.enquadramento === e)
+      && permitido("poses", p.nivel) && (config.poses.video || p.tipo !== "video"));
   }
 
   // sortear e "Usar esta": estado.pose aparece embaixo da carta nos dois aparelhos
@@ -1118,7 +1137,7 @@
 
   function desenharPoses() {
     if (!estado) return;
-    $("cardPoses").hidden = !estado.fixa || !poses.length;
+    $("cardPoses").hidden = !estado.fixa || !poses.length || !permitido("poses");
     desenharPoseCarta(estado);
     if (!$("dlgPoses").open) return;
     const r = estado.pose;
@@ -1149,7 +1168,7 @@
     const api = {
       limpar() {
         pedido++;
-        $("poseIaBotao").hidden = !(estado && estado.fixa);
+        $("poseIaBotao").hidden = !(estado && estado.fixa && permitido("ia") && config.ia.poses);
         $("poseIaPainel").hidden = true;
         $("poseIaTema").value = "";
         $("poseIaStatus").textContent = "";
@@ -1301,6 +1320,7 @@
   function tipoDoEnvelope() {
     const desafio = document.querySelector('input[name="envTipo"]:checked').value === "desafio";
     $("envNivelRotulo").textContent = desafio ? "Nível do desafio" : "Nível da sugestão";
+    limitarSelectNiveis($("envNivel"), v => (desafio ? permitido("envelopes", v) : permitido("nivel", v)));
     $("envIdeia").hidden = true;
     $("envIdeia").textContent = "";
   }
@@ -1308,7 +1328,7 @@
     const desafio = document.querySelector('input[name="envTipo"]:checked').value === "desafio";
     const tipo = desafio ? "desafio" : "ideia_mensagem";
     const nivel = !desafio && $("envNivel").value === "romantico" ? "leve" : $("envNivel").value;
-    const pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === nivel));
+    const pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === nivel && cartaPermitida(c)));
     if (!pool.length) return erro("erroEnvelope", desafio ? "Não há desafios desse nível." : "Ainda não há ideias desse nível.");
     erro("erroEnvelope", "");
     const recentes = sugeridas[tipo];
@@ -1330,6 +1350,7 @@
     const tipo = document.querySelector('input[name="envTipo"]:checked').value;
     const texto = $("envTexto").value.trim().slice(0, 500);
     if (texto.length < 3) return erro("erroEnvelope", "Escreva pelo menos 3 letras.");
+    if (tipo === "desafio" && !permitido("envelopes", $("envNivel").value)) return erro("erroEnvelope", "Escolha outro nível.");
     const linha = { sala: codigo, tipo, de: eu, texto, nivel: tipo === "desafio" ? $("envNivel").value : null };
     $("salvarEnvelope").disabled = true;
     const { data, error } = await sb.from("envelopes").insert(linha).select("*").single();
@@ -1371,8 +1392,9 @@
   // Desafio surpresa: vira a primeira carta da próxima vez de quem recebe (quando a vez chega), com os dois presentes
   async function talvezSurpresa() {
     const e = estado;
-    if (!e || !e.fixa || !e.jogadores[1] || e.vez !== eu || e.carta || e.vencedor !== null || girando || !ambosPresentes()) return;
-    const env = dados.envelopes.filter(x => x.tipo === "desafio" && !x.aberto_em && x.de === 1 - eu && !surpresasEmAndamento.has(x.id))
+    if (!e || !e.fixa || !e.jogadores[1] || e.vez !== eu || e.carta || e.vencedor !== null || girando || !ambosPresentes() || !permitido("envelopes")) return;
+    // desafio surpresa acima do nível permitido fica guardado até o dono liberar
+    const env = dados.envelopes.filter(x => x.tipo === "desafio" && !x.aberto_em && x.de === 1 - eu && !surpresasEmAndamento.has(x.id) && permitido("envelopes", x.nivel || "leve"))
       .sort((a, b) => (a.criada_em < b.criada_em ? -1 : 1))[0];
     if (!env) return;
     surpresasEmAndamento.add(env.id);
@@ -1394,6 +1416,7 @@
     const n = contarEnvelopes();
     $("cardEnvSub").textContent = n ? `${n} esperando` : "Nenhum esperando";
     $("cardEnv").classList.toggle("destaque", dados.envelopes.some(x => !x.aberto_em && x.de !== eu && x.tipo === "mensagem"));
+    $("cardEnv").hidden = !permitido("envelopes");
   });
 
   // ---------- cápsula do tempo ----------
@@ -1545,7 +1568,8 @@
 
   // sorteio determinístico (como o desafio do dia): mesma sala + semana + jogador = mesmas cartas nos dois aparelhos
   function poolSemana(tipo) {
-    let pool = cartas.filter(c => !c.sala && c.tipo === tipo && c.nivel === estado.nivelSemana);
+    const nivel = limitarNivel("semana", estado.nivelSemana) || "leve";
+    let pool = cartas.filter(c => !c.sala && c.tipo === tipo && c.nivel === nivel);
     if (!pool.length) pool = cartas.filter(c => !c.sala && c.tipo === tipo && c.nivel === "leve");
     return pool.sort((a, b) => (a.id < b.id ? -1 : 1));
   }
@@ -1636,6 +1660,8 @@
     const outro = 1 - eu, nOutro = nomeDe(outro);
     $("semanaInfo").textContent = `Semana de ${dataBR(semana)} a ${dataBR(somarDias(semana, 6))} · apostas até quarta, conferir a partir de sábado`;
     $("nivelSemana").value = estado.nivelSemana;
+    limitarSelectNiveis($("nivelSemana"), v => permitido("semana", v));
+    $("nivelSemana").closest("label").hidden = !souDono;   // configuração: só o dono vê
     $("titMinhasApostas").textContent = `Suas apostas sobre ${nOutro}`;
     // minhas apostas
     const ul = $("minhasApostas");
@@ -1742,6 +1768,7 @@
     $("cardSemanaSub").textContent = confirmar ? `${nomeDe(outro)} mostrou a missão: confirmar`
       : conferir ? "Confira as apostas sobre você" : faltaApostar ? "Faça suas apostas (até quarta)" : "Apostas e missão da semana";
     $("cardSemana").classList.toggle("destaque", confirmar || conferir || faltaApostar);
+    $("cardSemana").hidden = !permitido("semana");
     if (vista === "vSemana") desenharSemana();
   });
 
@@ -2017,7 +2044,7 @@
   escutar("conquistas", (ev, row, antes) => {
     if (ev !== "INSERT" || antes) return;
     const c = defConquista(row.codigo);
-    if (!c || (c.categoria === "ousadia" && estado && !estado.mostrarOusadia)) return;
+    if (!c || (c.categoria === "ousadia" && !permitido("conquistasOusadia"))) return;
     // várias de uma vez (fim de partida): um aviso só
     filaConquistas.push(`🏆 ${c.titulo}` + (row.jogador === 0 || row.jogador === 1 ? ` (${nomeDe(row.jogador)})` : ""));
     clearTimeout(timerConquistas);
@@ -2053,13 +2080,13 @@
   function desenharConquistas() {
     if (!$("vConquistas") || !estado || !estado.fixa) return;
     const d = dadosConquistas();
-    const mostrar = estado.mostrarOusadia;
+    const mostrar = permitido("conquistasOusadia");
     ["jornada", "ousadia"].forEach(cat => {
       const grade = $(cat === "jornada" ? "conqJornada" : "conqOusadia");
       grade.textContent = "";
       CONQ().filter(c => c.categoria === cat).forEach(c => grade.appendChild(itemConquista(c, d)));
     });
-    $("mostrarOusadia").checked = mostrar;
+    $("tituloOusadia").hidden = !mostrar;
     $("conqOusadia").hidden = !mostrar;
     const visiveis = CONQ().filter(c => mostrar || c.categoria !== "ousadia");
     const total = visiveis.reduce((s, c) => s + (c.escopo === "casal" ? 1 : 2), 0);
@@ -2076,11 +2103,11 @@
   }
   const tituloDe = (e, i) => {
     const c = e.fixa && e.titulos[i] ? defConquista(e.titulos[i]) : null;
-    return c && linhaConquista(c.codigo, i) && (e.mostrarOusadia || c.categoria !== "ousadia") ? c.titulo : "";
+    return c && linhaConquista(c.codigo, i) && (permitido("conquistasOusadia") || c.categoria !== "ousadia") ? c.titulo : "";
   };
   redesenhar("conquistas", () => { desenharConquistas(); if (estado) desenharPlacar(estado, [estado.jogadores[0] || "Pessoa 1", estado.jogadores[1] || "…"]); });
   extrasDaCasa.push(e => {
-    const n = dados.conquistas.filter(r => { const c = defConquista(r.codigo); return c && (e.mostrarOusadia || c.categoria !== "ousadia"); }).length;
+    const n = dados.conquistas.filter(r => { const c = defConquista(r.codigo); return c && (permitido("conquistasOusadia") || c.categoria !== "ousadia"); }).length;
     $("cardConqSub").textContent = n ? `${n} ${n === 1 ? "desbloqueada" : "desbloqueadas"}` : "Jornada do casal";
     if (vista === "vConquistas") desenharConquistas();
   });
@@ -2815,7 +2842,8 @@
     const marcada = !!id && ehNossa(id);
     b.textContent = marcada ? "❤️ Nossa" : "🤍 Nossa";
     b.setAttribute("aria-pressed", String(marcada));
-    $("soNossasLinha").hidden = !estado.fixa;
+    $("soNossasLinha").hidden = !estado.fixa || !permitido("trilha");
+    $("cardPlaylist").hidden = !permitido("trilha");
     $("soNossas").checked = !!estado.playlistSoNossas;
     $("soNossasAviso").hidden = !(estado.fixa && estado.playlistSoNossas && nossas.length < 5);
     $("cardPlaylistSub").textContent = nossas.length ? `${nossas.length} ${nossas.length === 1 ? "música" : "músicas"}` : "Marque com 🤍 na trilha";
@@ -2932,6 +2960,16 @@
     const abaixo = ok.filter(n => ordCfg(n) <= ordCfg(nivel));
     return abaixo.length ? abaixo[abaixo.length - 1] : ok[0];
   }
+  // seletores de nível: esconde o que não pode e ajusta o valor para o permitido mais alto abaixo
+  function limitarSelectNiveis(sel, pode) {
+    if (!sel) return;
+    [...sel.options].forEach(o => { const ok = pode(o.value); o.hidden = !ok; o.disabled = !ok; });
+    if (!pode(sel.value)) {
+      const oks = [...sel.options].filter(o => !o.disabled);
+      const abaixo = oks.filter(o => ordCfg(o.value) <= ordCfg(sel.value));
+      if (oks.length) sel.value = (abaixo.length ? abaixo[abaixo.length - 1] : oks[0]).value;
+    }
+  }
   const maisLeve = () => (config.niveis.leve ? "leve" : ORDEM_CFG.find(n => config.niveis[n]) || "leve");
   const niveisDaPartida = lista => { const l = (lista || []).filter(n => config.niveis[n]); return l.length ? l : [maisLeve()]; };
 
@@ -3024,6 +3062,10 @@
     if (typeof desenharEntradaConfig === "function") desenharEntradaConfig();
     aplicar(estado, true, true);
     desenharCasa(estado);
+    desenharDiario();
+    desenharExtras();
+    desenharConquistas();
+    desenharNossas();
   }
 
   // ---------- tela de Configurações (só existe no DOM do aparelho do dono) ----------
@@ -3389,7 +3431,6 @@
     if (!Number.isFinite(e.distanciaManual)) e.distanciaManual = null;
     if (typeof e.playlistSoNossas !== "boolean") e.playlistSoNossas = false;
     if (!e.encerrando || typeof e.encerrando !== "object" || !Array.isArray(e.encerrando.frases) || e.encerrando.frases.length !== 2) e.encerrando = null;
-    if (typeof e.mostrarOusadia !== "boolean") e.mostrarOusadia = true;
     if (!Array.isArray(e.titulos) || e.titulos.length !== 2) e.titulos = [null, null];
     if (!e.avaliacao || !e.carta || e.avaliacao.chave !== e.carta.chave) e.avaliacao = null;
     return e;
@@ -3410,9 +3451,10 @@
   // Nunca acima do mais alto ativo (a descida quando falta prenda fica no sortearPrenda).
   function nivelDaPrenda(n, motivo, pulada) {
     if (pulada && pulada.nivel === "romantico") return "romantico";   // romântica não sobe de nível
+    const niv = niveisDaPartida(n.niveis);                           // só os níveis que a sala tem
     // só o Romântico ligado: a prenda final também é romântica
-    if (!ORDEM_NIVEIS.some(x => n.niveis.includes(x)) && n.niveis.includes("romantico")) return "romantico";
-    const teto = ORDEM_NIVEIS.indexOf(nivelMaisAlto(n.niveis));
+    if (!ORDEM_NIVEIS.some(x => niv.includes(x)) && niv.includes("romantico")) return "romantico";
+    const teto = ORDEM_NIVEIS.indexOf(nivelMaisAlto(niv));
     if (motivo === "final" || !pulada) return ORDEM_NIVEIS[teto];
     const base = Math.max(0, ORDEM_NIVEIS.indexOf(pulada.nivel));
     return ORDEM_NIVEIS[Math.min(base + (pulada.tipo === "desafio" ? 1 : 0), ORDEM_NIVEIS.length - 1, teto)];
@@ -3503,7 +3545,7 @@
       ["Duelos vencidos", p => p.duelos],
       ["Sintonias certeiras", p => p.sintonias],
       ["Missões em dupla", p => p.duplas],
-      ["Reverso", p => p.reverso === false ? "Usado" : "Disponível"],
+      ...(permitido("reverso") ? [["Reverso", p => p.reverso === false ? "Usado" : "Disponível"]] : []),
       ["Pulos grátis de verdade", p => `${p.livresV}/${e.pulosMax}`],
       ["Pulos grátis de desafio", p => `${p.livresD}/${e.pulosMax}`]
     ];
@@ -3532,6 +3574,7 @@
     $("notaAdv").checked = e.notaAdversario;
     $("prendasFofas").checked = e.prendasFofas;
     $("eventos").value = e.eventos;
+    $("eventos").closest("label").hidden = !(souDono && permitido("eventos"));
     $("meta").disabled = $("pulosMax").disabled = $("notaAdv").disabled = $("eventos").disabled = $("prendasFofas").disabled = !zerado;
     $("configDica").textContent = zerado ? "" : "Meta, pulos, eventos, nota e prendas fofas só mudam com o placar zerado (em Nova partida).";
 
@@ -3561,7 +3604,13 @@
 
     $("convite").hidden = completa;
 
-    document.querySelectorAll("#niveis input").forEach(i => { i.checked = e.niveis.includes(i.value); });
+    // chips: só os níveis que a sala tem; com "só o dono", só ele muda
+    const niv = niveisDaPartida(e.niveis);
+    document.querySelectorAll("#niveis input").forEach(i => {
+      i.closest("label").hidden = !permitido("nivel", i.value);
+      i.checked = niv.includes(i.value);
+      i.disabled = config.chipsQuemMuda === "dono" && !souDono;
+    });
 
     const vez = $("vez");
     vez.innerHTML = "";
@@ -3616,6 +3665,8 @@
   }
 
   function desenharExtras() {
+    $("abrirCarta").hidden = !permitido("cartasDeVoces");
+    $("extras").hidden = !permitido("cartasDeVoces");
     const extras = cartas.filter(c => c.sala);
     $("extrasQtd").textContent = extras.length ? `(${extras.length})` : "";
     $("extrasVazio").hidden = extras.length > 0;
@@ -3968,12 +4019,13 @@
   // ---------- eventos especiais ----------
   // Tipo pelos pesos; nível entre os ativos que têm carta daquele tipo; sem carta, tenta outro tipo.
   function sortearEvento(n) {
-    let tipos = PESOS_EVENTO.filter(([t]) => t !== "efeito" || (n.efeitos || []).filter(x => x.dono === n.vez).length < 2);
+    if (!permitido("eventos")) return null;
+    let tipos = PESOS_EVENTO.filter(([t]) => config.eventos.tipos[t] && (t !== "efeito" || (n.efeitos || []).filter(x => x.dono === n.vez).length < 2));
     while (tipos.length) {
       const total = tipos.reduce((s, [, w]) => s + w, 0);
       let r = Math.random() * total, tipo = tipos[tipos.length - 1][0];
       for (const [t, w] of tipos) { if ((r -= w) < 0) { tipo = t; break; } }
-      const niveis = n.niveis.filter(nv => nv !== "romantico" && cartas.some(c => c.tipo === tipo && c.nivel === nv));
+      const niveis = niveisDaPartida(n.niveis).filter(nv => nv !== "romantico" && permitido("eventos", nv) && cartas.some(c => c.tipo === tipo && c.nivel === nv && cartaPermitida(c)));
       if (niveis.length) {
         const carta = sortear(tipo, [niveis[Math.floor(Math.random() * niveis.length)]], n.usados || []);
         if (carta) {
@@ -4291,9 +4343,11 @@
   // ---------- missão secreta da partida ----------
   // Duas missões diferentes, dos níveis ativos (se faltar, de qualquer nível). Cada um vê só a sua.
   function sortearSecretas(n) {
-    const nv = n.niveis.map(x => (x === "romantico" ? "leve" : x));
-    let pool = cartas.filter(c => c.tipo === "missao_secreta" && nv.includes(c.nivel));
-    if (pool.length < 2) pool = cartas.filter(c => c.tipo === "missao_secreta");
+    if (!permitido("missaoSecreta")) return [];
+    const nv = niveisDaPartida(n.niveis).map(x => (x === "romantico" ? "leve" : x));
+    const podem = cartas.filter(c => c.tipo === "missao_secreta" && permitido("missaoSecreta", c.nivel) && cartaPermitida(c));
+    let pool = podem.filter(c => nv.includes(c.nivel));
+    if (pool.length < 2) pool = podem;
     if (pool.length < 2) return [];
     const i = Math.floor(Math.random() * pool.length);
     let j = Math.floor(Math.random() * (pool.length - 1));
@@ -4332,7 +4386,7 @@
   function desenharSecretas(e) {
     const box = $("secretasBox");
     const ms = e.secretas;
-    box.hidden = !e.jogadores[1] || ms.length < 2;
+    box.hidden = !e.jogadores[1] || ms.length < 2 || !permitido("missaoSecreta");
     const lista = $("missoesReveladas");
     lista.textContent = "";
     if (box.hidden) return;
@@ -4461,7 +4515,7 @@
   // O outro resolve com as próprias regras e pontos, e depois a vez continua com ele (joga duas seguidas).
   function podeReverter(e) {
     const c = e && e.carta;
-    return !!(c && e.jogadores[1] && e.vez === eu && !c.evento && !c.reversa && !e.avaliacao && e.vencedor === null
+    return !!(c && permitido("reverso") && e.jogadores[1] && e.vez === eu && !c.evento && !c.reversa && !e.avaliacao && e.vencedor === null
       && (c.tipo === "verdade" || c.tipo === "desafio") && e.placar[e.vez].reverso !== false);
   }
 
@@ -4499,6 +4553,7 @@
     if (!estado || estado.vencedor === null) return;
     gravar(n => {
       n.vez = 1 - n.vencedor;                           // quem perdeu começa
+      n.niveis = [maisLeve()];                          // começa só com o chip mais leve disponível
       n.placar = [placarVazio(0, n.pulosMax), placarVazio(0, n.pulosMax)];
       n.pontos = [0, 0];
       n.vencedor = null;
@@ -4555,7 +4610,10 @@
     falha: "Não deu para gerar agora. Tente de novo."
   };
   async function gerarIdeias(tipo, nivel, tema, extra) {
-    const corpo = { sala: codigo, tipo, nivel: nivel === "romantico" ? "leve" : nivel, tema, quantidade: 3, ...(extra || {}) };
+    // nunca pede à IA acima do nível permitido para ela
+    let permitidoIA = limitarNivel("ia", nivel) || "leve";
+    if (tipo === "pose" && ordCfg(permitidoIA) > ordCfg(nivel)) permitidoIA = nivel;
+    const corpo = { sala: codigo, tipo, nivel: permitidoIA === "romantico" ? "leve" : permitidoIA, tema, quantidade: 3, ...(extra || {}) };
     const tempo = new Promise(res => setTimeout(() => res({ data: { erro: "falha" } }), 20000));
     try {
       const { data, error } = await Promise.race([sb.functions.invoke("gerar-cartas", { body: corpo }), tempo]);
@@ -4570,7 +4628,7 @@
     const api = {
       preparar() {
         pedido++;
-        q("IaBotao").hidden = !(estado && estado.fixa);
+        q("IaBotao").hidden = !(estado && estado.fixa && permitido("ia"));
         q("IaPainel").hidden = true;
         q("IaTema").value = "";
         q("IaStatus").textContent = "";
@@ -4620,6 +4678,8 @@
     if (!estado) return;
     $("formCarta").reset();
     $("midiaCarta").hidden = true;
+    $("temMidia").closest("label").hidden = !permitido("midia");
+    limitarSelectNiveis($("nivelCarta"), v => permitido("cartasDeVoces", v));
     erro("erroCarta", "");
     contarTexto();
     iaCarta.preparar();
@@ -4637,7 +4697,7 @@
       tipo: document.querySelector('input[name="tipoCarta"]:checked').value,
       nivel: $("nivelCarta").value,
       texto: texto.slice(0, 280),
-      midia: $("temMidia").checked ? $("midiaCarta").value : null,
+      midia: $("temMidia").checked && permitido("midia") ? $("midiaCarta").value : null,
       autor: (estado.jogadores[eu] || "").trim().slice(0, 20)
     };
     const btn = $("salvarCarta");
@@ -4667,8 +4727,9 @@
   }
 
   function mudarNiveis() {
-    const sel = [...document.querySelectorAll("#niveis input:checked")].map(i => i.value);
-    gravar(n => { n.niveis = sel.length ? sel : ["leve"]; });
+    if (config.chipsQuemMuda === "dono" && !souDono) return;
+    const sel = [...document.querySelectorAll("#niveis input:checked")].map(i => i.value).filter(v => permitido("nivel", v));
+    gravar(n => { n.niveis = sel.length ? sel : [maisLeve()]; });
   }
 
   // ---------- instalar app (PWA) ----------
@@ -4721,7 +4782,6 @@
     $("sortearPosicao").addEventListener("click", sortearPosicao);
     $("posGuardar").addEventListener("click", guardarCardapio);
     ["posFiltroDif", "posFiltroClima", "posFiltroMarca"].forEach(id => $(id).addEventListener("change", desenharPosicoes));
-    $("mostrarOusadia").addEventListener("change", () => { const v = $("mostrarOusadia").checked; gravar(n => { n.mostrarOusadia = v; }); });
     $("meuTitulo").addEventListener("change", () => { const v = $("meuTitulo").value || null; gravar(n => { n.titulos[eu] = v; }); });
     document.querySelectorAll("#marcas [data-marca]").forEach(b => b.addEventListener("click", () => marcarCarta(estado && estado.carta && estado.carta.id, b.dataset.marca)));
     $("cancelarMomento").addEventListener("click", () => $("dlgMomento").close());
