@@ -405,6 +405,7 @@
     if (fixa) carregarModelos(c);
     humores = []; faixaHumorFechada = false; $("humorNota").value = ""; $("humorNotaBox").hidden = true; $("humorSalvo").textContent = "";
     if (fixa) carregarHumores(c);
+    filtroHist = "tudo"; diasHist = 30;
     tracos = []; pilhaMural = []; muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); esconderConvite(); $("muralLegenda").value = ""; filtroMural = "todos";
     poses = []; carregarPoses(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
@@ -814,6 +815,7 @@
     if (nome === "vPlaylist") desenharNossas();
     if (nome === "vDiarioCasal") { paginasDiario = 1; desenharDiarioCasal(); }
     if (nome === "vPerfil") desenharPerfil(!editandoManual());
+    if (nome === "vHistorico") { diasHist = 30; desenharHistorico(); }
     if (vista !== "vMural" && muralJuntos) sairJuntos();
     if (nome === "vMural") entrarMural();
     window.scrollTo(0, 0);
@@ -1767,6 +1769,133 @@
     $("cartaMural").hidden = !(e && e.fixa && c && c.texto && RE_DESENHO.test(c.texto));
   }
 
+  // ---------- v7: aba Histórico ----------
+  let filtroHist = "tudo", diasHist = 30;
+  const DIAS_SEM = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const diaDe = iso => hojeISO(new Date(iso));
+  function rotuloDia(dia) {
+    const hoje = hojeISO();
+    if (dia === hoje) return "Hoje";
+    if (dia === somarDias(hoje, -1)) return "Ontem";
+    const [a, m, d] = dia.split("-").map(Number), dt = new Date(Date.UTC(a, m - 1, d));
+    return `${DIAS_SEM[dt.getUTCDay()]}, ${d} ${MESES_CURTOS[m - 1]}${a !== Number(hoje.slice(0, 4)) ? " " + a : ""}`;
+  }
+  const horaDe = iso => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Bahia" });
+  function duracao(ms) {
+    const min = Math.max(0, Math.round(ms / 60000));
+    if (min < 1) return "menos de 1 min";
+    if (min < 60) return `${min} min`;
+    const h = Math.floor(min / 60), r = min % 60;
+    return h < 24 ? `${h} h${r ? " " + r + " min" : ""}` : `${Math.round(h / 24)} ${Math.round(h / 24) === 1 ? "dia" : "dias"}`;
+  }
+  const soSozinho = d => itensDe(d).length > 0 && itensDe(d).every(x => x.chave === "sozinho");
+  // tudo que vai para a linha do tempo: { tipo, quando (ISO), dia, el() }
+  function eventosHist() {
+    const ev = [];
+    dados.dengos.forEach(d => { if (d.criada_em) ev.push({ tipo: "dengo", quando: d.criada_em, dia: diaDe(d.criada_em), x: d }); });
+    humores.forEach(h => ev.push({ tipo: "humor", quando: h.atualizado_em || h.dia + "T15:00:00Z", dia: h.dia, x: h }));
+    dados.murais.forEach(m => { if (m.criada_em) ev.push({ tipo: "mural", quando: m.criada_em, dia: diaDe(m.criada_em), x: m }); });
+    partidasSala.forEach(p => { if (p.finalizada_em) ev.push({ tipo: "partida", quando: p.finalizada_em, dia: diaDe(p.finalizada_em), x: p }); });
+    return ev.sort((a, b) => a.quando < b.quando ? 1 : a.quando > b.quando ? -1 : 0);
+  }
+  function itemHist(e) {
+    const li = el("li", "hist-item hist-" + e.tipo), x = e.x;
+    li.appendChild(el("span", "hist-hora", e.tipo === "humor" && !x.atualizado_em ? "" : horaDe(e.quando)));
+    const corpo = el("div", "hist-corpo");
+    if (e.tipo === "dengo") {
+      const quem = nomeDe(x.de), outro = nomeDe(1 - x.de);
+      corpo.appendChild(el("p", "hist-t", `💗 ${quem} pediu dengo`));
+      corpo.appendChild(el("p", "hist-itens", itensDe(x).map(i => `${i.emoji || ""} ${i.titulo || ""}${i.detalhe ? " (" + i.detalhe + ")" : ""}`.trim()).join(" · ")));
+      if (x.mensagem) corpo.appendChild(el("p", "hist-sub", `“${x.mensagem}”`));
+      const tempo = x.respondido_em ? " em " + duracao(new Date(x.respondido_em) - new Date(x.criada_em)) : "";
+      const r = x.status === "indo" ? (soSozinho(x) ? `${outro}: ${x.resposta || "Tô aqui quando precisar 🤍"}` : `${outro} respondeu “Tô indo 💨”${tempo}`)
+        : x.status === "nao_consigo" ? `${outro} não conseguiu${tempo}` : x.status === "cancelado" ? "Cancelado" : "Esperando resposta";
+      corpo.appendChild(el("p", "hist-sub", r + (x.resposta && !soSozinho(x) ? `: “${x.resposta}”` : "")));
+    } else if (e.tipo === "humor") {
+      corpo.appendChild(el("p", "hist-t", `${CARAS[x.valor] || ""} ${nomeDe(x.jogador)} se sentiu ${["", "muito mal", "mal", "mais ou menos", "bem", "muito bem"][x.valor] || ""}`));
+      if (x.nota) corpo.appendChild(el("p", "hist-sub", `“${x.nota}”`));
+    } else if (e.tipo === "mural") {
+      const b = el("button", "hist-mural"); b.type = "button";
+      b.appendChild(miniatura(x, 72));
+      b.setAttribute("aria-label", "Ver o desenho");
+      b.addEventListener("click", () => verMural(x));
+      li.insertBefore(b, null);
+      corpo.appendChild(el("p", "hist-t", x.para == null ? "✏️ Desenho feito juntos" : `✏️ ${nomeDe(x.de)} desenhou para ${nomeDe(x.para)}`));
+      if (x.legenda) corpo.appendChild(el("p", "hist-sub", x.legenda));
+    } else {
+      const j = x.jogadores || [], pts = (x.placar || []).map(p => p && p.pontos);
+      corpo.appendChild(el("p", "hist-t", `🎲 Partida: ${j[0] || ""} ${pts[0] ?? ""} × ${pts[1] ?? ""} ${j[1] || ""}`));
+      if (j[x.vencedor]) corpo.appendChild(el("p", "hist-sub", `Venceu ${j[x.vencedor]}`));
+    }
+    li.insertBefore(corpo, li.children[1] || null);
+    return li;
+  }
+  function desenharLinhaTempo() {
+    document.querySelectorAll("#histFiltro [data-f]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === filtroHist)));
+    const todos = eventosHist().filter(e => filtroHist === "tudo" || e.tipo === filtroHist);
+    const corte = somarDias(hojeISO(), -(diasHist - 1));
+    const vis = todos.filter(e => e.dia >= corte);
+    const box = $("linhaTempo"); box.textContent = "";
+    let dia = null, ul = null;
+    vis.forEach(e => {
+      if (e.dia !== dia) {
+        dia = e.dia;
+        box.appendChild(el("h3", "hist-dia", rotuloDia(dia)));
+        ul = el("ul", "hist-lista"); box.appendChild(ul);
+      }
+      ul.appendChild(itemHist(e));
+    });
+    $("linhaVazia").hidden = !!vis.length;
+    $("linhaVazia").textContent = todos.length ? `Nada nos últimos ${diasHist} dias.` : "Nada por aqui ainda.";
+    $("histMais").hidden = !todos.some(e => e.dia < corte);
+  }
+  // resumo do mês (sem ranking nem comparação entre os dois)
+  function desenharResumoMes() {
+    const mes = hojeISO().slice(0, 7), doMes = iso => iso && diaDe(iso).slice(0, 7) === mes;
+    const m = Number(mes.slice(5));
+    $("histMesTitulo").textContent = `Resumo de ${["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"][m - 1]}`;
+    const dg = dados.dengos.filter(d => doMes(d.criada_em) && d.status !== "cancelado" && !soSozinho(d));
+    const indo = dg.filter(d => d.status === "indo").length;
+    $("histMesDengos").textContent = `Dengos pedidos: ${dg.length} · atendidos com “Tô indo”: ${indo}`;
+    $("histMesMural").textContent = `Desenhos trocados: ${dados.murais.filter(x => doMes(x.criada_em)).length}`;
+    $("histMesPartidas").textContent = `Partidas: ${partidasSala.filter(p => doMes(p.finalizada_em)).length}`;
+  }
+  // gráfico: últimos 7 dias, uma linha por pessoa na cor do avatar; dia sem registro fica em branco
+  function desenharHumorSemana() {
+    const svg = $("humorSemana"); svg.textContent = "";
+    const hoje = hojeISO(), dias = [...Array(7)].map((_, i) => somarDias(hoje, i - 6));
+    const X = i => 30 + i * 46, Y = v => 125 - (v - 1) * 27;
+    [1, 2, 3, 4, 5].forEach(v => {
+      svg.appendChild(svgEl("line", { x1: 22, x2: 312, y1: Y(v), y2: Y(v), class: "hs-grade" }));
+      svg.appendChild(svgEl("text", { x: 2, y: Y(v) + 5, class: "hs-cara" }, CARAS[v]));
+    });
+    dias.forEach((d, i) => {
+      const [a, m, dd] = d.split("-").map(Number);
+      svg.appendChild(svgEl("text", { x: X(i), y: 146, class: "hs-dia", "text-anchor": "middle" }, d === hoje ? "Hoje" : DIAS_SEM[new Date(Date.UTC(a, m - 1, dd)).getUTCDay()]));
+    });
+    const leg = $("humorLegenda"); leg.textContent = "";
+    [0, 1].forEach(j => {
+      if (!nomeDe(j)) return;
+      const cor = avatarDe(j).cor, desloc = j === 0 ? -3 : 3;
+      const vals = dias.map(d => { const h = humorDe(j, d); return h ? h.valor : null; });
+      vals.forEach((v, i) => {
+        if (v === null) return;
+        if (i > 0 && vals[i - 1] !== null) svg.appendChild(svgEl("line", { x1: X(i - 1) + desloc, y1: Y(vals[i - 1]), x2: X(i) + desloc, y2: Y(v), stroke: cor, "stroke-width": 3, "stroke-linecap": "round" }));
+      });
+      vals.forEach((v, i) => { if (v !== null) svg.appendChild(svgEl("circle", { cx: X(i) + desloc, cy: Y(v), r: 5, fill: cor, class: "hs-ponto", "data-j": j, "data-dia": dias[i] })); });
+      const s = el("span", "hs-leg"); const bola = el("i"); bola.style.background = cor;
+      s.append(bola, document.createTextNode(nomeDe(j)));
+      leg.appendChild(s);
+    });
+  }
+  function desenharHistorico() {
+    if (vista !== "vHistorico" || !estado || !estado.fixa) return;
+    desenharResumoMes();
+    desenharHumorSemana();
+    desenharLinhaTempo();
+  }
+
   // abre o Manual do outro numa parte (ex.: "O que me acalma")
   function abrirManualOutro(campo) {
     mostrarVista("vPerfil");
@@ -1859,7 +1988,10 @@
   redesenhar("dengos", desenharDengo);
   manualMudouFns.push(desenharDengo);
   manualMudouFns.push(() => desenharHumor());
-  redesenhar("murais", () => { desenharMuralInicio(); desenharGaleria(); });
+  redesenhar("murais", () => { desenharMuralInicio(); desenharGaleria(); desenharHistorico(); });
+  redesenhar("dengos", desenharHistorico);
+  humorMudouFns.push(desenharHistorico);
+  manualMudouFns.push(desenharHistorico);
 
   // ---------- guia de posições (só texto, sem imagens) ----------
   // posicoes: o guia (só leitura); marcasPos: marcas do casal nesta sala { posicao_id, marca, link }
@@ -4429,6 +4561,7 @@
       li.append(data_, res);
       ul.appendChild(li);
     });
+    desenharHistorico();
   }
 
   function sair() {
@@ -5916,6 +6049,8 @@
     $("camera").addEventListener("change", mudarCamera);
     $("navRecolher").addEventListener("click", () => recolherNav(true));
     $("dengoPedir").addEventListener("click", botaoPedir);
+    document.querySelectorAll("#histFiltro [data-f]").forEach(b => b.addEventListener("click", () => { filtroHist = b.dataset.f; desenharLinhaTempo(); }));
+    $("histMais").addEventListener("click", () => { diasHist += 30; desenharLinhaTempo(); });
     const cv = $("muralCanvas");
     cv.addEventListener("pointerdown", comecarTraco);
     cv.addEventListener("pointermove", moverTraco);

@@ -484,6 +484,28 @@
       </section>
       <section class="casa-vista aba-vista" id="vHistorico" hidden>
         <h2>🕘 Histórico</h2>
+        <div class="hist-mes" id="histMes">
+          <p class="hist-mes-titulo" id="histMesTitulo"></p>
+          <p id="histMesDengos"></p>
+          <p id="histMesMural"></p>
+          <p id="histMesPartidas"></p>
+        </div>
+        <div class="hist-semana">
+          <p class="hist-mes-titulo">Humor da semana</p>
+          <svg class="humor-svg" id="humorSemana" viewBox="0 0 320 150" role="img" aria-label="Humor dos dois nos últimos 7 dias"></svg>
+          <p class="hist-legenda" id="humorLegenda"></p>
+        </div>
+        <div class="filtro" id="histFiltro" role="group" aria-label="Filtro do histórico">
+          <button type="button" data-f="tudo" aria-pressed="true">Tudo</button>
+          <button type="button" data-f="dengo" aria-pressed="false">Dengos</button>
+          <button type="button" data-f="humor" aria-pressed="false">Humor</button>
+          <button type="button" data-f="mural" aria-pressed="false">Mural</button>
+          <button type="button" data-f="partida" aria-pressed="false">Partidas</button>
+        </div>
+        <p class="extras-sub" id="linhaVazia" hidden>Nada por aqui ainda.</p>
+        <div class="hist-linha" id="linhaTempo"></div>
+        <button class="secondary" id="histMais" type="button" hidden>Ver mais 30 dias</button>
+        <h3 class="casa-h3">Placar geral</h3>
         <div id="lugarHistorico"></div>
       </section>
       <section class="casa-vista aba-vista" id="vPerfil" hidden>
