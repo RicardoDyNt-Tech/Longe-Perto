@@ -570,3 +570,4 @@ input[type=number]{width:100%; font:inherit; color:var(--ink); background:var(--
 .cfg-dentro{margin:0 0 6px 30px; padding-left:10px; border-left:2px solid var(--line)}
 .cfg-climas{display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px}
 .cfg-climas > span{font-weight:600; width:100%}
+.noite .noite-cancelar{position:absolute; top:14px; left:20px; width:auto; color:#c9c4ea}

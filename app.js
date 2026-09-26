@@ -2737,6 +2737,7 @@
   // estado.encerrando = { id, por, frases: [null | texto | false (pulou)], frase (boa noite, a mesma nos dois) }
   function encerrarNoite() {
     if (!estado || !estado.jogadores[1] || estado.encerrando) return;
+    if (!confirm("Encerrar a noite? A tela abre para os dois.")) return;
     const pool = cartas.filter(c => c.tipo === "boa_noite");
     gravar(n => {
       if (n.encerrando) return;
@@ -2764,6 +2765,17 @@
   function gravarFraseNoite(txt, id) {
     gravarFresco(n => { if (n.encerrando && n.encerrando.id === id && n.encerrando.frases[eu] === null) n.encerrando.frases[eu] = txt; });
   }
+  // tocou sem querer: qualquer um dos dois cancela antes das frases ficarem prontas (o placar não muda)
+  function cancelarNoite() {
+    const enc = estado && estado.encerrando;
+    if (!enc) return;
+    const id = enc.id;
+    gravar(n => {
+      if (!n.encerrando || n.encerrando.id !== id) return;
+      n.encerrando = null;
+      n.aviso = novoAviso(`${n.jogadores[eu]} cancelou o encerramento da noite.`);
+    });
+  }
   function boaNoite() {
     if (!estado || !estado.encerrando) return;
     gravar(n => { n.encerrando = null; });
@@ -2776,6 +2788,7 @@
     if (!enc) { noiteAtual = null; return; }
     if (noiteAtual !== enc.id) { noiteAtual = enc.id; $("noiteFrase").value = ""; erro("erroNoite", ""); }
     const outro = 1 - eu, prontos = enc.frases.every(f => f !== null);
+    $("noiteCancelar").hidden = prontos;
     $("noiteEscrever").hidden = enc.frases[eu] !== null;
     $("noiteEsperando").hidden = enc.frases[eu] === null || prontos;
     $("noiteEsperando").textContent = `Esperando ${nomeDe(outro)}…`;
@@ -4814,6 +4827,7 @@
     $("noiteEnviar").addEventListener("click", () => enviarFraseNoite(false));
     $("noitePular").addEventListener("click", () => enviarFraseNoite(true));
     $("noiteDormir").addEventListener("click", boaNoite);
+    $("noiteCancelar").addEventListener("click", cancelarNoite);
     $("pdResponder").addEventListener("click", responderPergunta);
     $("pdEditar").addEventListener("click", () => { editandoResposta = true; $("pdResposta").value = ""; desenharPergunta(); $("pdResposta").focus(); });
     $("diarioMais").addEventListener("click", () => { paginasDiario++; desenharDiarioCasal(); });
