@@ -1065,6 +1065,7 @@
   }
 
   function desenharDengo() {
+    desenharAlertaInicio();
     if (!estado || !estado.fixa) return;
     const outro = nomeDe(1 - eu) || "seu amor";
     // pedido pendente para mim (topo do Início)
@@ -1588,6 +1589,18 @@
     const l = loteMural; loteMural = [];
     l.forEach(x => mandarMural({ t: "pts", ...x }));
   }
+  function mandarEstadoMural() {
+    const partes = [[]];
+    let tam = 0;
+    tracos.forEach(t => {
+      const n = t.pts.length * 12 + 60;
+      if (tam + n > 60000 && partes[partes.length - 1].length) { partes.push([]); tam = 0; }
+      partes[partes.length - 1].push({ id: t.id, de: t.de, cor: t.cor, esp: t.esp, pts: t.pts });
+      tam += n;
+    });
+    partes.forEach((ts, i) => mandarMural({ t: "estado", parte: i, total: partes.length, tracos: ts, fundo: muralFundo }));
+  }
+  let recebendoEstado = false;
   function mandarMural(p) {
     try { canal && canal.send({ type: "broadcast", event: "mural", payload: { ...p, jogador: eu } }); } catch (err) {}
   }
@@ -1618,7 +1631,7 @@
     if (!p || p.jogador !== 1 - eu || !estado || !estado.fixa) return;
     const outro = nomeDe(1 - eu);
     if (p.t === "convite") {
-      if (muralJuntos) { muralOutroNoJuntos = true; mandarMural({ t: "entrou" }); mandarMural({ t: "estado", tracos, fundo: muralFundo }); return desenharMuralEstado(); }
+      if (muralJuntos) { muralOutroNoJuntos = true; mandarMural({ t: "entrou" }); mandarEstadoMural(); return desenharMuralEstado(); }
       conviteMural = Date.now();
       $("muralConviteTxt").textContent = `${outro} quer desenhar junto com você ✏️`;
       $("muralConvite").hidden = false;
@@ -1633,12 +1646,15 @@
     if (!muralJuntos) return;
     if (p.t === "entrou") {
       muralOutroNoJuntos = true;
-      mandarMural({ t: "estado", tracos, fundo: muralFundo });
+      mandarEstadoMural();
       return desenharMuralEstado();
     }
     if (p.t === "estado") {
       muralOutroNoJuntos = true;
-      if (Array.isArray(p.tracos) && !tracos.length) tracos = p.tracos.filter(tracoValido);
+      // a primeira parte só vale se o meu quadro está vazio; as seguintes completam
+      if (!p.parte) recebendoEstado = !tracos.length;
+      if (recebendoEstado && Array.isArray(p.tracos)) tracos.push(...p.tracos.filter(tracoValido).map(t => ({ ...t, id: typeof t.id === "string" ? t.id : undefined })));
+      if (!(p.parte + 1 < p.total)) recebendoEstado = false;
       if (MURAL_FUNDOS.includes(p.fundo)) muralFundo = p.fundo;
       redesenharMural(); desenharMuralEstado(); desenharFerramentas();
       return;
@@ -1748,7 +1764,12 @@
     $("dlgMuralVer").close();
   }
   // Início: o último desenho recebido (selo se ainda não visto)
+  function desenharAlertaInicio() {
+    const tem = !!(estado && estado.fixa) && (!!pendenteParaMim() || dados.murais.some(m => m.para === eu && !m.visto_em));
+    $("abaCasa").classList.toggle("alerta", tem);
+  }
   function desenharMuralInicio() {
+    desenharAlertaInicio();
     if (!estado || !estado.fixa) return;
     const outro = nomeDe(1 - eu) || "o outro";
     const recebidos = dados.murais.filter(m => m.para === eu).sort((a, b) => a.criada_em < b.criada_em ? 1 : -1);
