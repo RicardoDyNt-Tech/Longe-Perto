@@ -622,6 +622,7 @@
       <p class="kind" id="kind"></p>
       <p class="level" id="level"></p>
       <p class="text" id="text"></p>
+      <ol class="seq-etapas" id="seqEtapas" hidden></ol>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
       <button class="secondary carta-mural" id="cartaMural" type="button" hidden>✏️ Desenhar no mural</button>
       <div class="pos-carta" id="poseCarta" hidden>
@@ -786,6 +787,11 @@
             <button type="button" data-v="nao">Não deu</button>
           </div>
           <p class="wait" id="duplaStatus"></p>
+        </div>
+        <div class="evento-acoes seq-acoes" id="seqAcoes" hidden>
+          <button class="done" id="seqFeito" type="button">Feito ✓</button>
+          <p class="wait" id="seqStatus"></p>
+          <button class="linkbtn" id="seqParar" type="button">Parar aqui</button>
         </div>
         <div class="evento-acoes" id="efeitoAcoes" hidden>
           <button class="done" id="efeitoAceitar" type="button">Aceitar</button>

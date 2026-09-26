@@ -10,13 +10,14 @@
   const LEVEL_NAMES = { romantico: "Romântico", leve: "Leve", criativo: "Criativo", picante: "Picante", pesado: "Pesado +18" };
   const TIPO_NOMES = {
     verdade: "Verdade", desafio: "Desafio", prenda: "Prenda",
-    efeito: "Efeito contínuo", duelo: "Duelo", sintonia: "Sintonia", missao_dupla: "Missão em dupla", missao_secreta: "Missão secreta"
+    efeito: "Efeito contínuo", duelo: "Duelo", sintonia: "Sintonia", missao_dupla: "Missão em dupla", missao_secreta: "Missão secreta",
+    sequencia: "Carta em etapas"
   };
   // Eventos especiais: chance de um giro virar evento e peso de cada tipo
   const CHANCE_EVENTO = { desligado: 0, raro: 0.10, normal: 0.20, frequente: 0.35 };
-  const PESOS_EVENTO = [["efeito", 35], ["duelo", 30], ["sintonia", 20], ["missao_dupla", 15]];
-  const PARA_OS_DOIS = ["duelo", "missao_dupla"];
-  const OS_DOIS_JOGAM = ["duelo", "missao_dupla", "sintonia"];   // eventos em que os dois agem ao mesmo tempo
+  const PESOS_EVENTO = [["efeito", 30], ["duelo", 25], ["sintonia", 17], ["missao_dupla", 13], ["sequencia", 15]];
+  const PARA_OS_DOIS = ["duelo", "missao_dupla", "sequencia"];
+  const OS_DOIS_JOGAM = ["duelo", "missao_dupla", "sintonia", "sequencia"];   // eventos em que os dois agem ao mesmo tempo
   const PONTOS_EFEITO = { leve: 1, criativo: 1, picante: 2, pesado: 3 };   // quem aguenta o efeito até o fim
   const MAX_EFEITOS = 2;                                                     // por pessoa
   const PONTOS_MISSAO = { leve: 2, criativo: 2, picante: 3, pesado: 4 };    // missão secreta confirmada
@@ -128,6 +129,7 @@
     if (p.autor) carta.autor = p.autor;
     if (p.rodadas) carta.rodadas = p.rodadas;
     if (p.segundos) carta.segundos = p.segundos;
+    if (p.tipo === "sequencia") carta.etapas = etapasDe(p);
     return carta;
   }
 
@@ -228,7 +230,7 @@
     let data = [], error = null;
     for (let de = 0; ; de += 1000) {
       const r = await sb.from("cartas")
-        .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos")
+        .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos, etapas")
         .or("sala.is.null,sala.eq." + c)
         .eq("ativa", true)
         .order("id", { ascending: true })
@@ -2947,7 +2949,7 @@
 
   // ---------- álbum de momentos ----------
   // estado.historico: as últimas 50 cartas resolvidas da partida (zera em "Nova partida"); só em sala fixa
-  const CONTAM = ["verdades", "desafios", "prendas", "duelos", "sintonias", "duplas", "estrelas"];
+  const CONTAM = ["verdades", "desafios", "prendas", "duelos", "sintonias", "duplas", "estrelas", "sequencias"];
   function guardarNoHistorico(n, antes) {
     const c = antes.carta;
     if (!c || !c.texto) return;
@@ -4081,7 +4083,7 @@
     posicoes: { ativo: false, nivelMax: "picante", climas: ["romantica"], dificuldadeMax: "facil" },
     poses: { ativo: false, nivelMax: "leve", video: false },
     ia: { ativo: false, nivelMax: "leve", poses: false },
-    eventos: { ativo: false, nivelMax: "leve", tipos: { efeito: true, duelo: true, sintonia: true, missao_dupla: true } },
+    eventos: { ativo: false, nivelMax: "leve", tipos: { efeito: true, duelo: true, sintonia: true, missao_dupla: true, sequencia: true } },
     missaoSecreta: { ativo: false, nivelMax: "leve" },
     reverso: { ativo: true },
     trilha: { ativo: true, nivelMax: "leve" },
@@ -4138,6 +4140,11 @@
     if (!c || !permitido("nivel", c.nivel)) return false;
     if (c.midia && !permitido("midia")) return false;
     if (c.sala && !permitido("cartasDeVoces", c.nivel)) return false;
+    if (c.tipo === "sequencia") {
+      const et = etapasDe(c);
+      if (!et) return false;
+      if (et.some(x => RE_ENVIO.test(x.texto)) && !permitido("midia")) return false;
+    }
     return true;
   }
   // o nível permitido mais alto até `nivel` (ou o mais leve permitido, se nenhum abaixo)
@@ -4642,6 +4649,14 @@
     if (!e.duelo || !e.carta || e.duelo.chave !== e.carta.chave) e.duelo = null;
     if (!e.sintonia || !e.carta || e.sintonia.chave !== e.carta.chave) e.sintonia = null;
     if (!e.dupla || !e.carta || e.dupla.chave !== e.carta.chave) e.dupla = null;
+    // v8: carta em etapas na mesa -> progresso; sem ela, nada
+    if (e.carta && e.carta.tipo === "sequencia" && Array.isArray(e.carta.etapas)) {
+      const s = e.sequencia;
+      if (!s || s.chave !== e.carta.chave || !(s.etapa >= 0) || s.etapa >= e.carta.etapas.length)
+        e.sequencia = { chave: e.carta.chave, cartaId: e.carta.id || e.carta.chave, etapa: 0, feitos: [false, false], pontos: [0, 0] };
+      if (!Array.isArray(e.sequencia.feitos) || e.sequencia.feitos.length !== 2) e.sequencia.feitos = [false, false];
+      if (!Array.isArray(e.sequencia.pontos) || e.sequencia.pontos.length !== 2) e.sequencia.pontos = [0, 0];
+    } else e.sequencia = null;
     if (!Array.isArray(e.secretas)) e.secretas = [];
     if (!LEVEL_NAMES[e.nivelSemana]) e.nivelSemana = "leve";
     if (!Array.isArray(e.obsPedida) || e.obsPedida.length !== 2) e.obsPedida = [null, null];
@@ -4970,6 +4985,7 @@
     desenharDuelo(estado);
     desenharSintonia(estado);
     desenharDupla(estado);
+    desenharSequencia(estado);
     // Nota do adversário: quem não cumpriu dá as estrelas
     $("avaliar").hidden = !completa || minhaVez || !avaliando;
     if (c && !evento && c.tipo !== "prenda") {
@@ -5003,12 +5019,13 @@
     desenharPosCarta(e);
     desenharPoseCarta(e);
     $("selo").hidden = !c.evento;
-    $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "⚡ Evento especial · 🤝 Missão em dupla" : "⚡ Evento especial";
+    $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "⚡ Evento especial · 🤝 Missão em dupla" : c.tipo === "sequencia" ? "⚡ Evento especial · 🔗 Em etapas" : "⚡ Evento especial";
     $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
       : c.motivo === "duelo" ? "Prenda por perder o duelo"
       : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
       : ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
       : c.motivo === "final" ? "Prenda final"
+      : c.motivo === "sequencia" ? "Prenda por parar a carta em etapas"
       : c.surpresa ? `🎲 Desafio surpresa de ${e.jogadores[c.surpresaDe] || ""}`
       : c.reversa ? `🔄 Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
       : TIPO_NOMES[c.tipo] || c.tipo;
@@ -5016,6 +5033,7 @@
       + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome
       + (c.tipo === "efeito" && c.rodadas ? ` · dura ${c.rodadas} ${c.rodadas === 1 ? "rodada" : "rodadas"}` : "");
     $("text").textContent = c.texto;
+    desenharEtapas(e);
     $("midia").hidden = !c.midia;
     $("wa").href = "https://wa.me/?text=" + encodeURIComponent(`${$("kind").textContent} para ${nome}: ${c.texto}`);
   }
@@ -5052,7 +5070,7 @@
     $("timerVivo").hidden = !t;
     $("timerParado").hidden = !!t;
     if (!t && temCarta) {
-      const s = c.segundos || tempoDaCarta(c.texto);
+      const s = c.segundos || tempoDaCarta(c.tipo === "sequencia" && e.sequencia ? (c.etapas[e.sequencia.etapa] || {}).texto : c.texto);
       $("timerIniciar").hidden = !s;
       $("timerAbrir").hidden = !!s;
       if (s) { $("timerIniciar").textContent = `Iniciar ${rotuloTempo(s)}`; $("timerIniciar").dataset.seg = s; }
@@ -5253,7 +5271,7 @@
       const total = tipos.reduce((s, [, w]) => s + w, 0);
       let r = Math.random() * total, tipo = tipos[tipos.length - 1][0];
       for (const [t, w] of tipos) { if ((r -= w) < 0) { tipo = t; break; } }
-      const niveis = niveisDaPartida(n.niveis).filter(nv => nv !== "romantico" && permitido("eventos", nv) && cartas.some(c => c.tipo === tipo && c.nivel === nv && cartaPermitida(c)));
+      const niveis = niveisDaPartida(n.niveis).filter(nv => (nv !== "romantico" || tipo === "sequencia") && permitido("eventos", nv) && cartas.some(c => c.tipo === tipo && c.nivel === nv && cartaPermitida(c)));
       if (niveis.length) {
         const carta = sortear(tipo, [niveis[Math.floor(Math.random() * niveis.length)]], n.usados || []);
         if (carta) {
@@ -5566,6 +5584,117 @@
     const outro = e.jogadores[1 - eu];
     $("duplaStatus").textContent = meu === null ? (dele === null ? "Quando acabarem, os dois votam." : `${outro} já votou. Falta você.`)
       : dele === null ? `Você votou "${meu === "sim" ? "Conseguimos" : "Não deu"}". Esperando ${outro}…` : "";
+  }
+
+  // ---------- v8: cartas com continuação (2 ou 3 etapas) ----------
+  EVENTOS_TRATADOS.add("sequencia");
+  const RE_ENVIO = /\b(mande|envie|grave)\b/i;            // etapa que pede foto, vídeo ou áudio
+  const QUEM_ETAPA = ["vez", "outro", "dois"];
+  function etapasDe(c) {
+    const et = c && c.etapas;
+    if (!Array.isArray(et) || et.length < 2 || et.length > 3) return null;
+    const ok = et.every(x => x && QUEM_ETAPA.includes(x.quem) && typeof x.texto === "string" && x.texto.trim());
+    return ok ? et.map(x => ({ quem: x.quem, texto: x.texto })) : null;
+  }
+  const girouDe = (n, c) => (c.de === 0 || c.de === 1 ? c.de : n.vez);
+  // quem faz a etapa: 0, 1 ou "dois"
+  const quemFaz = (girou, et) => (et.quem === "dois" ? "dois" : et.quem === "vez" ? girou : 1 - girou);
+  function rotuloQuem(e, q) {
+    return q === "dois" ? "Os dois juntos" : q === eu ? "Sua vez" : `Vez de ${e.jogadores[q] || ""}`;
+  }
+  function desenharEtapas(e) {
+    const c = e.carta, ol = $("seqEtapas");
+    const seq = c && c.tipo === "sequencia" && e.sequencia && Array.isArray(c.etapas);
+    ol.hidden = !seq;
+    if (!seq) return;
+    ol.textContent = "";
+    const s = e.sequencia, girou = girouDe(e, c);
+    c.etapas.forEach((et, i) => {
+      const li = el("li", "seq-etapa" + (i < s.etapa ? " feita" : i === s.etapa ? " atual" : " oculta"));
+      const q = quemFaz(girou, et);
+      if (i > s.etapa) { li.appendChild(el("span", "seq-quem", `Etapa ${i + 1} · ???`)); ol.appendChild(li); return; }
+      li.appendChild(el("span", "seq-quem", `${i < s.etapa ? "✓ " : ""}Etapa ${i + 1} · ${rotuloQuem(e, q)}`));
+      li.appendChild(el("span", "seq-texto", et.texto));
+      ol.appendChild(li);
+    });
+  }
+  function desenharSequencia(e) {
+    const c = e.carta;
+    const ativo = !!(c && c.tipo === "sequencia" && e.sequencia && e.jogadores[1] && Array.isArray(c.etapas));
+    $("seqAcoes").hidden = !ativo;
+    if (!ativo) return;
+    const s = e.sequencia, et = c.etapas[s.etapa], q = quemFaz(girouDe(e, c), et);
+    const minha = q === "dois" ? !s.feitos[eu] : q === eu;
+    $("seqFeito").hidden = !minha;
+    const outro = e.jogadores[1 - eu];
+    $("seqStatus").textContent = q === "dois"
+      ? (s.feitos[eu] ? `Você já fez. Esperando ${outro}…` : s.feitos[1 - eu] ? `${outro} já fez. Falta você.` : "Os dois fazem esta etapa e tocam em “Feito”.")
+      : q === eu ? "" : `Esperando ${e.jogadores[q]} fazer a etapa ${s.etapa + 1}.`;
+  }
+  function feitoEtapa() {
+    const c = estado && estado.carta, s = estado && estado.sequencia;
+    if (!c || c.tipo !== "sequencia" || !s) return;
+    const chave = c.chave, etapa = s.etapa, q = quemFaz(girouDe(estado, c), c.etapas[etapa]);
+    if (q === "dois") {
+      // os dois tocam ao mesmo tempo: a jogada fica pendente até aparecer no estado
+      pendente("seq", e => !e.carta || e.carta.chave !== chave || !e.sequencia || e.sequencia.etapa !== etapa,
+        e => !!(e.sequencia && e.sequencia.feitos[eu]), () => gravarEtapa(chave, etapa));
+    }
+    gravarEtapa(chave, etapa);
+  }
+  function gravarEtapa(chave, etapa) {
+    gravarFresco(n => {
+      const c = n.carta, s = n.sequencia;
+      if (!c || c.tipo !== "sequencia" || c.chave !== chave || !s || s.etapa !== etapa) return;
+      const girou = girouDe(n, c), q = quemFaz(girou, c.etapas[etapa]);
+      if (q === "dois") {
+        if (s.feitos[eu]) return;
+        s.feitos[eu] = true;
+        if (!s.feitos[1 - eu]) return;
+        s.pontos[0]++; s.pontos[1]++;
+      } else {
+        if (q !== eu) return;
+        s.pontos[q]++;
+      }
+      s.etapa++;
+      s.feitos = [false, false];
+      if (s.etapa < c.etapas.length) return;
+      // terminou: +1 por etapa feita e +1 de bônus para os dois
+      n.placar.forEach((p, i) => { p.pontos += s.pontos[i] + 1; p.sequencias = (p.sequencias || 0) + 1; });
+      n.pontos = n.placar.map(x => x.pontos);
+      n.aviso = novoAviso(`Carta em etapas completa! ${n.jogadores[0]} +${s.pontos[0] + 1}, ${n.jogadores[1]} +${s.pontos[1] + 1}`);
+      n.carta = null;
+      n.sequencia = null;
+      n.vez = 1 - girou;
+      conferirMeta(n);
+    });
+  }
+  // "Parar aqui": ficam os pontos das etapas feitas; quem parou paga uma prenda do nível da carta
+  function pararSequencia() {
+    const c = estado && estado.carta;
+    if (!c || c.tipo !== "sequencia" || !estado.sequencia) return;
+    if (!confirm("Parar a carta aqui? Você paga uma prenda.")) return;
+    const chave = c.chave;
+    gravarFresco(n => {
+      const c2 = n.carta, s = n.sequencia;
+      if (!c2 || c2.chave !== chave || !s) return;
+      const girou = girouDe(n, c2);
+      n.placar.forEach((p, i) => { p.pontos += s.pontos[i]; });
+      n.pontos = n.placar.map(x => x.pontos);
+      n.sequencia = null;
+      n.carta = null;
+      n.vez = 1 - girou;
+      if (conferirMeta(n)) return;
+      const prenda = sortearPrenda(c2.nivel, n.usados || [], n);
+      n.aviso = novoAviso(`${n.jogadores[eu]} parou a carta em etapas.`);
+      if (!prenda) return;
+      registrarUso(n, prenda);
+      prenda.motivo = "sequencia";                     // sem devolver pulos
+      prenda.proxVez = 1 - girou;                      // resolvida a prenda, a vez segue a partir de quem girou
+      prenda.novaVez = true;
+      n.vez = eu;
+      n.carta = prenda;
+    });
   }
 
   // ---------- missão secreta da partida ----------
@@ -6070,6 +6199,8 @@
     $("camera").addEventListener("change", mudarCamera);
     $("navRecolher").addEventListener("click", () => recolherNav(true));
     $("dengoPedir").addEventListener("click", botaoPedir);
+    $("seqFeito").addEventListener("click", feitoEtapa);
+    $("seqParar").addEventListener("click", pararSequencia);
     document.querySelectorAll("#histFiltro [data-f]").forEach(b => b.addEventListener("click", () => { filtroHist = b.dataset.f; desenharLinhaTempo(); }));
     $("histMais").addEventListener("click", () => { diasHist += 30; desenharLinhaTempo(); });
     const cv = $("muralCanvas");
