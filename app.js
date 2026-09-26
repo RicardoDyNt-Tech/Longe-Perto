@@ -2955,7 +2955,7 @@
     conferirDono(c);
   }
   function aplicarLinhaConfig(row) {
-    config = mesclarConfig(row && row.config);
+    if (!(timerSalvarCfg || salvandoCfg)) config = mesclarConfig(row && row.config);
     temDono = !!row && (row.dono === 0 || row.dono === 1);
     donoIndice = temDono ? row.dono : null;
     configPronta = true;
@@ -3024,6 +3024,227 @@
     if (typeof desenharEntradaConfig === "function") desenharEntradaConfig();
     aplicar(estado, true, true);
     desenharCasa(estado);
+  }
+
+  // ---------- tela de Configurações (só existe no DOM do aparelho do dono) ----------
+  let timerSalvarCfg = null, salvandoCfg = 0, statusCfg = "", avisoNiveisCfg = "";
+  // entradas: "⚙️ Configurações" no menu da sala e um card na Casa, criados só para o dono
+  function desenharEntradaConfig() {
+    const menu = document.querySelector(".ajustes");
+    let bm = $("abrirConfigMenu"), bc = $("cardConfig");
+    if (souDono) {
+      if (!bm && menu) {
+        bm = el("button", "linkbtn", "⚙️ Configurações"); bm.id = "abrirConfigMenu"; bm.type = "button";
+        bm.addEventListener("click", abrirConfig);
+        menu.insertBefore(bm, $("som").nextSibling);
+      }
+      if (!bc) {
+        bc = el("button", "casa-card"); bc.id = "cardConfig"; bc.type = "button";
+        bc.append(el("span", "ic", "⚙️"), el("b", "", "Configurações"), el("span", "sub", "Só você vê"));
+        bc.addEventListener("click", abrirConfig);
+        $("casaGrade").appendChild(bc);
+      }
+    } else {
+      if (bm) bm.remove();
+      if (bc) bc.remove();
+      const d = $("dlgConfig");
+      if (d) { d.close(); d.remove(); }
+    }
+  }
+  function abrirConfig() {
+    if (!souDono) return;
+    let d = $("dlgConfig");
+    if (!d) {
+      d = el("dialog", "dlg-posicoes dlg-config"); d.id = "dlgConfig";
+      d.setAttribute("aria-label", "Configurações da sala");
+      d.addEventListener("close", () => d.remove());
+      document.body.appendChild(d);
+    }
+    statusCfg = "";
+    desenharTelaConfig();
+    if (!d.open) d.showModal();
+  }
+  // cada mudança: aplica as regras, redesenha e salva a config inteira (juntando toques em 500 ms)
+  const NIVEL_INICIAL_MODO = { posicoes: "picante" };
+  function mudarConfig(fn) {
+    if (!souDono) return;
+    const novo = structuredClone(config);
+    fn(novo);
+    config = mesclarConfig(novo);
+    statusCfg = "Salvando…";
+    avisoNiveisCfg = "";
+    clearTimeout(timerSalvarCfg);
+    timerSalvarCfg = setTimeout(salvarConfig, 500);
+    redesenharConfig();
+    desenharTelaConfig();
+  }
+  function ligarModo(cfg, recurso, ligar) {
+    const m = cfg[recurso];
+    if (ligar && !m.ativo) {
+      // ao ligar, começa no nível mais baixo que o modo aceita
+      if ("nivelMax" in m) m.nivelMax = NIVEL_INICIAL_MODO[recurso] || "leve";
+      if ("desafioNivelMax" in m) m.desafioNivelMax = "leve";
+      if (recurso === "posicoes") { m.dificuldadeMax = "facil"; if (!m.climas.length) m.climas = ["romantica"]; }
+    }
+    m.ativo = !!ligar;
+  }
+  async function salvarConfig() {
+    timerSalvarCfg = null;
+    const c = codigo, t = lerToken(c);
+    salvandoCfg++;
+    const { error } = await sb.rpc("sala_config_salvar", { p_sala: c, p_token: t, p_config: config });
+    salvandoCfg--;
+    if (c !== codigo) return;
+    statusCfg = error ? "Não consegui salvar. Confira a internet e tente de novo." : "Salvo ✓";
+    if (error && /dono/.test(error.message || "")) { statusCfg = "Este aparelho não é mais o dono."; conferirDono(c); }
+    const s = $("cfgStatus");
+    if (s) s.textContent = statusCfg;
+  }
+  async function gerarNovoCodigo() {
+    if (!confirm("Gerar um novo código? O código antigo para de funcionar em todos os aparelhos.")) return;
+    const c = codigo, t = lerToken(c), novo = novoToken();
+    const { error } = await sb.rpc("sala_dono_trocar", { p_sala: c, p_token_atual: t, p_token_novo: novo });
+    if (error) { statusCfg = "Não consegui gerar o código. Confira a internet e tente de novo."; return desenharTelaConfig(); }
+    salvarToken(c, novo);
+    mostrarCodigoDono(novo);
+    // regrava a config para os outros aparelhos conferirem se ainda são donos
+    sb.rpc("sala_config_salvar", { p_sala: c, p_token: novo, p_config: config }).then(() => {}, () => {});
+  }
+  async function passarCoroa() {
+    const outro = 1 - (donoIndice === null ? eu : donoIndice);
+    if (!estado.jogadores[outro]) return;
+    const { error } = await sb.rpc("sala_dono_indice", { p_sala: codigo, p_token: lerToken(codigo), p_jogador: outro });
+    statusCfg = error ? "Não consegui passar o 👑." : `O 👑 agora aparece para ${nomeDe(outro)}.`;
+    if (!error) donoIndice = outro;
+    desenharTelaConfig();
+  }
+
+  // peças da tela
+  function cfgInterruptor(rotulo, ligado, aoMudar, chave) {
+    const l = el("label", "cfg-item");
+    const i = el("input"); i.type = "checkbox"; i.checked = !!ligado;
+    if (chave) i.dataset.cfg = chave;
+    i.addEventListener("change", () => aoMudar(i.checked));
+    l.append(i, el("span", "", rotulo));
+    return l;
+  }
+  function cfgSeletor(rotulo, opcoes, valor, aoMudar, chave) {
+    const l = el("label", "cfg-sel");
+    l.appendChild(el("span", "", rotulo));
+    const s = el("select");
+    if (chave) s.dataset.cfg = chave;
+    opcoes.forEach(([v, t]) => { const o = el("option", "", t); o.value = v; s.appendChild(o); });
+    s.value = opcoes.some(([v]) => v === valor) ? valor : (opcoes[0] || [""])[0];
+    s.addEventListener("change", () => aoMudar(s.value));
+    l.appendChild(s);
+    return l;
+  }
+  // níveis oferecidos num seletor: só os que existem na sala (e os que o modo aceita)
+  const NIVEIS_DO_MODO = { posicoes: ["picante", "pesado"], poses: ["leve", "picante", "pesado"] };
+  function cfgNivelModo(recurso, rotulo) {
+    const chave = recurso === "envelopes" ? "desafioNivelMax" : "nivelMax";
+    const aceitos = NIVEIS_DO_MODO[recurso] || ORDEM_CFG;
+    const opcoes = aceitos.filter(n => (NIVEIS_DO_MODO[recurso] ? ordCfg(n) <= ordCfg(nivelMaxSala()) : config.niveis[n])).map(n => [n, LEVEL_NAMES[n]]);
+    if (!opcoes.length) return el("p", "extras-sub", recurso === "posicoes" ? "Ligue o nível Picante ou Pesado da sala para o guia aparecer." : "Nenhum nível disponível para isto com os níveis da sala.");
+    return cfgSeletor(rotulo || "Nível máximo", opcoes, efetivo(recurso), v => mudarConfig(c => { c[recurso][chave] = v; }), recurso + "." + chave);
+  }
+  function cfgModo(recurso, rotulo, extras) {
+    const box = el("div", "cfg-modo");
+    box.appendChild(cfgInterruptor(rotulo, config[recurso].ativo, v => mudarConfig(c => ligarModo(c, recurso, v)), recurso + ".ativo"));
+    if (config[recurso].ativo && extras) {
+      const dentro = el("div", "cfg-dentro");
+      extras(dentro);
+      box.appendChild(dentro);
+    }
+    return box;
+  }
+  function cfgSecao(titulo) { const s = el("section", "cfg-secao"); s.appendChild(el("h3", "casa-h3", titulo)); return s; }
+
+  function desenharTelaConfig() {
+    const d = $("dlgConfig");
+    if (!d || !souDono) return;
+    const rolagem = d.scrollTop;
+    d.textContent = "";
+    const topo = el("div", "pos-topo");
+    topo.appendChild(el("h2", "", "⚙️ Configurações"));
+    const fechar = el("button", "linkbtn", "Fechar"); fechar.type = "button"; fechar.addEventListener("click", () => d.close());
+    topo.appendChild(fechar);
+    d.appendChild(topo);
+    const dono = el("div", "cfg-dono");
+    dono.appendChild(el("p", "cfg-dono-titulo", "Você é o dono desta sala 👑"));
+    if (donoIndice !== null && estado.jogadores[donoIndice]) dono.appendChild(el("p", "extras-sub", `O 👑 aparece para ${nomeDe(donoIndice)}.`));
+    const botoes = el("div", "cfg-botoes");
+    const mostrar = el("button", "secondary", "Mostrar código de dono"); mostrar.type = "button";
+    mostrar.addEventListener("click", () => { if (confirm("Mostrar o código de dono na tela?")) mostrarCodigoDono(lerToken(codigo)); });
+    const gerar = el("button", "secondary", "Gerar novo código"); gerar.type = "button"; gerar.addEventListener("click", gerarNovoCodigo);
+    botoes.append(mostrar, gerar);
+    const outro = 1 - (donoIndice === null ? eu : donoIndice);
+    if (estado.jogadores[outro]) {
+      const passar = el("button", "secondary", `Passar o 👑 para ${nomeDe(outro)}`); passar.type = "button"; passar.addEventListener("click", passarCoroa);
+      botoes.appendChild(passar);
+    }
+    dono.appendChild(botoes);
+    const st = el("p", "cfg-status", statusCfg); st.id = "cfgStatus"; st.setAttribute("aria-live", "polite");
+    dono.appendChild(st);
+    d.appendChild(dono);
+
+    // níveis da sala
+    const sn = cfgSecao("Níveis da sala");
+    if (!config.niveis.picante || !config.niveis.pesado) sn.appendChild(el("p", "cfg-aviso", "Níveis mais ousados estão desligados nesta sala"));
+    if (avisoNiveisCfg) sn.appendChild(el("p", "erro", avisoNiveisCfg));
+    ORDEM_CFG.forEach(n => sn.appendChild(cfgInterruptor(LEVEL_NAMES[n], config.niveis[n], v => {
+      if (!v && ORDEM_CFG.filter(x => config.niveis[x]).length <= 1) { avisoNiveisCfg = "Pelo menos um nível precisa ficar ligado."; return desenharTelaConfig(); }
+      mudarConfig(c => { c.niveis[n] = v; });
+    }, "niveis." + n)));
+    sn.appendChild(cfgSeletor("Quem muda os níveis na partida", [["todos", "Os dois"], ["dono", "Só o dono"]], config.chipsQuemMuda, v => mudarConfig(c => { c.chipsQuemMuda = v; }), "chipsQuemMuda"));
+    d.appendChild(sn);
+
+    const sc = cfgSecao("Conteúdo");
+    sc.appendChild(cfgModo("midia", "Cartas com foto, vídeo e áudio"));
+    sc.appendChild(cfgModo("conquistasOusadia", "Conquistas de ousadia"));
+    d.appendChild(sc);
+
+    const sm = cfgSecao("Modos de jogo");
+    sm.appendChild(cfgModo("eventos", "Eventos especiais", box => {
+      box.appendChild(cfgNivelModo("eventos"));
+      Object.keys(config.eventos.tipos).forEach(t => box.appendChild(cfgInterruptor(TIPO_NOMES[t] || t, config.eventos.tipos[t], v => mudarConfig(c => { c.eventos.tipos[t] = v; }), "eventos.tipos." + t)));
+    }));
+    sm.appendChild(cfgModo("missaoSecreta", "Missão secreta", box => box.appendChild(cfgNivelModo("missaoSecreta"))));
+    sm.appendChild(cfgModo("reverso", "Reverso"));
+    d.appendChild(sm);
+
+    const sg = cfgSecao("Guias");
+    sg.appendChild(cfgModo("posicoes", "Guia de posições", box => {
+      box.appendChild(cfgNivelModo("posicoes"));
+      const climas = el("div", "cfg-climas");
+      climas.appendChild(el("span", "", "Climas"));
+      Object.entries(POS_CLIMA).forEach(([k, t]) => climas.appendChild(cfgInterruptor(t, config.posicoes.climas.includes(k), v => mudarConfig(c => {
+        c.posicoes.climas = v ? [...new Set([...c.posicoes.climas, k])] : c.posicoes.climas.filter(x => x !== k);
+      }), "posicoes.climas." + k)));
+      box.appendChild(climas);
+      box.appendChild(cfgSeletor("Dificuldade máxima", Object.entries(POS_DIF), config.posicoes.dificuldadeMax, v => mudarConfig(c => { c.posicoes.dificuldadeMax = v; }), "posicoes.dificuldadeMax"));
+    }));
+    sg.appendChild(cfgModo("poses", "Guia de poses", box => {
+      box.appendChild(cfgNivelModo("poses"));
+      box.appendChild(cfgInterruptor("Incluir vídeos", config.poses.video, v => mudarConfig(c => { c.poses.video = v; }), "poses.video"));
+    }));
+    d.appendChild(sg);
+
+    const si = cfgSecao("IA");
+    si.appendChild(cfgModo("ia", "Ideias da IA", box => {
+      box.appendChild(cfgNivelModo("ia"));
+      box.appendChild(cfgInterruptor("Ideias de pose pela IA", config.ia.poses, v => mudarConfig(c => { c.ia.poses = v; }), "ia.poses"));
+    }));
+    d.appendChild(si);
+
+    const se = cfgSecao("Entre chamadas");
+    se.appendChild(cfgModo("trilha", "Trilha da rodada", box => box.appendChild(cfgNivelModo("trilha"))));
+    se.appendChild(cfgModo("desafioDoDia", "Desafio do dia", box => box.appendChild(cfgNivelModo("desafioDoDia"))));
+    se.appendChild(cfgModo("semana", "Semana (apostas e missão de observação)", box => box.appendChild(cfgNivelModo("semana"))));
+    se.appendChild(cfgModo("envelopes", "Envelopes", box => box.appendChild(cfgNivelModo("envelopes", "Desafio surpresa até"))));
+    se.appendChild(cfgModo("cartasDeVoces", "Cartas de vocês", box => box.appendChild(cfgNivelModo("cartasDeVoces"))));
+    d.appendChild(se);
+    d.scrollTop = rolagem;
   }
 
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)

@@ -552,3 +552,21 @@ input[type=number]{width:100%; font:inherit; color:var(--ink); background:var(--
 .sem-dono .erro{margin:6px 0 0; font-weight:400}
 .codigo-dono{font:800 1.25rem ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing:.06em; text-align:center; padding:12px; border-radius:12px; background:var(--surface); border:1.5px solid var(--line); overflow-wrap:anywhere; user-select:all}
 #entrarDonoCodigo{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; text-transform:uppercase}
+
+/* tela de configurações (só o dono) */
+.cfg-dono{padding:10px 0 4px}
+.cfg-dono-titulo{margin:0; font-weight:800; font-size:1.1rem}
+.cfg-botoes{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
+.cfg-botoes button{width:auto; padding:8px 12px}
+.cfg-status{margin:8px 0 0; font-weight:700}
+.cfg-status:empty{display:none}
+.cfg-secao{border-top:1.5px solid var(--line); padding:8px 0 10px}
+.cfg-aviso{margin:0 0 8px; padding:8px 10px; border-radius:10px; background:color-mix(in srgb, var(--lamp) 18%, transparent); font-weight:700}
+.cfg-item{display:flex; align-items:center; gap:10px; padding:6px 0; font-weight:600}
+.cfg-item input{width:20px; height:20px; flex:none; accent-color:var(--lamp)}
+.cfg-sel{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; font-weight:600}
+.cfg-sel select{width:auto; margin:0; max-width:60%}
+.cfg-modo{padding:2px 0}
+.cfg-dentro{margin:0 0 6px 30px; padding-left:10px; border-left:2px solid var(--line)}
+.cfg-climas{display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px}
+.cfg-climas > span{font-weight:600; width:100%}
