@@ -357,6 +357,9 @@
         vistos[r.jogador] = r.visto_em;
         desenharPresenca();
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "manuais", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo && p.eventType !== "DELETE") receberManual(p.new);
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "salas_config", filter: `sala=eq.${c}` }, p => {
         if (c !== codigo || p.eventType === "DELETE" || !p.new) return;
         aplicarLinhaConfig(p.new);
@@ -388,6 +391,8 @@
     posicoes = []; marcasPos = []; carregarPosicoes(c);
     vistos = [null, null]; ultimoVistoGravado = 0; carregarVistos(c);
     nossas = []; if (fixa) carregarNossas(c);
+    manuais = [{}, {}]; clearTimeout(timerManual); timerManual = null; $("manualForm").textContent = ""; statusManual("");
+    if (fixa) carregarManuais(c);
     poses = []; carregarPoses(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
     config = mesclarConfig({}); temDono = false; donoIndice = null; souDono = false; configPronta = false;
@@ -795,6 +800,7 @@
     if (nome === "vAbra") desenharAbra();
     if (nome === "vPlaylist") desenharNossas();
     if (nome === "vDiarioCasal") { paginasDiario = 1; desenharDiarioCasal(); }
+    if (nome === "vPerfil") desenharPerfil(!editandoManual());
     window.scrollTo(0, 0);
   }
 
@@ -822,9 +828,188 @@
   }
   function recolherNav(v) { navRecolhida = v; desenharNav(); }
 
+  // ---------- v7: Manual de mim (um por pessoa, tabela manuais) ----------
+  let manuais = [{}, {}];            // campos de cada jogador
+  let timerManual = null, salvandoManual = 0;
+  const LINGUAGENS = { palavras: "Palavras de afirmação", tempo: "Tempo de qualidade", presentes: "Presentes", servico: "Atos de serviço", toque: "Toque físico" };
+  const TAMANHOS = [["camiseta", "Camiseta"], ["calca", "Calça"], ["calcado", "Calçado"], ["anel", "Anel"]];
+  // [campo, rótulo, limite, tipo, dica]
+  const CAMPOS_MANUAL = [
+    ["acalma", "O que me acalma", 300, "area"],
+    ["naoFazer", "O que não fazer quando estou mal", 300, "area"],
+    ["linguagemAmor", "Minha linguagem do amor", 0, "sel"],
+    ["comidaConforto", "Comida de conforto", 120],
+    ["doce", "Doce favorito", 80],
+    ["delivery", "Pedido de delivery favorito", 200, "area", "Restaurante e o que pedir"],
+    ["musicaConforto", "Música que me acalma", 200, "txt", "Nome ou link do Spotify"],
+    ["bebida", "Bebida favorita", 80],
+    ["tamanhos", "Tamanhos", 20, "tam"],
+    ["flores", "Flor favorita", 60],
+    ["datas", "Datas importantes para mim", 300, "area"],
+    ["apelidos", "Apelidos de que gosto", 120],
+    ["sonhos", "Coisas que quero fazer um dia", 300, "area"]
+  ];
+  const textoManual = (i, campo) => { const v = (manuais[i] || {})[campo]; return typeof v === "string" ? v.trim() : ""; };
+  // só o que é texto curto e conhecido vai para o banco (e volta de lá)
+  function limparManual(x) {
+    const out = {};
+    if (!x || typeof x !== "object") return out;
+    if (EMOJIS_AVATAR.includes(x.avatar)) out.avatar = x.avatar;
+    if (PALETA_AVATAR.includes(x.avatarCor)) out.avatarCor = x.avatarCor;
+    CAMPOS_MANUAL.forEach(([k, , max, tipo]) => {
+      const v = x[k];
+      if (tipo === "sel") { if (LINGUAGENS[v]) out[k] = v; return; }
+      if (tipo === "tam") {
+        const t = {};
+        if (v && typeof v === "object") TAMANHOS.forEach(([c]) => { if (typeof v[c] === "string" && v[c].trim()) t[c] = v[c].trim().slice(0, max); });
+        if (Object.keys(t).length) out[k] = t;
+        return;
+      }
+      if (typeof v === "string" && v.trim()) out[k] = v.slice(0, max);
+    });
+    return out;
+  }
+  async function carregarManuais(c) {
+    const { data, error } = await sb.from("manuais").select("jogador, campos").eq("sala", c);
+    if (c !== codigo || error || !data) return;
+    data.forEach(r => { if (r.jogador === 0 || r.jogador === 1) manuais[r.jogador] = limparManual(r.campos); });
+    manualMudou(true);
+  }
+  function receberManual(r) {
+    if (!r || (r.jogador !== 0 && r.jogador !== 1) || r.sala !== codigo) return;
+    // o meu, enquanto estou editando, fica como está neste aparelho
+    if (r.jogador === eu && (timerManual || salvandoManual)) return;
+    manuais[r.jogador] = limparManual(r.campos);
+    manualMudou(r.jogador === eu && !editandoManual());
+  }
+  const editandoManual = () => !!(document.activeElement && $("manualForm").contains(document.activeElement));
+  // redesenha tudo que usa o Manual; refazForm: também os campos do meu Manual
+  function manualMudou(refazForm) {
+    if (!estado) return;
+    desenharCabecalho(estado);
+    desenharPlacar(estado, [estado.jogadores[0] || "Pessoa 1", estado.jogadores[1] || "…"]);
+    if (vista === "vPerfil") desenharPerfil(refazForm);
+    manualMudouFns.forEach(f => f());
+  }
+  const manualMudouFns = [];   // dengo, humor… (fases seguintes)
+  function mudarManual(fn) {
+    fn(manuais[eu]);
+    manuais[eu] = limparManual(manuais[eu]);
+    statusManual("");
+    clearTimeout(timerManual);
+    timerManual = setTimeout(salvarManual, 800);
+  }
+  async function salvarManual() {
+    timerManual = null;
+    if (!codigo || (eu !== 0 && eu !== 1)) return;
+    salvandoManual++;
+    statusManual("Salvando…");
+    const c = codigo;
+    const { error } = await sb.from("manuais").upsert({ sala: c, jogador: eu, campos: limparManual(manuais[eu]), atualizado_em: new Date().toISOString() }, { onConflict: "sala,jogador" });
+    salvandoManual--;
+    if (c !== codigo) return;
+    statusManual(error ? "Não consegui salvar. Confira a internet." : "Salvo ✓");
+  }
+  function statusManual(t) { $("manualSalvo").textContent = t; $("manualSalvo").classList.toggle("erro-txt", /Não consegui/.test(t)); }
+
+  function desenharPerfil(refazForm) {
+    if (!estado) return;
+    const pa = $("perfilAvatar");
+    pa.textContent = ""; pa.appendChild(avatarEl(eu, "grande"));
+    $("perfilNome").textContent = estado.jogadores[eu] || "";
+    desenharEscolhaAvatar();
+    if (refazForm || !$("manualForm").childElementCount) desenharManualForm();
+    desenharManualOutro();
+  }
+  function desenharEscolhaAvatar() {
+    const a = avatarDe(eu), g = $("emojiGrade"), c = $("corGrade");
+    g.textContent = ""; c.textContent = "";
+    const sem = el("button", "emoji-op", "Aa"); sem.type = "button";
+    sem.setAttribute("aria-label", "Sem emoji (iniciais)"); sem.setAttribute("aria-pressed", String(!a.emoji));
+    sem.addEventListener("click", () => { mudarManual(m => { delete m.avatar; }); manualMudou(false); });
+    g.appendChild(sem);
+    EMOJIS_AVATAR.forEach(e => {
+      const b = el("button", "emoji-op", e); b.type = "button";
+      b.setAttribute("aria-pressed", String(a.emoji === e));
+      b.addEventListener("click", () => { mudarManual(m => { m.avatar = e; }); manualMudou(false); });
+      g.appendChild(b);
+    });
+    PALETA_AVATAR.forEach(cor => {
+      const b = el("button", "cor-op"); b.type = "button"; b.style.background = cor;
+      b.setAttribute("aria-label", "Cor " + cor); b.setAttribute("aria-pressed", String(a.cor === cor));
+      b.addEventListener("click", () => { mudarManual(m => { m.avatarCor = cor; }); manualMudou(false); });
+      c.appendChild(b);
+    });
+  }
+  function desenharManualForm() {
+    const f = $("manualForm"), m = manuais[eu] || {};
+    f.textContent = "";
+    CAMPOS_MANUAL.forEach(([k, rotulo, max, tipo, dica]) => {
+      const lab = el("label", "field");
+      lab.appendChild(el("span", "", rotulo));
+      if (tipo === "sel") {
+        const s = el("select"); s.id = "man-" + k;
+        s.appendChild(new Option("—", ""));
+        Object.entries(LINGUAGENS).forEach(([v, t]) => s.appendChild(new Option(t, v)));
+        s.value = m[k] || "";
+        s.addEventListener("change", () => mudarManual(x => { x[k] = s.value; }));
+        lab.appendChild(s);
+      } else if (tipo === "tam") {
+        const box = el("div", "manual-tamanhos");
+        TAMANHOS.forEach(([c, t]) => {
+          const l = el("label", "", t), i = el("input"); i.type = "text"; i.maxLength = max; i.id = "man-tam-" + c;
+          i.value = (m.tamanhos && m.tamanhos[c]) || "";
+          i.addEventListener("input", () => mudarManual(x => { x.tamanhos = { ...(x.tamanhos || {}), [c]: i.value }; }));
+          l.appendChild(i); box.appendChild(l);
+        });
+        lab.appendChild(box);
+      } else {
+        const i = tipo === "area" ? el("textarea") : el("input");
+        if (tipo === "area") i.rows = 2; else i.type = "text";
+        i.id = "man-" + k; i.maxLength = max;
+        if (dica) i.placeholder = dica;
+        i.value = m[k] || "";
+        i.addEventListener("input", () => mudarManual(x => { x[k] = i.value; }));
+        lab.appendChild(i);
+      }
+      f.appendChild(lab);
+    });
+  }
+  function desenharManualOutro() {
+    const o = 1 - eu, nome = nomeDe(o), m = manuais[o] || {}, dl = $("manualOutroLista");
+    $("manualOutro").hidden = !nome;
+    $("manualOutroTitulo").textContent = `📗 Manual ${nome ? "de " + nome : ""}`;
+    dl.textContent = "";
+    CAMPOS_MANUAL.forEach(([k, rotulo, , tipo]) => {
+      let v = "";
+      if (tipo === "sel") v = LINGUAGENS[m[k]] || "";
+      else if (tipo === "tam") v = m.tamanhos ? TAMANHOS.filter(([c]) => m.tamanhos[c]).map(([c, t]) => `${t}: ${m.tamanhos[c]}`).join(" · ") : "";
+      else v = textoManual(o, k);
+      if (!v) return;
+      const dt = el("dt", "", rotulo), dd = el("dd", "", v);
+      dt.id = "outro-" + k;
+      dl.append(dt, dd);
+    });
+    const vazio = !dl.childElementCount;
+    $("manualOutroVazio").hidden = !vazio;
+    $("manualOutroVazio").textContent = `${nome} ainda não preencheu o Manual.`;
+  }
+  // abre o Manual do outro numa parte (ex.: "O que me acalma")
+  function abrirManualOutro(campo) {
+    mostrarVista("vPerfil");
+    const alvo = $("outro-" + campo) || $("manualOutro");
+    if (alvo) { alvo.scrollIntoView({ block: "start" }); alvo.classList.add("destacado"); setTimeout(() => alvo.classList.remove("destacado"), 1600); }
+  }
+
   // avatar: emoji do Manual (v7) ou as iniciais num círculo colorido
   const CORES_AVATAR = ["#5B4BDB", "#E0405F"];
-  const avatarDe = i => ({ emoji: "", cor: CORES_AVATAR[i] });
+  const PALETA_AVATAR = ["#5B4BDB", "#E0405F", "#FF8A3D", "#1FA37A", "#2E86DE", "#B04BDB", "#C98A00", "#4A4A68"];
+  const EMOJIS_AVATAR = ["😀", "😎", "🥰", "😍", "🤓", "😇", "🥳", "😺", "🐶", "🐱", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐸", "🐵", "🐧", "🦄",
+    "🐝", "🦋", "🐢", "🐙", "🌸", "🌻", "🌈", "⭐", "🌙", "☀️", "🔥", "💧", "🍓", "🍑", "🍕", "🍩", "☕", "🎸", "🎮", "⚽"];
+  function avatarDe(i) {
+    const m = manuais[i] || {};
+    return { emoji: EMOJIS_AVATAR.includes(m.avatar) ? m.avatar : "", cor: PALETA_AVATAR.includes(m.avatarCor) ? m.avatarCor : CORES_AVATAR[i] };
+  }
   function iniciais(nome) {
     const p = (nome || "").trim().split(/\s+/).filter(Boolean);
     return ((p[0] || "?")[0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
@@ -3627,6 +3812,7 @@
     nomes.forEach((n, i) => {
       const th = document.createElement("th");
       th.textContent = n;
+      if (e.fixa) th.prepend(avatarEl(i, "mini"));
       const titulo = tituloDe(e, i);
       if (titulo) th.appendChild(el("small", "titulo-placar", titulo));
       th.className = (i === eu ? "me " : "") + (i === e.vez && e.jogadores[1] ? "vez" : "");

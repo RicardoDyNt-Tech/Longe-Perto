@@ -365,6 +365,25 @@
       </section>
       <section class="casa-vista aba-vista" id="vPerfil" hidden>
         <h2>👤 Perfil</h2>
+        <div class="perfil-eu">
+          <span class="perfil-avatar" id="perfilAvatar"></span>
+          <p class="perfil-nome" id="perfilNome"></p>
+        </div>
+        <details class="perfil-bloco" id="perfilAvatarBox">
+          <summary>Meu avatar</summary>
+          <div class="emoji-grade" id="emojiGrade" role="group" aria-label="Emoji do avatar"></div>
+          <div class="cor-grade" id="corGrade" role="group" aria-label="Cor do avatar"></div>
+        </details>
+        <section class="perfil-bloco" id="meuManual" aria-labelledby="meuManualTitulo">
+          <h3 class="casa-h3" id="meuManualTitulo">📘 Meu Manual <span class="manual-salvo" id="manualSalvo" aria-live="polite"></span></h3>
+          <p class="config-dica">O Manual fica visível para os dois e, como todo o resto, pode ser lido por quem tiver o código da sala. Não coloque dados de saúde.</p>
+          <div class="manual-form" id="manualForm"></div>
+        </section>
+        <section class="perfil-bloco" id="manualOutro" aria-labelledby="manualOutroTitulo">
+          <h3 class="casa-h3" id="manualOutroTitulo">📗 Manual</h3>
+          <p class="extras-sub" id="manualOutroVazio" hidden></p>
+          <dl class="manual-ler" id="manualOutroLista"></dl>
+        </section>
         <div class="perfil-config" id="perfilConfig"></div>
       </section>
       <section class="casa-vista" id="vCofre" hidden>

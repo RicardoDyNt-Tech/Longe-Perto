@@ -595,3 +595,28 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 .casa-mais{grid-column:1 / -1; margin:8px 0 0; font-size:1rem}
 .distancia #reencontro{margin:0 0 8px}
 .distancia .juntos-ha, .distancia .datas-especiais{margin:0 0 6px}
+/* v7: Perfil e Manual de mim */
+.perfil-eu{display:flex; align-items:center; gap:12px; margin:0 0 12px}
+.perfil-nome{margin:0; font-size:1.3rem; font-weight:800; overflow-wrap:anywhere}
+.avatar.grande{width:64px; height:64px; font-size:1.5rem}
+.avatar.grande.emoji{font-size:2.2rem}
+.avatar.mini{width:22px; height:22px; font-size:.62rem; margin-right:4px; vertical-align:middle}
+.avatar.mini.emoji{font-size:.85rem}
+.perfil-bloco{background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:12px 14px; margin:0 0 12px}
+.perfil-bloco > summary{font-weight:800; cursor:pointer}
+.perfil-bloco .casa-h3{margin-top:0}
+.emoji-grade{display:grid; grid-template-columns:repeat(auto-fill, minmax(40px, 1fr)); gap:6px; margin:10px 0}
+.emoji-op{background:var(--bg); color:var(--ink); font-size:1.3rem; padding:6px 0; border:1.5px solid var(--line); border-radius:12px}
+.emoji-op[aria-pressed="true"], .cor-op[aria-pressed="true"]{outline:3px solid var(--lamp); outline-offset:1px}
+.cor-grade{display:flex; flex-wrap:wrap; gap:8px}
+.cor-op{width:34px; height:34px; border-radius:50%; border:2px solid var(--surface)}
+.manual-salvo{font-weight:600; font-size:.8rem; color:#1FAF55; margin-left:6px}
+.manual-salvo.erro-txt{color:var(--erro)}
+.manual-form textarea, .manual-form select, .manual-form input[type=text]{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:8px 10px; margin-top:4px}
+.manual-tamanhos{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.manual-tamanhos label{font-weight:600; font-size:.85rem}
+.manual-ler{margin:0}
+.manual-ler dt{font-weight:800; font-size:.85rem; color:var(--muted); margin-top:10px; scroll-margin-top:16px}
+.manual-ler dd{margin:2px 0 0; white-space:pre-wrap; overflow-wrap:anywhere}
+.manual-ler dt.destacado{color:var(--desafio)}
+.manual-form input[type=text], .manual-form textarea{font-weight:400}
