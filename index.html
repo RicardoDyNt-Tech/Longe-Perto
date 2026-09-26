@@ -108,6 +108,55 @@
           <p class="ola" id="ola"></p>
           <div class="avatares" id="avatares" aria-hidden="true"></div>
         </header>
+        <div class="casa-bloco dengo-recebido" id="dengoRecebido" hidden role="alert">
+          <p class="dr-titulo" id="drTitulo"></p>
+          <ul class="dengo-itens" id="drItens"></ul>
+          <p class="dr-msg" id="drMsg" hidden></p>
+          <p class="dr-quando" id="drQuando"></p>
+          <p class="dr-dica" id="drDica" hidden></p>
+          <div class="dr-extras" id="drExtras"></div>
+          <div class="dr-acoes" id="drAcoes">
+            <button class="primary dr-indo" id="drIndo" type="button">TÔ INDO 💨</button>
+            <button class="secondary" id="drNao" type="button">Agora não consigo</button>
+          </div>
+          <div class="dr-resp" id="drRespIndo" hidden>
+            <input type="text" id="drIndoTexto" maxlength="200" placeholder="Te ligo em 5 min" aria-label="Resposta (opcional)">
+            <button class="primary" id="drIndoEnviar" type="button">Enviar "Tô indo"</button>
+          </div>
+          <div class="dr-resp" id="drRespNao" hidden>
+            <div class="dr-frases" id="drFrases">
+              <button type="button" class="chip-btn">Tô no trabalho, te ligo às 18h</button>
+              <button type="button" class="chip-btn">Tô sem sinal agora</button>
+              <button type="button" class="chip-btn">Já já eu volto, te amo</button>
+            </div>
+            <input type="text" id="drNaoTexto" maxlength="200" placeholder="Ou escreva…" aria-label="Resposta">
+            <button class="secondary" id="drNaoEnviar" type="button">Enviar</button>
+          </div>
+          <button class="primary" id="drAqui" type="button" hidden>Tô aqui quando precisar 🤍</button>
+          <p class="erro" id="erroDengoResp" role="alert"></p>
+        </div>
+        <div class="casa-bloco dengo" id="casaDengo">
+          <div class="dengo-resposta" id="dengoResposta" hidden role="status">
+            <p class="dengo-resp-titulo" id="dengoRespTitulo"></p>
+            <p class="dengo-resp-texto" id="dengoRespTexto" hidden></p>
+            <button class="secondary" id="dengoRespOk" type="button">Ok</button>
+          </div>
+          <button class="primary dengo-botao" id="dengoPedir" type="button">PEDIR DENGO 💗</button>
+          <div class="dengo-meu" id="dengoMeu" hidden>
+            <p class="dengo-esperando" id="dengoEsperando"></p>
+            <ul class="dengo-itens" id="dengoMeuItens"></ul>
+            <div class="row">
+              <a class="wa" id="dengoAvisar" target="_blank" rel="noopener">Avisar no WhatsApp</a>
+              <button class="secondary" id="dengoCancelar" type="button">Cancelar pedido</button>
+            </div>
+          </div>
+          <div class="dengo-grade" id="dengoGrade" role="group" aria-label="Pedidos rápidos"></div>
+          <div class="dengo-rodape">
+            <span class="dengo-conta" id="dengoConta"></span>
+            <button class="linkbtn" id="dengoEditar" type="button">✏️ Editar pedidos</button>
+          </div>
+          <p class="erro" id="erroDengo" role="alert"></p>
+        </div>
         <div class="casa-bloco carinhos" id="casaCarinhos">
           <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo">✕</button></p>
           <div class="carinho-botoes" id="carinhoBotoes">
@@ -663,6 +712,36 @@
       <button type="button" class="nav-mostrar" id="navMostrar" hidden>▴ Menu</button>
     </nav>
   </section>
+
+  <dialog id="dlgDengo" aria-labelledby="dlgDengoTitulo">
+    <form id="formDengo" method="dialog">
+      <h2 id="dlgDengoTitulo">Pedir dengo 💗</h2>
+      <ul class="dengo-resumo" id="dengoResumo"></ul>
+      <label class="field">Quer dizer mais alguma coisa?
+        <textarea id="dengoMensagem" maxlength="200" rows="2"></textarea>
+      </label>
+      <p class="erro" id="erroDlgDengo" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="dengoEnviar" type="submit">Enviar pedido 💗</button>
+        <button class="secondary" id="dengoVoltar" type="button">Voltar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgPedidos" class="dlg-posicoes" aria-labelledby="dlgPedidosTitulo">
+    <div class="pos-topo">
+      <h2 id="dlgPedidosTitulo">✏️ Meus pedidos</h2>
+      <button class="linkbtn" id="fecharPedidos" type="button">Fechar</button>
+    </div>
+    <p class="config-dica">Só a sua lista muda; a de quem você ama continua a mesma.</p>
+    <ul class="pedidos-edit" id="pedidosEdit"></ul>
+    <button class="secondary" id="pedidoNovo" type="button">+ Novo pedido</button>
+    <p class="erro" id="erroPedidos" role="alert"></p>
+    <div class="row">
+      <button class="primary" id="pedidosSalvar" type="button">Salvar</button>
+      <button class="linkbtn" id="pedidosRestaurar" type="button">Restaurar padrões</button>
+    </div>
+  </dialog>
 
   <dialog id="dlgEnvelope" aria-labelledby="dlgEnvTitulo">
     <form id="formEnvelope" method="dialog">

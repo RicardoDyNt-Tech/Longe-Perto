@@ -357,6 +357,10 @@
         vistos[r.jogador] = r.visto_em;
         desenharPresenca();
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "pedidos_modelos", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo) linhaModelo(p.eventType, p.eventType === "DELETE" ? p.old : p.new);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "pedidos_modelos" }, p => { if (c === codigo) linhaModelo("DELETE", p.old); })
       .on("postgres_changes", { event: "*", schema: "public", table: "manuais", filter: `sala=eq.${c}` }, p => {
         if (c === codigo && p.eventType !== "DELETE") receberManual(p.new);
       })
@@ -393,6 +397,8 @@
     nossas = []; if (fixa) carregarNossas(c);
     manuais = [{}, {}]; clearTimeout(timerManual); timerManual = null; $("manualForm").textContent = ""; statusManual("");
     if (fixa) carregarManuais(c);
+    modelos = []; dengoSel = []; dengoRespondendo = null; $("dengoMeu").hidden = true;
+    if (fixa) carregarModelos(c);
     poses = []; carregarPoses(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
     config = mesclarConfig({}); temDono = false; donoIndice = null; souDono = false; configPronta = false;
@@ -812,6 +818,7 @@
     const pend = cofre.filter(x => !x.feito).length;
     $("cardCofreSub").textContent = cofre.length ? `${pend} ${pend === 1 ? "pendente" : "pendentes"}` : "Guardem cartas para o reencontro";
     desenharCabecalho(e);
+    desenharDengo();
     desenharCasaExtras(e);
   }
 
@@ -994,6 +1001,300 @@
     $("manualOutroVazio").hidden = !vazio;
     $("manualOutroVazio").textContent = `${nome} ainda não preencheu o Manual.`;
   }
+  // ---------- v7: pedir dengo ----------
+  let modelos = [];                  // pedidos_modelos: padrões (sala null) + listas próprias desta sala
+  let dengoSel = [];                 // ids dos modelos marcados (até 6)
+  let dengoRascunho = null;          // itens do diálogo de envio
+  let pedidosRascunho = null;        // lista em edição
+  let dengoRespondendo = null;       // "indo" | "nao" (painel aberto no cartão recebido)
+  const MAX_DENGO = 6;
+  const haQuanto = iso => {
+    const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (min < 1) return "agora";
+    if (min < 60) return `há ${min} min`;
+    const h = Math.round(min / 60);
+    return h < 24 ? `há ${h} h` : dataCurta(iso);
+  };
+  async function carregarModelos(c) {
+    const { data, error } = await sb.from("pedidos_modelos").select("*").or(`sala.is.null,sala.eq.${c}`).order("ordem", { ascending: true });
+    if (c !== codigo || error || !data) return;
+    modelos = data;
+    desenharDengo();
+  }
+  function linhaModelo(ev, row) {
+    if (!row || !row.id) return;
+    const i = modelos.findIndex(x => x.id === row.id);
+    if (ev === "DELETE") { if (i >= 0) modelos.splice(i, 1); }
+    else if (row.sala === codigo) { if (i >= 0) modelos[i] = { ...modelos[i], ...row }; else modelos.push(row); }
+    else return;
+    desenharDengo();
+  }
+  const meusModelos = () => modelos.filter(m => m.sala === codigo && m.jogador === eu).sort((a, b) => a.ordem - b.ordem);
+  const padroes = () => modelos.filter(m => m.sala === null || m.sala === undefined).sort((a, b) => a.ordem - b.ordem);
+  // a lista própria vale a partir da primeira edição; antes, os padrões
+  function minhaLista() { const m = meusModelos(); return (m.length ? m : padroes()).filter(x => x.ativo !== false); }
+  const meuPendente = () => dados.dengos.filter(d => d.de === eu && d.status === "pendente").sort((a, b) => a.criada_em < b.criada_em ? 1 : -1)[0] || null;
+  const pendenteParaMim = () => dados.dengos.filter(d => d.de === 1 - eu && d.status === "pendente").sort((a, b) => a.criada_em < b.criada_em ? 1 : -1)[0] || null;
+  const itensDe = d => Array.isArray(d && d.itens) ? d.itens.filter(x => x && typeof x === "object") : [];
+  const temChave = (d, k) => itensDe(d).some(x => x.chave === k);
+  function lerOk() { const v = lerLocal("lp-dengo-ok"); return Array.isArray(v) ? v : []; }
+  // a resposta mais nova ao meu pedido que eu ainda não fechei (até 24 h)
+  function respostaNova() {
+    const ok = lerOk();
+    return dados.dengos.filter(d => d.de === eu && (d.status === "indo" || d.status === "nao_consigo") && d.respondido_em && !ok.includes(d.id) &&
+      Date.now() - new Date(d.respondido_em).getTime() < 86400000).sort((a, b) => a.respondido_em < b.respondido_em ? 1 : -1)[0] || null;
+  }
+  function itemLi(x) {
+    const li = el("li");
+    li.append(el("span", "ic", x.emoji || "💗"), el("b", "", x.titulo || ""));
+    if (x.detalhe) li.append(el("span", "det", " — " + x.detalhe));
+    return li;
+  }
+
+  function desenharDengo() {
+    if (!estado || !estado.fixa) return;
+    const outro = nomeDe(1 - eu) || "seu amor";
+    // pedido pendente para mim (topo do Início)
+    const p = pendenteParaMim(), box = $("dengoRecebido");
+    box.hidden = !p;
+    if (p) {
+      const sozinho = temChave(p, "sozinho");
+      $("drTitulo").textContent = sozinho ? `${outro} precisa de um tempo sozinho(a). Não precisa fazer nada agora 🤍` : `${outro} pediu dengo!`;
+      const ul = $("drItens"); ul.textContent = "";
+      if (!sozinho) itensDe(p).forEach(x => ul.appendChild(itemLi(x)));
+      ul.hidden = sozinho;
+      $("drMsg").hidden = !p.mensagem; $("drMsg").textContent = p.mensagem || "";
+      $("drQuando").textContent = `Pedido ${haQuanto(p.criada_em)}`;
+      const lanche = temChave(p, "lanche") && textoManual(1 - eu, "delivery");
+      $("drDica").hidden = !lanche; $("drDica").textContent = lanche ? `💡 ${outro} costuma pedir: ${lanche}` : "";
+      const ex = $("drExtras"); ex.textContent = "";
+      if (!sozinho && (temChave(p, "ligar") || temChave(p, "dormir"))) {
+        const a = el("a", "wa", "Abrir o WhatsApp"); a.href = "https://wa.me/"; a.target = "_blank"; a.rel = "noopener"; ex.appendChild(a);
+      }
+      if (!sozinho && temChave(p, "musica") && musicasNossas().length) {
+        const b = el("button", "secondary", "Mandar uma da nossa playlist"); b.type = "button";
+        b.addEventListener("click", mandarDaPlaylist); ex.appendChild(b);
+      }
+      $("drAcoes").hidden = sozinho || !!dengoRespondendo;
+      $("drAqui").hidden = !sozinho;
+      $("drRespIndo").hidden = sozinho || dengoRespondendo !== "indo";
+      $("drRespNao").hidden = sozinho || dengoRespondendo !== "nao";
+      box.dataset.id = p.id;
+    } else dengoRespondendo = null;
+
+    // resposta ao meu pedido
+    const r = respostaNova();
+    $("dengoResposta").hidden = !r;
+    if (r) {
+      const indo = r.status === "indo", tempo = temChave(r, "sozinho");
+      $("dengoRespTitulo").textContent = tempo ? `${outro}: ${r.resposta || "Tô aqui quando precisar 🤍"}` : indo ? `${outro} está indo! 💨` : `${outro} não consegue agora`;
+      $("dengoResposta").classList.toggle("indo", indo);
+      const txt = tempo ? "" : r.resposta || "";
+      $("dengoRespTexto").hidden = !txt; $("dengoRespTexto").textContent = txt;
+      $("dengoResposta").dataset.id = r.id;
+    }
+
+    // meu pedido pendente
+    const meu = meuPendente();
+    $("dengoPedir").textContent = meu ? "Ver meu pedido" : "PEDIR DENGO 💗";
+    $("dengoPedir").setAttribute("aria-expanded", String(!!meu && !$("dengoMeu").hidden));
+    if (!meu) $("dengoMeu").hidden = true;
+    else {
+      $("dengoEsperando").textContent = `Pedido enviado 💗, esperando ${outro}…`;
+      const ul = $("dengoMeuItens"); ul.textContent = "";
+      itensDe(meu).forEach(x => ul.appendChild(itemLi(x)));
+      $("dengoAvisar").href = "https://wa.me/?text=" + encodeURIComponent("Te pedi dengo no Longe & Perto 💗");
+    }
+
+    // grade de pedidos rápidos
+    const lista = minhaLista();
+    dengoSel = dengoSel.filter(id => lista.some(m => m.id === id));
+    const g = $("dengoGrade"); g.textContent = "";
+    g.hidden = !!meu;
+    lista.forEach(m => {
+      const b = el("button", "dengo-op"); b.type = "button";
+      b.setAttribute("aria-pressed", String(dengoSel.includes(m.id)));
+      b.append(el("span", "ic", m.emoji), el("b", "", m.titulo));
+      b.addEventListener("click", () => marcarPedido(m));
+      g.appendChild(b);
+    });
+    $("dengoConta").textContent = meu ? "" : dengoSel.length ? `${dengoSel.length} de ${MAX_DENGO} marcados` : "Marque até 6 ou só toque em Pedir";
+    $("dengoEditar").hidden = !!meu;
+  }
+  function marcarPedido(m) {
+    const lista = minhaLista(), sozinhoId = (lista.find(x => x.chave === "sozinho") || {}).id;
+    erro("erroDengo", "");
+    if (dengoSel.includes(m.id)) dengoSel = dengoSel.filter(x => x !== m.id);
+    else if (m.chave === "sozinho") dengoSel = [m.id];          // exclusivo: desmarca os outros
+    else {
+      dengoSel = dengoSel.filter(x => x !== sozinhoId);
+      if (dengoSel.length >= MAX_DENGO) return erro("erroDengo", `Dá para pedir até ${MAX_DENGO} coisas de uma vez.`);
+      dengoSel.push(m.id);
+    }
+    desenharDengo();
+  }
+  function botaoPedir() {
+    if (meuPendente()) { $("dengoMeu").hidden = !$("dengoMeu").hidden; return desenharDengo(); }
+    abrirDengo();
+  }
+  function abrirDengo() {
+    if (!estado || !estado.jogadores[1 - eu]) return erro("erroDengo", "Espere a outra pessoa entrar na sala.");
+    const lista = minhaLista();
+    const escolhidos = dengoSel.map(id => lista.find(m => m.id === id)).filter(Boolean);
+    dengoRascunho = escolhidos.length
+      ? escolhidos.map(m => ({ emoji: m.emoji, titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
+      : [{ emoji: "💗", titulo: "Dengo", detalhe: "", chave: null }];
+    const ul = $("dengoResumo"); ul.textContent = "";
+    dengoRascunho.forEach((x, i) => {
+      const li = el("li");
+      li.append(el("span", "ic", x.emoji), el("b", "", x.titulo));
+      if (x.chave !== "sozinho" && !(dengoRascunho.length === 1 && x.titulo === "Dengo" && !x.chave)) {
+        const inp = el("input"); inp.type = "text"; inp.maxLength = 80; inp.value = x.detalhe.slice(0, 80);
+        inp.placeholder = "Detalhe (opcional)"; inp.setAttribute("aria-label", "Detalhe de " + x.titulo); inp.dataset.i = i;
+        inp.addEventListener("input", () => { dengoRascunho[i].detalhe = inp.value; });
+        li.appendChild(inp);
+      }
+      ul.appendChild(li);
+    });
+    $("dengoMensagem").value = "";
+    erro("erroDlgDengo", "");
+    $("dlgDengo").showModal();
+  }
+  async function enviarDengo(ev) {
+    ev.preventDefault();
+    if (!dengoRascunho || !codigo) return;
+    if (meuPendente()) { $("dlgDengo").close(); return; }
+    // o detalhe sugerido sem nada depois ("O que eu quero: ") não vai
+    const itens = dengoRascunho.map(x => {
+      const d = (x.detalhe || "").trim(), sug = (minhaLista().find(m => m.titulo === x.titulo) || {}).detalhe || "";
+      const o = { emoji: x.emoji, titulo: x.titulo };
+      if (d && d !== sug.trim()) o.detalhe = d.slice(0, 80);
+      if (x.chave) o.chave = x.chave;
+      return o;
+    });
+    const mensagem = $("dengoMensagem").value.trim().slice(0, 200) || null;
+    $("dengoEnviar").disabled = true;
+    const c = codigo;
+    const { data, error } = await sb.from("dengos").insert({ sala: c, de: eu, itens, mensagem }).select().single();
+    $("dengoEnviar").disabled = false;
+    if (error || !data) return erro("erroDlgDengo", "Não consegui enviar. Confira a internet e tente de novo.");
+    $("dlgDengo").close();
+    dengoSel = [];
+    linhaV5("dengos", "INSERT", data);
+    $("dengoMeu").hidden = false;
+    desenharDengo();
+  }
+  async function cancelarDengo() {
+    const meu = meuPendente();
+    if (!meu || !confirm("Cancelar o pedido de dengo?")) return;
+    const { data, error } = await sb.from("dengos").update({ status: "cancelado" }).eq("id", meu.id).eq("status", "pendente").select().maybeSingle();
+    if (error) return erro("erroDengo", "Não consegui cancelar. Confira a internet.");
+    linhaV5("dengos", "UPDATE", data || { ...meu, status: "cancelado" });
+  }
+  async function responderDengo(status, resposta) {
+    const p = pendenteParaMim();
+    if (!p) return;
+    erro("erroDengoResp", "");
+    const txt = (resposta || "").trim().slice(0, 200) || null;
+    const { data, error } = await sb.from("dengos").update({ status, resposta: txt, respondido_em: new Date().toISOString() })
+      .eq("id", p.id).eq("status", "pendente").select().maybeSingle();
+    if (error) return erro("erroDengoResp", "Não consegui responder. Confira a internet e tente de novo.");
+    dengoRespondendo = null;
+    $("drIndoTexto").value = ""; $("drNaoTexto").value = "";
+    if (data) linhaV5("dengos", "UPDATE", data);
+    else desenharDengo();   // já tinha sido respondido ou cancelado
+  }
+  function fecharResposta() {
+    const id = $("dengoResposta").dataset.id;
+    if (id) salvarLocal("lp-dengo-ok", [id, ...lerOk()].slice(0, 50));
+    desenharDengo();
+  }
+  // Nossa playlist (v6): sorteia uma e abre no Spotify
+  const musicasNossas = () => nossas.map(n => musicas.find(m => m.id === n.musica_id)).filter(Boolean);
+  function mandarDaPlaylist() {
+    const l = musicasNossas();
+    if (!l.length) return;
+    const m = l[Math.floor(Math.random() * l.length)];
+    window.open(m.url, "_blank", "noopener");
+  }
+
+  // editar a lista de pedidos rápidos (cópia dos padrões na primeira vez)
+  function abrirPedidos() {
+    const minhas = meusModelos();
+    pedidosRascunho = (minhas.length ? minhas : padroes()).map(m => ({
+      id: minhas.length ? m.id : null, chave: m.chave || null, emoji: m.emoji, titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false }));
+    erro("erroPedidos", "");
+    desenharPedidosEdit();
+    $("dlgPedidos").showModal();
+  }
+  function desenharPedidosEdit() {
+    const ul = $("pedidosEdit"); ul.textContent = "";
+    pedidosRascunho.forEach((p, i) => {
+      const li = el("li", "pedido-edit" + (p.ativo ? "" : " inativo"));
+      const emo = el("input"); emo.type = "text"; emo.value = p.emoji; emo.maxLength = 8; emo.className = "pe-emoji"; emo.setAttribute("aria-label", "Emoji");
+      emo.addEventListener("input", () => { p.emoji = emo.value; });
+      const tit = el("input"); tit.type = "text"; tit.value = p.titulo; tit.maxLength = 40; tit.className = "pe-titulo"; tit.setAttribute("aria-label", "Pedido");
+      tit.addEventListener("input", () => { p.titulo = tit.value; });
+      const det = el("input"); det.type = "text"; det.value = p.detalhe; det.maxLength = 120; det.className = "pe-detalhe"; det.placeholder = "Detalhe sugerido (opcional)";
+      det.setAttribute("aria-label", "Detalhe sugerido");
+      det.addEventListener("input", () => { p.detalhe = det.value; });
+      const ac = el("div", "pe-acoes");
+      const mover = (d, txt, rot) => {
+        const b = el("button", "linkbtn", txt); b.type = "button"; b.setAttribute("aria-label", rot);
+        b.disabled = i + d < 0 || i + d >= pedidosRascunho.length;
+        b.addEventListener("click", () => { const [x] = pedidosRascunho.splice(i, 1); pedidosRascunho.splice(i + d, 0, x); desenharPedidosEdit(); });
+        return b;
+      };
+      const at = el("label", "check"), cb = el("input"); cb.type = "checkbox"; cb.checked = p.ativo;
+      cb.addEventListener("change", () => { p.ativo = cb.checked; li.classList.toggle("inativo", !p.ativo); });
+      at.append(cb, document.createTextNode(" ativo"));
+      ac.append(mover(-1, "↑", "Subir"), mover(1, "↓", "Descer"), at);
+      if (!p.chave) {
+        const x = el("button", "linkbtn", "Apagar"); x.type = "button";
+        x.addEventListener("click", () => { pedidosRascunho.splice(i, 1); desenharPedidosEdit(); });
+        ac.appendChild(x);
+      }
+      li.append(emo, tit, det, ac);
+      ul.appendChild(li);
+    });
+  }
+  async function salvarPedidos() {
+    if (!codigo || !pedidosRascunho) return;
+    const linhas = pedidosRascunho.map((p, i) => ({ id: p.id, sala: codigo, jogador: eu, chave: p.chave, emoji: p.emoji.trim(), titulo: p.titulo.trim(),
+      detalhe: p.detalhe.trim() ? p.detalhe.slice(0, 120) : null, ordem: i + 1, ativo: p.ativo }));
+    if (linhas.some(l => [...l.emoji].length < 1 || l.emoji.length > 8)) return erro("erroPedidos", "Cada pedido precisa de um emoji.");
+    if (linhas.some(l => l.titulo.length < 2)) return erro("erroPedidos", "Cada pedido precisa de um nome (2 letras ou mais).");
+    if (!linhas.some(l => l.ativo)) return erro("erroPedidos", "Deixe pelo menos um pedido ativo.");
+    $("pedidosSalvar").disabled = true;
+    const c = codigo, antes = meusModelos();
+    const tirar = antes.filter(m => !linhas.some(l => l.id === m.id)).map(m => m.id);
+    const velhas = linhas.filter(l => l.id), novas = linhas.filter(l => !l.id).map(({ id, ...l }) => l);
+    let falhou = false;
+    if (tirar.length) falhou = !!(await sb.from("pedidos_modelos").delete().in("id", tirar)).error || falhou;
+    if (velhas.length) falhou = !!(await sb.from("pedidos_modelos").upsert(velhas, { onConflict: "id" })).error || falhou;
+    if (novas.length) falhou = !!(await sb.from("pedidos_modelos").insert(novas)).error || falhou;
+    $("pedidosSalvar").disabled = false;
+    if (c !== codigo) return;
+    await carregarModelos(c);
+    if (falhou) return erro("erroPedidos", "Não consegui salvar tudo. Confira a internet e tente de novo.");
+    $("dlgPedidos").close();
+  }
+  async function restaurarPedidos() {
+    if (!codigo || !confirm("Voltar para os pedidos padrão? A sua lista editada será apagada.")) return;
+    const c = codigo;
+    const { error } = await sb.from("pedidos_modelos").delete().eq("sala", c).eq("jogador", eu);
+    if (error) return erro("erroPedidos", "Não consegui restaurar. Confira a internet.");
+    await carregarModelos(c);
+    $("dlgPedidos").close();
+  }
+  function novoPedido() {
+    if (pedidosRascunho.length >= 30) return erro("erroPedidos", "Dá para ter até 30 pedidos.");
+    pedidosRascunho.push({ id: null, chave: null, emoji: "💗", titulo: "", detalhe: "", ativo: true });
+    desenharPedidosEdit();
+    const ts = $("pedidosEdit").querySelectorAll(".pe-titulo");
+    ts[ts.length - 1].focus();
+  }
+
   // abre o Manual do outro numa parte (ex.: "O que me acalma")
   function abrirManualOutro(campo) {
     mostrarVista("vPerfil");
@@ -1063,8 +1364,9 @@
 
   // ---------- tabelas da v5 (só em sala fixa): carga, Realtime e redesenho ----------
   const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
-    carinhos: "criada_em", marcos: "data", motivos: "criada_em", abra_quando: "criada_em", respostas_dia: "dia" };
-  const LIMITE_TABELA = { carinhos: 500, respostas_dia: 1000 };   // tabelas que crescem sem parar: só as linhas mais novas
+    carinhos: "criada_em", marcos: "data", motivos: "criada_em", abra_quando: "criada_em", respostas_dia: "dia",
+    dengos: "criada_em" };
+  const LIMITE_TABELA = { carinhos: 500, respostas_dia: 1000, dengos: 500 };   // tabelas que crescem sem parar: só as linhas mais novas
   const aoCarregar = {};                     // tabela -> fn() depois da primeira carga
   const dados = {};
   Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
@@ -1073,6 +1375,15 @@
   const escutar = (t, f) => (aoMudar[t] = aoMudar[t] || []).push(f);
   const redesenhar = (t, f) => (aoDesenhar[t] = aoDesenhar[t] || []).push(f);
   const redesenharV5 = t => { (aoDesenhar[t] || []).forEach(f => f()); if (estado) desenharCasa(estado); };
+  // v7: pedir dengo
+  escutar("dengos", (ev, row, antes) => {
+    // pedido novo para mim: vibra
+    if (ev === "INSERT" && !antes && row.de === 1 - eu && row.status === "pendente") vibrar([100, 50, 100, 50, 200]);
+    // a resposta ao meu pedido chegou
+    if (ev !== "DELETE" && row.de === eu && antes && antes.status === "pendente" && (row.status === "indo" || row.status === "nao_consigo")) vibrar([60, 40, 60]);
+  });
+  redesenhar("dengos", desenharDengo);
+  manualMudouFns.push(desenharDengo);
 
   // ---------- guia de posições (só texto, sem imagens) ----------
   // posicoes: o guia (só leitura); marcasPos: marcas do casal nesta sala { posicao_id, marca, link }
@@ -5126,6 +5437,27 @@
     document.addEventListener("visibilitychange", () => { if (document.hidden) segurar(false); });
     $("camera").addEventListener("change", mudarCamera);
     $("navRecolher").addEventListener("click", () => recolherNav(true));
+    $("dengoPedir").addEventListener("click", botaoPedir);
+    $("formDengo").addEventListener("submit", enviarDengo);
+    $("dengoVoltar").addEventListener("click", () => $("dlgDengo").close());
+    $("dengoCancelar").addEventListener("click", cancelarDengo);
+    $("dengoRespOk").addEventListener("click", fecharResposta);
+    $("drIndo").addEventListener("click", () => { dengoRespondendo = "indo"; desenharDengo(); $("drIndoTexto").focus(); });
+    $("drNao").addEventListener("click", () => { dengoRespondendo = "nao"; desenharDengo(); });
+    $("drIndoEnviar").addEventListener("click", () => responderDengo("indo", $("drIndoTexto").value));
+    $("drNaoEnviar").addEventListener("click", () => {
+      const t = $("drNaoTexto").value.trim();
+      if (!t) return erro("erroDengoResp", "Escolha uma frase ou escreva uma resposta.");
+      responderDengo("nao_consigo", t);
+    });
+    document.querySelectorAll("#drFrases button").forEach(b => b.addEventListener("click", () => responderDengo("nao_consigo", b.textContent)));
+    $("drAqui").addEventListener("click", () => responderDengo("indo", "Tô aqui quando precisar 🤍"));
+    $("dengoEditar").addEventListener("click", abrirPedidos);
+    $("fecharPedidos").addEventListener("click", () => $("dlgPedidos").close());
+    $("pedidosSalvar").addEventListener("click", salvarPedidos);
+    $("pedidosRestaurar").addEventListener("click", restaurarPedidos);
+    $("pedidoNovo").addEventListener("click", novoPedido);
+    setInterval(() => { if (vista === "casa" && !document.hidden) desenharDengo(); }, 60000);   // "há X min"
     $("navMostrar").addEventListener("click", () => recolherNav(false));
     try { new ResizeObserver(() => document.documentElement.style.setProperty("--nav", $("navBaixo").offsetHeight + "px")).observe($("navBaixo")); } catch (err) {}
     // reserva o espaço da barra fixa no fim da página
