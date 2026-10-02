@@ -811,3 +811,29 @@ body[data-modo="presencial"]{
 .passe-titulo{font-size:1.5rem; font-weight:800; margin:8px 0; overflow-wrap:anywhere}
 .passe-sub{color:var(--muted); margin:0 0 18px}
 .passe-in .primary{width:100%}
+/* modos de hoje (presencial) */
+.modos-hoje{margin:14px 0 0; padding:12px 14px; border-radius:18px; background:var(--surface); border:1.5px solid var(--line)}
+.mh-titulo{margin:0 0 8px; font-weight:800}
+.mh-abas{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.mh-abas button{background:var(--bg); color:var(--ink); border:1.5px solid var(--line); border-radius:12px; padding:8px; font-weight:700; font-size:.9rem}
+.mh-abas button[aria-selected="true"]{border-color:var(--desafio); background:color-mix(in srgb, var(--desafio) 12%, var(--surface))}
+.mh-painel{margin-top:12px; display:grid; gap:8px}
+.mh-texto{margin:0; overflow-wrap:anywhere}
+.mh-acoes{display:flex; flex-wrap:wrap; gap:8px}
+.mh-acoes > *{flex:1 1 auto}
+.mh-relogio{margin:0; text-align:center; font-size:2rem; font-weight:800; font-variant-numeric:tabular-nums}
+.mh-placar{margin:0; font-weight:800}
+.mh-opcoes{display:flex; gap:10px; flex-wrap:wrap}
+.mh-opcoes label{flex:1 1 40%; font-weight:600; font-size:.9rem}
+.mh-opcoes select{width:100%; margin-top:4px; background:var(--bg)}
+.mh-nota .estrelas{display:flex; flex-wrap:wrap; gap:6px}
+.mh-nota .estrelas button{flex:1 1 auto; background:var(--bg); color:var(--lamp); border:1.5px solid var(--line); border-radius:10px; padding:6px; font-size:.9rem}
+.dados{display:grid; grid-template-columns:repeat(3, 1fr); gap:8px}
+.dado-face{display:grid; place-items:center; min-height:76px; padding:8px; border-radius:14px; text-align:center; font-weight:800; font-size:.9rem;
+  background:var(--bg); border:2px solid var(--desafio); overflow-wrap:anywhere}
+.dados.rolando .dado-face{animation:rolaDado .7s cubic-bezier(.2,.8,.3,1)}
+.dados.rolando .dado-face:nth-child(2){animation-delay:.08s}
+.dados.rolando .dado-face:nth-child(3){animation-delay:.16s}
+@keyframes rolaDado{0%{transform:rotate(-200deg) scale(.6); opacity:.3} 100%{transform:none; opacity:1}}
+@media (prefers-reduced-motion:reduce){.dados.rolando .dado-face{animation:none}}
+.vendada-aviso{margin:6px 0; font-weight:800; color:var(--desafio)}

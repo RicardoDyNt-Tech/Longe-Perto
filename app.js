@@ -202,6 +202,199 @@
     trocaModoFns.forEach(f => f(n, para));
   }
 
+  // ---------- modos de hoje (só no Juntos) ----------
+  let dadoItens = [], modoHoje = null, timerModos = null, ultimoDado = null, avisouFim = new Set(), vendadaLida = null;
+  async function carregarDado(c) {
+    const { data, error } = await sb.from("dado_itens").select("face, nivel, texto").eq("ativo", true);
+    if (c !== codigo || error || !data) return;
+    dadoItens = data.filter(x => ["acao", "parte", "tempo"].includes(x.face) && LEVEL_NAMES[x.nivel] && typeof x.texto === "string");
+    if (estado) desenharModosHoje(estado);
+  }
+  // cada face: dos níveis ligados; se faltar, de qualquer nível da sala até o mais alto ligado
+  function poolFace(face, n) {
+    const ativos = niveisDaPartida(n.niveis), topo = Math.max(...ativos.map(ordCfg));
+    const ate = dadoItens.filter(x => x.face === face && config.niveis[x.nivel] && ordCfg(x.nivel) <= topo);
+    const nos = ate.filter(x => ativos.includes(x.nivel));
+    return nos.length ? nos : ate;
+  }
+  const umDe = l => l[Math.floor(Math.random() * l.length)];
+  function rolarDado() {
+    if (!estado || !juntos()) return;
+    const faces = {};
+    for (const f of ["acao", "parte", "tempo"]) {
+      const p = poolFace(f, estado);
+      if (!p.length) return erro("erroDado", "O dado ainda não carregou. Confira a internet.");
+      faces[f] = umDe(p);
+    }
+    erro("erroDado", "");
+    gravarFresco(n => {
+      const quem = n.dado ? 1 - n.dado.quem : n.vez;   // quem faz alterna a cada rolagem
+      n.dado = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), quem, faces: { acao: faces.acao.texto, parte: faces.parte.texto, tempo: faces.tempo.texto },
+        niveis: [faces.acao.nivel, faces.parte.nivel, faces.tempo.nivel], timer: null };
+    });
+  }
+  function iniciarTimerDado() {
+    const d = estado && estado.dado, seg = d ? tempoDaCarta(d.faces.tempo) : 0;
+    if (!seg) return;
+    gravarFresco(n => { if (n.dado && n.dado.id === d.id) n.dado.timer = { inicio: Date.now(), segundos: seg }; });
+  }
+  const restaMs = t => (t ? t.inicio + t.segundos * 1000 - Date.now() : 0);
+  const relogioMs = ms => relogio(Math.max(0, Math.ceil(ms / 1000)));
+  // massagem cronometrada: quem faz, quem recebe, tempo e região; no fim, quem recebeu dá de 1 a 5 ⭐
+  function comecarMassagem() {
+    if (!estado || !juntos()) return;
+    const seg = Number($("massagemTempo").value), regiao = $("massagemRegiao").value;
+    if (![120, 300, 600].includes(seg) || !["ombros", "costas", "pés", "mãos", "cabeça"].includes(regiao)) return;
+    gravarFresco(n => {
+      const quem = n.massagem && n.massagem.proximo !== undefined ? n.massagem.proximo : n.vez;
+      n.massagem = { id: Date.now().toString(36), quem, regiao, inicio: Date.now(), segundos: seg, nota: null };
+    });
+  }
+  function terminarMassagem() {
+    const m = estado && estado.massagem;
+    if (!m || m.nota !== null || m.terminou) return;
+    gravarFresco(n => { if (n.massagem && n.massagem.id === m.id) n.massagem.terminou = true; });
+  }
+  function notaMassagem(v) {
+    const m = estado && estado.massagem;
+    if (!m || m.nota !== null || ![1, 2, 3, 4, 5].includes(v)) return;
+    gravarFresco(n => {
+      const x = n.massagem;
+      if (!x || x.id !== m.id || x.nota !== null) return;
+      x.nota = v;
+      const p = n.placar[x.quem];
+      p.estrelas += v; p.pontos += v;                  // como a nota do adversário: cada estrela vale 1 ponto
+      n.pontos = n.placar.map(q => q.pontos);
+      n.aviso = novoAviso(`${n.jogadores[x.quem]} ganhou ${"★".repeat(v)} pela massagem`);
+      n.massagem = { proximo: 1 - x.quem };            // troca de lugar
+      conferirMeta(n);
+    });
+  }
+  // de olhos vendados: a próxima verdade/desafio de quem está na vez; o outro lê em voz alta
+  function ligarVendado(v) {
+    if (!estado || !juntos()) return;
+    gravarFresco(n => { n.vendado = v ? { jogador: n.vez } : null; });
+  }
+  function desenharVendada(e) {
+    const c = e.carta, v = !!(c && c.vendada), quem = e.jogadores[e.vez] || "";
+    const leitor = v && (umCelularAqui(e) ? vendadaLida === c.chave : eu !== e.vez);
+    $("vendadaAviso").hidden = !v;
+    $("vendadaAviso").textContent = !v ? "" : leitor ? `🙈 Leia para ${quem} em voz alta (+1 ponto)` : eu === e.vez && !umCelularAqui(e) ? `🙈 Você está de olhos vendados. ${e.jogadores[1 - e.vez]} vai ler a carta.` : `🙈 ${quem} está de olhos vendados`;
+    $("vendadaLer").hidden = !(v && umCelularAqui(e) && vendadaLida !== c.chave);
+    $("text").hidden = v && !leitor;
+  }
+  // quente ou frio: melhor de 3; cada rodada, os dois procuram uma vez e vence quem achar mais rápido
+  function acaoQuente() {
+    const q = estado && estado.noite;
+    if (!estado || !juntos()) return;
+    if (!q || q.fim) return gravarFresco(n => { n.noite = { vitorias: [0, 0], tempos: [null, null], fase: "esconder", escondedor: n.vez, inicio: null, fim: false }; });
+    if (q.fase === "esconder") return gravarFresco(n => { if (n.noite && n.noite.fase === "esconder") { n.noite.fase = "procurando"; n.noite.inicio = Date.now(); } });
+    achou(false);
+  }
+  function achou(desistiu) {
+    const q = estado && estado.noite;
+    if (!q || q.fase !== "procurando") return;
+    const fimEm = Date.now();
+    gravarFresco(n => {
+      const x = n.noite;
+      if (!x || x.fase !== "procurando" || x.inicio !== q.inicio) return;
+      const busca = 1 - x.escondedor;
+      x.tempos[busca] = desistiu ? 1e9 : fimEm - x.inicio;
+      x.fase = "esconder"; x.inicio = null;
+      x.escondedor = busca;                              // agora quem procurou esconde
+      if (x.tempos[0] === null || x.tempos[1] === null) return;
+      const w = x.tempos[0] === x.tempos[1] ? null : x.tempos[0] < x.tempos[1] ? 0 : 1;
+      x.ultimos = x.tempos.slice();
+      x.tempos = [null, null];
+      if (w === null) { n.aviso = novoAviso("🔥 Empate na rodada!"); return; }
+      x.vitorias[w]++;
+      n.aviso = novoAviso(`🔥 ${n.jogadores[w]} venceu a rodada (${x.vitorias[0]} × ${x.vitorias[1]})`);
+      if (x.vitorias[w] < 2) return;
+      x.fim = true; x.vencedor = w;
+      const prenda = sortearPrenda(nivelDaPrenda(n, "final"), n.usados || [], n);
+      if (prenda) { registrarUso(n, prenda); x.prenda = prenda.texto; }
+    });
+  }
+  function desenharModosHoje(e) {
+    const box = $("modosHoje");
+    box.hidden = !juntos(e) || !e.jogadores[1] || vista !== "jogo";
+    if (box.hidden) return pararTimerModos();
+    document.querySelectorAll("[data-modo-hoje]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.modoHoje === modoHoje)));
+    ["dado", "massagem", "vendado", "quente"].forEach(m => { $("mh" + m[0].toUpperCase() + m.slice(1)).hidden = modoHoje !== m; });
+    const nome = i => e.jogadores[i] || "";
+    // dado
+    const d = e.dado;
+    if (d && d.id !== ultimoDado) {
+      const animar = ultimoDado !== null && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+      ultimoDado = d.id;
+      if (animar) { $("dados").classList.remove("rolando"); void $("dados").offsetWidth; $("dados").classList.add("rolando"); }
+    }
+    $("dadoAcao").textContent = d ? d.faces.acao : "?"; $("dadoParte").textContent = d ? d.faces.parte : "?"; $("dadoTempo").textContent = d ? d.faces.tempo : "?";
+    $("dadoTexto").textContent = d ? `${nome(d.quem)} faz: ${d.faces.acao} · ${d.faces.parte} · ${d.faces.tempo}` : "Ação, parte do corpo e tempo, dos níveis ligados. Não vale ponto.";
+    const segDado = d ? tempoDaCarta(d.faces.tempo) : 0;
+    $("dadoTimer").hidden = !segDado || !!(d.timer && restaMs(d.timer) > 0);
+    $("dadoTimer").textContent = segDado ? `Iniciar ${rotuloTempo(segDado)}` : "";
+    $("dadoRolar").textContent = d ? "🎲 Rolar de novo" : "🎲 Rolar o dado";
+    // massagem
+    const m = e.massagem && e.massagem.id ? e.massagem : null;
+    $("massagemForm").hidden = !!m; $("massagemVivo").hidden = !m;
+    const prox = e.massagem && e.massagem.proximo !== undefined ? e.massagem.proximo : e.vez;
+    $("massagemQuem").textContent = `${nome(prox)} faz a massagem em ${nome(1 - prox)}.`;
+    if (m) {
+      const acabou = m.terminou || restaMs(m) <= 0;
+      $("massagemTexto").textContent = `${nome(m.quem)} faz massagem ${{ ombros: "nos", costas: "nas", "pés": "nos", "mãos": "nas", "cabeça": "na" }[m.regiao] || "em"} ${m.regiao} de ${nome(1 - m.quem)}`;
+      $("massagemTerminar").hidden = acabou;
+      const daNota = acabou && (eu === 1 - m.quem || umCelularAqui(e));
+      $("massagemNota").hidden = !daNota;
+      $("massagemNotaTexto").textContent = `${nome(1 - m.quem)}, que nota a massagem merece?`;
+      $("massagemEspera").textContent = acabou && !daNota ? `Esperando a nota de ${nome(1 - m.quem)}…` : "";
+      if (!$("massagemEstrelas").childElementCount) [1, 2, 3, 4, 5].forEach(v => {
+        const b = el("button", "", "★".repeat(v)); b.type = "button"; b.setAttribute("aria-label", `${v} ${v === 1 ? "estrela" : "estrelas"}`);
+        b.addEventListener("click", () => notaMassagem(v)); $("massagemEstrelas").appendChild(b);
+      });
+    }
+    // vendado
+    const vd = e.vendado;
+    $("vendadoTexto").textContent = vd ? `🙈 A próxima carta de ${nome(vd.jogador)} vai de olhos vendados: ${nome(1 - vd.jogador)} lê em voz alta. Vale +1 ponto.`
+      : `Na próxima carta, ${nome(e.vez)} cumpre de olhos vendados (lenço, travesseiro ou a mão) e ${nome(1 - e.vez)} lê a carta. Vale +1 ponto.`;
+    $("vendadoLigar").hidden = !!vd;
+    $("vendadoLigar").textContent = `🙈 Vendar ${nome(e.vez)} na próxima carta`;
+    $("vendadoDesligar").hidden = !vd;
+    // quente ou frio
+    const q = e.noite;
+    $("quentePlacar").textContent = q ? `Melhor de 3 · ${nome(0)} ${q.vitorias[0]} × ${q.vitorias[1]} ${nome(1)}` : "";
+    $("quenteRelogio").hidden = !(q && q.fase === "procurando" && !q.fim);
+    $("quenteDesistir").hidden = $("quenteRelogio").hidden;
+    if (!q) { $("quenteTexto").textContent = "Um esconde um objeto ou um bilhete pela casa; o outro procura com dicas de quente ou frio. Quem achar mais rápido vence a rodada."; $("quenteAcao").textContent = "Começar (melhor de 3)"; }
+    else if (q.fim) { $("quenteTexto").textContent = `🏆 ${nome(q.vencedor)} venceu o quente ou frio!` + (q.prenda ? ` ${nome(1 - q.vencedor)} paga: ${q.prenda}` : ""); $("quenteAcao").textContent = "Jogar de novo"; }
+    else if (q.fase === "esconder") { $("quenteTexto").textContent = `${nome(q.escondedor)} esconde; ${nome(1 - q.escondedor)} fecha os olhos.` + (q.ultimos ? ` Última rodada: ${nome(0)} ${fmtBusca(q.ultimos[0])}, ${nome(1)} ${fmtBusca(q.ultimos[1])}.` : ""); $("quenteAcao").textContent = "Escondi, valendo!"; }
+    else { $("quenteTexto").textContent = `${nome(1 - q.escondedor)} procurando… ${nome(q.escondedor)} dá as dicas: quente ou frio!`; $("quenteAcao").textContent = "Achei! 🎉"; }
+    tickModos();
+    if (!timerModos) timerModos = setInterval(tickModos, 500);
+  }
+  const fmtBusca = ms => (ms === null || ms === undefined ? "—" : ms >= 1e9 ? "desistiu" : relogioMs(ms));
+  function pararTimerModos() { clearInterval(timerModos); timerModos = null; }
+  // relógios ao vivo (calculados de Date.now() a partir do início gravado)
+  function tickModos() {
+    const e = estado;
+    if (!e) return;
+    const d = e.dado, t = d && d.timer;
+    $("dadoRelogio").hidden = !t;
+    if (t) {
+      const r = restaMs(t);
+      $("dadoRelogio").textContent = r > 0 ? relogioMs(r) : "Tempo! ⏰";
+      if (r <= 0 && !avisouFim.has("d" + d.id)) { avisouFim.add("d" + d.id); tom(880, 0.4); vibrar([200, 100, 200]); $("dadoTimer").hidden = false; }
+    }
+    const m = e.massagem && e.massagem.id ? e.massagem : null;
+    if (m) {
+      const r = restaMs(m);
+      $("massagemRelogio").textContent = m.terminou ? "Terminou" : r > 0 ? relogioMs(r) : "Tempo! ⏰";
+      if ((r <= 0 || m.terminou) && !avisouFim.has("m" + m.id)) { avisouFim.add("m" + m.id); if (r <= 0) { tom(880, 0.4); vibrar([200, 100, 200]); } desenharModosHoje(e); }
+    }
+    const q = e.noite;
+    if (q && q.fase === "procurando" && q.inicio) $("quenteRelogio").textContent = relogioMs(Date.now() - q.inicio);
+  }
+
   function desenharModo(e) {
     const j = juntos(e);
     document.body.dataset.modo = j ? "presencial" : "distancia";
@@ -528,6 +721,7 @@
     tracos = []; pilhaMural = []; muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); esconderConvite(); $("muralLegenda").value = ""; filtroMural = "todos";
     poses = []; carregarPoses(c);
     roteiros = []; carregarRoteiros(c);
+    dadoItens = []; ultimoDado = null; carregarDado(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
     config = mesclarConfig({}); temDono = false; donoIndice = null; souDono = false; configPronta = false;
     carregarConfig(c);
@@ -916,6 +1110,7 @@
     if (!(estado && estado.fixa)) nome = "jogo";   // sala comum: só o jogo
     vista = nome;
     if (estado) conferirCelular(estado);
+    if (estado) setTimeout(() => estado && desenharModosHoje(estado), 0);
     const naCasa = nome !== "jogo";
     $("telaCasa").hidden = !naCasa;
     $("telaJogo").hidden = naCasa;
@@ -4787,6 +4982,10 @@
     if (typeof e.escolhaCegas !== "boolean") e.escolhaCegas = false;
     if (e.modo !== "presencial") e.modo = "distancia";
     if (typeof e.umCelular !== "boolean" || e.modo !== "presencial") e.umCelular = false;
+    if (!e.dado || typeof e.dado !== "object" || !e.dado.faces) e.dado = null;
+    if (!e.massagem || typeof e.massagem !== "object" || !([0, 1].includes(e.massagem.quem) || [0, 1].includes(e.massagem.proximo))) e.massagem = null;
+    if (!e.vendado || ![0, 1].includes(e.vendado.jogador)) e.vendado = null;
+    if (!e.noite || typeof e.noite !== "object" || !Array.isArray(e.noite.vitorias)) e.noite = null;
     if (e.umCelularDe !== 0 && e.umCelularDe !== 1) e.umCelularDe = null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(e.juntosDesde || "")) e.juntosDesde = null;
     if (typeof e.morteSubita !== "boolean") e.morteSubita = false;
@@ -5020,6 +5219,7 @@
     desenharDiario();
     desenharNav();
     desenharModo(e);
+    desenharModosHoje(e);
     desenharRoteiro(e);
     talvezCofreRoteiro(e, inicial);
     desenharMorteSubita(e, inicial);
@@ -5191,6 +5391,7 @@
       + (c.tipo === "efeito" && c.rodadas ? ` · dura ${c.rodadas} ${c.rodadas === 1 ? "rodada" : "rodadas"}` : "")
       + (e.emMorteSubita && (c.tipo === "verdade" || c.tipo === "desafio") ? " · ⚡ vale o dobro" : "");
     $("text").textContent = c.texto;
+    desenharVendada(e);
     desenharEtapas(e);
     $("midia").hidden = !c.midia || juntos(e);
     $("wa").href = "https://wa.me/?text=" + encodeURIComponent(`${$("kind").textContent} para ${nome}: ${c.texto}`);
@@ -5413,7 +5614,8 @@
       // com a chance configurada, o giro vira um evento especial (a roleta continua mostrando Verdade/Desafio)
       if (tipoEvento) carta = sortearEvento(n, tipoEvento) || carta;                 // roteiro: evento da etapa
       else if (!et && !n.emMorteSubita && Math.random() < CHANCE_EVENTO[n.eventos]) carta = sortearEvento(n) || carta;
-      const cegas = !carta.evento && n.escolhaCegas && !n.emMorteSubita ? duasCegas(n, tipo, carta) : null;
+      if (n.vendado && n.vendado.jogador === n.vez && !carta.evento) { carta.vendada = true; n.vendado = null; }
+      const cegas = !carta.evento && n.escolhaCegas && !n.emMorteSubita && !carta.vendada ? duasCegas(n, tipo, carta) : null;
       if (cegas) { n.cegas = cegas; n.carta = null; n.musica = null; }
       else {
         registrarUso(n, carta);
@@ -5430,6 +5632,7 @@
     gravar(n => {
       if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
       const carta = sortear(tipo, n.emMorteSubita ? [nivelMorteSubita(n)] : n.niveis, n.usados || []);
+      if (n.vendado && n.vendado.jogador === n.vez) { carta.vendada = true; n.vendado = null; }
       registrarUso(n, carta);
       n.carta = carta;
       n.musica = sortearMusica(carta.nivel);
@@ -6228,7 +6431,7 @@
   // soma pontos da tabela (+ estrelas), conta o tipo e só então confere a meta
   function pontuar(n, c, estrelas) {
     const p = n.placar[n.vez];
-    const base = ((PONTOS[c.tipo] || {})[c.nivel] || 0) * (n.emMorteSubita ? 2 : 1);   // morte súbita: vale o dobro
+    const base = ((PONTOS[c.tipo] || {})[c.nivel] || 0) * (n.emMorteSubita ? 2 : 1) + (c.vendada ? 1 : 0);   // morte súbita: dobro; vendado: +1
     p.pontos += base + estrelas;
     if (n.emMorteSubita) n.ms.res[n.vez] = base + estrelas;
     p.estrelas += estrelas;
@@ -6631,6 +6834,19 @@
     $("modoBtn").addEventListener("click", trocarModo);
     $("umCelular").addEventListener("change", mudarUmCelular);
     $("passeOk").addEventListener("click", confirmarPasse);
+    document.querySelectorAll("[data-modo-hoje]").forEach(b => b.addEventListener("click", () => {
+      modoHoje = modoHoje === b.dataset.modoHoje ? null : b.dataset.modoHoje;
+      if (estado) desenharModosHoje(estado);
+    }));
+    $("dadoRolar").addEventListener("click", rolarDado);
+    $("dadoTimer").addEventListener("click", iniciarTimerDado);
+    $("massagemComecar").addEventListener("click", comecarMassagem);
+    $("massagemTerminar").addEventListener("click", terminarMassagem);
+    $("vendadoLigar").addEventListener("click", () => ligarVendado(true));
+    $("vendadoDesligar").addEventListener("click", () => ligarVendado(false));
+    $("vendadaLer").addEventListener("click", () => { vendadaLida = estado && estado.carta ? estado.carta.chave : null; if (estado) mostrarCarta(estado); });
+    $("quenteAcao").addEventListener("click", acaoQuente);
+    $("quenteDesistir").addEventListener("click", () => achou(true));
     $("roteiroAbrir").addEventListener("click", abrirRoteiros);
     $("fecharRoteiros").addEventListener("click", () => $("dlgRoteiros").close());
     $("dlgRoteiros").addEventListener("close", fecharRoteiros);

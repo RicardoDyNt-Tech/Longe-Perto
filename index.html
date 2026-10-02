@@ -625,6 +625,70 @@
       </div>
     </div>
 
+    <section class="modos-hoje" id="modosHoje" hidden aria-label="Modos de hoje">
+      <p class="mh-titulo">💞 Modos de hoje</p>
+      <div class="mh-abas" role="tablist">
+        <button type="button" role="tab" data-modo-hoje="dado" aria-selected="false">🎲 Dado</button>
+        <button type="button" role="tab" data-modo-hoje="massagem" aria-selected="false">⏱️ Massagem</button>
+        <button type="button" role="tab" data-modo-hoje="vendado" aria-selected="false">🙈 Vendado</button>
+        <button type="button" role="tab" data-modo-hoje="quente" aria-selected="false">🔥 Quente ou frio</button>
+      </div>
+      <div class="mh-painel" id="mhDado" hidden>
+        <div class="dados" id="dados" aria-live="polite">
+          <span class="dado-face" id="dadoAcao">?</span>
+          <span class="dado-face" id="dadoParte">?</span>
+          <span class="dado-face" id="dadoTempo">?</span>
+        </div>
+        <p class="mh-texto" id="dadoTexto"></p>
+        <div class="mh-acoes">
+          <button class="primary" id="dadoRolar" type="button">🎲 Rolar o dado</button>
+          <button class="secondary" id="dadoTimer" type="button" hidden></button>
+        </div>
+        <p class="mh-relogio" id="dadoRelogio" hidden></p>
+        <p class="erro" id="erroDado" role="alert"></p>
+      </div>
+      <div class="mh-painel" id="mhMassagem" hidden>
+        <div id="massagemForm">
+          <p class="mh-texto" id="massagemQuem"></p>
+          <div class="mh-opcoes">
+            <label>Tempo
+              <select id="massagemTempo"><option value="120">2 min</option><option value="300" selected>5 min</option><option value="600">10 min</option></select>
+            </label>
+            <label>Região
+              <select id="massagemRegiao">
+                <option value="ombros">Ombros</option><option value="costas">Costas</option><option value="pés">Pés</option><option value="mãos">Mãos</option><option value="cabeça">Cabeça</option>
+              </select>
+            </label>
+          </div>
+          <button class="primary" id="massagemComecar" type="button">Começar a massagem</button>
+        </div>
+        <div id="massagemVivo" hidden>
+          <p class="mh-texto" id="massagemTexto"></p>
+          <p class="mh-relogio" id="massagemRelogio"></p>
+          <button class="linkbtn" id="massagemTerminar" type="button">Terminar antes</button>
+          <div class="mh-nota" id="massagemNota" hidden>
+            <p id="massagemNotaTexto"></p>
+            <div class="estrelas" id="massagemEstrelas"></div>
+          </div>
+          <p class="wait" id="massagemEspera"></p>
+        </div>
+      </div>
+      <div class="mh-painel" id="mhVendado" hidden>
+        <p class="mh-texto" id="vendadoTexto"></p>
+        <button class="primary" id="vendadoLigar" type="button"></button>
+        <button class="linkbtn" id="vendadoDesligar" type="button" hidden>Cancelar</button>
+      </div>
+      <div class="mh-painel" id="mhQuente" hidden>
+        <p class="mh-placar" id="quentePlacar"></p>
+        <p class="mh-texto" id="quenteTexto"></p>
+        <p class="mh-relogio" id="quenteRelogio" hidden></p>
+        <div class="mh-acoes">
+          <button class="primary" id="quenteAcao" type="button"></button>
+          <button class="secondary" id="quenteDesistir" type="button" hidden>Desistir da busca</button>
+        </div>
+      </div>
+    </section>
+
     <div class="stage" aria-live="polite">
       <p class="turn" id="vez"></p>
       <div class="wheel-wrap">
@@ -649,6 +713,8 @@
       <p class="selo" id="selo" hidden></p>
       <p class="kind" id="kind"></p>
       <p class="level" id="level"></p>
+      <p class="vendada-aviso" id="vendadaAviso" hidden></p>
+      <button class="secondary" id="vendadaLer" type="button" hidden>👀 Toque para ler (só quem lê)</button>
       <p class="text" id="text"></p>
       <ol class="seq-etapas" id="seqEtapas" hidden></ol>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
