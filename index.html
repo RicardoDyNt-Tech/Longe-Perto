@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=52">
+<link rel="stylesheet" href="style.css?v=53">
 </head>
 <body>
 <main>
@@ -81,12 +81,25 @@
 
     <div class="reencontro" id="reencontro">
       <p class="reencontro-txt" id="reencontroTxt"></p>
+      <div class="contador" id="contador" hidden role="timer" aria-live="off">
+        <div class="ct-caixa" id="ctCaixaDias"><b id="ctDias"></b><span>dias</span></div>
+        <div class="ct-caixa"><b id="ctHoras"></b><span>horas</span></div>
+        <div class="ct-caixa"><b id="ctMin"></b><span>min</span></div>
+        <div class="ct-caixa"><b id="ctSeg"></b><span>seg</span></div>
+      </div>
+      <p class="contador-quando" id="contadorQuando" hidden></p>
+      <p class="contador-dica" id="contadorDica" hidden>Coloque o horário para o contador ficar exato.</p>
+      <div class="contador-festa" id="contadorFesta" hidden aria-hidden="true"></div>
+      <button class="primary contador-juntos" id="contadorJuntos" type="button" hidden>💞 Ligar o modo Juntos</button>
       <div class="reencontro-form" id="reencontroForm" hidden>
+        <span class="reencontro-rotulo">Data e hora do encontro</span>
         <input type="date" id="reencontroData" aria-label="Data do reencontro">
-        <button class="secondary" id="reencontroSalvar" type="button">Salvar data</button>
+        <input type="time" id="reencontroHora" aria-label="Hora do reencontro">
+        <button class="secondary" id="reencontroSalvar" type="button">Salvar</button>
       </div>
       <button class="linkbtn" id="reencontroMudar" type="button" hidden>mudar data</button>
     </div>
+    <p class="contador-mini" id="contadorMini" hidden></p>
 
 
     <div class="invite" id="convite" hidden>
@@ -1447,9 +1460,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=52"></script>
-<script src="conquistas.js?v=52"></script>
-<script src="app.js?v=52"></script>
+<script src="config.js?v=53"></script>
+<script src="conquistas.js?v=53"></script>
+<script src="app.js?v=53"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
