@@ -427,31 +427,123 @@
   // "hoje" no fuso do casal, como AAAA-MM-DD
   const hojeISO = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bahia" }).format(d);
   const diasAte = iso => {
-    const [a, m, d] = iso.split("-").map(Number), [ha, hm, hd] = hojeISO().split("-").map(Number);
+    const [a, m, d] = iso.slice(0, 10).split("-").map(Number), [ha, hm, hd] = hojeISO().split("-").map(Number);
     return Math.round((Date.UTC(a, m - 1, d) - Date.UTC(ha, hm - 1, hd)) / 86400000);
   };
-  const dataBR = iso => iso.split("-").reverse().join("/");
+  const dataBR = iso => iso.slice(0, 10).split("-").reverse().join("/");
   let editandoData = false;
 
+  // ---------- contador ao vivo ----------
+  // `reencontro` é 'AAAA-MM-DD' (salas antigas: meia-noite) ou 'AAAA-MM-DDTHH:MM', sempre no fuso fixo −03:00
+  const RE_REENCONTRO = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
+  const alvoReencontro = r => new Date((r.length === 10 ? r + "T00:00" : r) + ":00-03:00").getTime();
+  const JUNTOS_ATE = 14 * 86400000;        // "Vocês estão juntos há…" até 14 dias depois; depois, pede a próxima data
+  const AGORA_MS = 60000;                   // "É agora! 💞" no primeiro minuto
+  let timerContador = null, faltavaAntes = null;
+  const dois = n => String(n).padStart(2, "0");
+  function partes(ms) {
+    const s = Math.floor(Math.max(0, ms) / 1000);
+    return { d: Math.floor(s / 86400), h: Math.floor(s % 86400 / 3600), m: Math.floor(s % 3600 / 60), s: s % 60 };
+  }
+  // "8d 14h 32m" (compacto) ou "8 dias, 14 h 32 min 07 s"
+  function textoFalta(ms, compacto) {
+    const p = partes(ms);
+    if (compacto) return (p.d ? `${p.d}d ` : "") + `${p.h}h ${dois(p.m)}m` + (p.d ? "" : ` ${dois(p.s)}s`);
+    return (p.d ? `${p.d} ${p.d === 1 ? "dia" : "dias"}, ` : "") + `${p.h} h ${dois(p.m)} min ${dois(p.s)} s`;
+  }
+  function textoJuntos(ms) {
+    const p = partes(ms);
+    return p.d ? `${p.d} ${p.d === 1 ? "dia" : "dias"} e ${p.h} h` : p.h ? `${p.h} h ${p.m} min` : `${p.m} min`;
+  }
+  function quandoReencontro(r) {
+    const d = new Date(alvoReencontro(r));
+    const f = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Bahia", weekday: "short", day: "numeric", month: "short" }).format(d).replace(/\./g, "");
+    return `Encontro em ${f}` + (r.length > 10 ? `, às ${r.slice(11, 16)}` : "");
+  }
+  // estado do reencontro agora: sem data, contando, é agora, juntos ou passou
+  function situacaoReencontro(e) {
+    const r = e && e.reencontro;
+    if (!r) return { fase: "sem" };
+    const falta = alvoReencontro(r) - Date.now();
+    if (falta > 0) return { fase: "contando", falta, r };
+    if (-falta < AGORA_MS) return { fase: "agora", falta, r };
+    if (-falta < JUNTOS_ATE) return { fase: "juntos", falta, r };
+    return { fase: "passou", falta, r };
+  }
+  function tickContador() {
+    const e = estado;
+    if (!e) return;
+    const st = situacaoReencontro(e), contando = st.fase === "contando";
+    // cruzou o zero com o app aberto: festa nos dois
+    if (faltavaAntes !== null && faltavaAntes > 0 && st.falta !== undefined && st.falta <= 0) festaReencontro();
+    faltavaAntes = st.falta === undefined ? null : st.falta;
+    $("contador").hidden = !contando;
+    if (contando) {
+      const p = partes(st.falta);
+      $("ctCaixaDias").hidden = p.d === 0;
+      $("ctDias").textContent = p.d; $("ctHoras").textContent = dois(p.h); $("ctMin").textContent = dois(p.m); $("ctSeg").textContent = dois(p.s);
+      $("contador").classList.toggle("urgente", st.falta < 3600000);
+      $("contador").setAttribute("aria-label", `Faltam ${textoFalta(st.falta)}`);
+    }
+    $("contadorQuando").hidden = !contando;
+    if (contando) $("contadorQuando").textContent = quandoReencontro(st.r);
+    $("contadorDica").hidden = !(contando && st.r.length === 10);
+    const txt = st.fase === "sem" ? "Quando é o reencontro? 💞"
+      : contando ? "Contagem para o reencontro 💞"
+      : st.fase === "agora" ? "É agora! 💞"
+      : st.fase === "juntos" ? `Vocês estão juntos há ${textoJuntos(-st.falta)} 💞`
+      : `O reencontro foi em ${dataBR(st.r)}. Marcar uma nova data?`;
+    if ($("reencontroTxt").textContent !== txt) $("reencontroTxt").textContent = txt;
+    // mapa da saudade (v6), boa noite (v6) e cabeçalho do jogo
+    const curto = contando ? `Faltam ${textoFalta(st.falta)} para o reencontro` : st.fase === "agora" ? "É agora! 💞" : st.fase === "juntos" ? `Juntos há ${textoJuntos(-st.falta)} 💞` : "";
+    if ($("mapaReencontro")) $("mapaReencontro").textContent = curto;
+    if ($("noiteReencontro")) $("noiteReencontro").textContent = curto;
+    const mini = $("contadorMini");
+    mini.hidden = !(contando && e.fixa && vista === "jogo");
+    if (!mini.hidden) mini.textContent = `💞 ${textoFalta(st.falta, true)}`;
+  }
+  function festaReencontro() {
+    vibrar([200, 100, 200, 100, 400]);
+    const f = $("contadorFesta");
+    f.textContent = "";
+    for (let i = 0; i < 18; i++) {
+      const c = el("span", "", i % 3 ? "💞" : "❤️");
+      c.style.left = (5 + Math.random() * 90) + "%";
+      c.style.animationDelay = (Math.random() * 0.6) + "s";
+      f.appendChild(c);
+    }
+    f.hidden = false;
+    setTimeout(() => { f.hidden = true; f.textContent = ""; }, 3000);
+  }
+  // um único intervalo de 1 s; parado com a aba oculta, recalculado ao voltar
+  function ligarContador() {
+    clearInterval(timerContador); timerContador = null;
+    if (document.hidden) return;
+    tickContador();
+    timerContador = setInterval(tickContador, 1000);
+  }
+
   function desenharReencontro(e) {
-    const r = e.reencontro;
-    const dias = r ? diasAte(r) : null;
-    const txt = !r ? "Quando é o reencontro? 💞"
-      : dias > 1 ? `Faltam ${dias} dias para o reencontro 💞`
-      : dias === 1 ? "Falta 1 dia para o reencontro 💞"
-      : dias === 0 ? "É hoje! 💞"
-      : `O reencontro foi em ${dataBR(r)}. Marcar uma nova data?`;
-    $("reencontroTxt").textContent = txt;
-    const mostrarForm = !r || dias < 0 || editandoData;
+    const st = situacaoReencontro(e);
+    const mostrarForm = st.fase === "sem" || st.fase === "passou" || st.fase === "juntos" || editandoData;
     $("reencontroForm").hidden = !mostrarForm;
     $("reencontroMudar").hidden = mostrarForm;
-    if (mostrarForm && document.activeElement !== $("reencontroData")) $("reencontroData").value = r && dias >= 0 ? r : "";
+    $("reencontroSalvar").textContent = st.fase === "juntos" ? "Marcar o próximo" : "Salvar";
+    const editando = [$("reencontroData"), $("reencontroHora")].includes(document.activeElement);
+    if (mostrarForm && !editando) {
+      const vale = st.fase === "contando" || st.fase === "agora";
+      $("reencontroData").value = vale ? st.r.slice(0, 10) : "";
+      $("reencontroHora").value = vale && st.r.length > 10 ? st.r.slice(11, 16) : "";
+    }
+    tickContador();
   }
 
   function salvarReencontro() {
-    const v = $("reencontroData").value;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
+    const d = $("reencontroData").value, h = $("reencontroHora").value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    const v = /^\d{2}:\d{2}$/.test(h) ? `${d}T${h}` : d;   // sem hora: meia-noite
     editandoData = false;
+    faltavaAntes = null;
     gravar(n => { n.reencontro = v; });
   }
 
@@ -829,6 +921,7 @@
     if (nome === "vHistorico") { diasHist = 30; desenharHistorico(); }
     if (vista !== "vMural" && muralJuntos) sairJuntos();
     if (nome === "vMural") entrarMural();
+    tickContador();
     window.scrollTo(0, 0);
   }
 
@@ -3505,8 +3598,7 @@
     g1.append(svgEl("circle", { cx: 270, cy: 60, r: 9 }), svgEl("text", { x: 270, y: 95, "text-anchor": "middle" }, nomes[1]));
     svg.append(g0, g1, svgEl("text", { x: 160, y: 68, "text-anchor": "middle", class: "mapa-coracao" }, "❤"));
     $("mapaKm").textContent = hoje0 ? "Hoje é 0 km 💞" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Digam as cidades de vocês para ver a distância";
-    const r = e.reencontro ? diasAte(e.reencontro) : null;
-    $("mapaReencontro").textContent = r === null || r < 0 ? "" : r === 0 ? "É hoje! 💞" : r === 1 ? "Falta 1 dia para o reencontro" : `Faltam ${r} dias para o reencontro`;
+    tickContador();   // "Faltam 8 dias, 14 h…" ao vivo
     // configuração "Nossas cidades"
     [0, 1].forEach(i => {
       $("cidadeRotulo" + i).textContent = `Cidade de ${nomeDe(i)}`;
@@ -3990,8 +4082,7 @@
       ul.appendChild(li);
     });
     $("noiteBoaFrase").textContent = enc.frase || "";
-    const r = e.reencontro ? diasAte(e.reencontro) : null;
-    $("noiteReencontro").textContent = r === null || r < 0 ? "" : r === 0 ? "O reencontro é hoje 💞" : r === 1 ? "Falta 1 dia para o reencontro" : `Faltam ${r} dias para o reencontro`;
+    tickContador();
     $("noiteMaos").textContent = maosNoite > 0 ? `Hoje vocês ficaram ${fmtMinSeg(maosNoite)} de mãos dadas` : "";
   }
 
@@ -4648,7 +4739,7 @@
     if (e.aviso === undefined) e.aviso = null;
     if (e.timer === undefined) e.timer = null;
     if (!e.musica || !idFaixa(e.musica.url)) e.musica = null;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(e.reencontro || "")) e.reencontro = null;
+    if (!RE_REENCONTRO.test(e.reencontro || "")) e.reencontro = null;
     if (!LEVEL_NAMES[e.nivelDiario]) e.nivelDiario = "leve";
     if (!e.diario || typeof e.diario !== "object" || Array.isArray(e.diario)) e.diario = {};
     if (typeof e.notaAdversario !== "boolean") e.notaAdversario = true;
@@ -6583,6 +6674,8 @@
     $("criar").addEventListener("click", () => criarSala(false));
     $("criarFixa").addEventListener("click", () => criarSala(true));
     $("reencontroSalvar").addEventListener("click", salvarReencontro);
+    document.addEventListener("visibilitychange", ligarContador);
+    ligarContador();
     $("reencontroMudar").addEventListener("click", () => { editandoData = true; desenharReencontro(estado); $("reencontroData").focus(); });
     $("guardar").addEventListener("click", abrirGuardar);
     $("abrirMusica").addEventListener("click", abrirMusica);
