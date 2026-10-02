@@ -237,7 +237,7 @@
     let data = [], error = null;
     for (let de = 0; ; de += 1000) {
       const r = await sb.from("cartas")
-        .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos, etapas")
+        .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos, etapas, modo")
         .or("sala.is.null,sala.eq." + c)
         .eq("ativa", true)
         .order("id", { ascending: true })
@@ -251,7 +251,7 @@
       cartas = [];
       erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     } else {
-      cartas = data;
+      cartas = data.filter(c => c.modo !== "presencial");   // cartas do modo Juntos (025) ficam fora até o modo existir
       cartasOk = true;
     }
     atualizarBotoes();
