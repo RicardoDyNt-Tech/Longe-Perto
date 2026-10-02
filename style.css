@@ -803,3 +803,11 @@ body[data-modo="presencial"]{
 @media (prefers-color-scheme:dark){
   body[data-modo="presencial"]{ --bg:#24130F; --surface:#331B15; --ink:#FFEDE5; --muted:#D3A596; --line:#55302A; --verdade:#FB923C; --desafio:#FB7185; --lamp:#FBBF24; }
 }
+/* num celular só */
+.um-celular{margin:0; font-size:.9rem}
+.passe-celular{position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:24px; background:var(--bg)}
+.passe-in{max-width:360px; text-align:center}
+.passe-ic{font-size:3rem; margin:0}
+.passe-titulo{font-size:1.5rem; font-weight:800; margin:8px 0; overflow-wrap:anywhere}
+.passe-sub{color:var(--muted); margin:0 0 18px}
+.passe-in .primary{width:100%}

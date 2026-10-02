@@ -34,7 +34,8 @@
 
   let sb = null;
   let codigo = null;    // sala atual
-  let eu = null;        // 0 ou 1
+  let eu = null;        // 0 ou 1 (num celular só, quem está com o aparelho na vez)
+  let euReal = null;    // o jogador deste aparelho
   let estado = null;    // último estado conhecido
   let canal = null;
   let ultimoGiro = null;
@@ -134,6 +135,73 @@
       if (typeof aoTrocarModo === "function") aoTrocarModo(n, para);
     });
   }
+  // ---------- num celular só: o aparelho passa de mão em mão ----------
+  let passeAberto = null;   // { ator, segredo } enquanto a tela de "passe o celular" cobre o jogo
+  const umCelularAqui = e => !!(e && e.umCelular && juntos(e) && e.umCelularDe === euReal && e.jogadores[1]);
+  const primeiroSem = (e, arr) => [e.vez, 1 - e.vez].find(j => arr[j] === null || arr[j] === undefined || arr[j] === false);
+  // quem precisa estar com o celular agora
+  function atorDe(e) {
+    const c = e.carta, v = e.vez;
+    if (e.avaliacao) return 1 - v;                    // nota do adversário: quem não cumpriu dá as estrelas
+    if (!c) return v;
+    if (c.tipo === "duelo") return e.duelo && e.duelo.iniciado ? primeiroSem(e, e.duelo.votos) ?? v : v;
+    if (c.tipo === "missao_dupla") return e.dupla ? primeiroSem(e, e.dupla.votos) ?? v : v;
+    if (c.tipo === "sintonia") { const s = e.sintonia; return s && s.revelado ? s.alvo : s ? primeiroSem(e, s.respostas) ?? v : alvoDe(e, c); }
+    if (c.tipo === "sequencia" && e.sequencia && Array.isArray(c.etapas)) {
+      const q = quemFaz(girouDe(e, c), c.etapas[e.sequencia.etapa]);
+      return q === "dois" ? primeiroSem(e, e.sequencia.feitos) ?? v : q;
+    }
+    return v;
+  }
+  // respostas e votos secretos: o primeiro já respondeu e o segundo ainda não
+  function segredoAberto(e) {
+    const c = e.carta;
+    if (!c) return false;
+    if (c.tipo === "sintonia") return !!(e.sintonia && !e.sintonia.revelado && e.sintonia.respostas.some(x => x !== null));
+    if (c.tipo === "duelo") return !!(e.duelo && e.duelo.iniciado && e.duelo.votos.some(x => x !== null));
+    if (c.tipo === "missao_dupla") return !!(e.dupla && e.dupla.votos.some(x => x !== null));
+    if (c.tipo === "sequencia") return !!(e.sequencia && e.sequencia.feitos.some(Boolean));
+    return false;
+  }
+  function conferirCelular(e) {
+    if (!umCelularAqui(e) || vista !== "jogo") {
+      if (eu !== euReal) eu = euReal;
+      if (passeAberto) { passeAberto = null; $("passeCelular").hidden = true; }
+      return;
+    }
+    const ator = atorDe(e);
+    if (ator === eu) { if (passeAberto) { passeAberto = null; $("passeCelular").hidden = true; } return; }
+    const segredo = segredoAberto(e), nome = e.jogadores[ator] || "";
+    passeAberto = { ator, segredo };
+    $("passeTitulo").textContent = segredo ? `Agora é a vez de ${nome}, não espie 🙈` : `Passe o celular para ${nome} 💞`;
+    $("passeSub").textContent = segredo ? `Entregue o celular para ${nome} sem olhar a tela.` : "";
+    $("passeOk").textContent = `Sou ${nome}, pode mostrar`;
+    $("passeCelular").hidden = false;
+  }
+  function confirmarPasse() {
+    if (!passeAberto || !estado) return;
+    eu = passeAberto.ator;
+    passeAberto = null;
+    $("passeCelular").hidden = true;
+    $("sintoniaTexto").value = "";                     // nada do rascunho de quem passou o celular
+    aplicar(estado, true, true);
+  }
+  function mudarUmCelular() {
+    const v = $("umCelular").checked;
+    if (!estado || !juntos() || !podeTrocarModo()) return;
+    gravar(n => {
+      n.umCelular = v;
+      n.umCelularDe = v ? euReal : null;
+      if (v) n.secretas = [];                          // missão secreta não dá para esconder num celular só
+      n.aviso = novoAviso(v ? "📱 Jogando num celular só" : "📱 Cada um no seu celular de novo");
+    });
+  }
+  const trocaModoFns = [];
+  function aoTrocarModo(n, para) {
+    if (para === "distancia") { n.umCelular = false; n.umCelularDe = null; }
+    trocaModoFns.forEach(f => f(n, para));
+  }
+
   function desenharModo(e) {
     const j = juntos(e);
     document.body.dataset.modo = j ? "presencial" : "distancia";
@@ -146,6 +214,8 @@
     const dia = j && e.juntosDesde ? 1 - diasAte(e.juntosDesde) : null;
     $("juntosCab").hidden = !j;
     $("juntosCab").textContent = j ? "💞 Juntos de novo" + (dia ? ` · dia ${dia} do reencontro` : "") : "";
+    $("umCelularLinha").hidden = !j || !podeTrocarModo();
+    $("umCelular").checked = !!e.umCelular;
     desenharAjustes();
   }
 
@@ -361,7 +431,7 @@
   }
 
   function abrirSala(c, idx, e) {
-    codigo = c; eu = idx; ultimoGiro = null; ultimaVez = null;
+    codigo = c; eu = idx; euReal = idx; ultimoGiro = null; ultimaVez = null; passeAberto = null;
     salvarLocal("lp-ultima-sala", { codigo: c });
     lembrarSala(c, e.jogadores[idx], !!e.fixa);
     $("salaCodigo").classList.toggle("fixa", !!e.fixa);
@@ -845,6 +915,7 @@
   function mostrarVista(nome) {
     if (!(estado && estado.fixa)) nome = "jogo";   // sala comum: só o jogo
     vista = nome;
+    if (estado) conferirCelular(estado);
     const naCasa = nome !== "jogo";
     $("telaCasa").hidden = !naCasa;
     $("telaJogo").hidden = naCasa;
@@ -4546,12 +4617,12 @@
     desenharPresenca();
   }
   function marcarVisto(forcar) {
-    if (!codigo || (eu !== 0 && eu !== 1) || document.hidden && !forcar) return;
+    if (!codigo || (euReal !== 0 && euReal !== 1) || document.hidden && !forcar) return;
     if (!forcar && Date.now() - ultimoVistoGravado < 55000) return;
     ultimoVistoGravado = Date.now();
     const agora = new Date().toISOString();
-    vistos[eu] = agora;
-    sb.from("vistos").upsert({ sala: codigo, jogador: eu, visto_em: agora }, { onConflict: "sala,jogador" }).then(() => {}, () => {});
+    vistos[euReal] = agora;
+    sb.from("vistos").upsert({ sala: codigo, jogador: euReal, visto_em: agora }, { onConflict: "sala,jogador" }).then(() => {}, () => {});
   }
   // "há 5 min", "hoje às 21:43", "ontem às 23:10", "12/10 às 08:00"
   function quandoVisto(iso) {
@@ -4715,6 +4786,8 @@
     if (!Array.isArray(e.historico)) e.historico = [];
     if (typeof e.escolhaCegas !== "boolean") e.escolhaCegas = false;
     if (e.modo !== "presencial") e.modo = "distancia";
+    if (typeof e.umCelular !== "boolean" || e.modo !== "presencial") e.umCelular = false;
+    if (e.umCelularDe !== 0 && e.umCelularDe !== 1) e.umCelularDe = null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(e.juntosDesde || "")) e.juntosDesde = null;
     if (typeof e.morteSubita !== "boolean") e.morteSubita = false;
     if (typeof e.emMorteSubita !== "boolean" || e.vencedor !== null) e.emMorteSubita = false;
@@ -4903,6 +4976,7 @@
     const vezAntes = estado ? estado.vez : null;
     const chaveAntes = estado && estado.carta ? estado.carta.chave : null, baralhoAntes = estado ? estado.baralhoVer : undefined;
     estado = normalizar(e);
+    conferirCelular(estado);
     mostrarAviso(e.aviso, inicial);
     avisarMinhaVez(e, inicial || local);
     if (!inicial && e.vencedor !== null && ultimoVencedor === null) {
@@ -6042,7 +6116,7 @@
   // ---------- missão secreta da partida ----------
   // Duas missões diferentes, dos níveis ativos (se faltar, de qualquer nível). Cada um vê só a sua.
   function sortearSecretas(n) {
-    if (!permitido("missaoSecreta")) return [];
+    if (!permitido("missaoSecreta") || n.umCelular) return [];
     const nv = niveisDaPartida(n.niveis).map(x => (x === "romantico" ? "leve" : x));
     const podem = cartas.filter(c => c.tipo === "missao_secreta" && permitido("missaoSecreta", c.nivel) && cartaPermitida(c) && noModo(c));
     let pool = podem.filter(c => nv.includes(c.nivel));
@@ -6085,7 +6159,7 @@
   function desenharSecretas(e) {
     const box = $("secretasBox");
     const ms = e.secretas;
-    box.hidden = !e.jogadores[1] || ms.length < 2 || !permitido("missaoSecreta");
+    box.hidden = !e.jogadores[1] || ms.length < 2 || !permitido("missaoSecreta") || e.umCelular;
     const lista = $("missoesReveladas");
     lista.textContent = "";
     if (box.hidden) return;
@@ -6555,6 +6629,8 @@
     $("dengoPedir").addEventListener("click", botaoPedir);
     $("seqFeito").addEventListener("click", feitoEtapa);
     $("modoBtn").addEventListener("click", trocarModo);
+    $("umCelular").addEventListener("change", mudarUmCelular);
+    $("passeOk").addEventListener("click", confirmarPasse);
     $("roteiroAbrir").addEventListener("click", abrirRoteiros);
     $("fecharRoteiros").addEventListener("click", () => $("dlgRoteiros").close());
     $("dlgRoteiros").addEventListener("close", fecharRoteiros);
