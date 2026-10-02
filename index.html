@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=50">
+<link rel="stylesheet" href="style.css?v=52">
 </head>
 <body>
 <main>
@@ -57,6 +57,10 @@
     <div class="topbar">
       <span>Sala <span class="sala" id="salaCodigo"></span></span>
       <button class="linkbtn" id="sair">Sair da sala</button>
+    </div>
+    <div class="modo-linha">
+      <button class="modo-btn" id="modoBtn" type="button" hidden aria-pressed="false">📍 A distância</button>
+      <p class="juntos-cab" id="juntosCab" hidden></p>
     </div>
 
     <div class="ajustes">
@@ -1297,6 +1301,13 @@
         <textarea id="textoCarta" maxlength="280" rows="4" placeholder="Ex.: Me conta um sonho que você teve comigo"></textarea>
         <span class="contador" id="contadorCarta">0/280</span>
       </label>
+      <label class="field" id="modoCartaLinha">Para
+        <select id="modoCarta">
+          <option value="distancia">a distância</option>
+          <option value="presencial">juntos</option>
+          <option value="ambos">os dois</option>
+        </select>
+      </label>
       <label class="check"><input type="checkbox" id="temMidia"> Pede foto, vídeo ou áudio</label>
       <select id="midiaCarta" hidden aria-label="Tipo de mídia">
         <option value="foto">Foto</option>
@@ -1313,9 +1324,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=50"></script>
-<script src="conquistas.js?v=50"></script>
-<script src="app.js?v=50"></script>
+<script src="config.js?v=52"></script>
+<script src="conquistas.js?v=52"></script>
+<script src="app.js?v=52"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

@@ -109,11 +109,51 @@
     rotacao = graus;
   }
 
+  // ---------- modo da sala: a distância ou juntos (presencial) ----------
+  const MODO_AMBOS = ["verdade", "sintonia", "pergunta_dia", "capsula", "boa_noite"];   // como no 025_presencial.sql
+  const modoDe = c => (["distancia", "presencial", "ambos"].includes(c.modo) ? c.modo : MODO_AMBOS.includes(c.tipo) ? "ambos" : "distancia");
+  const juntos = (e = estado) => !!(e && e.modo === "presencial" && permitido("presencial"));
+  // a carta sai no modo atual? (no Juntos, nada que peça WhatsApp)
+  function noModo(c) {
+    const m = modoDe(c), j = juntos();
+    if (m !== "ambos" && m !== (j ? "presencial" : "distancia")) return false;
+    return !(j && c.midia);
+  }
+  const foraDoJuntos = c => modoDe(c) !== "presencial";   // recursos da distância (desafio do dia, envelopes)
+
+  const podeTrocarModo = () => permitido("presencial") && (config.chipsQuemMuda !== "dono" || souDono);
+  function trocarModo() {
+    if (!estado || !podeTrocarModo()) return;
+    const para = juntos() ? "distancia" : "presencial";
+    if (!placarZerado(estado) && !confirm("Trocar de modo? O placar continua.")) return;
+    gravar(n => {
+      n.modo = para;
+      n.cegas = null;
+      if (para === "presencial" && !n.juntosDesde) n.juntosDesde = hojeISO();
+      n.aviso = novoAviso(para === "presencial" ? "💞 Modo Juntos ligado" : "📍 De volta ao modo a distância");
+      if (typeof aoTrocarModo === "function") aoTrocarModo(n, para);
+    });
+  }
+  function desenharModo(e) {
+    const j = juntos(e);
+    document.body.dataset.modo = j ? "presencial" : "distancia";
+    const b = $("modoBtn");
+    b.hidden = !permitido("presencial") || !e.jogadores[1];
+    b.disabled = !podeTrocarModo();
+    b.textContent = j ? "💞 Juntos" : "📍 A distância";
+    b.setAttribute("aria-pressed", String(j));
+    b.title = j ? "Tocar para voltar ao modo a distância" : "Tocar para ligar o modo Juntos";
+    const dia = j && e.juntosDesde ? 1 - diasAte(e.juntosDesde) : null;
+    $("juntosCab").hidden = !j;
+    $("juntosCab").textContent = j ? "💞 Juntos de novo" + (dia ? ` · dia ${dia} do reencontro` : "") : "";
+    desenharAjustes();
+  }
+
   // ---------- sorteio ----------
   // chaves antigas em `usados` (de antes das cartas irem para o banco) não batem com nenhum id e são ignoradas
   function sortear(tipo, niveis, usados) {
     const lista = niveisDaPartida(niveis);
-    const doTipo = cartas.filter(c => c.tipo === tipo && cartaPermitida(c));   // config da sala primeiro
+    const doTipo = cartas.filter(c => c.tipo === tipo && cartaPermitida(c) && noModo(c));   // config da sala e modo primeiro
     let pool = filtrarBaralho(doTipo.filter(c => lista.includes(c.nivel)).map(c => ({ ...c, chave: c.id })));
     if (!pool.length) pool = filtrarBaralho(doTipo.filter(c => c.nivel === maisLeve()).map(c => ({ ...c, chave: c.id })));
     if (!pool.length) return null;
@@ -141,7 +181,7 @@
   // prenda do nível pedido; se não houver prenda nesse nível, desce um nível até encontrar.
   // Romântico fica fora da ordem de subida. Com "Prendas fofas", toda prenda sai romântica,
   // guardando em nivelOriginal o nível que ela teria (para a devolução de pulos).
-  const temPrendaRomantica = () => cartas.some(c => c.tipo === "prenda" && c.nivel === "romantico" && cartaPermitida(c));
+  const temPrendaRomantica = () => cartas.some(c => c.tipo === "prenda" && c.nivel === "romantico" && cartaPermitida(c) && noModo(c));
   function sortearPrenda(nivel, usados, n) {
     if (n && n.prendasFofas && temPrendaRomantica()) {
       const fofa = sortear("prenda", ["romantico"], usados);
@@ -155,7 +195,7 @@
     // nível que a sala não tem (ou sem prenda): desce até o permitido mais alto; sem nada, a romântica
     for (let i = ORDEM_NIVEIS.indexOf(nivel); i >= 0; i--) {
       const x = ORDEM_NIVEIS[i];
-      if (cartas.some(c => c.tipo === "prenda" && c.nivel === x && cartaPermitida(c))) return sortear("prenda", [x], usados);
+      if (cartas.some(c => c.tipo === "prenda" && c.nivel === x && cartaPermitida(c) && noModo(c))) return sortear("prenda", [x], usados);
     }
     return temPrendaRomantica() ? sortear("prenda", ["romantico"], usados) : null;
   }
@@ -237,7 +277,7 @@
     let data = [], error = null;
     for (let de = 0; ; de += 1000) {
       const r = await sb.from("cartas")
-        .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos, etapas")
+        .select("id, sala, tipo, nivel, texto, midia, autor, rodadas, segundos, etapas, modo")
         .or("sala.is.null,sala.eq." + c)
         .eq("ativa", true)
         .order("id", { ascending: true })
@@ -579,7 +619,7 @@
   function desafioDoDia(dia, jogador) {
     // só as cartas padrão, em ordem fixa, para os dois aparelhos terem exatamente a mesma lista
     const nivel = limitarNivel("desafioDoDia", estado.nivelDiario);
-    const pool = cartas.filter(c => !c.sala && c.tipo === "desafio" && c.nivel === nivel && cartaPermitida(c))
+    const pool = cartas.filter(c => !c.sala && c.tipo === "desafio" && c.nivel === nivel && cartaPermitida(c) && foraDoJuntos(c))
       .sort((a, b) => (a.id < b.id ? -1 : 1));
     if (!pool.length) return null;
     return pool[fnv1a(`${codigo}|${dia}|${jogador}`) % pool.length];
@@ -2188,7 +2228,7 @@
       });
       li.appendChild(marcas);
       const acoes = el("div", "pos-acoes");
-      const esc = el("button", "secondary", "Escolher esta"); esc.type = "button";
+      const esc = el("button", "secondary", juntos() ? "Fazer agora" : "Escolher esta"); esc.type = "button";
       esc.addEventListener("click", () => definirPosicao(p, "escolheu"));
       acoes.appendChild(esc);
       if (posModo === "cardapio") {
@@ -2242,7 +2282,7 @@
   const POSE_ENQ = { close: "Close", meio: "Meio corpo", inteiro: "Corpo inteiro", espelho: "Espelho", silhueta: "Silhueta" };
   const RE_POSE = /foto|v[íi]deo|nude|selfie/i;
   const tetoDaCarta = n => (n === "pesado" ? "pesado" : n === "picante" ? "picante" : "leve");
-  const pedeFotoOuVideo = c => !!(c && c.texto && permitido("poses") && (c.midia === "foto" || c.midia === "video" || RE_POSE.test(c.texto)));
+  const pedeFotoOuVideo = c => !!(c && c.texto && permitido("poses") && !juntos() && (c.midia === "foto" || c.midia === "video" || RE_POSE.test(c.texto)));
   const formatoDaCarta = c => (config.poses.video && (c.midia === "video" || (c.midia !== "foto" && /v[íi]deo/i.test(c.texto))) ? "video" : "foto");
   // teto das poses na sala (romântico e criativo valem como Leve)
   const tetoPoses = () => tetoDaCarta(efetivo("poses"));
@@ -2321,7 +2361,7 @@
 
   function desenharPoses() {
     if (!estado) return;
-    $("cardPoses").hidden = !estado.fixa || !poses.length || !permitido("poses");
+    $("cardPoses").hidden = !estado.fixa || !poses.length || !permitido("poses") || juntos();
     desenharPoseCarta(estado);
     if (!$("dlgPoses").open) return;
     const r = estado.pose;
@@ -2512,7 +2552,7 @@
     const desafio = document.querySelector('input[name="envTipo"]:checked').value === "desafio";
     const tipo = desafio ? "desafio" : "ideia_mensagem";
     const nivel = !desafio && $("envNivel").value === "romantico" ? "leve" : $("envNivel").value;
-    const pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === nivel && cartaPermitida(c)));
+    const pool = filtrarBaralho(cartas.filter(c => c.tipo === tipo && c.nivel === nivel && cartaPermitida(c) && foraDoJuntos(c)));
     if (!pool.length) return erro("erroEnvelope", desafio ? "Não há desafios desse nível." : "Ainda não há ideias desse nível.");
     erro("erroEnvelope", "");
     const recentes = sugeridas[tipo];
@@ -4101,7 +4141,8 @@
     semana: { ativo: true, nivelMax: "leve" },
     envelopes: { ativo: true, desafioNivelMax: "leve" },
     cartasDeVoces: { ativo: true, nivelMax: "leve" },
-    conquistasOusadia: { ativo: false }
+    conquistasOusadia: { ativo: false },
+    presencial: { ativo: true }
   };
   // merge profundo: o padrão preenche o que faltar (e o que vier com tipo errado)
   function mesclar(pad, x) {
@@ -4457,6 +4498,7 @@
     }));
     sm.appendChild(cfgModo("missaoSecreta", "Missão secreta", box => box.appendChild(cfgNivelModo("missaoSecreta"))));
     sm.appendChild(cfgModo("reverso", "Reverso"));
+    sm.appendChild(cfgModo("presencial", "Modo Juntos (presencial)"));
     d.appendChild(sm);
 
     const sg = cfgSecao("Guias");
@@ -4672,6 +4714,8 @@
     if (!Array.isArray(e.obsPedida) || e.obsPedida.length !== 2) e.obsPedida = [null, null];
     if (!Array.isArray(e.historico)) e.historico = [];
     if (typeof e.escolhaCegas !== "boolean") e.escolhaCegas = false;
+    if (e.modo !== "presencial") e.modo = "distancia";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(e.juntosDesde || "")) e.juntosDesde = null;
     if (typeof e.morteSubita !== "boolean") e.morteSubita = false;
     if (typeof e.emMorteSubita !== "boolean" || e.vencedor !== null) e.emMorteSubita = false;
     if (!e.emMorteSubita || !e.ms || !Array.isArray(e.ms.res) || e.ms.res.length !== 2) e.ms = e.emMorteSubita ? { res: [null, null] } : null;
@@ -4901,6 +4945,7 @@
     desenharReencontro(e);
     desenharDiario();
     desenharNav();
+    desenharModo(e);
     desenharRoteiro(e);
     talvezCofreRoteiro(e, inicial);
     desenharMorteSubita(e, inicial);
@@ -4953,7 +4998,8 @@
       info.className = "info";
       const tag = document.createElement("span");
       tag.className = "tag " + x.tipo;
-      tag.textContent = (TIPO_NOMES[x.tipo] || x.tipo) + " · " + (LEVEL_NAMES[x.nivel] || x.nivel) + (x.midia ? " · pede " + MIDIA_NOMES[x.midia] : "");
+      tag.textContent = (TIPO_NOMES[x.tipo] || x.tipo) + " · " + (LEVEL_NAMES[x.nivel] || x.nivel) + (x.midia ? " · pede " + MIDIA_NOMES[x.midia] : "")
+        + (modoDe(x) === "presencial" ? " · juntos" : modoDe(x) === "ambos" ? " · os dois modos" : "");
       const t = document.createElement("span");
       t.textContent = x.texto;
       const autor = document.createElement("span");
@@ -5072,7 +5118,7 @@
       + (e.emMorteSubita && (c.tipo === "verdade" || c.tipo === "desafio") ? " · ⚡ vale o dobro" : "");
     $("text").textContent = c.texto;
     desenharEtapas(e);
-    $("midia").hidden = !c.midia;
+    $("midia").hidden = !c.midia || juntos(e);
     $("wa").href = "https://wa.me/?text=" + encodeURIComponent(`${$("kind").textContent} para ${nome}: ${c.texto}`);
   }
 
@@ -5214,8 +5260,9 @@
   const CAMERAS = ["direita", "esquerda", "nenhuma"];
   let camera = CAMERAS.includes(lerLocal("lp-camera")) ? lerLocal("lp-camera") : "direita";
   function desenharAjustes() {
-    document.body.classList.toggle("cam-direita", camera === "direita");
-    document.body.classList.toggle("cam-esquerda", camera === "esquerda");
+    document.body.classList.toggle("cam-direita", camera === "direita" && !juntos());
+    document.body.classList.toggle("cam-esquerda", camera === "esquerda" && !juntos());
+    $("camera").closest("label").hidden = juntos();
     $("camera").value = camera;
     $("som").textContent = somLigado ? "🔊" : "🔇";
     $("som").setAttribute("aria-pressed", String(somLigado));
@@ -5324,7 +5371,7 @@
       const total = tipos.reduce((s, [, w]) => s + w, 0);
       let r = Math.random() * total, tipo = tipos[tipos.length - 1][0];
       for (const [t, w] of tipos) { if ((r -= w) < 0) { tipo = t; break; } }
-      const niveis = niveisDaPartida(n.niveis).filter(nv => (nv !== "romantico" || tipo === "sequencia") && permitido("eventos", nv) && cartas.some(c => c.tipo === tipo && c.nivel === nv && cartaPermitida(c)));
+      const niveis = niveisDaPartida(n.niveis).filter(nv => (nv !== "romantico" || tipo === "sequencia") && permitido("eventos", nv) && cartas.some(c => c.tipo === tipo && c.nivel === nv && cartaPermitida(c) && noModo(c)));
       if (niveis.length) {
         const carta = sortear(tipo, [niveis[Math.floor(Math.random() * niveis.length)]], n.usados || []);
         if (carta) {
@@ -5781,7 +5828,7 @@
       if (!op || n.carta) return;
       const p = cartas.find(x => x.id === op.id);
       // a carta sumiu ou a sala deixou de permitir: sorteia outra do mesmo tipo
-      const carta = p && cartaPermitida(p) ? montarCarta({ ...p, chave: p.id }, op.tipo) : sortear(op.tipo, n.niveis, n.usados || []);
+      const carta = p && cartaPermitida(p) && noModo(p) ? montarCarta({ ...p, chave: p.id }, op.tipo) : sortear(op.tipo, n.niveis, n.usados || []);
       n.cegas = null;
       if (!carta) return;
       carta.cega = true;
@@ -5997,7 +6044,7 @@
   function sortearSecretas(n) {
     if (!permitido("missaoSecreta")) return [];
     const nv = niveisDaPartida(n.niveis).map(x => (x === "romantico" ? "leve" : x));
-    const podem = cartas.filter(c => c.tipo === "missao_secreta" && permitido("missaoSecreta", c.nivel) && cartaPermitida(c));
+    const podem = cartas.filter(c => c.tipo === "missao_secreta" && permitido("missaoSecreta", c.nivel) && cartaPermitida(c) && noModo(c));
     let pool = podem.filter(c => nv.includes(c.nivel));
     if (pool.length < 2) pool = podem;
     if (pool.length < 2) return [];
@@ -6253,7 +6300,7 @@
   function juntarCarta(c) {
     if (!c || !c.id || c.sala !== codigo || c.ativa === false) return;
     if (cartas.some(x => x.id === c.id)) return;
-    cartas.push({ id: c.id, sala: c.sala, tipo: c.tipo, nivel: c.nivel, texto: c.texto, midia: c.midia, autor: c.autor });
+    cartas.push({ id: c.id, sala: c.sala, tipo: c.tipo, nivel: c.nivel, texto: c.texto, midia: c.midia, autor: c.autor, modo: c.modo });
     desenharExtras();
   }
 
@@ -6339,6 +6386,8 @@
     $("formCarta").reset();
     $("midiaCarta").hidden = true;
     $("temMidia").closest("label").hidden = !permitido("midia");
+    $("modoCartaLinha").hidden = !permitido("presencial");
+    $("modoCarta").value = juntos() ? "presencial" : "distancia";
     limitarSelectNiveis($("nivelCarta"), v => permitido("cartasDeVoces", v));
     erro("erroCarta", "");
     contarTexto();
@@ -6358,11 +6407,12 @@
       nivel: $("nivelCarta").value,
       texto: texto.slice(0, 280),
       midia: $("temMidia").checked && permitido("midia") ? $("midiaCarta").value : null,
-      autor: (estado.jogadores[eu] || "").trim().slice(0, 20)
+      autor: (estado.jogadores[eu] || "").trim().slice(0, 20),
+      modo: permitido("presencial") && ["distancia", "presencial", "ambos"].includes($("modoCarta").value) ? $("modoCarta").value : "distancia"
     };
     const btn = $("salvarCarta");
     btn.disabled = true;
-    const { data, error } = await sb.from("cartas").insert(nova).select("id, sala, tipo, nivel, texto, midia, autor").single();
+    const { data, error } = await sb.from("cartas").insert(nova).select("id, sala, tipo, nivel, texto, midia, autor, modo").single();
     btn.disabled = false;
     if (error) {
       const msg = /limite de cartas/.test(error.message || "")
@@ -6504,6 +6554,7 @@
     $("navRecolher").addEventListener("click", () => recolherNav(true));
     $("dengoPedir").addEventListener("click", botaoPedir);
     $("seqFeito").addEventListener("click", feitoEtapa);
+    $("modoBtn").addEventListener("click", trocarModo);
     $("roteiroAbrir").addEventListener("click", abrirRoteiros);
     $("fecharRoteiros").addEventListener("click", () => $("dlgRoteiros").close());
     $("dlgRoteiros").addEventListener("close", fecharRoteiros);
