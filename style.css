@@ -837,3 +837,13 @@ body[data-modo="presencial"]{
 @keyframes rolaDado{0%{transform:rotate(-200deg) scale(.6); opacity:.3} 100%{transform:none; opacity:1}}
 @media (prefers-reduced-motion:reduce){.dados.rolando .dado-face{animation:none}}
 .vendada-aviso{margin:6px 0; font-weight:800; color:var(--desafio)}
+/* reencontro: hoje é dia de cumprir */
+.cumprir{border:2px solid var(--desafio)}
+.cumprir-titulo{margin:0 0 4px; font-weight:800; font-size:1.1rem}
+.cumprir-dias{margin:0 0 8px; font-weight:700; color:var(--desafio)}
+.cumprir-sorteio{margin:0 0 10px; padding:10px 12px; border-radius:12px; background:var(--bg)}
+.cumprir-sorteado{margin:0 0 8px; font-weight:800; overflow-wrap:anywhere}
+.cumprir-lista{list-style:none; padding:0; margin:10px 0 0; display:grid; gap:6px}
+.cumprir-lista li{overflow-wrap:anywhere}
+.cumprir-lista li.feito{opacity:.6; text-decoration:line-through}
+#cumprirSortear{width:100%}

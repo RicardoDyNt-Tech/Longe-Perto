@@ -113,6 +113,23 @@
           <p class="ola" id="ola"></p>
           <div class="avatares" id="avatares" aria-hidden="true"></div>
         </header>
+        <div class="casa-bloco cumprir" id="casaCumprir" hidden>
+          <p class="cumprir-titulo">🎁 Hoje é dia de cumprir</p>
+          <p class="cumprir-dias" id="cumprirDias"></p>
+          <div class="cumprir-sorteio" id="cumprirSorteio" hidden>
+            <p class="cumprir-sorteado" id="cumprirSorteado"></p>
+            <div class="row">
+              <button class="done" id="cumprirSim" type="button">Cumprimos ✓</button>
+              <button class="secondary" id="cumprirNao" type="button">Hoje não</button>
+            </div>
+          </div>
+          <button class="primary" id="cumprirSortear" type="button">🎁 Sortear do cofre</button>
+          <p class="extras-sub" id="cumprirVazio" hidden>Nada guardado para o reencontro. Guardem cartas no cofre durante a distância.</p>
+          <ul class="cumprir-lista" id="cumprirLista"></ul>
+          <p class="extras-sub" id="cumprirFechados"></p>
+          <button class="linkbtn" id="cumprirAte" type="button">Até quando vocês ficam juntos?</button>
+          <p class="erro" id="erroCumprir" role="alert"></p>
+        </div>
         <div class="casa-bloco dengo-recebido" id="dengoRecebido" hidden role="alert">
           <p class="dr-titulo" id="drTitulo"></p>
           <ul class="dengo-itens" id="drItens"></ul>
@@ -924,6 +941,36 @@
       <button class="primary" id="passeOk" type="button"></button>
     </div>
   </div>
+
+  <dialog id="dlgJuntosAte" aria-labelledby="juntosAteTitulo">
+    <form id="formJuntosAte" method="dialog">
+      <h2 id="juntosAteTitulo">💞 Até quando vocês ficam juntos?</h2>
+      <p class="config-dica">Assim o app conta os dias do reencontro ("Dia 2 de 5 juntos").</p>
+      <label class="field">Último dia juntos
+        <input type="date" id="juntosAteData">
+      </label>
+      <div class="row">
+        <button class="primary" id="juntosAteSalvar" type="submit">Salvar</button>
+        <button class="secondary" id="juntosAteDepois" type="button">Ainda não sei</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgResumoJuntos" aria-labelledby="resumoJuntosTitulo">
+    <form id="formResumoJuntos" method="dialog">
+      <h2 id="resumoJuntosTitulo">💞 O que fizemos juntos</h2>
+      <p class="config-dica" id="resumoJuntosPeriodo"></p>
+      <ul class="cumprir-lista" id="resumoJuntosLista"></ul>
+      <p class="extras-sub" id="resumoJuntosMomentos"></p>
+      <label class="field">Quando é o próximo reencontro?
+        <input type="date" id="resumoProximo">
+      </label>
+      <div class="row">
+        <button class="primary" id="resumoSalvar" type="submit">Salvar a data</button>
+        <button class="secondary" id="resumoFechar" type="button">Fechar</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="dlgRoteiros" class="dlg-posicoes" aria-labelledby="dlgRoteirosTitulo">
     <div class="pos-topo">

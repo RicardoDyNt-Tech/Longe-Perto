@@ -198,7 +198,15 @@
   }
   const trocaModoFns = [];
   function aoTrocarModo(n, para) {
-    if (para === "distancia") { n.umCelular = false; n.umCelularDe = null; }
+    if (para === "distancia") {
+      n.umCelular = false; n.umCelularDe = null;
+      // resumo do que fizeram juntos, para os dois verem ao voltar
+      if (n.juntosDesde) n.resumoJuntos = { id: Date.now().toString(36), desde: n.juntosDesde, ate: hojeISO(), cumpridas: n.cumpridas.slice(-50) };
+      n.juntosDesde = null; n.juntosAte = null; n.cumpridas = []; n.lista = {}; n.sorteioCofre = null;
+    } else {
+      n.resumoJuntos = null;
+      if (!n.juntosAte) n.perguntarAte = euReal;            // ao ligar pela primeira vez: até quando vão ficar
+    }
     trocaModoFns.forEach(f => f(n, para));
   }
 
@@ -395,6 +403,131 @@
     if (q && q.fase === "procurando" && q.inicio) $("quenteRelogio").textContent = relogioMs(Date.now() - q.inicio);
   }
 
+  // ---------- reencontro: o que foi prometido a distância ----------
+  const MOMENTOS_OK = () => !!(estado && estado.fixa);
+  // tudo o que está esperando os dois, com chave para o check da lista
+  function promessas(e) {
+    const l = [];
+    cofre.forEach(x => l.push({ chave: "cofre:" + x.id, texto: x.carta + (x.nota ? ` · ${x.nota}` : ""), ic: "💞", feito: !!x.feito, cofre: x }));
+    if (permitido("posicoes")) marcasPos.filter(m => m.marca === "testar").forEach(m => {
+      const p = posicoes.find(x => x.id === m.posicao_id);
+      if (p) l.push({ chave: "pos:" + p.id, texto: `Posição: ${p.nome}`, ic: "📖", feito: !!e.lista["pos:" + p.id] });
+    });
+    [0, 1].forEach(j => {
+      const sonhos = textoManual(j, "sonhos");
+      if (sonhos) sonhos.split(/\n|;/).map(x => x.trim()).filter(Boolean).slice(0, 6).forEach((t, i) =>
+        l.push({ chave: `sonho:${j}:${i}`, texto: `Desejo de ${nomeDe(j)}: ${t}`, ic: "✨", feito: !!e.lista[`sonho:${j}:${i}`] }));
+    });
+    return l;
+  }
+  function desenharCumprir(e) {
+    const box = $("casaCumprir");
+    box.hidden = !juntos(e) || !e.fixa;
+    if (box.hidden) return;
+    const l = promessas(e), feitas = l.filter(x => x.feito).length;
+    const hoje = hojeISO();
+    let dias = "";
+    if (e.juntosDesde) {
+      const dia = 1 - diasAte(e.juntosDesde);
+      const total = e.juntosAte ? diasAte(e.juntosAte) - diasAte(e.juntosDesde) + 1 : null;
+      dias = e.juntosAte && hoje === e.juntosAte ? `Último dia juntos 💞 · já cumpriram ${feitas} de ${l.length} promessas`
+        : total && total > 0 ? `Dia ${dia} de ${total} juntos · ${feitas} de ${l.length} promessas cumpridas`
+        : `Dia ${dia} juntos · ${feitas} de ${l.length} promessas cumpridas`;
+    }
+    $("cumprirDias").textContent = dias;
+    $("cumprirAte").hidden = !!e.juntosAte;
+    const pend = cofre.filter(x => !x.feito);
+    $("cumprirSortear").hidden = !pend.length || !!e.sorteioCofre;
+    $("cumprirVazio").hidden = !!l.length;
+    const s = e.sorteioCofre && cofre.find(x => x.id === e.sorteioCofre.id && !x.feito);
+    $("cumprirSorteio").hidden = !s;
+    $("cumprirSorteado").textContent = s ? `🎁 ${s.carta}` + (s.nota ? ` · ${s.nota}` : "") : "";
+    const ul = $("cumprirLista"); ul.textContent = "";
+    l.forEach(x => {
+      const li = el("li", x.feito ? "feito" : "");
+      const lab = el("label", "check"), cb = el("input"); cb.type = "checkbox"; cb.checked = x.feito;
+      cb.addEventListener("change", () => marcarPromessa(x, cb.checked));
+      lab.append(cb, document.createTextNode(` ${x.ic} ${x.texto}`));
+      li.appendChild(lab); ul.appendChild(li);
+    });
+    // fechados: desafios surpresa e "Abra quando… faltar uma semana" (sem revelar o texto)
+    const env = dados.envelopes.filter(x => x.tipo === "desafio" && !x.aberto_em).length;
+    const abra = dados.abra_quando.filter(x => !x.aberto_em && /faltar uma semana/i.test(x.ocasiao || "")).length;
+    const partes = [];
+    if (env) partes.push(`${env} ${env === 1 ? "desafio surpresa fechado" : "desafios surpresa fechados"} (em Envelopes)`);
+    if (abra) partes.push(`${abra} ${abra === 1 ? "carta" : "cartas"} "Abra quando… faltar uma semana" (em Abra quando…)`);
+    $("cumprirFechados").textContent = partes.length ? "Ainda fechados: " + partes.join(" · ") : "";
+  }
+  async function marcarPromessa(x, feito, semMomento) {
+    erro("erroCumprir", "");
+    if (x.cofre) {
+      await marcarCofre(x.cofre, feito);
+      if (feito && !semMomento) guardarMomentoCumprido(x.cofre.carta);
+    }
+    // uma gravação só: o check da lista, o que foi cumprido e o sorteio
+    gravarFresco(n => {
+      if (!x.cofre) { if (feito) n.lista[x.chave] = hojeISO(); else delete n.lista[x.chave]; }
+      if (feito) n.cumpridas = [...n.cumpridas, { texto: x.texto.slice(0, 200), dia: hojeISO() }].slice(-50);
+      if (n.sorteioCofre && x.cofre && n.sorteioCofre.id === x.cofre.id) n.sorteioCofre = null;
+    });
+  }
+  // "Cumprimos ✓": vai para o álbum de momentos com a data
+  async function guardarMomentoCumprido(texto) {
+    if (!MOMENTOS_OK()) return;
+    const { data, error } = await sb.from("momentos")
+      .insert({ sala: codigo, carta_texto: texto.slice(0, 500), carta_tipo: "desafio", frase: `Cumprido no reencontro em ${dataBR(hojeISO())} 💞`, autor: nomeDe(eu) }).select("*").single();
+    if (!error && data) linhaV5("momentos", "INSERT", data);
+  }
+  function sortearPromessa() {
+    const pend = cofre.filter(x => !x.feito);
+    if (!pend.length) return;
+    const x = pend[Math.floor(Math.random() * pend.length)];
+    gravarFresco(n => { n.sorteioCofre = { id: x.id, por: eu }; });
+  }
+  function cumprirSorteada(sim) {
+    const s = estado && estado.sorteioCofre, x = s && cofre.find(c => c.id === s.id);
+    if (!s) return;
+    if (sim && x) marcarPromessa({ chave: "cofre:" + x.id, texto: x.carta, cofre: x }, true);
+    else gravarFresco(n => { n.sorteioCofre = null; });
+  }
+  // até quando ficam juntos (perguntado ao ligar o modo pela primeira vez)
+  function abrirJuntosAte() {
+    $("juntosAteData").min = hojeISO();
+    $("juntosAteData").value = estado && estado.juntosAte || "";
+    if (!$("dlgJuntosAte").open) $("dlgJuntosAte").showModal();
+  }
+  function salvarJuntosAte(ev) {
+    ev.preventDefault();
+    const v = $("juntosAteData").value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
+    $("dlgJuntosAte").close();
+    gravarFresco(n => { n.juntosAte = v; n.perguntarAte = null; });
+  }
+  // resumo ao voltar para a distância (uma vez em cada aparelho)
+  const resumosVistos = new Set();
+  function talvezResumoJuntos(e, inicial) {
+    const r = e.resumoJuntos;
+    if (!r || juntos(e) || resumosVistos.has(r.id)) return;
+    resumosVistos.add(r.id);
+    if (inicial) return;
+    $("resumoJuntosPeriodo").textContent = `De ${dataBR(r.desde)} a ${dataBR(r.ate)}`;
+    const ul = $("resumoJuntosLista"); ul.textContent = "";
+    (r.cumpridas || []).forEach(x => ul.appendChild(el("li", "feito", `✓ ${x.texto}`)));
+    if (!ul.childElementCount) ul.appendChild(el("li", "", "Nenhuma promessa marcada como cumprida."));
+    const mom = dados.momentos.filter(m => m.criada_em && hojeISO(new Date(m.criada_em)) >= r.desde).length;
+    $("resumoJuntosMomentos").textContent = mom ? `${mom} ${mom === 1 ? "momento salvo" : "momentos salvos"} no álbum` : "";
+    $("resumoProximo").min = hojeISO();
+    $("resumoProximo").value = "";
+    if (!$("dlgResumoJuntos").open) $("dlgResumoJuntos").showModal();
+  }
+  function salvarProximo(ev) {
+    ev.preventDefault();
+    const v = $("resumoProximo").value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
+    $("dlgResumoJuntos").close();
+    gravar(n => { n.reencontro = v; });
+  }
+
   function desenharModo(e) {
     const j = juntos(e);
     document.body.dataset.modo = j ? "presencial" : "distancia";
@@ -405,8 +538,11 @@
     b.setAttribute("aria-pressed", String(j));
     b.title = j ? "Tocar para voltar ao modo a distância" : "Tocar para ligar o modo Juntos";
     const dia = j && e.juntosDesde ? 1 - diasAte(e.juntosDesde) : null;
+    const total = j && e.juntosDesde && e.juntosAte ? diasAte(e.juntosAte) - diasAte(e.juntosDesde) + 1 : null;
     $("juntosCab").hidden = !j;
-    $("juntosCab").textContent = j ? "💞 Juntos de novo" + (dia ? ` · dia ${dia} do reencontro` : "") : "";
+    $("juntosCab").textContent = !j ? "" : total && total > 0 && dia ? `💞 Juntos de novo · dia ${dia} de ${total}` : "💞 Juntos de novo" + (dia ? ` · dia ${dia} do reencontro` : "");
+    if (j && e.perguntarAte === euReal && !e.juntosAte && !$("dlgJuntosAte").open) { setTimeout(() => gravar(n => { n.perguntarAte = null; }), 0); abrirJuntosAte(); }
+    talvezResumoJuntos(e, false);
     $("umCelularLinha").hidden = !j || !podeTrocarModo();
     $("umCelular").checked = !!e.umCelular;
     desenharAjustes();
@@ -770,6 +906,7 @@
   }
 
   function juntarCofre(x) {
+    setTimeout(() => estado && desenharCumprir(estado), 0);
     if (!x || !x.id || x.sala !== codigo) return;
     const i = cofre.findIndex(y => y.id === x.id);
     if (i >= 0) cofre[i] = Object.assign(cofre[i], x); else cofre.push(x);
@@ -1146,6 +1283,7 @@
     const pend = cofre.filter(x => !x.feito).length;
     $("cardCofreSub").textContent = cofre.length ? `${pend} ${pend === 1 ? "pendente" : "pendentes"}` : "Guardem cartas para o reencontro";
     desenharCabecalho(e);
+    desenharCumprir(e);
     desenharDengo();
     desenharHumor();
     desenharMuralInicio();
@@ -4988,6 +5126,12 @@
     if (!e.noite || typeof e.noite !== "object" || !Array.isArray(e.noite.vitorias)) e.noite = null;
     if (e.umCelularDe !== 0 && e.umCelularDe !== 1) e.umCelularDe = null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(e.juntosDesde || "")) e.juntosDesde = null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(e.juntosAte || "")) e.juntosAte = null;
+    if (e.perguntarAte !== 0 && e.perguntarAte !== 1) e.perguntarAte = null;
+    if (!e.lista || typeof e.lista !== "object" || Array.isArray(e.lista)) e.lista = {};
+    if (!Array.isArray(e.cumpridas)) e.cumpridas = [];
+    if (!e.sorteioCofre || typeof e.sorteioCofre.id !== "string") e.sorteioCofre = null;
+    if (!e.resumoJuntos || typeof e.resumoJuntos !== "object" || !e.resumoJuntos.id) e.resumoJuntos = null;
     if (typeof e.morteSubita !== "boolean") e.morteSubita = false;
     if (typeof e.emMorteSubita !== "boolean" || e.vencedor !== null) e.emMorteSubita = false;
     if (!e.emMorteSubita || !e.ms || !Array.isArray(e.ms.res) || e.ms.res.length !== 2) e.ms = e.emMorteSubita ? { res: [null, null] } : null;
@@ -5218,6 +5362,7 @@
     desenharReencontro(e);
     desenharDiario();
     desenharNav();
+    if (inicial && e.resumoJuntos) resumosVistos.add(e.resumoJuntos.id);
     desenharModo(e);
     desenharModosHoje(e);
     desenharRoteiro(e);
@@ -6834,6 +6979,14 @@
     $("modoBtn").addEventListener("click", trocarModo);
     $("umCelular").addEventListener("change", mudarUmCelular);
     $("passeOk").addEventListener("click", confirmarPasse);
+    $("cumprirSortear").addEventListener("click", sortearPromessa);
+    $("cumprirSim").addEventListener("click", () => cumprirSorteada(true));
+    $("cumprirNao").addEventListener("click", () => cumprirSorteada(false));
+    $("cumprirAte").addEventListener("click", abrirJuntosAte);
+    $("formJuntosAte").addEventListener("submit", salvarJuntosAte);
+    $("juntosAteDepois").addEventListener("click", () => $("dlgJuntosAte").close());
+    $("formResumoJuntos").addEventListener("submit", salvarProximo);
+    $("resumoFechar").addEventListener("click", () => $("dlgResumoJuntos").close());
     document.querySelectorAll("[data-modo-hoje]").forEach(b => b.addEventListener("click", () => {
       modoHoje = modoHoje === b.dataset.modoHoje ? null : b.dataset.modoHoje;
       if (estado) desenharModosHoje(estado);
