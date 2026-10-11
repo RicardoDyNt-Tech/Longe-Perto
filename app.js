@@ -1109,6 +1109,8 @@
         payload => tirarCarta(payload.old && payload.old.id))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "cofre", filter: `sala=eq.${c}` },
         payload => juntarCofre(payload.new))
+      .on("postgres_changes", { event: "*", schema: "public", table: "clausulas_sala", filter: `sala=eq.${c}` },
+        payload => { if (c === codigo) linhaClausula(payload.eventType, payload.eventType === "DELETE" ? payload.old : payload.new); })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "cofre", filter: `sala=eq.${c}` },
         payload => juntarCofre(payload.new))
       // DELETE não é filtrável no Realtime: tira pelo id (itens de outras salas não estão na lista)
@@ -1164,6 +1166,8 @@
     carregarCartas(c);
     carregarCofre(c);
     carregarVales(c);
+    campanhas = []; roteirosCampanha = {}; carregarCampanhas(c);
+    clausulasCat = []; clausulasSala = []; carregarClausulas(c);
     cardapioEnviaram = []; cardapioMatch = null; cardapioPingVisto = null;
     setTimeout(() => { if (c === codigo) statusCardapio(); }, 800);
     carregarMusicas(c);
@@ -4065,7 +4069,7 @@
     return {
       partidas: partidasDoCasal(), autorais: cartas.filter(c => c.sala).length,
       envelopes: dados.envelopes, capsulas: dados.capsulas, apostas: dados.apostas, observacoes: dados.observacoes, momentos: dados.momentos,
-      cofre, seq: [sequencia(0), sequencia(1)]
+      cofre, seq: [sequencia(0), sequencia(1)], campanhas: (estado && estado.campanhasFeitas) || 0
     };
   }
   function progresso(c, d, j) { try { return Number(c.contar(d, j)) || 0; } catch (err) { return 0; } }
@@ -4970,7 +4974,8 @@
     conquistasOusadia: { ativo: false },
     presencial: { ativo: true },
     fatura: { vales: true },
-    cardapio: { ativo: true }
+    cardapio: { ativo: true },
+    clausulas: { ativo: true }
   };
   // merge profundo: o padrão preenche o que faltar (e o que vier com tipo errado)
   function mesclar(pad, x) {
@@ -5332,6 +5337,7 @@
     const sr = cfgSecao("Reencontro");
     sr.appendChild(cfgInterruptor("Vale para quem vence a partida", config.fatura.vales, v => mudarConfig(c => { c.fatura.vales = v; }), "fatura.vales"));
     sr.appendChild(cfgModo("cardapio", "Cardápio secreto de desejos"));
+    sr.appendChild(cfgModo("clausulas", "Cláusulas para amanhã (quem perde a partida)"));
     d.appendChild(sr);
 
     const sg = cfgSecao("Guias");
@@ -5564,6 +5570,20 @@
     if (!rg || typeof rg !== "object" || typeof rg.id !== "string" || (rg.por !== 0 && rg.por !== 1)) e.resgate = null;
     else if (typeof rg.ate !== "number") rg.ate = null;
     if (!Array.isArray(e.cardapioNoCofre)) e.cardapioNoCofre = [];
+    const cp = e.campanha;
+    if (!cp || typeof cp !== "object" || !Array.isArray(cp.noites) || cp.noites.length < 2 || !Number.isInteger(cp.noite)) e.campanha = null;
+    else {
+      if (!Array.isArray(cp.bonus) || cp.bonus.length !== 2) cp.bonus = [0, 0];
+      cp.bonus = cp.bonus.map(x => Math.max(0, Number(x) || 0));
+      if (!Array.isArray(cp.quebrou) || cp.quebrou.length !== 2) cp.quebrou = [false, false];
+      if (!Array.isArray(cp.placares)) cp.placares = [];
+      cp.noite = Math.min(Math.max(0, cp.noite), cp.noites.length - 1);
+      cp.jogando = !!cp.jogando; cp.concluida = !!cp.concluida;
+      if (!LEVEL_NAMES[cp.nivelProx]) cp.nivelProx = null;
+    }
+    if (!Number.isInteger(e.campanhasFeitas)) e.campanhasFeitas = 0;
+    if (!e.vetos || typeof e.vetos !== "object" || Array.isArray(e.vetos)) e.vetos = {};
+    if (!Array.isArray(e.clausulasPrenda)) e.clausulasPrenda = [];
     if (!e.cardapioPing || typeof e.cardapioPing !== "object") e.cardapioPing = null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(e.juntosAte || "")) e.juntosAte = null;
     if (e.perguntarAte !== 0 && e.perguntarAte !== 1) e.perguntarAte = null;
@@ -5649,6 +5669,8 @@
     n.efeitos = [];                                     // efeitos ativos são descartados, sem pontos
     n.prendaPendente = null;
     n.carta = prendaPara(n, "final");
+    // vitória no meio de uma noite da campanha: a noite termina aqui
+    if (n.roteiro && n.roteiro.campanha && !n.roteiro.concluido) { n.roteiro.concluido = true; concluirNoite(n); }
   }
 
   // Início de uma vez: desconta 1 rodada dos efeitos do dono; quem aguentou até o fim ganha pontos.
@@ -5755,6 +5777,7 @@
   // ---------- render ----------
   function aplicar(e, inicial, local) {
     if (!e) return;
+    const campAntes = estado && estado.campanha ? { id: estado.campanha.id, n: estado.campanha.placares.length, ok: estado.campanha.concluida } : null;
     const vezAntes = estado ? estado.vez : null;
     const chaveAntes = estado && estado.carta ? estado.carta.chave : null, baralhoAntes = estado ? estado.baralhoVer : undefined;
     estado = normalizar(e);
@@ -5763,6 +5786,7 @@
     avisarMinhaVez(e, inicial || local);
     if (!inicial && e.vencedor !== null && ultimoVencedor === null) {
       setTimeout(() => ganharVale(estado), 0);
+      talvezClausula(estado, 1 - e.vencedor);
       setTimeout(() => carregarHistorico(codigo), 1500);
       somVitoria();
       vibrar([300, 100, 300, 100, 500]);
@@ -5806,6 +5830,14 @@
     desenharModo(e);
     desenharModosHoje(e);
     desenharDescongelar(estado);
+    desenharCampanha(estado);
+    desenharClausulas();
+    const cpo = estado.campanha;
+    if (!inicial && cpo && campAntes && campAntes.id === cpo.id && cpo.placares.length > campAntes.n) {
+      const p = cpo.placares[cpo.placares.length - 1];
+      if (p && p[0] !== p[1]) talvezClausula(estado, p[0] < p[1] ? 0 : 1);   // empate: sem cláusula
+      if (local && cpo.concluida && !campAntes.ok) setTimeout(verificarConquistas, 0);
+    }
     desenharCardCardapio(estado);
     const ping = estado.cardapioPing;
     if (ping && ping.id !== cardapioPingVisto) { cardapioPingVisto = ping.id; if (!inicial) statusCardapio(); }
@@ -6200,7 +6232,7 @@
     if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
       if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
-      let carta = sortear(tipo, n.emMorteSubita ? [nivelMorteSubita(n)] : n.niveis, n.usados || []);
+      let carta = sortear(tipo, niveisDoSorteio(n), n.usados || []);
       // com a chance configurada, o giro vira um evento especial (a roleta continua mostrando Verdade/Desafio)
       if (tipoEvento) carta = sortearEvento(n, tipoEvento) || carta;                 // roteiro: evento da etapa
       else if (!et && !n.emMorteSubita && Math.random() < CHANCE_EVENTO[n.eventos]) carta = sortearEvento(n) || carta;
@@ -6221,7 +6253,7 @@
     if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
       if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
-      const carta = sortear(tipo, n.emMorteSubita ? [nivelMorteSubita(n)] : n.niveis, n.usados || []);
+      const carta = sortear(tipo, niveisDoSorteio(n), n.usados || []);
       if (n.vendado && n.vendado.jogador === n.vez) { carta.vendada = true; n.vendado = null; }
       registrarUso(n, carta);
       n.carta = carta;
@@ -6793,6 +6825,7 @@
       r.fechamento = et ? et.tipos.find(t => FECHAMENTOS.includes(t)) || null : null;
       n.aviso = novoAviso(`${r.emoji} ${r.nome}: roteiro concluído 🎬`);
       if (r.fechamento === "encerrar" && n.jogadores[1] && n.vencedor === null) comecarEncerrando(n);
+      if (r.campanha) concluirNoite(n);
       return;
     }
     n.niveis = niveisEtapa(et);
@@ -6800,8 +6833,8 @@
   }
   function sairRoteiro() {
     if (!estado || !estado.roteiro || !podeChipsAqui()) return;
-    if (!estado.roteiro.concluido && !confirm("Sair do roteiro? O placar continua.")) return;
-    gravar(n => { n.roteiro = null; });
+    if (!estado.roteiro.concluido && !confirm(estado.roteiro.campanha ? "Sair do roteiro? A noite da campanha não conta." : "Sair do roteiro? O placar continua.")) return;
+    gravar(n => { if (n.roteiro && n.roteiro.campanha && !n.roteiro.concluido && n.campanha) n.campanha.jogando = false; n.roteiro = null; });
   }
   function abrirRoteiros() {
     if (!estado || !podeChipsAqui()) return;
@@ -6824,6 +6857,7 @@
     const r = e.roteiro, completa = !!e.jogadores[1];
     const pode = !r && completa && placarZerado(e) && !e.carta && !e.cegas && e.vencedor === null && roteiros.some(roteiroPermitido);
     $("roteiroAbrir").hidden = !(pode && podeChipsAqui());
+    $("campanhaAbrir").hidden = !(!r && !e.campanha && completa && placarZerado(e) && !e.carta && !e.cegas && e.vencedor === null && podeChipsAqui() && campanhas.some(campanhaPermitida));
     const outroEscolhe = !r && e.roteiroEscolhendo === 1 - eu && pode;
     $("roteiroEscolhendo").hidden = !outroEscolhe;
     $("roteiroEscolhendo").textContent = outroEscolhe ? `${e.jogadores[1 - eu]} está escolhendo o roteiro` : "";
@@ -6849,6 +6883,274 @@
     if (!r || !r.concluido || r.fechamento !== "cofre" || !r.ultima || cofreDoRoteiro.has(r.inicio)) return;
     cofreDoRoteiro.add(r.inicio);
     if (!inicial && !$("dlgCofre").open) abrirGuardar(r.ultima);
+  }
+
+  // ---------- v9: campanha de 3 noites (cada noite é um roteiro da v8) ----------
+  let campanhas = [], roteirosCampanha = {};
+  async function carregarCampanhas(c) {
+    const { data, error } = await sb.from("campanhas").select("*").eq("ativo", true).order("ordem", { ascending: true });
+    if (c !== codigo || error || !Array.isArray(data)) return;
+    campanhas = data.filter(x => x && x.id && LEVEL_NAMES[x.nivel_max] && Array.isArray(x.noites) && x.noites.length >= 2
+      && x.noites.every(nt => nt && typeof nt.titulo === "string" && typeof nt.roteiro === "string"));
+    const nomes = [...new Set(campanhas.flatMap(x => x.noites.map(nt => nt.roteiro)))];
+    if (!nomes.length) return;
+    // os roteiros da campanha podem estar inativos (só aparecem dentro dela)
+    const { data: rs, error: er } = await sb.from("roteiros").select("*").in("nome", nomes);
+    if (c !== codigo || er || !Array.isArray(rs)) return;
+    roteirosCampanha = {};
+    rs.filter(r => r && r.id && LEVEL_NAMES[r.nivel_max] && etapasRoteiroOk(r.etapas)).forEach(r => { roteirosCampanha[r.nome] = r; });
+    if (estado) { desenharRoteiro(estado); desenharCampanha(estado); }
+  }
+  const campanhaPermitida = x => ordCfg(x.nivel_max) <= ordCfg(nivelMaxSala()) && x.noites.every(nt => roteirosCampanha[nt.roteiro] && roteiroPermitido(roteirosCampanha[nt.roteiro]));
+  // ficha "nível da próxima carta" (noite 3): vale para uma carta só
+  function niveisDoSorteio(n) {
+    if (n.emMorteSubita) return [nivelMorteSubita(n)];
+    const c = n.campanha;
+    if (c && c.nivelProx && LEVEL_NAMES[c.nivelProx]) { const nv = c.nivelProx; c.nivelProx = null; return [nv]; }
+    return n.niveis;
+  }
+  function abrirCampanhas() {
+    if (!estado || !podeChipsAqui()) return;
+    const ul = $("campanhasLista"); ul.textContent = "";
+    campanhas.filter(campanhaPermitida).forEach(x => {
+      const li = el("li"), b = el("button", "roteiro-op"); b.type = "button";
+      b.append(el("span", "ro-nome", `${x.emoji} ${x.nome}`), el("span", "ro-desc", x.descricao || ""),
+        el("span", "ro-etapas", x.noites.map((nt, i) => `Noite ${i + 1}: ${nt.titulo}`).join(" → ")));
+      b.addEventListener("click", () => comecarCampanha(x));
+      li.appendChild(b); ul.appendChild(li);
+    });
+    if (!ul.childElementCount) ul.appendChild(el("li", "extras-sub", "Nenhuma campanha combina com as configurações desta sala."));
+    $("dlgCampanhas").showModal();
+  }
+  function comecarCampanha(x) {
+    if (!estado || !campanhaPermitida(x)) return;
+    $("dlgCampanhas").close();
+    gravar(n => {
+      if (n.campanha || n.roteiro || !placarZerado(n) || n.carta || n.vencedor !== null) return;
+      n.campanha = { id: x.id, nome: x.nome, emoji: x.emoji, noites: x.noites.map(nt => ({ titulo: nt.titulo, roteiro: nt.roteiro, regra: nt.regra || "" })),
+        noite: 0, comecou: hojeISO(), bonus: [0, 0], quebrou: [false, false], jogando: false, ultima: null, placares: [], concluida: false, nivelProx: null };
+      iniciarNoite(n);
+    });
+  }
+  function iniciarNoite(n) {
+    const c = n.campanha, nt = c && c.noites[c.noite], r = nt && roteirosCampanha[nt.roteiro];
+    if (!r || n.roteiro || !placarZerado(n) || n.carta || n.vencedor !== null) return;
+    const et = r.etapas[0];
+    n.roteiro = { id: r.id, nome: r.nome, emoji: r.emoji, etapas: r.etapas, etapa: 0, rodadaNaEtapa: 0, vezes: 0, inicio: Date.now().toString(36), campanha: true };
+    n.roteiroEscolhendo = null;
+    n.niveis = niveisEtapa(et);
+    c.jogando = true;
+    c.nivelProx = null;
+    if (c.noite === 0) c.comecou = hojeISO();
+    n.aviso = novoAviso(`🎞️ Noite ${c.noite + 1} de ${c.noites.length} · ${nt.titulo}`);
+    if (!et.rodadas) proximaEtapa(n, true);
+  }
+  // fim do roteiro da noite: placar da noite, fichas (cada 3 pontos nas noites antes da última) e próxima noite amanhã
+  function concluirNoite(n) {
+    const c = n.campanha;
+    if (!c || !c.jogando) return;
+    const k = c.noite, pts = n.placar.map(p => p.pontos), ultima = k === c.noites.length - 1;
+    c.placares = [...c.placares.slice(0, k), pts];
+    if (!ultima) [0, 1].forEach(j => { if (!(k === 1 && c.quebrou[j])) c.bonus[j] += Math.floor(pts[j] / 3); });
+    c.jogando = false;
+    c.nivelProx = null;
+    c.ultima = hojeISO();
+    if (ultima) { c.concluida = true; n.campanhasFeitas = (n.campanhasFeitas || 0) + 1; n.aviso = novoAviso(`${c.emoji} Campanha concluída 🎞️`); }
+    else { c.noite = k + 1; n.aviso = novoAviso(`🎞️ Noite ${k + 1} concluída · fichas: ${n.jogadores[0]} ${c.bonus[0]} · ${n.jogadores[1]} ${c.bonus[1]}`); }
+  }
+  function jogarNoite() {
+    const e = estado;
+    if (!e || !e.campanha) return;
+    const zerar = !placarZerado(e) || e.carta || e.vencedor !== null || e.roteiro;
+    if (zerar && !confirm(`Começar a noite ${e.campanha.noite + 1}? O placar de agora zera.`)) return;
+    gravar(n => {
+      const c = n.campanha;
+      if (!c || c.jogando || c.concluida || (c.ultima || "") >= hojeISO()) return;
+      if (!placarZerado(n) || n.carta || n.vencedor !== null || n.roteiro) zerarPartida(n, n.vez);
+      iniciarNoite(n);
+    });
+  }
+  function recomecarCampanha() {
+    if (!estado || !estado.campanha || !confirm("Recomeçar a campanha da noite 1? As fichas zeram.")) return;
+    gravar(n => {
+      const c = n.campanha;
+      if (!c) return;
+      Object.assign(c, { noite: 0, bonus: [0, 0], quebrou: [false, false], jogando: false, ultima: null, placares: [], concluida: false, nivelProx: null });
+      if (n.roteiro && n.roteiro.campanha) n.roteiro = null;
+    });
+  }
+  function sairCampanha() {
+    if (!estado || !estado.campanha) return;
+    if (!estado.campanha.concluida && !confirm("Sair da campanha? O que foi jogado nas noites se perde.")) return;
+    gravar(n => { if (n.roteiro && n.roteiro.campanha) n.roteiro = null; n.campanha = null; });
+  }
+  function quebreiRegra() {
+    const c = estado && estado.campanha;
+    if (!c || c.noite !== 1 || !c.jogando || c.quebrou[eu]) return;
+    if (!confirm("Quebrou a regra da noite? Palavra de honra: suas fichas zeram.")) return;
+    gravar(n => { const x = n.campanha; if (!x) return; x.quebrou[eu] = true; x.bonus[eu] = 0; n.aviso = novoAviso(`🙈 ${n.jogadores[eu]} quebrou a regra e perdeu as fichas`); });
+  }
+  const naNoiteFinal = e => { const c = e && e.campanha; return !!(c && c.jogando && c.noite === c.noites.length - 1 && e.roteiro && e.roteiro.campanha && !e.roteiro.concluido); };
+  function usarFicha(tipo) {
+    const e = estado;
+    if (!naNoiteFinal(e) || e.campanha.bonus[eu] < 1 || e.vencedor !== null) return;
+    const nivel = $("fichaNivel").value;
+    gravar(n => {
+      const c = n.campanha;
+      if (!naNoiteFinal(n) || c.bonus[eu] < 1) return;
+      const quem = n.jogadores[eu];
+      if (tipo === "nivel") {
+        if (n.carta || !permitido("nivel", nivel)) return;
+        c.nivelProx = nivel;
+        n.aviso = novoAviso(`🎟️ ${quem} gastou uma ficha: a próxima carta é ${LEVEL_NAMES[nivel]}`);
+      } else if (tipo === "quem") {
+        if (!n.carta || !["verdade", "desafio"].includes(n.carta.tipo)) return;
+        n.vez = 1 - n.vez;
+        n.aviso = novoAviso(`🎟️ ${quem} gastou uma ficha: quem cumpre esta carta é ${n.jogadores[n.vez]}`);
+      } else if (tipo === "pular") {
+        if (!n.carta || n.vez !== eu || !["verdade", "desafio"].includes(n.carta.tipo)) return;
+        const cc = n.carta;
+        n.carta = null;
+        passarVez(n, cc);
+        n.aviso = novoAviso(`🎟️ ${quem} gastou uma ficha e pulou sem prenda`);
+      } else return;
+      c.bonus[eu]--;
+    });
+  }
+  function desenharCampanha(e) {
+    const c = e.campanha, f = $("faixaCampanha");
+    f.hidden = !c;
+    if (!c) return;
+    const k = Math.min(c.noite, c.noites.length - 1), nt = c.noites[k], N = c.noites.length;
+    const fichas = `Fichas: ${e.jogadores[0]} ${c.bonus[0]} · ${e.jogadores[1] || "…"} ${c.bonus[1]}`;
+    $("campanhaRegra").hidden = !!c.concluida || !nt.regra;
+    $("campanhaRegra").textContent = nt.regra ? `Regra da noite: ${nt.regra}` : "";
+    const hoje = hojeISO(), liberada = (c.ultima || "") < hoje;
+    const parado = c.ultima ? -diasAte(c.ultima) : 0;
+    let info = "";
+    if (c.concluida) {
+      $("campanhaCapa").textContent = `${c.emoji} ${c.nome} · Campanha concluída 🎞️`;
+      info = c.placares.map((p, i) => `Noite ${i + 1}: ${e.jogadores[0]} ${p[0]} × ${p[1]} ${e.jogadores[1] || ""}`).join(" · ");
+    } else {
+      $("campanhaCapa").textContent = `${c.emoji} Noite ${k + 1} de ${N} · ${nt.titulo}`;
+      if (c.jogando) info = k === N - 1 ? fichas + " (valem agora)" : fichas;
+      else if (!liberada) info = `A noite ${k + 1} fica liberada amanhã 🌙 · ${fichas}`;
+      else info = fichas;
+    }
+    $("campanhaInfo").textContent = info;
+    const podeJogar = !c.concluida && !c.jogando && liberada && !!e.jogadores[1] && !e.cegas && !e.encerrando;
+    $("campanhaJogar").hidden = !podeJogar;
+    $("campanhaJogar").textContent = c.noite === 0 && !c.placares.length ? "Começar a noite 1" : `Começar a noite ${k + 1}`;
+    $("campanhaRecomecar").hidden = !!c.concluida || c.jogando || parado <= 7;
+    $("campanhaQuebrei").hidden = !(c.jogando && c.noite === 1 && !c.quebrou[eu]);
+    $("campanhaSair").textContent = c.concluida ? "Fechar" : "Sair da campanha";
+    // fichas na noite final
+    const final = naNoiteFinal(e) && c.bonus[eu] > 0 && e.vencedor === null;
+    $("fichasAcoes").hidden = !final;
+    if (!final) return;
+    const sel = $("fichaNivel"), atual = sel.value; sel.textContent = "";
+    ORDEM_CFG.filter(nv => permitido("nivel", nv)).forEach(nv => { const o = el("option", "", LEVEL_NAMES[nv]); o.value = nv; sel.appendChild(o); });
+    if ([...sel.options].some(o => o.value === atual)) sel.value = atual;
+    const semCarta = !e.carta;
+    sel.disabled = !semCarta || !!c.nivelProx;
+    $("fichaNivelUsar").disabled = !semCarta || !!c.nivelProx;
+    const vd = e.carta && ["verdade", "desafio"].includes(e.carta.tipo);
+    $("fichaQuem").hidden = !vd;
+    $("fichaQuem").textContent = vd ? `🎟️ ${e.jogadores[1 - e.vez]} cumpre esta` : "";
+    $("fichaPular").hidden = !(vd && e.vez === eu);
+  }
+
+  // ---------- v9: cláusulas para amanhã (efeito borboleta) ----------
+  let clausulasCat = [], clausulasSala = [];
+  async function carregarClausulas(c) {
+    const [cat, sala] = await Promise.all([
+      sb.from("clausulas").select("*").eq("ativa", true),
+      sb.from("clausulas_sala").select("*").eq("sala", c).order("vale_para", { ascending: false }).limit(60)
+    ]);
+    if (c !== codigo) return;
+    if (!cat.error && Array.isArray(cat.data)) clausulasCat = cat.data.filter(x => x && LEVEL_NAMES[x.nivel] && typeof x.texto === "string");
+    if (!sala.error && Array.isArray(sala.data)) clausulasSala = sala.data;
+    desenharClausulas();
+    setTimeout(vencerClausulas, 0);
+  }
+  function linhaClausula(ev, row) {
+    if (!row || !row.id) return;
+    const i = clausulasSala.findIndex(x => x.id === row.id);
+    if (ev === "DELETE") { if (i >= 0) clausulasSala.splice(i, 1); }
+    else if (row.sala === codigo) {
+      if (i < 0 && ev === "INSERT") mostrarAviso(novoAviso(`📜 Cláusula para amanhã (${nomeDe(row.para)}): ${row.texto}`), false);
+      if (i >= 0) clausulasSala[i] = { ...clausulasSala[i], ...row }; else clausulasSala.unshift(row);
+    }
+    desenharClausulas();
+  }
+  // quem perdeu recebe uma cláusula do nível mais alto ligado ou um abaixo (uma por pessoa por dia)
+  async function sortearClausula(para) {
+    if (!config.clausulas.ativo || !codigo || (para !== 0 && para !== 1)) return;
+    const amanha = somarDias(hojeISO(), 1);
+    if (clausulasSala.some(x => x.para === para && x.vale_para === amanha)) return;
+    const ligados = ORDEM_CFG.filter(nv => config.niveis[nv]), topo = ligados[ligados.length - 1];
+    const niveis = [topo, ligados[ligados.length - 2]].filter(Boolean);
+    const pool = clausulasCat.filter(x => niveis.includes(x.nivel));
+    if (!pool.length) return;
+    const x = pool[Math.floor(Math.random() * pool.length)];
+    const { data, error } = await sb.from("clausulas_sala").insert({ sala: codigo, para, texto: x.texto, nivel: x.nivel, vale_para: amanha }).select("*").single();
+    if (!error && data) linhaClausula("INSERT", data);
+  }
+  // o aparelho de quem ganhou sorteia (num celular só, o próprio)
+  function talvezClausula(e, perdeu) {
+    const ganhou = 1 - perdeu;
+    if (eu === ganhou || umCelularAqui(e)) setTimeout(() => sortearClausula(perdeu), 0);
+  }
+  const podeVetar = j => { const v = estado && estado.vetos && estado.vetos[j]; return !v || -diasAte(v) >= 7; };
+  async function cumpriuClausula(x) {
+    const { error } = await sb.from("clausulas_sala").update({ cumprida_em: new Date().toISOString() }).eq("id", x.id);
+    if (error) return erro("erroClausula", "Não consegui marcar. Confira a internet.");
+    linhaClausula("UPDATE", { ...x, cumprida_em: new Date().toISOString() });
+  }
+  async function vetarClausula(x) {
+    if (!podeVetar(x.para)) return;
+    const outras = clausulasCat.filter(c => c.nivel === x.nivel && c.texto !== x.texto);
+    if (!outras.length) return erro("erroClausula", "Não há outra cláusula desse nível para trocar.");
+    if (!confirm("Usar o veto da semana e trocar esta cláusula?")) return;
+    const nova = outras[Math.floor(Math.random() * outras.length)];
+    const { error } = await sb.from("clausulas_sala").update({ texto: nova.texto }).eq("id", x.id);
+    if (error) return erro("erroClausula", "Não consegui trocar. Confira a internet.");
+    linhaClausula("UPDATE", { ...x, texto: nova.texto });
+    gravar(n => { n.vetos = { ...(n.vetos || {}), [x.para]: hojeISO() }; n.aviso = novoAviso(`📜 ${n.jogadores[x.para]} usou o veto da semana`); });
+  }
+  // não cumpriu até o fim do dia: vira prenda na fatura (o aparelho de quem cobra grava)
+  let vencendoClausulas = false;
+  async function vencerClausulas() {
+    if (!estado || vencendoClausulas) return;
+    const hoje = hojeISO(), feitas = estado.clausulasPrenda || [];
+    const l = clausulasSala.filter(x => x.vale_para < hoje && !x.cumprida_em && !feitas.includes(x.id) && (eu === 1 - x.para || umCelularAqui(estado)) && -diasAte(x.vale_para) <= 30);
+    if (!l.length) return;
+    vencendoClausulas = true;
+    gravarFresco(n => { n.clausulasPrenda = [...(n.clausulasPrenda || []), ...l.map(x => x.id)].slice(-60); });
+    for (const x of l) {
+      const { data, error } = await sb.from("cofre").insert({ sala: codigo, carta: x.texto.slice(0, 280), nota: `Cláusula não cumprida em ${dataBR(x.vale_para)}`, autor: nomeDe(x.para).slice(0, 20), tipo: "prenda", credor: 1 - x.para }).select("*").single();
+      if (!error && data) juntarCofre(data);
+    }
+    vencendoClausulas = false;
+  }
+  function desenharClausulas() {
+    if (!estado) return;
+    const hoje = hojeISO(), l = clausulasSala.filter(x => x.vale_para === hoje);
+    $("casaClausulas").hidden = !estado.fixa || !l.length;
+    const ul = $("clausulasLista"); ul.textContent = "";
+    l.forEach(x => {
+      const li = el("li", x.cumprida_em ? "feito" : "");
+      li.append(el("p", "cumprir-titulo", `📜 Cláusula de hoje para ${nomeDe(x.para)}`), el("p", "clausula-texto", x.texto));
+      if (x.cumprida_em) li.appendChild(el("p", "extras-sub", "Cumpriu ✓"));
+      else {
+        const ac = el("div", "row");
+        if (eu === 1 - x.para || umCelularAqui(estado)) { const b = el("button", "done", "Cumpriu ✓"); b.type = "button"; b.addEventListener("click", () => cumpriuClausula(x)); ac.appendChild(b); }
+        if ((eu === x.para || umCelularAqui(estado)) && podeVetar(x.para)) { const v = el("button", "linkbtn", "Vetar (1 por semana)"); v.type = "button"; v.addEventListener("click", () => vetarClausula(x)); ac.appendChild(v); }
+        if (eu === x.para && !umCelularAqui(estado)) ac.appendChild(el("span", "extras-sub", `Quem marca é ${nomeDe(1 - x.para)}.`));
+        li.appendChild(ac);
+      }
+      ul.appendChild(li);
+    });
   }
 
   // ---------- v8: morte súbita ----------
@@ -7120,29 +7422,30 @@
 
   function novaPartida() {
     if (!estado || estado.vencedor === null) return;
-    gravar(n => {
-      n.vez = 1 - n.vencedor;                           // quem perdeu começa
-      n.niveis = [maisLeve()];                          // começa só com o chip mais leve disponível
-      n.placar = [placarVazio(0, n.pulosMax), placarVazio(0, n.pulosMax)];
-      n.pontos = [0, 0];
-      n.vencedor = null;
-      n.usados = [];
-      n.carta = null;
-      n.efeitos = [];
-      n.prendaPendente = null;
-      n.duelo = null;
-      n.sintonia = null;
-      n.dupla = null;
-      n.secretas = sortearSecretas(n);
-      n.historico = [];
-      n.encerrando = null;
-      n.cegas = null;                                   // a opção escolhaCegas continua como estava
-      n.roteiro = null;
-      n.roteiroEscolhendo = null;
-      n.emMorteSubita = false;                          // a opção morteSubita continua como estava
-      n.ms = null;
-    });
+    gravar(n => zerarPartida(n, 1 - n.vencedor));        // quem perdeu começa
     missaoAberta = false;
+  }
+  function zerarPartida(n, comeca) {
+    n.vez = comeca;
+    n.niveis = [maisLeve()];                          // começa só com o chip mais leve disponível
+    n.placar = [placarVazio(0, n.pulosMax), placarVazio(0, n.pulosMax)];
+    n.pontos = [0, 0];
+    n.vencedor = null;
+    n.usados = [];
+    n.carta = null;
+    n.efeitos = [];
+    n.prendaPendente = null;
+    n.duelo = null;
+    n.sintonia = null;
+    n.dupla = null;
+    n.secretas = sortearSecretas(n);
+    n.historico = [];
+    n.encerrando = null;
+    n.cegas = null;                                   // a opção escolhaCegas continua como estava
+    n.roteiro = null;
+    n.roteiroEscolhendo = null;
+    n.emMorteSubita = false;                          // a opção morteSubita continua como estava
+    n.ms = null;
   }
 
   function mudarMeta() {
@@ -7447,6 +7750,15 @@
     $("quenteAcao").addEventListener("click", acaoQuente);
     $("quenteDesistir").addEventListener("click", () => achou(true));
     $("roteiroAbrir").addEventListener("click", abrirRoteiros);
+    $("campanhaAbrir").addEventListener("click", abrirCampanhas);
+    $("fecharCampanhas").addEventListener("click", () => $("dlgCampanhas").close());
+    $("campanhaJogar").addEventListener("click", jogarNoite);
+    $("campanhaRecomecar").addEventListener("click", recomecarCampanha);
+    $("campanhaSair").addEventListener("click", sairCampanha);
+    $("campanhaQuebrei").addEventListener("click", quebreiRegra);
+    $("fichaNivelUsar").addEventListener("click", () => usarFicha("nivel"));
+    $("fichaQuem").addEventListener("click", () => usarFicha("quem"));
+    $("fichaPular").addEventListener("click", () => usarFicha("pular"));
     $("fecharRoteiros").addEventListener("click", () => $("dlgRoteiros").close());
     $("dlgRoteiros").addEventListener("close", fecharRoteiros);
     $("roteiroSair").addEventListener("click", sairRoteiro);

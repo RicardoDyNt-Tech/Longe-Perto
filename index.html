@@ -126,6 +126,10 @@
           <p class="ola" id="ola"></p>
           <div class="avatares" id="avatares" aria-hidden="true"></div>
         </header>
+        <div class="casa-bloco clausulas" id="casaClausulas" hidden>
+          <ul class="clausulas-lista" id="clausulasLista"></ul>
+          <p class="erro" id="erroClausula" role="alert"></p>
+        </div>
         <div class="casa-bloco cardapio-aviso" id="casaCardapio" hidden>
           <p class="cumprir-titulo">🤫 Cardápio secreto</p>
           <p class="extras-sub">Marque o que você quer fazer nos dias juntos.</p>
@@ -636,7 +640,27 @@
         <button class="linkbtn" id="roteiroSair" type="button" hidden>Sair do roteiro</button>
       </div>
     </div>
+    <div class="faixa-campanha" id="faixaCampanha" hidden role="status">
+      <p class="fc-capa" id="campanhaCapa"></p>
+      <p class="fc-regra" id="campanhaRegra" hidden></p>
+      <p class="fc-info" id="campanhaInfo"></p>
+      <div class="fc-fichas" id="fichasAcoes" hidden>
+        <label>Ficha: nível da próxima carta
+          <select id="fichaNivel" aria-label="Nível da próxima carta"></select>
+        </label>
+        <button class="secondary" id="fichaNivelUsar" type="button">Usar ficha</button>
+        <button class="secondary" id="fichaQuem" type="button" hidden></button>
+        <button class="secondary" id="fichaPular" type="button" hidden>🎟️ Pular sem prenda</button>
+      </div>
+      <div class="fr-acoes">
+        <button class="primary" id="campanhaJogar" type="button" hidden></button>
+        <button class="linkbtn" id="campanhaQuebrei" type="button" hidden>Quebrei a regra 🙈</button>
+        <button class="secondary" id="campanhaRecomecar" type="button" hidden>Recomeçar</button>
+        <button class="linkbtn" id="campanhaSair" type="button">Sair da campanha</button>
+      </div>
+    </div>
     <div class="roteiro-entrada">
+      <button class="secondary" id="campanhaAbrir" type="button" hidden>🎞️ Campanha de 3 noites</button>
       <button class="secondary" id="roteiroAbrir" type="button" hidden>🎬 Jogar com roteiro</button>
       <p class="config-dica" id="roteiroEscolhendo" hidden></p>
     </div>
@@ -1042,6 +1066,15 @@
     </div>
     <p class="config-dica">Uma partida com começo, meio e fim. Os níveis de cada etapa seguem as configurações da sala.</p>
     <ul class="roteiros-lista" id="roteirosLista"></ul>
+  </dialog>
+
+  <dialog id="dlgCampanhas" class="dlg-posicoes" aria-labelledby="dlgCampanhasTitulo">
+    <div class="pos-topo">
+      <h2 id="dlgCampanhasTitulo">🎞️ Campanha de 3 noites</h2>
+      <button class="linkbtn" id="fecharCampanhas" type="button">Fechar</button>
+    </div>
+    <p class="config-dica">Uma noite por dia, cada uma com um roteiro e uma regra. Nas duas primeiras, cada 3 pontos viram uma ficha para gastar na última.</p>
+    <ul class="roteiros-lista" id="campanhasLista"></ul>
   </dialog>
 
   <dialog id="dlgMuralVer" class="dlg-mural" aria-labelledby="muralVerTitulo">

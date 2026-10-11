@@ -2,7 +2,7 @@
 // Cada conquista: { codigo, titulo, descricao, categoria: "jornada" | "ousadia", escopo: "casal" | "jogador", meta, contar(dados, jogador) }.
 // `dados` vem pronto do app (tudo da sala):
 //   partidas: [{ placar: [p0, p1], vencedor }] já na ordem dos jogadores atuais
-//   autorais, envelopes, capsulas, apostas, observacoes, momentos, cofre, seq: [dias seguidos de cada um]
+//   autorais, envelopes, capsulas, apostas, observacoes, momentos, cofre, seq: [dias seguidos de cada um], campanhas (concluídas)
 // As partidas antigas não têm os contadores da v5 (porNivel, eventos, pulosUsados…) e contam como zero.
 (function () {
   const soma = (lista, f) => lista.reduce((s, x) => s + (Number(f(x)) || 0), 0);
@@ -34,6 +34,7 @@
     jornada("observacao_4", "Olhos atentos", "4 missões de observação confirmadas", "casal", 4, d => d.observacoes.length),
     jornada("album_10", "Álbum de família", "10 momentos no álbum", "casal", 10, d => d.momentos.length),
     jornada("cofre_1", "Promessa cumprida", "1 item do cofre marcado como feito", "casal", 1, d => d.cofre.filter(x => x.feito).length),
+    jornada("campanha_1", "Minissérie completa", "1 campanha de 3 noites concluída", "casal", 1, d => d.campanhas || 0),
     jornada("eventos_todos", "Experimentamos de tudo", "Pelo menos 1 de cada: efeito, duelo, sintonia e missão em dupla", "casal", 4,
       d => TIPOS_EVENTO.filter(t => d.partidas.some(p => p.placar.some(q => ((q || {}).eventos || {})[t] > 0))).length),
     // Jornada · jogador

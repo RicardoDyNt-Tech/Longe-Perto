@@ -910,3 +910,14 @@ body[data-modo="presencial"]{
 .cardapio-match li.virar{animation:virarCarta .6s ease-out both}
 @keyframes virarCarta{from{transform:rotateY(90deg); opacity:0} to{transform:rotateY(0); opacity:1}}
 @media (prefers-reduced-motion: reduce){.dc-respirar span{animation-duration:16s} .cardapio-match li.virar{animation:none}}
+
+/* v9: campanha e cláusulas */
+.faixa-campanha{border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; margin:8px 0; background:var(--surface)}
+.faixa-campanha .fc-capa{font-weight:700; margin:0 0 4px}
+.faixa-campanha .fc-regra{margin:4px 0; padding:8px 10px; border-radius:10px; background:var(--bg); border-left:4px solid var(--desafio); font-weight:600}
+.faixa-campanha .fc-info{margin:4px 0; color:var(--muted); font-size:.9rem}
+.fc-fichas{display:flex; flex-wrap:wrap; gap:8px; align-items:end; margin:6px 0}
+.fc-fichas label{display:flex; flex-direction:column; font-size:.85rem; font-weight:600}
+.clausulas-lista{list-style:none; padding:0; margin:0; display:grid; gap:8px}
+.clausulas-lista li.feito{opacity:.7}
+.clausula-texto{margin:4px 0 8px; font-weight:600}
