@@ -802,6 +802,23 @@
       </div>
     </div>
 
+    <section class="silencio" id="silencioBox" hidden aria-live="polite">
+      <p class="silencio-titulo" id="silencioTitulo">🤫 Valendo silêncio</p>
+      <p class="silencio-status" id="silencioStatus"></p>
+      <div id="silencioPreparo" hidden>
+        <div class="chips" role="radiogroup" aria-label="Sensibilidade">
+          <label class="chip"><input type="radio" name="silSens" value="facil"><span>Fácil</span></label>
+          <label class="chip"><input type="radio" name="silSens" value="normal" checked><span>Normal</span></label>
+          <label class="chip"><input type="radio" name="silSens" value="dificil"><span>Difícil</span></label>
+        </div>
+        <p class="config-dica">Deixe este celular perto de quem cumpre. Primeiro, 3 segundos em silêncio para medir o barulho do ambiente. Só mede o volume: nada é gravado nem enviado.</p>
+        <button class="primary" id="silencioComecar" type="button">Calibrar e começar</button>
+      </div>
+      <div class="silencio-medidor" id="silencioMedidor" hidden aria-hidden="true"><i id="silencioNivel"></i><b id="silencioLimite"></b></div>
+      <p class="silencio-tempo" id="silencioTempo" hidden></p>
+      <div class="silencio-prendas" id="silencioPrendas" hidden></div>
+      <button class="linkbtn" id="silencioCancelar" type="button" hidden>Cancelar o silêncio</button>
+    </section>
     <section class="enredo" id="enredoBox" hidden aria-live="polite">
       <p class="enredo-topo" id="enredoTopo"></p>
       <p class="enredo-escolha" id="enredoEscolha" hidden></p>
@@ -836,6 +853,7 @@
       <p class="level" id="level"></p>
       <p class="vendada-aviso" id="vendadaAviso" hidden></p>
       <button class="secondary" id="vendadaLer" type="button" hidden>👀 Toque para ler (só quem lê)</button>
+      <p class="secreta-dica" id="secretaDica" hidden>🔒 Carta secreta: segure a carta para ler. Virou o celular, escondeu.</p>
       <p class="text" id="text"></p>
       <ol class="seq-etapas" id="seqEtapas" hidden></ol>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
@@ -975,6 +993,7 @@
     <div class="barra-acoes" id="barraAcoes">
       <div class="barra-in">
         <div class="acoes-giro" id="acoesGiro">
+          <button class="secondary secreta-btn" id="secretaBtn" type="button" aria-pressed="false" hidden>🔒 Carta secreta</button>
           <button class="primary" id="spin">Girar roleta</button>
           <div class="direct">
             <button id="pickV">Escolher verdade</button>
@@ -988,6 +1007,7 @@
         <button class="secondary reverso" id="reverso" type="button" hidden>🔄 Reverso</button>
         <button class="secondary liberar" id="liberar" type="button" hidden>Liberar da prenda</button>
         <button class="secondary" id="deixarReencontro" type="button" hidden>🧾 Deixar para o reencontro</button>
+        <button class="secondary" id="silencioBtn" type="button" hidden>🤫 Valendo silêncio</button>
         <button class="done evento-fim" id="eventoFim" type="button" hidden>Concluir evento</button>
         <div class="evento-acoes duelo-acoes" id="dueloAcoes" hidden>
           <button class="done" id="dueloComecar" type="button">Começar duelo</button>

@@ -937,3 +937,22 @@ body[data-enredo="1"] .wheel-wrap, body[data-enredo="1"] #acoesGiro{display:none
 .enredo-papel{border:none; padding:0; margin:8px 0; display:flex; flex-wrap:wrap; gap:8px}
 .enredo-papel legend{font-weight:600; margin-bottom:6px}
 .enredo-nome{font-weight:700}
+
+/* v9: carta secreta */
+.card[data-secreta="1"] #text,.card[data-secreta="vendo"] #text{user-select:none; -webkit-user-select:none; transition:filter .1s}
+.card[data-secreta="1"] #text{filter:blur(9px)}
+.card[data-secreta="1"],.card[data-secreta="vendo"]{touch-action:none; -webkit-touch-callout:none}
+.secreta-dica{font-size:.85rem; color:var(--muted); margin:4px 0}
+.secreta-btn[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+/* v9: desafio do silêncio */
+.silencio{border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; margin:10px 0; background:var(--surface)}
+.silencio.falhou{border-color:var(--erro)}
+.silencio-titulo{font-weight:700; margin:0 0 4px}
+.silencio-tempo{font-size:2rem; font-weight:700; font-variant-numeric:tabular-nums; margin:6px 0}
+.silencio-medidor{position:relative; height:16px; border-radius:8px; background:var(--bg); border:1.5px solid var(--line); overflow:hidden; margin:8px 0}
+.silencio-medidor i{position:absolute; left:0; top:0; bottom:0; background:#2e9d5b; transition:width .1s}
+.silencio-medidor b{position:absolute; top:0; bottom:0; width:3px; background:var(--erro)}
+.silencio-prendas{display:grid; gap:6px; margin:6px 0}
+body.flash-falhou::after{content:""; position:fixed; inset:0; background:rgba(220,30,40,.45); z-index:90; pointer-events:none; animation:flashFalhou .9s ease-out}
+@keyframes flashFalhou{0%,40%{opacity:1} 100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){body.flash-falhou::after{animation:none; opacity:.5}}

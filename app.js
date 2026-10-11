@@ -4259,7 +4259,12 @@
     if (!antes && agora) {
       juntosDesde = Date.now();
       clearInterval(batidaMaos);
-      batidaMaos = setInterval(() => vibrar(25), 857);   // cerca de 70 batidas por minuto
+      // batimento suave (tum-tum e pausa) nos dois ao mesmo tempo: o aparelho da pessoa 1 marca o ritmo
+      // e manda um sinal a cada batida; o outro vibra quando o sinal chega
+      if (eu === 0) batidaMaos = setInterval(() => {
+        vibrar(BATIMENTO);
+        try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "batida", jogador: eu } }); } catch (err) {}
+      }, 1040);
       clearInterval(timerMaos);
       timerMaos = setInterval(desenharMaos, 250);
     }
@@ -4281,8 +4286,11 @@
     mudarMaos(eu, v, true);
     try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "mao", jogador: eu, segurando: v } }); } catch (err) {}
   }
+  // [0, 120, 100, 120, 700] em loop (espera, vibra, pausa, vibra, pausa): no navegador, vibra 120, pausa 100, vibra 120, a cada 1,04 s
+  const BATIMENTO = [120, 100, 120];
   function receberMao(p) {
     if (!p || (p.jogador !== 0 && p.jogador !== 1) || p.jogador === eu) return;
+    if (p.evento === "batida") { if (maos[0] && maos[1]) vibrar(BATIMENTO); return; }
     mudarMaos(p.jogador, !!p.segurando, false);
   }
   // o outro saiu da sala segurando: solta por ele (e este aparelho grava o tempo)
@@ -4976,7 +4984,8 @@
     presencial: { ativo: true },
     fatura: { vales: true },
     cardapio: { ativo: true },
-    clausulas: { ativo: true }
+    clausulas: { ativo: true },
+    silencio: { ativo: true }
   };
   // merge profundo: o padrão preenche o que faltar (e o que vier com tipo errado)
   function mesclar(pad, x) {
@@ -5333,6 +5342,7 @@
     sm.appendChild(cfgModo("missaoSecreta", "Missão secreta", box => box.appendChild(cfgNivelModo("missaoSecreta"))));
     sm.appendChild(cfgModo("reverso", "Reverso"));
     sm.appendChild(cfgModo("presencial", "Modo Juntos (presencial)"));
+    sm.appendChild(cfgModo("silencio", "Desafio do silêncio (microfone, no modo Juntos)"));
     d.appendChild(sm);
 
     const sr = cfgSecao("Reencontro");
@@ -5493,6 +5503,7 @@
     missaoAberta = false;
     cartas = []; cartasOk = false; cofre = []; musicas = []; tocandoUrl = null;
     clearInterval(timerDc); timerDc = null; clearInterval(timerResgate); timerResgate = null; $("descongelar").hidden = true;
+    pararMic();
     pendentes.forEach(p => clearTimeout(p.t)); pendentes.clear();
     desenharExtras();
     clearTimeout(timerCarta);
@@ -5583,6 +5594,9 @@
       if (!LEVEL_NAMES[cp.nivelProx]) cp.nivelProx = null;
     }
     if (!Number.isInteger(e.campanhasFeitas)) e.campanhasFeitas = 0;
+    if (e.secretaProx !== 0 && e.secretaProx !== 1) e.secretaProx = null;
+    const si = e.silencio;
+    if (!si || typeof si !== "object" || !e.carta || si.chave !== e.carta.chave || !["preparando", "calibrando", "valendo", "falhou", "passou"].includes(si.fase)) e.silencio = null;
     const en = e.enredo;
     if (!en || typeof en !== "object" || !nosOk(en.nos) || !Array.isArray(en.papeis) || en.papeis.length !== 2 || !en.nos.some(x => x.id === en.no)) e.enredo = null;
     else {
@@ -5842,6 +5856,8 @@
     desenharDescongelar(estado);
     desenharCampanha(estado);
     desenharEnredo(estado);
+    desenharSecreta(estado);
+    desenharSilencio(estado);
     desenharClausulas();
     const cpo = estado.campanha;
     if (!inicial && cpo && campAntes && campAntes.id === cpo.id && cpo.placares.length > campAntes.n) {
@@ -6077,6 +6093,7 @@
     }
   }
 
+  const VIB_321 = { 3: 100, 2: 200, 1: 400 };
   function atualizarTimer() {
     const t = estado && estado.timer;
     if (!t || !timerLocal) { clearInterval(timerTick); return; }
@@ -6088,7 +6105,13 @@
       // contagem de largada sincronizada: 3, 2, 1, VALENDO! (depois, o tempo da carta, se houver)
       const passou = t.total - r;
       num.classList.remove("fim", "tempo");
-      if (passou < t.preparo) { num.textContent = String(Math.ceil(t.preparo - passou)); return; }
+      if (passou < t.preparo) {
+        const d = Math.ceil(t.preparo - passou);
+        num.textContent = String(d);
+        // vibração crescente nos dois aparelhos: 3, 2, 1
+        if (timerLocal.ultimoPrep !== d && !t.pausado) { timerLocal.ultimoPrep = d; if (VIB_321[d]) vibrar(VIB_321[d]); }
+        return;
+      }
       if (t.total <= t.preparo || passou < t.preparo + 0.9) {
         num.textContent = "VALENDO!";
         if (t.total <= t.preparo) { $("timerPausar").hidden = true; clearInterval(timerTick); }
@@ -6248,6 +6271,7 @@
       if (tipoEvento) carta = sortearEvento(n, tipoEvento) || carta;                 // roteiro: evento da etapa
       else if (!et && !n.emMorteSubita && Math.random() < CHANCE_EVENTO[n.eventos]) carta = sortearEvento(n) || carta;
       if (n.vendado && n.vendado.jogador === n.vez && !carta.evento) { carta.vendada = true; n.vendado = null; }
+      marcarSecreta(n, carta);
       const cegas = !carta.evento && n.escolhaCegas && !n.emMorteSubita && !carta.vendada ? duasCegas(n, tipo, carta) : null;
       if (cegas) { n.cegas = cegas; n.carta = null; n.musica = null; }
       else {
@@ -6266,6 +6290,7 @@
       if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
       const carta = sortear(tipo, niveisDoSorteio(n), n.usados || []);
       if (n.vendado && n.vendado.jogador === n.vez) { carta.vendada = true; n.vendado = null; }
+      marcarSecreta(n, carta);
       registrarUso(n, carta);
       n.carta = carta;
       n.musica = sortearMusica(carta.nivel);
@@ -7213,6 +7238,192 @@
     }
   }
 
+  // ---------- v9: carta secreta (segure para ler; virou o celular, escondeu) ----------
+  let segurandoCarta = false, celularVirado = false;
+  function alternarSecreta() {
+    if (!estado || estado.vez !== eu || estado.carta) return;
+    gravar(n => { n.secretaProx = n.secretaProx === eu ? null : eu; });
+  }
+  function marcarSecreta(n, carta) {
+    if (n.secretaProx === n.vez && carta && (carta.tipo === "verdade" || carta.tipo === "desafio")) carta.secreta = true;
+    n.secretaProx = null;
+  }
+  function desenharSecreta(e) {
+    const c = e.carta, sec = !!(c && c.secreta);
+    // atributos (o desenho da carta troca a classe do #card)
+    $("card").dataset.secreta = sec ? (segurandoCarta && !celularVirado ? "vendo" : "1") : "";
+    $("secretaDica").hidden = !sec;
+    const pode = !c && e.vez === eu && e.vencedor === null && !!e.jogadores[1] && !e.enredo;
+    $("secretaBtn").hidden = !pode;
+    $("secretaBtn").setAttribute("aria-pressed", String(e.secretaProx === eu));
+    $("secretaBtn").textContent = e.secretaProx === eu ? "🔒 Carta secreta: ligada" : "🔒 Carta secreta";
+  }
+  function segurarCarta(v) {
+    segurandoCarta = v;
+    if (estado) desenharSecreta(estado);
+  }
+  addEventListener("deviceorientation", ev => {
+    const virado = typeof ev.beta === "number" && Math.abs(ev.beta) > 150;   // tela para baixo
+    if (virado === celularVirado) return;
+    celularVirado = virado;
+    if (virado) segurandoCarta = false;
+    if (estado) desenharSecreta(estado);
+  });
+
+  // ---------- v9: desafio do silêncio (o microfone como juiz; só no Juntos) ----------
+  // Só mede o volume (RMS) neste aparelho: nada é gravado nem enviado. O resultado vai pelo estado.
+  const SENS_SIL = { facil: [4, 0.05], normal: [3, 0.03], dificil: [2, 0.015] };
+  const micDisponivel = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  let mic = null, falhouVisto = null, passouVisto = null;
+  function pararMic() {
+    if (!mic) return;
+    clearInterval(mic.timer);
+    try { mic.stream.getTracks().forEach(t => t.stop()); } catch (err) {}
+    try { mic.ctx.close(); } catch (err) {}
+    mic = null;
+  }
+  function volumeAgora() {
+    const buf = mic.buf;
+    mic.analyser.getFloatTimeDomainData(buf);
+    let s = 0;
+    for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+    return Math.sqrt(s / buf.length);
+  }
+  const silencioPode = e => !!(e && e.carta && juntos(e) && config.silencio.ativo && micDisponivel()
+    && (e.carta.tipo === "desafio" || e.carta.tipo === "prenda") && (e.carta.nivel === "picante" || e.carta.nivel === "pesado"));
+  function ligarSilencio() {
+    const e = estado;
+    if (!silencioPode(e) || e.silencio) return;
+    const chave = e.carta.chave;
+    gravarFresco(n => { if (n.carta && n.carta.chave === chave && !n.silencio) n.silencio = { chave, ouvinte: euReal, fase: "preparando" }; });
+  }
+  async function comecarSilencio() {
+    const e = estado, s = e && e.silencio;
+    if (!s || s.ouvinte !== euReal || s.fase !== "preparando") return;
+    const sens = (document.querySelector('input[name="silSens"]:checked') || {}).value || "normal";
+    pararMic();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      mic = { stream, ctx, analyser, buf: new Float32Array(analyser.fftSize), timer: null, amostras: [], limite: null, acima: 0, chave: s.chave };
+    } catch (err) {
+      erro("erroJogo", "Sem acesso ao microfone. O silêncio fica para outra vez.");
+      gravarFresco(n => { n.silencio = null; });
+      return;
+    }
+    gravarFresco(n => { if (n.silencio && n.silencio.chave === s.chave) Object.assign(n.silencio, { fase: "calibrando", sens }); });
+    const inicio = Date.now();
+    mic.timer = setInterval(() => {
+      if (!mic) return;
+      const v = volumeAgora();
+      mostrarMedidor(v);
+      const st = estado && estado.silencio;
+      if (!st || st.chave !== mic.chave || !estado.carta || estado.carta.chave !== mic.chave) return pararMic();
+      if (mic.limite === null) {
+        mic.amostras.push(v);
+        if (Date.now() - inicio < 3000) return;
+        // limite = barulho do ambiente × fator + margem (pela sensibilidade)
+        const base = mic.amostras.reduce((a, b) => a + b, 0) / mic.amostras.length, [f, m] = SENS_SIL[sens];
+        mic.limite = base * f + m;
+        const seg = tempoDaCarta(estado.carta.texto) || 60;
+        gravarFresco(n => { if (n.silencio && n.silencio.chave === mic.chave) Object.assign(n.silencio, { fase: "valendo", ate: Date.now() + seg * 1000, seg }); });
+        return;
+      }
+      if (st.fase !== "valendo") return;
+      mic.acima = v > mic.limite ? mic.acima + 1 : 0;
+      if (mic.acima >= 2) {   // passou do limite por uns 200 ms: falhou
+        const ch = mic.chave; pararMic();
+        gravarFresco(n => { if (n.silencio && n.silencio.chave === ch && n.silencio.fase === "valendo") n.silencio.fase = "falhou"; });
+      } else if (st.ate && Date.now() >= st.ate) {
+        const ch = mic.chave; pararMic();
+        gravarFresco(n => {
+          if (!n.silencio || n.silencio.chave !== ch || n.silencio.fase !== "valendo") return;
+          n.silencio.fase = "passou";
+          n.placar[n.vez].pontos += 2;
+          n.pontos = n.placar.map(p => p.pontos);
+          n.aviso = novoAviso(`🤫 ${n.jogadores[n.vez]} aguentou em silêncio! +2`);
+          conferirMeta(n);
+        });
+      }
+    }, 100);
+  }
+  function mostrarMedidor(v) {
+    const pct = x => Math.min(100, Math.round(Math.sqrt(Math.min(1, x / 0.3)) * 100));
+    $("silencioMedidor").hidden = false;
+    $("silencioNivel").style.width = pct(v) + "%";
+    $("silencioLimite").hidden = !mic || mic.limite === null;
+    if (mic && mic.limite !== null) $("silencioLimite").style.left = pct(mic.limite) + "%";
+  }
+  function cancelarSilencio() {
+    pararMic();
+    gravarFresco(n => { n.silencio = null; });
+  }
+  // falhou: o outro escolhe uma prenda imediata, entre três
+  let prendasSilencio = null;
+  function opcoesPrendaSilencio(e) {
+    const ch = e.silencio.chave;
+    if (prendasSilencio && prendasSilencio.chave === ch) return prendasSilencio.l;
+    const usados = [...(e.usados || [])], l = [];
+    const nivel = nivelDaPrenda(e, "pulo", e.carta);
+    for (let i = 0; i < 3; i++) { const p = sortearPrenda(nivel, usados, e); if (!p || l.some(x => x.chave === p.chave)) continue; l.push(p); usados.push(p.chave); }
+    prendasSilencio = { chave: ch, l };
+    return l;
+  }
+  function escolherPrendaSilencio(p) {
+    const ch = estado && estado.silencio && estado.silencio.chave;
+    gravar(n => {
+      if (!n.silencio || n.silencio.chave !== ch || n.silencio.fase !== "falhou" || !n.carta) return;
+      const c = n.carta, carta = structuredClone(p);
+      registrarUso(n, carta);
+      carta.motivo = "pulo"; carta.origem = c.tipo === "prenda" ? "desafio" : c.tipo;
+      n.carta = carta;
+      n.silencio = null;
+      n.aviso = novoAviso(`🤫 Falhou! ${n.jogadores[1 - n.vez]} escolheu a prenda`);
+    });
+  }
+  function desenharSilencio(e) {
+    const s = e.silencio, c = e.carta;
+    $("silencioBtn").hidden = !silencioPode(e) || !!s || !e.jogadores[1];
+    $("silencioBox").hidden = !s;
+    if (!s) { if (mic) pararMic(); return; }
+    const ouvinte = s.ouvinte === euReal, quem = e.jogadores[e.vez];
+    $("silencioPreparo").hidden = !(ouvinte && s.fase === "preparando");
+    $("silencioCancelar").hidden = !(s.fase === "preparando" || s.fase === "calibrando" || s.fase === "valendo" || (s.fase === "falhou" && !opcoesPrendaSilencio(e).length));
+    if (!ouvinte || !mic) $("silencioMedidor").hidden = true;
+    $("silencioTempo").hidden = s.fase !== "valendo";
+    $("silencioStatus").textContent = s.fase === "preparando" ? (ouvinte ? "" : `O celular de ${e.jogadores[s.ouvinte] || "vocês"} vai ouvir.`)
+      : s.fase === "calibrando" ? "Calibrando: 3 segundos em silêncio…"
+      : s.fase === "valendo" ? `${quem} não pode fazer nenhum som.`
+      : s.fase === "falhou" ? "Falhou! 🤫" : `${quem} aguentou em silêncio! +2`;
+    $("silencioBox").classList.toggle("falhou", s.fase === "falhou");
+    // falhou: tela vermelha piscando e vibração, uma vez em cada aparelho
+    if (s.fase === "falhou" && falhouVisto !== s.chave) {
+      falhouVisto = s.chave;
+      document.body.classList.add("flash-falhou");
+      setTimeout(() => document.body.classList.remove("flash-falhou"), 900);
+      vibrar([300, 100, 300]);
+    }
+    const box = $("silencioPrendas"); box.textContent = "";
+    const ops = s.fase === "falhou" ? opcoesPrendaSilencio(e) : [];
+    const escolhe = s.fase === "falhou" && (eu === 1 - e.vez || umCelularAqui(e));
+    box.hidden = s.fase !== "falhou";
+    if (s.fase === "falhou") {
+      if (escolhe) {
+        box.appendChild(el("p", "config-dica", "Escolha a prenda imediata:"));
+        if (!ops.length) box.appendChild(el("p", "config-dica", "Nenhuma prenda disponível nos níveis da sala."));
+        ops.forEach(p => { const b = el("button", "secondary", p.texto); b.type = "button"; b.addEventListener("click", () => escolherPrendaSilencio(p)); box.appendChild(b); });
+      } else box.appendChild(el("p", "config-dica", `${e.jogadores[1 - e.vez]} vai escolher a prenda.`));
+    }
+    clearInterval(desenharSilencio.t);
+    if (s.fase === "valendo" && s.ate) {
+      const tick = () => { const r = Math.max(0, Math.ceil((s.ate - Date.now()) / 1000)); $("silencioTempo").textContent = relogio(r); };
+      tick(); desenharSilencio.t = setInterval(tick, 250);
+    }
+  }
+
   // ---------- v9: cláusulas para amanhã (efeito borboleta) ----------
   let clausulasCat = [], clausulasSala = [];
   async function carregarClausulas(c) {
@@ -7905,6 +8116,13 @@
     $("roteiroAbrir").addEventListener("click", abrirRoteiros);
     $("campanhaAbrir").addEventListener("click", abrirCampanhas);
     $("enredoAbrir").addEventListener("click", abrirEnredos);
+    $("secretaBtn").addEventListener("click", alternarSecreta);
+    $("card").addEventListener("pointerdown", ev => { if ($("card").dataset.secreta) { ev.preventDefault(); segurarCarta(true); } });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(t => $("card").addEventListener(t, () => { if (segurandoCarta) segurarCarta(false); }));
+    $("card").addEventListener("contextmenu", ev => { if ($("card").dataset.secreta) ev.preventDefault(); });
+    $("silencioBtn").addEventListener("click", ligarSilencio);
+    $("silencioComecar").addEventListener("click", comecarSilencio);
+    $("silencioCancelar").addEventListener("click", cancelarSilencio);
     $("fecharEnredos").addEventListener("click", () => $("dlgEnredos").close());
     $("enredoVoltar").addEventListener("click", () => { $("enredosEscolher").hidden = false; $("enredosPapeis").hidden = true; });
     $("enredoComecar").addEventListener("click", comecarEnredo);
