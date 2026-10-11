@@ -1167,6 +1167,7 @@
     carregarCofre(c);
     carregarVales(c);
     campanhas = []; roteirosCampanha = {}; carregarCampanhas(c);
+    enredos = []; carregarEnredos(c);
     clausulasCat = []; clausulasSala = []; carregarClausulas(c);
     cardapioEnviaram = []; cardapioMatch = null; cardapioPingVisto = null;
     setTimeout(() => { if (c === codigo) statusCardapio(); }, 800);
@@ -5582,6 +5583,15 @@
       if (!LEVEL_NAMES[cp.nivelProx]) cp.nivelProx = null;
     }
     if (!Number.isInteger(e.campanhasFeitas)) e.campanhasFeitas = 0;
+    const en = e.enredo;
+    if (!en || typeof en !== "object" || !nosOk(en.nos) || !Array.isArray(en.papeis) || en.papeis.length !== 2 || !en.nos.some(x => x.id === en.no)) e.enredo = null;
+    else {
+      if (!Array.isArray(en.caminho)) en.caminho = [en.no];
+      if (!Array.isArray(en.escolhas)) en.escolhas = [];
+      if (!Array.isArray(en.papeisNomes) || en.papeisNomes.length !== 2) en.papeisNomes = ["Papel 1", "Papel 2"];
+      en.nos.forEach(x => { if (!Array.isArray(x.opcoes)) x.opcoes = []; if (!x.quem) x.quem = "ambos"; });
+      en.cumpriu = !!en.cumpriu;
+    }
     if (!e.vetos || typeof e.vetos !== "object" || Array.isArray(e.vetos)) e.vetos = {};
     if (!Array.isArray(e.clausulasPrenda)) e.clausulasPrenda = [];
     if (!e.cardapioPing || typeof e.cardapioPing !== "object") e.cardapioPing = null;
@@ -5831,6 +5841,7 @@
     desenharModosHoje(e);
     desenharDescongelar(estado);
     desenharCampanha(estado);
+    desenharEnredo(estado);
     desenharClausulas();
     const cpo = estado.campanha;
     if (!inicial && cpo && campAntes && campAntes.id === cpo.id && cpo.placares.length > campAntes.n) {
@@ -6210,7 +6221,7 @@
 
   // ---------- ações ----------
   function girar() {
-    if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null) return;
+    if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null || estado.enredo) return;
     let k = Math.floor(Math.random() * SEGMENTOS);
     const passo = 360 / SEGMENTOS;
     // roteiro: a etapa define os tipos (verdade/desafio pela roleta; os outros saem direto, como evento)
@@ -6249,7 +6260,7 @@
   }
 
   function escolher(tipo) {
-    if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null) return;
+    if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null || estado.enredo) return;
     if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
       if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
@@ -6856,8 +6867,8 @@
   function desenharRoteiro(e) {
     const r = e.roteiro, completa = !!e.jogadores[1];
     const pode = !r && completa && placarZerado(e) && !e.carta && !e.cegas && e.vencedor === null && roteiros.some(roteiroPermitido);
-    $("roteiroAbrir").hidden = !(pode && podeChipsAqui());
-    $("campanhaAbrir").hidden = !(!r && !e.campanha && completa && placarZerado(e) && !e.carta && !e.cegas && e.vencedor === null && podeChipsAqui() && campanhas.some(campanhaPermitida));
+    $("roteiroAbrir").hidden = !(pode && podeChipsAqui() && !e.enredo);
+    $("campanhaAbrir").hidden = !(!r && !e.campanha && !e.enredo && completa && placarZerado(e) && !e.carta && !e.cegas && e.vencedor === null && podeChipsAqui() && campanhas.some(campanhaPermitida));
     const outroEscolhe = !r && e.roteiroEscolhendo === 1 - eu && pode;
     $("roteiroEscolhendo").hidden = !outroEscolhe;
     $("roteiroEscolhendo").textContent = outroEscolhe ? `${e.jogadores[1 - eu]} está escolhendo o roteiro` : "";
@@ -7058,6 +7069,148 @@
     $("fichaQuem").hidden = !vd;
     $("fichaQuem").textContent = vd ? `🎟️ ${e.jogadores[1 - e.vez]} cumpre esta` : "";
     $("fichaPular").hidden = !(vd && e.vez === eu);
+  }
+
+  // ---------- v9: enredos com escolhas (roleplay em árvore) ----------
+  let enredos = [], enredoEscolhido = null;
+  const TIPOS_NO = ["narracao", "verdade", "desafio"];
+  function nosOk(nos) {
+    return Array.isArray(nos) && nos.length >= 1 && nos.every(x => x && typeof x.id === "string" && typeof x.texto === "string" && TIPOS_NO.includes(x.tipo)
+      && ["vez", "outro", "ambos"].includes(x.quem || "ambos")
+      && (!x.opcoes || (Array.isArray(x.opcoes) && x.opcoes.every(o => o && typeof o.rotulo === "string" && nos.some(y => y.id === o.vai)))));
+  }
+  async function carregarEnredos(c) {
+    const { data, error } = await sb.from("enredos").select("*").eq("ativo", true).order("ordem", { ascending: true });
+    if (c !== codigo || error || !Array.isArray(data)) return;
+    enredos = data.filter(x => x && x.id && LEVEL_NAMES[x.nivel_max] && Array.isArray(x.papeis) && x.papeis.length === 2 && nosOk(x.nos));
+    if (estado) desenharEnredo(estado);
+  }
+  const modoEnredoOk = (x, e) => !x.modo || x.modo === "ambos" || x.modo === (juntos(e) ? "presencial" : "distancia");
+  const enredoPermitido = (x, e) => ordCfg(x.nivel_max) <= ordCfg(nivelMaxSala()) && modoEnredoOk(x, e || estado);
+  const noDoEnredo = en => en && en.nos.find(x => x.id === en.no);
+  // quem faz o trecho: "vez" = papel 1, "outro" = papel 2, "ambos" = os dois
+  const fazDoNo = (en, no) => no.quem === "vez" ? [en.papeis[0]] : no.quem === "outro" ? [en.papeis[1]] : [0, 1];
+  const aquiFaz = (e, js) => umCelularAqui(e) || js.includes(eu);
+  function abrirEnredos() {
+    if (!estado) return;
+    $("enredosEscolher").hidden = false; $("enredosPapeis").hidden = true;
+    const ul = $("enredosLista"); ul.textContent = "";
+    enredos.filter(x => enredoPermitido(x)).forEach(x => {
+      const li = el("li"), b = el("button", "roteiro-op"); b.type = "button";
+      b.append(el("span", "ro-nome", `${x.emoji} ${x.nome}`), el("span", "ro-desc", x.descricao || ""), el("span", "ro-etapas", `${x.papeis[0]} × ${x.papeis[1]}`));
+      b.addEventListener("click", () => escolherPapeis(x));
+      li.appendChild(b); ul.appendChild(li);
+    });
+    if (!ul.childElementCount) ul.appendChild(el("li", "extras-sub", "Nenhum enredo combina com as configurações e o modo desta sala."));
+    $("dlgEnredos").showModal();
+  }
+  function escolherPapeis(x) {
+    enredoEscolhido = x;
+    $("enredosEscolher").hidden = true; $("enredosPapeis").hidden = false;
+    $("enredoPapeisNome").textContent = `${x.emoji} ${x.nome}`;
+    $("enredoPapeisDesc").textContent = x.descricao || "";
+    $("enredoPapel0").textContent = `Quem fica com "${x.papeis[0]}"?`;
+    $("enredoPapelJ0").textContent = nomeDe(0); $("enredoPapelJ1").textContent = nomeDe(1);
+    const atual = () => Number((document.querySelector('input[name="papel0"]:checked') || {}).value || 0);
+    const outro = () => { $("enredoPapelOutro").textContent = `${nomeDe(1 - atual())} fica com "${x.papeis[1]}".`; };
+    document.querySelectorAll('input[name="papel0"]').forEach(r => { r.onchange = outro; });
+    outro();
+  }
+  function comecarEnredo() {
+    const x = enredoEscolhido;
+    if (!x || !estado) return;
+    const p0 = Number((document.querySelector('input[name="papel0"]:checked') || {}).value || 0);
+    $("dlgEnredos").close();
+    gravar(n => {
+      if (n.enredo || n.carta || n.roteiro || n.vencedor !== null || !n.jogadores[1]) return;
+      const nos = x.nos.map(no => ({ id: no.id, quem: no.quem || "ambos", tipo: no.tipo, texto: no.texto.slice(0, 600), opcoes: (no.opcoes || []).map(o => ({ rotulo: String(o.rotulo).slice(0, 80), vai: o.vai })), fim: !!no.fim }));
+      n.enredo = { id: x.id, nome: x.nome, emoji: x.emoji, nivel: x.nivel_max, papeisNomes: x.papeis.slice(0, 2), papeis: [p0, 1 - p0], nos, no: nos[0].id, caminho: [nos[0].id], escolhas: [], cumpriu: false, ultima: null };
+      n.aviso = novoAviso(`🎭 ${x.nome}: ${n.jogadores[p0]} é "${x.papeis[0]}", ${n.jogadores[1 - p0]} é "${x.papeis[1]}"`);
+    });
+  }
+  function cumpriTrecho() {
+    const e = estado, en = e && e.enredo, no = noDoEnredo(en);
+    if (!no || no.tipo === "narracao" || en.cumpriu || !aquiFaz(e, fazDoNo(en, no))) return;
+    gravar(n => {
+      const x = n.enredo, nn = noDoEnredo(x);
+      if (!nn || nn.id !== no.id || x.cumpriu) return;
+      x.cumpriu = true;
+      const fez = fazDoNo(x, nn);
+      fez.forEach(j => { n.placar[j].pontos += 1; });   // +1 por trecho cumprido, para quem fez
+      n.pontos = n.placar.map(p => p.pontos);
+      x.quemCumpriu = fez.length === 1 ? fez[0] : null;
+      conferirMeta(n);
+    });
+  }
+  function escolherOpcao(i) {
+    const e = estado, en = e && e.enredo, no = noDoEnredo(en);
+    if (!no || !no.opcoes[i]) return;
+    gravar(n => {
+      const x = n.enredo, nn = noDoEnredo(x);
+      if (!nn || nn.id !== no.id) return;
+      const o = nn.opcoes[i];
+      x.escolhas = [...x.escolhas, { no: nn.id, rotulo: o.rotulo, quem: eu }];
+      x.ultima = { quem: eu, rotulo: o.rotulo };
+      x.no = o.vai; x.caminho = [...x.caminho, o.vai].slice(-40); x.cumpriu = false; x.quemCumpriu = null;
+      n.aviso = novoAviso(`${n.jogadores[eu]} escolheu: ${o.rotulo}`);
+    });
+  }
+  function sairEnredo(continuar) {
+    const en = estado && estado.enredo;
+    if (!en) return;
+    if (!continuar && !confirm("Sair do enredo? Os pontos ficam.")) return;
+    gravar(n => {
+      const x = n.enredo;
+      if (!x) return;
+      // "Continuar com cartas": a roleta abre no nível mais alto do enredo (o que a sala permitir)
+      if (continuar) { const nv = limitarNivel("nivel", x.nivel) || maisLeve(); n.niveis = [nv]; }
+      n.enredo = null;
+    });
+  }
+  // fim: nó com fim e (narração ou trecho cumprido); sem opções também encerra
+  const enredoAcabou = (en, no) => !!no && (no.fim || !no.opcoes.length) && (no.tipo === "narracao" || en.cumpriu);
+  function desenharEnredo(e) {
+    const en = e.enredo, completa = !!e.jogadores[1];
+    $("enredoAbrir").hidden = !(!en && completa && !e.carta && !e.roteiro && !e.cegas && e.vencedor === null && enredos.some(x => enredoPermitido(x, e)));
+    $("enredoBox").hidden = !en;
+    document.body.dataset.enredo = en ? "1" : "";
+    if (!en) return;
+    const no = noDoEnredo(en);
+    if (!no) return;
+    $("enredoTopo").textContent = `${en.emoji} ${en.nome} · ${e.jogadores[en.papeis[0]]} é "${en.papeisNomes[0]}", ${e.jogadores[en.papeis[1]]} é "${en.papeisNomes[1]}"`;
+    $("enredoEscolha").hidden = !en.ultima;
+    $("enredoEscolha").textContent = en.ultima ? `${e.jogadores[en.ultima.quem]} escolheu: ${en.ultima.rotulo}` : "";
+    const acabou = enredoAcabou(en, no);
+    $("enredoFim").hidden = !acabou;
+    $("enredoSair").hidden = acabou;
+    const fez = fazDoNo(en, no);
+    $("enredoQuem").textContent = no.tipo === "narracao" ? "📖 Narração (alguém lê em voz alta)"
+      : `${no.tipo === "verdade" ? "Verdade" : "Desafio"} para ${fez.length === 2 ? "os dois" : e.jogadores[fez[0]]}`;
+    $("enredoTexto").textContent = no.texto;
+    $("enredoTexto").classList.toggle("narracao", no.tipo === "narracao");
+    const pendente = no.tipo !== "narracao" && !en.cumpriu;
+    $("enredoCumpri").hidden = !pendente || !aquiFaz(e, fez);
+    $("enredoCumpri").textContent = fez.length === 2 ? "Cumprimos" : "Cumpri";
+    $("enredoEspera").hidden = !pendente || aquiFaz(e, fez);
+    $("enredoEspera").textContent = pendente ? `Aguardando ${e.jogadores[fez[0]]} cumprir.` : "";
+    // escolhe quem acabou de cumprir; em "ambos" ou narração, qualquer um
+    const box = $("enredoOpcoes"); box.textContent = "";
+    if (!pendente && !acabou) {
+      const quem = no.tipo === "narracao" || fez.length === 2 ? null : en.quemCumpriu ?? fez[0];
+      const pode = quem === null || quem === eu || umCelularAqui(e);
+      if (pode) no.opcoes.forEach((o, i) => { const b = el("button", "secondary", o.rotulo); b.type = "button"; b.addEventListener("click", () => escolherOpcao(i)); box.appendChild(b); });
+      else box.appendChild(el("p", "config-dica", `${e.jogadores[quem]} escolhe o que acontece agora.`));
+    }
+    if (acabou) {
+      const ol = $("enredoCaminho"); ol.textContent = "";
+      en.caminho.forEach((id, i) => {
+        const x = en.nos.find(y => y.id === id);
+        if (!x) return;
+        const esc = en.escolhas.find(y => y.no === id);
+        ol.appendChild(el("li", "", x.texto.length > 90 ? x.texto.slice(0, 88) + "…" : x.texto));
+        if (esc) ol.appendChild(el("li", "enredo-esc", `↳ ${e.jogadores[esc.quem]} escolheu: ${esc.rotulo}`));
+      });
+    }
   }
 
   // ---------- v9: cláusulas para amanhã (efeito borboleta) ----------
@@ -7751,6 +7904,13 @@
     $("quenteDesistir").addEventListener("click", () => achou(true));
     $("roteiroAbrir").addEventListener("click", abrirRoteiros);
     $("campanhaAbrir").addEventListener("click", abrirCampanhas);
+    $("enredoAbrir").addEventListener("click", abrirEnredos);
+    $("fecharEnredos").addEventListener("click", () => $("dlgEnredos").close());
+    $("enredoVoltar").addEventListener("click", () => { $("enredosEscolher").hidden = false; $("enredosPapeis").hidden = true; });
+    $("enredoComecar").addEventListener("click", comecarEnredo);
+    $("enredoCumpri").addEventListener("click", cumpriTrecho);
+    $("enredoSair").addEventListener("click", () => sairEnredo(false));
+    $("enredoContinuar").addEventListener("click", () => sairEnredo(true));
     $("fecharCampanhas").addEventListener("click", () => $("dlgCampanhas").close());
     $("campanhaJogar").addEventListener("click", jogarNoite);
     $("campanhaRecomecar").addEventListener("click", recomecarCampanha);

@@ -661,6 +661,7 @@
     </div>
     <div class="roteiro-entrada">
       <button class="secondary" id="campanhaAbrir" type="button" hidden>🎞️ Campanha de 3 noites</button>
+      <button class="secondary" id="enredoAbrir" type="button" hidden>🎭 Enredos</button>
       <button class="secondary" id="roteiroAbrir" type="button" hidden>🎬 Jogar com roteiro</button>
       <p class="config-dica" id="roteiroEscolhendo" hidden></p>
     </div>
@@ -801,6 +802,23 @@
       </div>
     </div>
 
+    <section class="enredo" id="enredoBox" hidden aria-live="polite">
+      <p class="enredo-topo" id="enredoTopo"></p>
+      <p class="enredo-escolha" id="enredoEscolha" hidden></p>
+      <div id="enredoTrecho">
+        <p class="enredo-quem" id="enredoQuem"></p>
+        <p class="enredo-texto" id="enredoTexto"></p>
+        <button class="done" id="enredoCumpri" type="button" hidden>Cumpri</button>
+        <p class="config-dica" id="enredoEspera" hidden></p>
+        <div class="enredo-opcoes" id="enredoOpcoes"></div>
+      </div>
+      <div id="enredoFim" hidden>
+        <p class="enredo-fim-titulo">Fim do enredo 🎭</p>
+        <ol class="enredo-caminho" id="enredoCaminho"></ol>
+        <button class="primary" id="enredoContinuar" type="button">Continuar com cartas</button>
+      </div>
+      <button class="linkbtn" id="enredoSair" type="button">Sair do enredo</button>
+    </section>
     <p class="aviso" id="aviso" role="status" hidden></p>
     <div class="faixa-ms" id="faixaMS" hidden role="status">
       <p class="ms-titulo">⚡ Morte súbita! Próxima carta decide</p>
@@ -1066,6 +1084,31 @@
     </div>
     <p class="config-dica">Uma partida com começo, meio e fim. Os níveis de cada etapa seguem as configurações da sala.</p>
     <ul class="roteiros-lista" id="roteirosLista"></ul>
+  </dialog>
+
+  <dialog id="dlgEnredos" class="dlg-posicoes" aria-labelledby="dlgEnredosTitulo">
+    <div class="pos-topo">
+      <h2 id="dlgEnredosTitulo">🎭 Enredos</h2>
+      <button class="linkbtn" id="fecharEnredos" type="button">Fechar</button>
+    </div>
+    <div id="enredosEscolher">
+      <p class="config-dica">Uma história com escolhas: cada trecho cumprido abre o próximo.</p>
+      <ul class="roteiros-lista" id="enredosLista"></ul>
+    </div>
+    <div id="enredosPapeis" hidden>
+      <p class="enredo-nome" id="enredoPapeisNome"></p>
+      <p class="config-dica" id="enredoPapeisDesc"></p>
+      <fieldset class="enredo-papel">
+        <legend id="enredoPapel0"></legend>
+        <label class="chip"><input type="radio" name="papel0" value="0" checked><span id="enredoPapelJ0"></span></label>
+        <label class="chip"><input type="radio" name="papel0" value="1"><span id="enredoPapelJ1"></span></label>
+      </fieldset>
+      <p class="config-dica" id="enredoPapelOutro"></p>
+      <div class="row">
+        <button class="primary" id="enredoComecar" type="button">Começar</button>
+        <button class="secondary" id="enredoVoltar" type="button">Voltar</button>
+      </div>
+    </div>
   </dialog>
 
   <dialog id="dlgCampanhas" class="dlg-posicoes" aria-labelledby="dlgCampanhasTitulo">

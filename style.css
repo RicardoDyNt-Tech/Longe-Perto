@@ -921,3 +921,19 @@ body[data-modo="presencial"]{
 .clausulas-lista{list-style:none; padding:0; margin:0; display:grid; gap:8px}
 .clausulas-lista li.feito{opacity:.7}
 .clausula-texto{margin:4px 0 8px; font-weight:600}
+
+/* v9: enredos */
+body[data-enredo="1"] .wheel-wrap, body[data-enredo="1"] #acoesGiro{display:none}
+.enredo{border:1.5px solid var(--line); border-radius:16px; padding:14px; margin:10px 0; background:var(--surface)}
+.enredo-topo{font-weight:700; margin:0 0 6px}
+.enredo-escolha{color:var(--muted); font-size:.9rem; margin:0 0 6px}
+.enredo-quem{font-weight:600; color:var(--muted); margin:6px 0 2px}
+.enredo-texto{font-size:1.1rem; line-height:1.4; margin:4px 0 12px}
+.enredo-texto.narracao{font-style:italic}
+.enredo-opcoes{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0}
+.enredo-fim-titulo{font-weight:700; font-size:1.2rem}
+.enredo-caminho{padding-left:20px; margin:6px 0 12px}
+.enredo-caminho .enredo-esc{list-style:none; color:var(--muted); font-size:.9rem}
+.enredo-papel{border:none; padding:0; margin:8px 0; display:flex; flex-wrap:wrap; gap:8px}
+.enredo-papel legend{font-weight:600; margin-bottom:6px}
+.enredo-nome{font-weight:700}
