@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=53">
+<link rel="stylesheet" href="style.css?v=54">
 </head>
 <body>
 <main>
@@ -62,6 +62,10 @@
       <button class="modo-btn" id="modoBtn" type="button" hidden aria-pressed="false">📍 A distância</button>
       <p class="juntos-cab" id="juntosCab" hidden></p>
       <label class="check um-celular" id="umCelularLinha" hidden><input type="checkbox" id="umCelular"> 📱 Jogar num celular só</label>
+      <div class="chamada-linha" id="chamadaLinha" hidden>
+        <button class="chamada-btn" id="chamadaBtn" type="button" aria-pressed="false">📞 Em chamada agora</button>
+        <span class="chamada-relogio" id="chamadaRelogio" hidden aria-live="off"></span>
+      </div>
     </div>
 
     <div class="ajustes">
@@ -273,6 +277,7 @@
         <button type="button" class="casa-card" data-abre="vPote" id="cardPote"><span class="ic">🫙</span><b>Pote de motivos</b><span class="sub" id="cardPoteSub"></span></button>
         <button type="button" class="casa-card" data-abre="vAbra" id="cardAbra"><span class="ic">💌</span><b>Abra quando…</b><span class="sub" id="cardAbraSub"></span></button>
         <button type="button" class="casa-card" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="ic">📖</span><b>Diário</b><span class="sub" id="cardDiarioCasalSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vChamadas" id="cardChamadas"><span class="ic">📞</span><b>Nossas chamadas</b><span class="sub" id="cardChamadasSub">Tempo em chamada</span></button>
         <button type="button" class="casa-card" data-abre="vPlaylist" id="cardPlaylist"><span class="ic">🎵</span><b>Nossa playlist</b><span class="sub" id="cardPlaylistSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
@@ -466,6 +471,26 @@
         <p class="extras-sub" id="diarioVazio">Os dias anteriores da pergunta do dia aparecem aqui.</p>
         <ul class="diario-lista" id="listaDiario"></ul>
         <button class="secondary" id="diarioMais" type="button" hidden>Ver mais</button>
+      </section>
+      <section class="casa-vista" id="vChamadas" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>📞 Nossas chamadas</h2>
+        <div class="ch-resumo" id="chamadasResumo"></div>
+        <details class="ch-viagem" id="chViagem">
+          <summary>Tempo de viagem entre nós</summary>
+          <div class="ch-duracao">
+            <label>Horas <input type="number" id="chViagemH" min="0" max="168" inputmode="numeric"></label>
+            <label>Minutos <input type="number" id="chViagemM" min="0" max="59" inputmode="numeric"></label>
+          </div>
+          <p class="config-dica">Usado só na frase de equivalência. Vazio esconde a frase da viagem.</p>
+          <button class="secondary" id="chViagemSalvar" type="button">Salvar</button>
+        </details>
+        <button class="secondary" id="chamadaRegistrar" type="button">+ Registrar chamada passada</button>
+        <h3 class="casa-h3">Histórico</h3>
+        <p class="extras-sub" id="chamadasVazio">Nenhuma chamada ainda.</p>
+        <ul class="lista-extras chamadas-lista" id="chamadasLista"></ul>
+        <button class="secondary" id="chamadasMais" type="button" hidden>Ver mais</button>
+        <p class="erro" id="erroChamadas" role="alert"></p>
       </section>
       <section class="casa-vista" id="vPlaylist" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
@@ -954,6 +979,56 @@
       <button class="primary" id="passeOk" type="button"></button>
     </div>
   </div>
+
+  <dialog id="dlgChamadaPassada" aria-labelledby="chPassadaTitulo">
+    <form id="formChamadaPassada" method="dialog">
+      <h2 id="chPassadaTitulo">📞 Registrar chamada passada</h2>
+      <div class="tipo" role="radiogroup" aria-label="Dia">
+        <label class="chip"><input type="radio" name="chDia" value="hoje" checked><span>Hoje</span></label>
+        <label class="chip"><input type="radio" name="chDia" value="ontem"><span>Ontem</span></label>
+        <label class="chip"><input type="radio" name="chDia" value="outro"><span>Outro dia</span></label>
+      </div>
+      <label class="field" id="chDataLinha" hidden>Dia
+        <input type="date" id="chData">
+      </label>
+      <label class="field">Começou por volta de
+        <input type="time" id="chHora" value="21:00">
+      </label>
+      <p class="ch-rotulo">Duração</p>
+      <div class="ch-atalhos" id="chAtalhos">
+        <button type="button" class="chip-btn" data-min="30">30 min</button>
+        <button type="button" class="chip-btn" data-min="60">1 h</button>
+        <button type="button" class="chip-btn" data-min="120">2 h</button>
+        <button type="button" class="chip-btn" data-min="180">3 h</button>
+      </div>
+      <div class="ch-duracao">
+        <label>Horas <input type="number" id="chHoras" min="0" max="12" value="1" inputmode="numeric"></label>
+        <label>Minutos <input type="number" id="chMinutos" min="0" max="59" value="0" inputmode="numeric"></label>
+      </div>
+      <p class="config-dica">Horário de Brasília/Bahia. Até 60 dias atrás e até 12 h.</p>
+      <p class="erro" id="erroChPassada" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="chPassadaSalvar" type="submit">Registrar</button>
+        <button class="secondary" id="chPassadaCancelar" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgChamadaAjustar" aria-labelledby="chAjustarTitulo">
+    <form id="formChamadaAjustar" method="dialog">
+      <h2 id="chAjustarTitulo">Quanto durou a chamada?</h2>
+      <p class="config-dica" id="chAjustarInfo"></p>
+      <div class="ch-duracao">
+        <label>Horas <input type="number" id="chAjHoras" min="0" max="12" inputmode="numeric"></label>
+        <label>Minutos <input type="number" id="chAjMinutos" min="0" max="59" inputmode="numeric"></label>
+      </div>
+      <p class="erro" id="erroChAjustar" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="chAjustarSalvar" type="submit">Salvar</button>
+        <button class="secondary" id="chAjustarCerto" type="button">Está certo</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="dlgJuntosAte" aria-labelledby="juntosAteTitulo">
     <form id="formJuntosAte" method="dialog">
@@ -1459,10 +1534,20 @@
   </dialog>
 </main>
 
+<div class="call-card" id="callCard" role="group" aria-labelledby="callCardTitulo" hidden>
+  <b id="callCardTitulo">Como foi a call?</b>
+  <div class="call-card-ops">
+    <button type="button" data-h="romantica"><span>🥰</span>Romântica</button>
+    <button type="button" data-h="intensa"><span>🥵</span>Intensa</button>
+    <button type="button" data-h="risadas"><span>😂</span>Risadas</button>
+    <button type="button" data-h="sono"><span>😴</span>Caímos no sono</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=53"></script>
-<script src="conquistas.js?v=53"></script>
-<script src="app.js?v=53"></script>
+<script src="config.js?v=54"></script>
+<script src="conquistas.js?v=54"></script>
+<script src="app.js?v=54"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

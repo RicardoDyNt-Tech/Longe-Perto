@@ -870,3 +870,44 @@ body[data-modo="presencial"]{
   body.cam-esquerda .contador-mini{margin-left:40vw}
 }
 .contador-juntos{flex:1 1 100%}
+/* chamadas */
+.chamada-linha{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.chamada-btn{background:var(--surface); color:var(--ink); border:1.5px solid var(--line); border-radius:99px; padding:6px 12px; font-weight:800; font-size:.85rem}
+.chamada-btn[aria-pressed="true"]{background:#1FAF55; color:#fff; border-color:#1FAF55}
+.chamada-relogio{font-weight:800; font-size:.9rem; font-variant-numeric:tabular-nums}
+.chamadas-lista .acoes{display:flex; gap:10px}
+.ch-rotulo{margin:6px 0; font-weight:600}
+.ch-atalhos{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px}
+.ch-duracao{display:flex; gap:10px}
+.ch-duracao label{flex:1; font-weight:600; font-size:.9rem}
+.ch-duracao input{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:8px 10px; margin-top:4px}
+#chamadaRegistrar{width:100%; margin:12px 0 0}
+
+/* "Como foi a call?" */
+.call-card { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; width: min(92vw, 380px); background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); border-radius: 16px; box-shadow: 0 8px 28px rgba(0,0,0,.25); padding: 12px 14px; text-align: center; animation: subirCall .25s ease-out; }
+.call-card[hidden] { display: none; }
+.call-card-ops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.call-card-ops button { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .72rem; background: transparent; border: 1.5px solid var(--line); border-radius: 12px; padding: 6px 2px; color: inherit; cursor: pointer; }
+.call-card-ops button span { font-size: 1.5rem; line-height: 1; }
+@keyframes subirCall { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .call-card { animation: none; } }
+
+/* estatísticas de chamadas */
+.ch-total{display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; padding:14px 10px; margin:6px 0 10px; background:var(--surface); border:1.5px solid var(--line); border-radius:16px}
+.ch-total b{font-size:1.6rem; line-height:1.15}
+.ch-total .ch-sub{color:var(--muted); font-size:.9rem}
+.ch-total .ch-num{font-weight:700; margin-top:4px}
+.ch-stats{list-style:none; margin:0 0 10px; padding:0; display:grid; gap:6px}
+.ch-stats li{display:flex; flex-direction:column; padding:8px 12px; background:var(--surface); border:1.5px solid var(--line); border-radius:12px}
+.ch-stats .rot{color:var(--muted); font-size:.8rem}
+.ch-barras{display:grid; grid-template-columns:repeat(14, 1fr); gap:3px; align-items:end; height:110px; margin:0 0 6px}
+.ch-col{display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%}
+.ch-col i{display:block; width:100%; min-height:2px; background:var(--verdade); border-radius:4px 4px 0 0}
+.ch-col span{font-size:.65rem; color:var(--muted); margin-top:2px}
+.ch-equiv{text-align:center; color:var(--muted); margin:8px 0 12px}
+.ch-equiv b{color:var(--ink)}
+.ch-viagem{margin:0 0 12px}
+.ch-viagem summary{cursor:pointer; font-weight:600; margin-bottom:6px}
+.ch-selos{display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 10px}
+.ch-selo{font-size:.8rem; padding:4px 10px; border-radius:999px; border:1.5px solid var(--line); color:var(--muted)}
+.ch-selo.ok{color:var(--ink); background:var(--surface); font-weight:600}
