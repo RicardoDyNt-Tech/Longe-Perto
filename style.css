@@ -891,3 +891,20 @@ body[data-modo="presencial"]{
 .call-card-ops button span { font-size: 1.5rem; line-height: 1; }
 @keyframes subirCall { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @media (prefers-reduced-motion: reduce) { .call-card { animation: none; } }
+
+/* estatísticas de chamadas */
+.ch-total{display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; padding:14px 10px; margin:6px 0 10px; background:var(--surface); border:1.5px solid var(--line); border-radius:16px}
+.ch-total b{font-size:1.6rem; line-height:1.15}
+.ch-total .ch-sub{color:var(--muted); font-size:.9rem}
+.ch-total .ch-num{font-weight:700; margin-top:4px}
+.ch-stats{list-style:none; margin:0 0 10px; padding:0; display:grid; gap:6px}
+.ch-stats li{display:flex; flex-direction:column; padding:8px 12px; background:var(--surface); border:1.5px solid var(--line); border-radius:12px}
+.ch-stats .rot{color:var(--muted); font-size:.8rem}
+.ch-barras{display:grid; grid-template-columns:repeat(14, 1fr); gap:3px; align-items:end; height:110px; margin:0 0 6px}
+.ch-col{display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%}
+.ch-col i{display:block; width:100%; min-height:2px; background:var(--verdade); border-radius:4px 4px 0 0}
+.ch-col span{font-size:.65rem; color:var(--muted); margin-top:2px}
+.ch-equiv{text-align:center; color:var(--muted); margin:8px 0 12px}
+.ch-equiv b{color:var(--ink)}
+.ch-viagem{margin:0 0 12px}
+.ch-viagem summary{cursor:pointer; font-weight:600; margin-bottom:6px}

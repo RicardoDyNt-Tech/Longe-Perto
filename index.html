@@ -475,7 +475,16 @@
       <section class="casa-vista" id="vChamadas" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>📞 Nossas chamadas</h2>
-        <div id="chamadasResumo"></div>
+        <div class="ch-resumo" id="chamadasResumo"></div>
+        <details class="ch-viagem" id="chViagem">
+          <summary>Tempo de viagem entre nós</summary>
+          <div class="ch-duracao">
+            <label>Horas <input type="number" id="chViagemH" min="0" max="168" inputmode="numeric"></label>
+            <label>Minutos <input type="number" id="chViagemM" min="0" max="59" inputmode="numeric"></label>
+          </div>
+          <p class="config-dica">Usado só na frase de equivalência. Vazio esconde a frase da viagem.</p>
+          <button class="secondary" id="chViagemSalvar" type="button">Salvar</button>
+        </details>
         <button class="secondary" id="chamadaRegistrar" type="button">+ Registrar chamada passada</button>
         <h3 class="casa-h3">Histórico</h3>
         <p class="extras-sub" id="chamadasVazio">Nenhuma chamada ainda.</p>

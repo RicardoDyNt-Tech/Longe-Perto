@@ -567,8 +567,10 @@
   function chamadasMudou() {
     desenharChamadaTopo();
     if (vista === "vChamadas") desenharChamadas();
-    const n = chamadas.filter(r => r.fim).length;
-    $("cardChamadasSub").textContent = n ? `${n} ${n === 1 ? "chamada" : "chamadas"}` : "Tempo em chamada";
+    const fechadas = chamadas.filter(r => r.fim);
+    const totalLocal = fechadas.reduce((s, r) => s + (r.duracao_minutos || 0), 0);
+    $("cardChamadasSub").textContent = fechadas.length ? `${horasTxt(resumoCh ? resumoCh.total_minutos : totalLocal)} conectados` : "Tempo em chamada";
+    pedirResumoChamadas();
     if ($("dlgChamadaAjustar").open && chAjustando && !chamadas.some(r => r.id === chAjustando.id && (chAjustando.esquecida ? r.fechada_auto : true))) $("dlgChamadaAjustar").close();
     chamadasMudouFns.forEach(f => f());
     conferirEsquecida();
@@ -704,7 +706,111 @@
     $("chamadasMais").hidden = fechadas.length <= paginasChamadas * 20;
     desenharResumoChamadas();
   }
-  function desenharResumoChamadas() {}   // Fase 3
+  // ---------- estatísticas (chamadas_resumo, recarregado ao abrir e a cada mudança) ----------
+  let resumoCh = null, timerResumoCh = null, fraseCh = Math.floor(Math.random() * 4);
+  const resumoChamadasFns = [];   // marcos (fase 4)
+  const PERIODO_CH = { madrugada: "madrugada 🌙", manha: "manhã ☀️", tarde: "tarde 🌤️", noite: "noite 🌃" };
+  const HUMOR_NOME = { romantica: "Romântica", intensa: "Intensa", risadas: "Risadas", sono: "Caímos no sono" };
+  const numBR = n => n.toLocaleString("pt-BR");
+  const horasTxt = min => { min = Math.round(min || 0); const h = Math.floor(min / 60); return h ? `${numBR(h)} ${h === 1 ? "hora" : "horas"}` : `${min} ${min === 1 ? "minuto" : "minutos"}`; };
+  function pedirResumoChamadas() {
+    clearTimeout(timerResumoCh);
+    timerResumoCh = setTimeout(carregarResumoChamadas, 400);
+  }
+  async function carregarResumoChamadas() {
+    const c = codigo;
+    if (!c) return;
+    const { data, error } = await sb.rpc("chamadas_resumo", { p_sala: c });
+    if (c !== codigo || error || !data) return;
+    const antes = resumoCh;
+    resumoCh = data;
+    if (chamadas.some(r => r.fim)) $("cardChamadasSub").textContent = `${horasTxt(data.total_minutos)} conectados`;
+    desenharResumoChamadas();
+    resumoChamadasFns.forEach(f => f(data, antes));
+  }
+  // "ou 13 dias e meio sem parar"
+  function emDias(min) {
+    const d = min / 1440, n = Math.floor(d), meio = d - n >= 0.5;
+    if (n < 1) return meio ? "ou meio dia sem parar" : "";
+    return `ou ${numBR(n)} ${n === 1 ? "dia" : "dias"}${meio ? " e meio" : ""} sem parar`;
+  }
+  function quandoRecorde(isoX) {
+    const d = new Date(isoX), f = o => d.toLocaleString("pt-BR", { timeZone: "America/Bahia", ...o }).replace(/\./g, "");
+    const h = Number(f({ hour: "2-digit", hourCycle: "h23" }));
+    const per = h < 6 ? "madrugada" : h < 12 ? "manhã" : h < 18 ? "tarde" : "noite";
+    return `${per} de ${f({ weekday: "short" })}, ${Number(f({ day: "numeric" }))} de ${f({ month: "short" })}`;
+  }
+  // minutos por dia nos últimos 14 dias (horário de Brasília/Bahia), pela lista carregada
+  function ultimos14() {
+    const hoje = hojeISO(), dias = [];
+    for (let i = 13; i >= 0; i--) dias.push({ d: somarDias(hoje, -i), m: 0 });
+    const dia = isoX => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bahia" }).format(new Date(isoX));
+    chamadas.filter(r => r.fim).forEach(r => { const x = dias.find(y => y.d === dia(r.inicio)); if (x) x.m += r.duracao_minutos || 0; });
+    return dias;
+  }
+  function frasesEquivalencia(min, total) {
+    const v = estado && estado.viagemMin;
+    return [
+      v ? [Math.floor(min / v), "viagens entre as nossas cidades"] : null,
+      [Math.floor(min / 120), "filmes de 2 horas"],
+      [Math.floor(min / 686), "vezes a trilogia do Senhor dos Anéis estendida (11h 26min)"],
+      [Math.floor(min / 92), "voltas da Terra pela ISS (92 min)"]
+    ].filter(x => x && x[0] >= 1).map(([n, resto]) => [`${/minuto/.test(total) ? "Esse" : "Essa"}${total.startsWith("1 ") ? "" : "s"} ${total} dariam `, n === 1 ? resto.replace(/^viagens/, "viagem").replace(/^filmes/, "filme").replace(/^vezes/, "vez").replace(/^voltas/, "volta") : resto, numBR(n)]);
+  }
+  function desenharResumoChamadas() {
+    const box = $("chamadasResumo");
+    if (!box || $("vChamadas").hidden) return;
+    box.textContent = "";
+    const r = resumoCh;
+    if (!r || !r.total_chamadas) return;
+    const tot = horasTxt(r.total_minutos);
+    const topo = el("div", "ch-total");
+    topo.append(el("b", "", `${tot} conectados`));
+    const dias = emDias(r.total_minutos);
+    if (dias) topo.append(el("span", "ch-sub", dias));
+    topo.append(el("span", "ch-num", `${numBR(r.total_chamadas)} ${r.total_chamadas === 1 ? "chamada" : "chamadas"}`));
+    box.append(topo);
+    const ul = el("ul", "ch-stats");
+    const item = (rot, txt) => { const li = el("li"); li.append(el("span", "rot", rot), el("span", "", txt)); ul.append(li); };
+    if (r.recorde) item("Chamada mais longa", `Recorde: ${fmtDur(r.recorde.minutos)} · ${quandoRecorde(r.recorde.inicio)}`);
+    item("Esta semana", r.semana_minutos ? `Média de ${fmtDur(r.semana_minutos / 7)} por dia` : "Nenhuma chamada nos últimos 7 dias");
+    if (r.periodo_favorito && PERIODO_CH[r.periodo_favorito]) item("Horário favorito", PERIODO_CH[r.periodo_favorito]);
+    if (r.humor_favorito && HUMOR_CH[r.humor_favorito]) item("Vibe mais comum", `${HUMOR_CH[r.humor_favorito]} ${HUMOR_NOME[r.humor_favorito]}`);
+    if (r.sequencia_dias >= 2) item("Dias seguidos com chamada", `🔥 ${r.sequencia_dias} dias seguidos`);
+    box.append(ul);
+    // gráfico dos últimos 14 dias, em CSS
+    const d14 = ultimos14(), max = Math.max(1, ...d14.map(x => x.m));
+    const g = el("div", "ch-barras");
+    g.setAttribute("role", "img");
+    g.setAttribute("aria-label", "Minutos por dia nos últimos 14 dias");
+    d14.forEach(x => {
+      const col = el("div", "ch-col"), b = el("i");
+      b.style.height = Math.round(x.m / max * 100) + "%";
+      col.title = `${dataBR(x.d)}: ${fmtDur(x.m)}`;
+      col.append(b, el("span", "", String(Number(x.d.slice(8)))));
+      g.append(col);
+    });
+    box.append(el("p", "ch-rotulo", "Últimos 14 dias"), g);
+    const frases = frasesEquivalencia(r.total_minutos, tot);
+    if (frases.length) {
+      const [ini, resto, n] = frases[fraseCh % frases.length];
+      const p = el("p", "ch-equiv", ini);
+      p.append(el("b", "", `${n} ${resto.split(" ")[0]}`), document.createTextNode(" " + resto.split(" ").slice(1).join(" ")));
+      box.append(p);
+    }
+  }
+  function desenharViagem() {
+    if (!estado || [$("chViagemH"), $("chViagemM")].includes(document.activeElement)) return;
+    const v = estado.viagemMin;
+    $("chViagemH").value = v ? Math.floor(v / 60) : "";
+    $("chViagemM").value = v ? v % 60 : "";
+  }
+  function salvarViagem() {
+    const h = $("chViagemH").value, m = $("chViagemM").value;
+    const v = (Number(h) || 0) * 60 + (Number(m) || 0);
+    gravar(n => { n.viagemMin = v >= 1 && v <= 10080 ? v : null; });
+    $("chViagem").open = false;
+  }
 
   // "Como foi a call?": some sozinho em 5 s sem gravar; se os dois votarem, vale o último
   let comoFoiId = null, timerComoFoi = null;
@@ -1575,7 +1681,7 @@
     if (nome === "vPlaylist") desenharNossas();
     if (nome === "vDiarioCasal") { paginasDiario = 1; desenharDiarioCasal(); }
     if (nome === "vPerfil") desenharPerfil(!editandoManual());
-    if (nome === "vChamadas") { paginasChamadas = 1; desenharChamadas(); }
+    if (nome === "vChamadas") { paginasChamadas = 1; fraseCh++; desenharViagem(); desenharChamadas(); pedirResumoChamadas(); }
     if (nome === "vHistorico") { diasHist = 30; desenharHistorico(); }
     if (vista !== "vMural" && muralJuntos) sairJuntos();
     if (nome === "vMural") entrarMural();
@@ -5404,6 +5510,7 @@
     if (e.timer === undefined) e.timer = null;
     if (!e.musica || !idFaixa(e.musica.url)) e.musica = null;
     if (!RE_REENCONTRO.test(e.reencontro || "")) e.reencontro = null;
+    if (!(Number.isInteger(e.viagemMin) && e.viagemMin >= 1 && e.viagemMin <= 10080)) e.viagemMin = null;
     if (!LEVEL_NAMES[e.nivelDiario]) e.nivelDiario = "leve";
     if (!e.diario || typeof e.diario !== "object" || Array.isArray(e.diario)) e.diario = {};
     if (typeof e.notaAdversario !== "boolean") e.notaAdversario = true;
@@ -5675,6 +5782,7 @@
     desenharModo(e);
     desenharChamadaTopo();
     conferirPresencaChamada();
+    if (vista === "vChamadas") { desenharViagem(); desenharResumoChamadas(); }
     desenharModosHoje(e);
     desenharRoteiro(e);
     talvezCofreRoteiro(e, inicial);
@@ -7298,6 +7406,7 @@
       else if (botaoLigado()) sinalChamada("botao");
     });
     $("chamadaRegistrar").addEventListener("click", abrirChamadaPassada);
+    $("chViagemSalvar").addEventListener("click", salvarViagem);
     $("formChamadaPassada").addEventListener("submit", salvarChamadaPassada);
     $("chPassadaCancelar").addEventListener("click", () => $("dlgChamadaPassada").close());
     document.querySelectorAll('input[name="chDia"]').forEach(r => r.addEventListener("change", () => { $("chDataLinha").hidden = document.querySelector('input[name="chDia"]:checked').value !== "outro"; }));
