@@ -870,3 +870,15 @@ body[data-modo="presencial"]{
   body.cam-esquerda .contador-mini{margin-left:40vw}
 }
 .contador-juntos{flex:1 1 100%}
+/* chamadas */
+.chamada-linha{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.chamada-btn{background:var(--surface); color:var(--ink); border:1.5px solid var(--line); border-radius:99px; padding:6px 12px; font-weight:800; font-size:.85rem}
+.chamada-btn[aria-pressed="true"]{background:#1FAF55; color:#fff; border-color:#1FAF55}
+.chamada-relogio{font-weight:800; font-size:.9rem; font-variant-numeric:tabular-nums}
+.chamadas-lista .acoes{display:flex; gap:10px}
+.ch-rotulo{margin:6px 0; font-weight:600}
+.ch-atalhos{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px}
+.ch-duracao{display:flex; gap:10px}
+.ch-duracao label{flex:1; font-weight:600; font-size:.9rem}
+.ch-duracao input{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:8px 10px; margin-top:4px}
+#chamadaRegistrar{width:100%; margin:12px 0 0}

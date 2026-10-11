@@ -528,6 +528,181 @@
     gravar(n => { n.reencontro = v; });
   }
 
+  // ---------- tempo em chamada (tabela chamadas; escrita só pelos RPCs) ----------
+  let chamadas = [], timerSinalPres = null, ultimoToqueCh = 0, timerRelogioCh = null, paginasChamadas = 1;
+  const ORIGEM_IC = { presenca: "👥", botao: "📞", manual: "✍️", app: "📱", android: "🤖" };
+  const ORIGEM_NOME = { presenca: "pela presença", botao: "pelo botão", manual: "registrada à mão", app: "chamada do app", android: "detectada no Android" };
+  const chamadaAberta = () => chamadas.find(r => !r.fim) || null;
+  const botaoLigado = () => { const a = chamadaAberta(); return !!(a && a.tolerancia_min >= 360); };
+  function fmtDur(min) {
+    min = Math.max(0, Math.round(min || 0));
+    const h = Math.floor(min / 60), m = min % 60;
+    return h ? `${h}h${m ? ` ${String(m).padStart(2, "0")}min` : ""}` : `${m}min`;
+  }
+  function fmtCrono(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
+    return (h ? `${h}h ` : "") + `${h ? String(m).padStart(2, "0") : m}min ${String(ss).padStart(2, "0")}s`;
+  }
+  const quandoChamada = isoX => new Date(isoX).toLocaleString("pt-BR", { timeZone: "America/Bahia", weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(/\./g, "");
+  async function carregarChamadas(c) {
+    const { data, error } = await sb.from("chamadas").select("*").eq("sala", c).order("inicio", { ascending: false }).limit(500);
+    if (c !== codigo || error || !data) return;
+    chamadas = data;
+    chamadasMudou();
+    conferirEsquecida();
+  }
+  function linhaChamada(ev, row) {
+    if (!row || !row.id) return;
+    const i = chamadas.findIndex(x => x.id === row.id);
+    if (ev === "DELETE") { if (i >= 0) chamadas.splice(i, 1); }
+    else if (row.sala === codigo) { if (i >= 0) chamadas[i] = { ...chamadas[i], ...row }; else chamadas.push(row); }
+    else return;
+    chamadas.sort((a, b) => (a.inicio < b.inicio ? 1 : -1));
+    chamadasMudou();
+  }
+  const chamadasMudouFns = [];   // como foi a call, resumo, conquistas (fases seguintes)
+  function chamadasMudou() {
+    desenharChamadaTopo();
+    if (vista === "vChamadas") desenharChamadas();
+    const n = chamadas.filter(r => r.fim).length;
+    $("cardChamadasSub").textContent = n ? `${n} ${n === 1 ? "chamada" : "chamadas"}` : "Tempo em chamada";
+    if ($("dlgChamadaAjustar").open && chAjustando && !chamadas.some(r => r.id === chAjustando.id && (chAjustando.esquecida ? r.fechada_auto : true))) $("dlgChamadaAjustar").close();
+    chamadasMudouFns.forEach(f => f());
+    conferirEsquecida();
+  }
+  async function sinalChamada(origem) {
+    if (!codigo) return;
+    const { error } = await sb.rpc("chamada_sinal", { p_sala: codigo, p_origem: origem });
+    if (error) erro("erroChamadas", "Não consegui registrar a chamada. Confira a internet.");
+  }
+  // presença: enquanto os dois estão na sala, cada aparelho manda um sinal por minuto (o banco mantém uma sessão só)
+  function conferirPresencaChamada() {
+    const deve = !!(codigo && estado && estado.jogadores[1] && ambosPresentes() && config.chamadas.presenca);
+    if (deve && !timerSinalPres) {
+      sinalChamada("presenca");
+      timerSinalPres = setInterval(() => { if (ambosPresentes() && config.chamadas.presenca) sinalChamada("presenca"); }, 60000);
+    } else if (!deve && timerSinalPres) { clearInterval(timerSinalPres); timerSinalPres = null; }
+  }
+  function apertarChamada() {
+    if (!codigo || !estado) return;
+    if (botaoLigado()) return encerrarChamada();
+    sinalChamada("botao");
+  }
+  async function encerrarChamada() {
+    const { data, error } = await sb.rpc("chamada_encerrar", { p_sala: codigo });
+    if (error) return erro("erroChamadas", "Não consegui encerrar. Confira a internet.");
+    if (data && typeof aoEncerrarChamada === "function") aoEncerrarChamada(data);
+  }
+  // com o botão ligado, qualquer toque no app vale como sinal (no máximo um por minuto)
+  function toqueChamada() {
+    if (!botaoLigado() || Date.now() - ultimoToqueCh < 60000) return;
+    ultimoToqueCh = Date.now();
+    sinalChamada("botao");
+  }
+  function desenharChamadaTopo() {
+    const linha = $("chamadaLinha");
+    linha.hidden = !(estado && estado.jogadores[1]);
+    const a = chamadaAberta(), lig = botaoLigado();
+    $("chamadaBtn").setAttribute("aria-pressed", String(lig));
+    $("chamadaBtn").textContent = lig ? "⏹ Encerrar chamada" : "📞 Em chamada agora";
+    $("chamadaRelogio").hidden = !a;
+    clearInterval(timerRelogioCh); timerRelogioCh = null;
+    if (!a) return;
+    const tick = () => { const x = chamadaAberta(); if (x) $("chamadaRelogio").textContent = (botaoLigado() ? "📞 " : "👥 ") + fmtCrono(Date.now() - new Date(x.inicio).getTime()); };
+    tick();
+    timerRelogioCh = setInterval(tick, 1000);   // sempre a partir de `inicio`: não acumula erro
+  }
+  // sessão do botão esquecida: fechou sozinha depois de 6 h sem sinal
+  let chAjustando = null;
+  const lerOkCh = () => { const v = lerLocal("lp-ch-ok"); return Array.isArray(v) ? v : []; };
+  function conferirEsquecida() {
+    const x = chamadas.find(r => r.fim && r.fechada_auto && r.tolerancia_min >= 360 && !lerOkCh().includes(r.id));
+    if (!x || $("dlgChamadaAjustar").open) return;
+    abrirAjuste(x, true);
+  }
+  function abrirAjuste(x, esquecida) {
+    chAjustando = { id: x.id, esquecida };
+    const min = x.duracao_minutos || 0;
+    $("chAjustarTitulo").textContent = esquecida ? `A chamada de ${diaRelativo(x.inicio)} ficou aberta. Quanto durou?` : "Quanto durou a chamada?";
+    $("chAjustarInfo").textContent = `Começou ${quandoChamada(x.inicio)} · registrada: ${fmtDur(min)}`;
+    $("chAjHoras").value = Math.floor(min / 60); $("chAjMinutos").value = min % 60;
+    $("chAjustarCerto").hidden = !esquecida;
+    erro("erroChAjustar", "");
+    $("dlgChamadaAjustar").showModal();
+  }
+  function diaRelativo(isoX) {
+    const d = hojeISO(new Date(isoX)), h = hojeISO();
+    return d === h ? "hoje" : d === somarDias(h, -1) ? "ontem" : dataBR(d);
+  }
+  async function salvarAjuste(ev, manter) {
+    if (ev) ev.preventDefault();
+    if (!chAjustando) return;
+    const x = chamadas.find(r => r.id === chAjustando.id);
+    const min = manter ? Math.max(1, (x && x.duracao_minutos) || 1) : (Number($("chAjHoras").value) || 0) * 60 + (Number($("chAjMinutos").value) || 0);
+    if (min < 1 || min > 720) return erro("erroChAjustar", "A duração vai de 1 minuto a 12 horas.");
+    const { error } = await sb.rpc("chamada_ajustar", { p_sala: codigo, p_id: chAjustando.id, p_minutos: min });
+    if (error) return erro("erroChAjustar", "Não consegui salvar. Confira a internet.");
+    salvarLocal("lp-ch-ok", [chAjustando.id, ...lerOkCh()].slice(0, 50));
+    chAjustando = null;
+    $("dlgChamadaAjustar").close();
+  }
+  // "+ Registrar chamada passada"
+  function abrirChamadaPassada() {
+    $("formChamadaPassada").reset();
+    $("chData").max = hojeISO(); $("chData").min = somarDias(hojeISO(), -60); $("chData").value = somarDias(hojeISO(), -2);
+    $("chDataLinha").hidden = true;
+    erro("erroChPassada", "");
+    $("dlgChamadaPassada").showModal();
+  }
+  async function salvarChamadaPassada(ev) {
+    ev.preventDefault();
+    const qual = document.querySelector('input[name="chDia"]:checked').value;
+    const dia = qual === "hoje" ? hojeISO() : qual === "ontem" ? somarDias(hojeISO(), -1) : $("chData").value;
+    const hora = $("chHora").value;
+    const min = (Number($("chHoras").value) || 0) * 60 + (Number($("chMinutos").value) || 0);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dia || "") || !/^\d{2}:\d{2}$/.test(hora || "")) return erro("erroChPassada", "Escolha o dia e a hora.");
+    if (min < 1 || min > 720) return erro("erroChPassada", "A duração vai de 1 minuto a 12 horas.");
+    const inicio = `${dia}T${hora}:00-03:00`;   // fuso fixo, como o contador do reencontro
+    $("chPassadaSalvar").disabled = true;
+    const { error } = await sb.rpc("chamada_registrar", { p_sala: codigo, p_inicio: inicio, p_minutos: min });
+    $("chPassadaSalvar").disabled = false;
+    if (error) {
+      const msg = error.message || "";
+      if (/sobreposta/.test(msg)) {
+        const ini = new Date(inicio).getTime(), fim = ini + min * 60000;
+        const x = chamadas.find(r => new Date(r.inicio).getTime() < fim && ini < (r.fim ? new Date(r.fim).getTime() : Date.now()));
+        return erro("erroChPassada", "Já tem uma chamada registrada nesse horário" + (x ? `: ${quandoChamada(x.inicio)}, ${fmtDur(x.duracao_minutos || 0)}.` : "."));
+      }
+      return erro("erroChPassada", /intervalo/.test(msg) ? "Só dá para registrar chamadas dos últimos 60 dias, sem passar de agora." : "Não consegui registrar. Confira a internet.");
+    }
+    $("dlgChamadaPassada").close();
+  }
+  async function apagarChamada(x) {
+    if (!confirm(`Apagar a chamada de ${quandoChamada(x.inicio)} (${fmtDur(x.duracao_minutos || 0)})?`)) return;
+    const { error } = await sb.rpc("chamada_apagar", { p_sala: codigo, p_id: x.id });
+    if (error) erro("erroChamadas", "Não consegui apagar. Confira a internet.");
+  }
+  const HUMOR_CH = { romantica: "🥰", intensa: "🥵", risadas: "😂", sono: "😴" };
+  function desenharChamadas() {
+    if ($("vChamadas").hidden) return;
+    const fechadas = chamadas.filter(r => r.fim);
+    $("chamadasVazio").hidden = !!fechadas.length;
+    const ul = $("chamadasLista"); ul.textContent = "";
+    fechadas.slice(0, paginasChamadas * 20).forEach(x => {
+      const li = el("li"), info = el("div", "info");
+      info.append(el("span", "t", `${ORIGEM_IC[x.origem] || "📞"} ${quandoChamada(x.inicio)} · ${fmtDur(x.duracao_minutos || 0)}` + (x.humor_final ? ` ${HUMOR_CH[x.humor_final] || ""}` : "")),
+        el("span", "autor", ORIGEM_NOME[x.origem] || "") );
+      const ac = el("div", "acoes");
+      const aj = el("button", "linkbtn", "Ajustar"); aj.type = "button"; aj.addEventListener("click", () => abrirAjuste(x, false));
+      const ap = el("button", "linkbtn", "Apagar"); ap.type = "button"; ap.addEventListener("click", () => apagarChamada(x));
+      ac.append(aj, ap);
+      li.append(info, ac); ul.appendChild(li);
+    });
+    $("chamadasMais").hidden = fechadas.length <= paginasChamadas * 20;
+    desenharResumoChamadas();
+  }
+  function desenharResumoChamadas() {}   // Fase 3
+
   function desenharModo(e) {
     const j = juntos(e);
     document.body.dataset.modo = j ? "presencial" : "distancia";
@@ -810,6 +985,10 @@
         if (c === codigo) linhaModelo(p.eventType, p.eventType === "DELETE" ? p.old : p.new);
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "pedidos_modelos" }, p => { if (c === codigo) linhaModelo("DELETE", p.old); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "chamadas", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo) linhaChamada(p.eventType, p.eventType === "DELETE" ? p.old : p.new);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "chamadas" }, p => { if (c === codigo) linhaChamada("DELETE", p.old); })
       .on("postgres_changes", { event: "*", schema: "public", table: "humores", filter: `sala=eq.${c}` }, p => {
         if (c === codigo && p.eventType !== "DELETE") linhaHumor(p.new);
       })
@@ -857,6 +1036,7 @@
     tracos = []; pilhaMural = []; muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); esconderConvite(); $("muralLegenda").value = ""; filtroMural = "todos";
     poses = []; carregarPoses(c);
     roteiros = []; carregarRoteiros(c);
+    chamadas = []; clearInterval(timerSinalPres); timerSinalPres = null; carregarChamadas(c);
     dadoItens = []; ultimoDado = null; carregarDado(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
     config = mesclarConfig({}); temDono = false; donoIndice = null; souDono = false; configPronta = false;
@@ -1334,7 +1514,7 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vChamadas"];
   const ABAS = { casa: "abaCasa", jogo: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
 
   function mostrarVista(nome) {
@@ -1363,6 +1543,7 @@
     if (nome === "vPlaylist") desenharNossas();
     if (nome === "vDiarioCasal") { paginasDiario = 1; desenharDiarioCasal(); }
     if (nome === "vPerfil") desenharPerfil(!editandoManual());
+    if (nome === "vChamadas") { paginasChamadas = 1; desenharChamadas(); }
     if (nome === "vHistorico") { diasHist = 30; desenharHistorico(); }
     if (vista !== "vMural" && muralJuntos) sairJuntos();
     if (nome === "vMural") entrarMural();
@@ -4639,7 +4820,8 @@
     envelopes: { ativo: true, desafioNivelMax: "leve" },
     cartasDeVoces: { ativo: true, nivelMax: "leve" },
     conquistasOusadia: { ativo: false },
-    presencial: { ativo: true }
+    presencial: { ativo: true },
+    chamadas: { presenca: true }
   };
   // merge profundo: o padrão preenche o que faltar (e o que vier com tipo errado)
   function mesclar(pad, x) {
@@ -4996,6 +5178,7 @@
     sm.appendChild(cfgModo("missaoSecreta", "Missão secreta", box => box.appendChild(cfgNivelModo("missaoSecreta"))));
     sm.appendChild(cfgModo("reverso", "Reverso"));
     sm.appendChild(cfgModo("presencial", "Modo Juntos (presencial)"));
+    sm.appendChild(cfgInterruptor("Contar chamada pela presença (os dois com a sala aberta)", config.chamadas.presenca, v => mudarConfig(c => { c.chamadas.presenca = v; }), "chamadas.presenca"));
     d.appendChild(sm);
 
     const sg = cfgSecao("Guias");
@@ -5142,6 +5325,7 @@
   }
 
   function sair() {
+    clearInterval(timerSinalPres); timerSinalPres = null; clearInterval(timerRelogioCh); timerRelogioCh = null;
     marcarVisto(true);
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null; ultimoVencedor = null; ultimaRevelada = null;
@@ -5457,6 +5641,8 @@
     desenharNav();
     if (inicial && e.resumoJuntos) resumosVistos.add(e.resumoJuntos.id);
     desenharModo(e);
+    desenharChamadaTopo();
+    conferirPresencaChamada();
     desenharModosHoje(e);
     desenharRoteiro(e);
     talvezCofreRoteiro(e, inicial);
@@ -7070,6 +7256,22 @@
     $("dengoPedir").addEventListener("click", botaoPedir);
     $("seqFeito").addEventListener("click", feitoEtapa);
     $("modoBtn").addEventListener("click", trocarModo);
+    $("chamadaBtn").addEventListener("click", apertarChamada);
+    document.addEventListener("pointerdown", toqueChamada, true);
+    presencaMudou.push(conferirPresencaChamada);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden || !codigo) return;
+      if (ambosPresentes() && config.chamadas.presenca) sinalChamada("presenca");   // ao voltar, sinal na hora
+      else if (botaoLigado()) sinalChamada("botao");
+    });
+    $("chamadaRegistrar").addEventListener("click", abrirChamadaPassada);
+    $("formChamadaPassada").addEventListener("submit", salvarChamadaPassada);
+    $("chPassadaCancelar").addEventListener("click", () => $("dlgChamadaPassada").close());
+    document.querySelectorAll('input[name="chDia"]').forEach(r => r.addEventListener("change", () => { $("chDataLinha").hidden = document.querySelector('input[name="chDia"]:checked').value !== "outro"; }));
+    document.querySelectorAll("#chAtalhos [data-min]").forEach(b => b.addEventListener("click", () => { const m = Number(b.dataset.min); $("chHoras").value = Math.floor(m / 60); $("chMinutos").value = m % 60; }));
+    $("formChamadaAjustar").addEventListener("submit", ev => salvarAjuste(ev, false));
+    $("chAjustarCerto").addEventListener("click", () => salvarAjuste(null, true));
+    $("chamadasMais").addEventListener("click", () => { paginasChamadas++; desenharChamadas(); });
     $("contadorJuntos").addEventListener("click", trocarModo);
     $("umCelular").addEventListener("change", mudarUmCelular);
     $("passeOk").addEventListener("click", confirmarPasse);
