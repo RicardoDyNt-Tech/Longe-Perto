@@ -552,6 +552,9 @@
     conferirEsquecida();
   }
   function linhaChamada(ev, row) {
+    const antes = row && chamadas.find(x => x.id === row.id);
+    // encerrada pelo botão (aqui ou no outro celular): "Como foi a call?" para quem está com o app aberto
+    if (ev === "UPDATE" && antes && !antes.fim && row.fim && !row.fechada_auto && row.sala === codigo) setTimeout(() => mostrarComoFoi(row.id), 0);
     if (!row || !row.id) return;
     const i = chamadas.findIndex(x => x.id === row.id);
     if (ev === "DELETE") { if (i >= 0) chamadas.splice(i, 1); }
@@ -702,6 +705,35 @@
     desenharResumoChamadas();
   }
   function desenharResumoChamadas() {}   // Fase 3
+
+  // "Como foi a call?": some sozinho em 5 s sem gravar; se os dois votarem, vale o último
+  let comoFoiId = null, timerComoFoi = null;
+  function mostrarComoFoi(id) {
+    if (!id || id === comoFoiId) return;
+    comoFoiId = id;
+    $("callCard").hidden = false;
+    clearTimeout(timerComoFoi);
+    timerComoFoi = setTimeout(esconderComoFoi, 5000);
+  }
+  function esconderComoFoi() { clearTimeout(timerComoFoi); $("callCard").hidden = true; comoFoiId = null; }
+  function aoEncerrarChamada(id) { mostrarComoFoi(id); }
+  async function votarComoFoi(h) {
+    const id = comoFoiId;
+    esconderComoFoi();
+    if (!id) return;
+    const { error } = await sb.rpc("chamada_humor", { p_sala: codigo, p_id: id, p_humor: h });
+    if (error) erro("erroChamadas", "Não consegui guardar como foi a call. Confira a internet.");
+  }
+  // ao abrir o app: a última sessão automática de 15 min ou mais, ainda sem humor (uma vez por aparelho)
+  chamadasMudouFns.push(() => {
+    const x = chamadas.find(r => r.fim);
+    if (!x || !x.fechada_auto || x.tolerancia_min >= 360 || x.humor_final || (x.duracao_minutos || 0) < 15) return;
+    if (Date.now() - new Date(x.fim).getTime() > 2 * 86400000) return;
+    const vistos = lerLocal("lp-ch-humor"), lista = Array.isArray(vistos) ? vistos : [];
+    if (lista.includes(x.id)) return;
+    salvarLocal("lp-ch-humor", [x.id, ...lista].slice(0, 50));
+    mostrarComoFoi(x.id);
+  });
 
   function desenharModo(e) {
     const j = juntos(e);
@@ -5325,7 +5357,7 @@
   }
 
   function sair() {
-    clearInterval(timerSinalPres); timerSinalPres = null; clearInterval(timerRelogioCh); timerRelogioCh = null;
+    clearInterval(timerSinalPres); timerSinalPres = null; clearInterval(timerRelogioCh); timerRelogioCh = null; esconderComoFoi();
     marcarVisto(true);
     if (canal) { sb.removeChannel(canal); canal = null; }
     codigo = null; estado = null; eu = null; ultimoVencedor = null; ultimaRevelada = null;
@@ -7257,6 +7289,7 @@
     $("seqFeito").addEventListener("click", feitoEtapa);
     $("modoBtn").addEventListener("click", trocarModo);
     $("chamadaBtn").addEventListener("click", apertarChamada);
+    $("callCard").querySelectorAll("[data-h]").forEach(b => b.addEventListener("click", () => votarComoFoi(b.dataset.h)));
     document.addEventListener("pointerdown", toqueChamada, true);
     presencaMudou.push(conferirPresencaChamada);
     document.addEventListener("visibilitychange", () => {

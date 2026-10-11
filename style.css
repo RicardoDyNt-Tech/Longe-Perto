@@ -882,3 +882,12 @@ body[data-modo="presencial"]{
 .ch-duracao label{flex:1; font-weight:600; font-size:.9rem}
 .ch-duracao input{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:8px 10px; margin-top:4px}
 #chamadaRegistrar{width:100%; margin:12px 0 0}
+
+/* "Como foi a call?" */
+.call-card { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; width: min(92vw, 380px); background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); border-radius: 16px; box-shadow: 0 8px 28px rgba(0,0,0,.25); padding: 12px 14px; text-align: center; animation: subirCall .25s ease-out; }
+.call-card[hidden] { display: none; }
+.call-card-ops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.call-card-ops button { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .72rem; background: transparent; border: 1.5px solid var(--line); border-radius: 12px; padding: 6px 2px; color: inherit; cursor: pointer; }
+.call-card-ops button span { font-size: 1.5rem; line-height: 1; }
+@keyframes subirCall { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .call-card { animation: none; } }
