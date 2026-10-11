@@ -3484,8 +3484,26 @@
   const faseCapsula = x => !cheio(x.respostas) ? "respondendo" : diasAte(x.abre_em) > 0 ? "selada" : !cheio(x.respostas_depois) ? "pronta" : "aberta";
   let perguntaAtual = -1;
 
+  // ---------- v9: cápsula de espelho (1 ano; a resposta antiga só aparece depois da nova) ----------
+  const PERGUNTAS_ESPELHO = new Set([
+    "Qual é o seu maior medo sobre nós dois hoje?", "O que você mais admira na minha rotina?",
+    "O que te faz ter certeza de que vale a pena a distância?", "Como você descreveria o nosso namoro para alguém que não nos conhece?",
+    "O que você gostaria que fosse diferente entre nós daqui a um ano?", "Qual é a coisa mais difícil de namorar a distância para você hoje?",
+    "Que promessa você me faz hoje para cobrar daqui a um ano?", "Em que você mudou desde que começou a namorar comigo?",
+    "Qual é o seu lugar preferido para pensar em mim?", "O que você ainda não teve coragem de me pedir?",
+    "Qual foi o momento deste ano em que você mais precisou de mim?", "Onde você quer que a gente more um dia?"]);
+  const ESPELHO = "🪞 ";
+  const ehEspelho = x => typeof x.pergunta === "string" && x.pergunta.startsWith(ESPELHO);
+  let capEspelho = false;
+  function abrirNovaEspelho() {
+    if (!estado || !estado.fixa) return;
+    capEspelho = true;
+    abrirNovaCapsula(true);
+  }
+
   function outraPergunta() {
-    const pool = cartas.filter(c => c.tipo === "capsula");
+    const todas = cartas.filter(c => c.tipo === "capsula"), esp = todas.filter(c => PERGUNTAS_ESPELHO.has(c.texto));
+    const pool = capEspelho && esp.length ? esp : todas;
     if (!pool.length) return;
     let i = Math.floor(Math.random() * pool.length);
     if (pool.length > 1 && i === perguntaAtual) i = (i + 1) % pool.length;
@@ -3493,20 +3511,24 @@
     $("capPergunta").value = pool[i].texto;
   }
 
-  function abrirNovaCapsula() {
+  function abrirNovaCapsula(espelho) {
     if (!estado || !estado.fixa) return;
+    if (espelho !== true) capEspelho = false;
     erro("erroCapsula", "");
+    perguntaAtual = -1;
     outraPergunta();
     const hoje = hojeISO();
+    $("dlgCapTitulo").textContent = capEspelho ? "Nova cápsula de espelho 🪞" : "Nova cápsula do tempo";
     $("capData").min = somarDias(hoje, 7);
     $("capData").max = somarDias(hoje, 730);
-    $("capData").value = somarMeses(hoje, 1);
+    $("capData").value = somarMeses(hoje, capEspelho ? 12 : 1);
     $("dlgCapsula").showModal();
   }
 
   async function salvarCapsula(ev) {
     ev.preventDefault();
-    const pergunta = $("capPergunta").value.replace(/\s+/g, " ").trim().slice(0, 280);
+    let pergunta = $("capPergunta").value.replace(/\s+/g, " ").trim().slice(0, 270);
+    if (capEspelho && pergunta.length >= 3 && !pergunta.startsWith(ESPELHO)) pergunta = ESPELHO + pergunta;   // a marca do espelho fica na pergunta
     const data = $("capData").value, hoje = hojeISO();
     if (pergunta.length < 3) return erro("erroCapsula", "Escreva a pergunta (pelo menos 3 letras).");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || data < somarDias(hoje, 7) || data > somarDias(hoje, 730))
@@ -3579,6 +3601,8 @@
         info.appendChild(el("span", "cap-status", r[outro] == null ? `Esperando ${nOutro} responder` : `${nOutro} respondeu ✓`));
       } else if (fase === "selada") {
         info.appendChild(el("span", "cap-status", `🔒 Selada · abre em ${dias} ${dias === 1 ? "dia" : "dias"} (${dataBR(x.abre_em)})`));
+      } else if ((fase === "pronta" || fase === "aberta") && ehEspelho(x)) {
+        desenharEspelho(x, info);
       } else if (fase === "pronta") {
         info.appendChild(el("span", "cap-status", "⏳ Cápsula pronta para abrir: respondam de novo, sem ver a antiga."));
         const d = x.respostas_depois || [null, null];
@@ -3604,6 +3628,27 @@
     $("capVazio").hidden = dados.capsulas.length > 0;
   }
   redesenhar("capsulas", desenharCapsulas);
+  // espelho: cada um vê o "Há um ano" × "Hoje" só depois de responder de novo
+  function desenharEspelho(x, info) {
+    const outro = 1 - eu, nOutro = nomeDe(outro), d = x.respostas_depois || [null, null];
+    if (d[eu] == null) {
+      info.appendChild(el("span", "cap-status", "🪞 Responda como você se sente hoje, antes de ver o que disse há um ano."));
+      info.appendChild(campoResposta(x, "respostas_depois", "Sua resposta de hoje"));
+      info.appendChild(el("span", "cap-status", d[outro] == null ? `${nOutro} ainda não respondeu de novo` : `${nOutro} já respondeu de novo ✓`));
+      return;
+    }
+    const antes = dataCurta(x.criada_em), agora = dataBR(x.abre_em);
+    [[eu, "Você"], [outro, nOutro]].forEach(([i, quem]) => {
+      if (d[i] == null) { info.appendChild(el("span", "cap-status", `Esperando ${quem} responder de novo`)); return; }
+      const q = el("div", "cap-quadros espelho");
+      [[`${quem} · Há um ano (${antes})`, x.respostas[i]], [`${quem} · Hoje (${agora})`, d[i]]].forEach(([rot, txt]) => {
+        const c = el("div", "cap-quadro");
+        c.append(el("span", "quem", rot), el("p", "", txt));
+        q.appendChild(c);
+      });
+      info.appendChild(q);
+    });
+  }
   extrasDaCasa.push(() => {
     const prontas = dados.capsulas.filter(x => faseCapsula(x) === "pronta").length;
     const seladas = dados.capsulas.filter(x => faseCapsula(x) === "selada").length;
@@ -3611,6 +3656,9 @@
     $("cardCapSub").textContent = prontas ? `⏳ ${prontas} pronta${prontas > 1 ? "s" : ""} para abrir`
       : resp ? `${resp} esperando sua resposta` : seladas ? `${seladas} selada${seladas > 1 ? "s" : ""}` : "Perguntas para o futuro";
     $("cardCap").classList.toggle("destaque", prontas > 0 || resp > 0);
+    const hoje = hojeISO();
+    $("casaEspelho").hidden = !dados.capsulas.some(x => ehEspelho(x) && x.abre_em === hoje && cheio(x.respostas) && (x.respostas_depois || [])[eu] == null);
+    desenharAvisoNossoAno();
   });
 
   // ---------- a semana: apostas e missão de observação ----------
@@ -7238,6 +7286,144 @@
     }
   }
 
+  // ---------- v9: "Nosso ano" (retrospectiva em telas, calculada no aparelho) ----------
+  let telasAno = [], telaAno = 0;
+  const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const diaBahia = iso => hojeISO(new Date(iso));
+  // aniversário de namoro: estado.namoroDesde ou "namoro … dd/mm" no campo datas do Manual
+  function diaNamoro() {
+    if (estado && /^\d{4}-\d{2}-\d{2}$/.test(estado.namoroDesde || "")) return estado.namoroDesde.slice(5);
+    for (const j of [0, 1]) {
+      const m = /namor\w*[^\d\n]{0,30}(\d{1,2})\/(\d{1,2})/i.exec(textoManual(j, "datas"));
+      if (m) return `${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    }
+    return null;
+  }
+  function desenharAvisoNossoAno() {
+    if (!estado || !estado.fixa) { $("casaNossoAno").hidden = true; return; }
+    const hoje = hojeISO(), dez = hoje.slice(5, 7) === "12", aniv = diaNamoro() === hoje.slice(5);
+    $("casaNossoAno").hidden = !(dez || aniv);
+    $("casaNossoAnoTitulo").textContent = aniv ? "✨ Hoje é aniversário de namoro: vejam o Nosso ano" : "✨ Nosso ano: a retrospectiva de vocês";
+  }
+  // partidas na ordem dos jogadores de agora, só do período
+  function partidasDoPeriodo(ini) {
+    const nomes = estado.jogadores;
+    return partidasSala.filter(p => !ini || (p.finalizada_em && diaBahia(p.finalizada_em) >= ini)).map(p => {
+      const js = p.jogadores || [];
+      const ordem = [0, 1].map(i => { const k = js.findIndex(n => mesmoNome(n, nomes[i])); return k >= 0 ? k : i; });
+      if (ordem[0] === ordem[1]) ordem[1] = 1 - ordem[0];
+      return { quando: p.finalizada_em, placar: ordem.map(k => (Array.isArray(p.placar) && p.placar[k]) || {}), vencedor: ordem.indexOf(p.vencedor) };
+    });
+  }
+  async function montarNossoAno(periodo) {
+    const e = estado, c = codigo, ano = hojeISO().slice(0, 4), ini = periodo === "ano" ? `${ano}-01-01` : null;
+    const noPeriodo = iso => !!iso && (!ini || diaBahia(iso) >= ini);
+    const n0 = nomeDe(0), n1 = nomeDe(1), telas = [];
+    telas.push({ emoji: "✨", titulo: periodo === "ano" ? `Nosso ${ano}` : "Nossa história até aqui", linhas: [`${n0} & ${n1}`, "Toque para avançar"] });
+    // 1. chamadas (se a tabela existir)
+    try {
+      const { data, error } = await sb.from("chamadas").select("inicio, fim, duracao_minutos").eq("sala", c).limit(5000);
+      if (!error && Array.isArray(data)) {
+        const l = data.filter(r => r.fim && noPeriodo(r.inicio));
+        const tot = l.reduce((s, r) => s + (r.duracao_minutos || 0), 0);
+        if (tot > 0) {
+          const rec = l.slice().sort((a, b) => (b.duracao_minutos || 0) - (a.duracao_minutos || 0))[0];
+          const h = Math.floor(tot / 60);
+          telas.push({ emoji: "📞", titulo: h ? `${h} ${h === 1 ? "hora" : "horas"} em chamada` : `${tot} minutos em chamada`,
+            linhas: [`${l.length} ${l.length === 1 ? "chamada" : "chamadas"}`, `Recorde: ${fmtDuracao(rec.duracao_minutos || 0)} em ${dataBR(diaBahia(rec.inicio))}`] });
+        }
+      }
+    } catch (err) {}
+    if (c !== codigo) return null;
+    // 2 e 3. partidas, placar geral e nível mais jogado por mês
+    const ps = partidasDoPeriodo(ini);
+    if (ps.length) {
+      const v = [0, 1].map(j => ps.filter(p => p.vencedor === j).length);
+      telas.push({ emoji: "🎲", titulo: `${ps.length} ${ps.length === 1 ? "partida" : "partidas"}`, linhas: [`${n0} ${v[0]} × ${v[1]} ${n1}`, v[0] === v[1] ? "Empate técnico 💞" : `${v[0] > v[1] ? n0 : n1} venceu mais`] });
+      const porMes = {};
+      ps.forEach(p => {
+        if (!p.quando) return;
+        const m = diaBahia(p.quando).slice(0, 7);
+        p.placar.forEach(q => Object.entries(q.porNivel || {}).forEach(([nv, x]) => {
+          if (!LEVEL_NAMES[nv]) return;
+          porMes[m] = porMes[m] || {};
+          porMes[m][nv] = (porMes[m][nv] || 0) + (Number(x && x.v) || 0) + (Number(x && x.d) || 0);
+        }));
+      });
+      const linhas = Object.keys(porMes).sort().map(m => {
+        const top = Object.entries(porMes[m]).sort((a, b) => b[1] - a[1])[0];
+        return top && top[1] > 0 ? `${MESES[Number(m.slice(5)) - 1]}/${m.slice(2, 4)} · ${LEVEL_NAMES[top[0]]}` : null;
+      }).filter(Boolean).slice(-12);
+      if (linhas.length) telas.push({ emoji: "🌡️", titulo: "O nível mais jogado, mês a mês", linhas });
+    }
+    // 4. dengos
+    const dg = (dados.dengos || []).filter(d => noPeriodo(d.criada_em));
+    if (dg.length) {
+      const indo = dg.filter(d => d.status === "indo").length;
+      telas.push({ emoji: "🫂", titulo: `${dg.length} ${dg.length === 1 ? "dengo pedido" : "dengos pedidos"}`, linhas: [`${indo} com "Tô indo" 🏃`] });
+    }
+    // 5. a verdade favorita (marcada com ⭐; desempate: a mais vista)
+    const favs = [...marcas.entries()].filter(([, s]) => s.has("favorita")).map(([id]) => cartas.find(x => x.id === id)).filter(x => x && x.tipo === "verdade");
+    if (favs.length) {
+      const f = favs.sort((a, b) => (vistas.get(b.id) || 0) - (vistas.get(a.id) || 0))[0];
+      telas.push({ emoji: "⭐", titulo: "A verdade favorita", linhas: [`“${f.texto}”`] });
+    }
+    // 6. o dia de mais saudade: o dia com mais carinhos ("Pensei em você", saudade…)
+    const porDia = {};
+    (dados.carinhos || []).filter(x => noPeriodo(x.criada_em)).forEach(x => { const d = diaBahia(x.criada_em); porDia[d] = (porDia[d] || 0) + 1; });
+    const pico = Object.entries(porDia).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? 1 : -1))[0];
+    if (pico) {
+      const hum = humores.filter(h => h.dia === pico[0]).map(h => h.valor);
+      telas.push({ emoji: "🥺", titulo: "O dia de mais saudade", linhas: [`${dataBR(pico[0])}: ${pico[1]} ${pico[1] === 1 ? "carinho" : "carinhos"} pela tela`].concat(hum.length ? [`Humor mais baixo do dia: ${Math.min(...hum)} de 5`] : []) });
+    }
+    // 7. cofre quitado e reencontros
+    const fe = cofre.filter(x => x.feito && noPeriodo(x.quitado_em || x.criada_em));
+    const linhas7 = [];
+    if (fe.length) {
+      const t = k => fe.filter(x => (x.tipo || "promessa") === k).length;
+      linhas7.push(`${t("promessa")} ${t("promessa") === 1 ? "promessa cumprida" : "promessas cumpridas"}`, `${t("vale")} ${t("vale") === 1 ? "vale" : "vales"} e ${t("prenda")} ${t("prenda") === 1 ? "prenda quitada" : "prendas quitadas"}`);
+    }
+    const reenc = (dados.momentos || []).filter(m => noPeriodo(m.criada_em) && /^Cumprido no reencontro/.test(m.frase || "")).map(m => diaBahia(m.criada_em));
+    if (reenc.length) linhas7.push(`${new Set(reenc).size} ${new Set(reenc).size === 1 ? "dia juntos" : "dias juntos"} com promessa cumprida`);
+    if (linhas7.length) telas.push({ emoji: "🧾", titulo: "O que foi cumprido ao vivo", linhas: linhas7 });
+    // 8. conquistas
+    const cq = (dados.conquistas || []).filter(x => noPeriodo(x.desbloqueada_em)).map(x => defConquista(x.codigo)).filter(Boolean);
+    if (cq.length) telas.push({ emoji: "🏆", titulo: `${cq.length} ${cq.length === 1 ? "conquista" : "conquistas"}`, linhas: [...new Set(cq.map(x => `${x.selo || "🏆"} ${x.titulo}`))].slice(0, 6) });
+    // 9. fechamento
+    const st = situacaoReencontro(e), fim = ["Obrigado por mais um ano de nós dois."];
+    if (st.fase === "contando") { const d = Math.max(0, diasAte(st.r)); fim.push(d ? `Próximo reencontro em ${d} ${d === 1 ? "dia" : "dias"} 💞` : "O próximo reencontro é hoje 💞"); }
+    telas.push({ emoji: "💞", titulo: "Ano que vem tem mais 💞", linhas: fim });
+    return telas;
+  }
+  const fmtDuracao = min => { const h = Math.floor(min / 60), m = Math.round(min % 60); return h ? `${h}h${m ? ` ${String(m).padStart(2, "0")}min` : ""}` : `${m}min`; };
+  async function abrirNossoAno() {
+    if (!estado || !estado.fixa) return;
+    const periodo = (document.querySelector('input[name="naPeriodo"]:checked') || {}).value || "ano";
+    $("nossoAno").hidden = false;
+    $("naTitulo").textContent = "Calculando…"; $("naLinhas").textContent = ""; $("naEmoji").textContent = "✨";
+    const t = await montarNossoAno(periodo);
+    if (!t) return;
+    telasAno = t; telaAno = 0;
+    desenharTelaAno();
+  }
+  function desenharTelaAno() {
+    const t = telasAno[telaAno];
+    if (!t) return;
+    $("naEmoji").textContent = t.emoji;
+    $("naTitulo").textContent = t.titulo;
+    const box = $("naLinhas"); box.textContent = "";
+    t.linhas.forEach(l => box.appendChild(el("p", "", l)));
+    const barra = $("naBarra"); barra.textContent = "";
+    telasAno.forEach((_, i) => barra.appendChild(el("i", i <= telaAno ? "ok" : "")));
+    $("naAntes").disabled = telaAno === 0;
+    $("naDepois").textContent = telaAno === telasAno.length - 1 ? "Fechar" : "Avançar ›";
+  }
+  function passarTelaAno(d) {
+    if (telaAno + d >= telasAno.length) { $("nossoAno").hidden = true; return; }
+    telaAno = Math.max(0, telaAno + d);
+    desenharTelaAno();
+  }
+
   // ---------- v9: carta secreta (segure para ler; virou o celular, escondeu) ----------
   let segurandoCarta = false, celularVirado = false;
   function alternarSecreta() {
@@ -8007,6 +8193,14 @@
     $("envSugerir").addEventListener("click", sugerirEnvelope);
     $("envFechar").addEventListener("click", () => { $("envAbrindo").hidden = true; });
     $("novaCapsula").addEventListener("click", abrirNovaCapsula);
+    $("novaEspelho").addEventListener("click", abrirNovaEspelho);
+    $("nossoAnoAbrir").addEventListener("click", abrirNossoAno);
+    $("casaNossoAnoAbrir").addEventListener("click", abrirNossoAno);
+    $("naFechar").addEventListener("click", () => { $("nossoAno").hidden = true; });
+    $("naAntes").addEventListener("click", () => passarTelaAno(-1));
+    $("naDepois").addEventListener("click", () => passarTelaAno(1));
+    $("naTela").addEventListener("click", ev => { const r = $("naTela").getBoundingClientRect(); passarTelaAno(ev.clientX < r.left + r.width / 3 ? -1 : 1); });
+    document.querySelectorAll('input[name="naPeriodo"]').forEach(r => r.addEventListener("change", abrirNossoAno));
     $("nivelSemana").addEventListener("change", () => { const v = $("nivelSemana").value; if (LEVEL_NAMES[v]) gravar(n => { n.nivelSemana = v; }); });
     $("capOutra").addEventListener("click", outraPergunta);
     $("formCapsula").addEventListener("submit", salvarCapsula);

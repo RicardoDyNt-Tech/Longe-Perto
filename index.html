@@ -130,6 +130,14 @@
           <ul class="clausulas-lista" id="clausulasLista"></ul>
           <p class="erro" id="erroClausula" role="alert"></p>
         </div>
+        <div class="casa-bloco espelho-aviso" id="casaEspelho" hidden>
+          <p class="cumprir-titulo">🪞 Uma cápsula de espelho abre hoje</p>
+          <button class="primary" type="button" data-abre="vCapsulas">Abrir</button>
+        </div>
+        <div class="casa-bloco nosso-ano-aviso" id="casaNossoAno" hidden>
+          <p class="cumprir-titulo" id="casaNossoAnoTitulo">✨ Nosso ano</p>
+          <button class="primary" type="button" id="casaNossoAnoAbrir">Ver a retrospectiva</button>
+        </div>
         <div class="casa-bloco cardapio-aviso" id="casaCardapio" hidden>
           <p class="cumprir-titulo">🤫 Cardápio secreto</p>
           <p class="extras-sub">Marque o que você quer fazer nos dias juntos.</p>
@@ -374,7 +382,10 @@
         <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Cápsulas do tempo</h2>
         <p class="extras-sub">A mesma pergunta, respondida agora e de novo numa data futura. Ninguém vê nada até lá.</p>
-        <button class="primary" id="novaCapsula" type="button">Nova cápsula</button>
+        <div class="row">
+          <button class="primary" id="novaCapsula" type="button">Nova cápsula</button>
+          <button class="secondary" id="novaEspelho" type="button">Nova cápsula de espelho 🪞</button>
+        </div>
         <p class="extras-sub" id="capVazio">Nenhuma cápsula ainda.</p>
         <div id="capGrupo-pronta" hidden><h3 class="casa-h3">Prontas para abrir</h3><ul class="lista-extras" id="capProntas"></ul></div>
         <div id="capGrupo-respondendo" hidden><h3 class="casa-h3">Esperando respostas</h3><ul class="lista-extras" id="capRespondendo"></ul></div>
@@ -572,6 +583,7 @@
       </section>
       <section class="casa-vista aba-vista" id="vHistorico" hidden>
         <h2>🕘 Histórico</h2>
+        <button class="secondary" id="nossoAnoAbrir" type="button">✨ Nosso ano</button>
         <div class="hist-mes" id="histMes">
           <p class="hist-mes-titulo" id="histMesTitulo"></p>
           <p id="histMesDengos"></p>
@@ -1604,6 +1616,28 @@
     </form>
   </dialog>
 </main>
+
+<div class="nosso-ano" id="nossoAno" role="dialog" aria-modal="true" aria-labelledby="naTitulo" hidden>
+  <div class="na-topo">
+    <div class="na-barra" id="naBarra" aria-hidden="true"></div>
+    <div class="na-controles">
+      <div class="chips" role="radiogroup" aria-label="Período">
+        <label class="chip"><input type="radio" name="naPeriodo" value="ano" checked><span>Este ano</span></label>
+        <label class="chip"><input type="radio" name="naPeriodo" value="tudo"><span>Desde o começo</span></label>
+      </div>
+      <button class="linkbtn" id="naFechar" type="button">Fechar</button>
+    </div>
+  </div>
+  <div class="na-tela" id="naTela">
+    <p class="na-emoji" id="naEmoji" aria-hidden="true"></p>
+    <h2 id="naTitulo"></h2>
+    <div class="na-linhas" id="naLinhas"></div>
+  </div>
+  <div class="na-nav">
+    <button class="secondary" id="naAntes" type="button">‹ Voltar</button>
+    <button class="primary" id="naDepois" type="button">Avançar ›</button>
+  </div>
+</div>
 
 <div class="descongelar" id="descongelar" role="dialog" aria-modal="true" aria-labelledby="dcTitulo" hidden>
   <div class="dc-caixa">
