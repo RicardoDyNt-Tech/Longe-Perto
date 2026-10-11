@@ -972,3 +972,31 @@ body.flash-falhou::after{content:""; position:fixed; inset:0; background:rgba(22
 .na-tela h2{font-size:1.7rem; margin:8px 0 12px}
 .na-linhas p{font-size:1.1rem; margin:4px 0}
 .na-nav{display:flex; justify-content:space-between; gap:10px}
+
+/* v9: bateria social baixa — tela calma para quem ligou; sem jogo nem pedir dengo para o outro */
+body[data-bateria-eu="1"] #abaJogo, body[data-bateria-outro="1"] #abaJogo{display:none}
+body[data-bateria-eu="1"] #casaGrade > :not(.calmo):not(header):not(#casaCarinhos):not(#casaCuidado){display:none}
+body[data-bateria-outro="1"] #casaDengo, body[data-bateria-outro="1"] #casaGrade > .casa-card[data-abre="vDiario"]{display:none}
+.bateria-texto{font-weight:600; margin:0 0 4px}
+.cuidado{border-left:4px solid var(--lamp)}
+.cuidado-lista{list-style:none; padding:0; margin:6px 0 10px; display:grid; gap:6px}
+.cuidado-lista li.acao{font-weight:600}
+/* v9: recados */
+.recado{border-left:4px solid #e9b949}
+.recado-texto{font-size:1.05rem; white-space:pre-wrap; margin:6px 0}
+.recado-lido{color:var(--muted); font-size:.9rem}
+.recados-lista .t{white-space:pre-wrap}
+/* v9: companhia silenciosa */
+.companhia{position:fixed; inset:0; z-index:85; background:#0d0b14; color:#d8d2e8; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px; text-align:center}
+.companhia[hidden]{display:none}
+.comp-luz{width:150px; height:150px; border-radius:50%; border:none; background:radial-gradient(circle, #f6c86b 0%, #a8742a 55%, transparent 70%); opacity:.25; font-size:2.2rem; color:#1a1420; font-weight:700; cursor:pointer}
+.comp-luz.junto{opacity:.85; animation:luzComp 4s ease-in-out infinite}
+.comp-luz.brilho{opacity:1; filter:brightness(1.6) drop-shadow(0 0 30px #f6c86b)}
+@keyframes luzComp{0%,100%{transform:scale(.92)} 50%{transform:scale(1.05)}}
+.comp-status{font-size:1.1rem; margin:0}
+.comp-dica{font-size:.85rem; opacity:.7; margin:0; min-height:1.2em}
+.comp-musica{max-width:420px; width:100%}
+.companhia .linkbtn{color:#d8d2e8}
+@media (prefers-reduced-motion: reduce){.comp-luz.junto{animation:none}}
+.cumprir-lista .acoes button{width:auto; flex:0 0 auto; padding:6px 14px; font-size:.9rem}
+.acoes-giro .secreta-btn{width:auto; align-self:center; padding:6px 14px; font-size:.9rem; margin-bottom:6px}

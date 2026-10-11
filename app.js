@@ -1109,6 +1109,8 @@
         payload => tirarCarta(payload.old && payload.old.id))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "cofre", filter: `sala=eq.${c}` },
         payload => juntarCofre(payload.new))
+      .on("postgres_changes", { event: "*", schema: "public", table: "recados", filter: `sala=eq.${c}` },
+        payload => { if (c === codigo) linhaRecado(payload.eventType, payload.eventType === "DELETE" ? payload.old : payload.new); })
       .on("postgres_changes", { event: "*", schema: "public", table: "clausulas_sala", filter: `sala=eq.${c}` },
         payload => { if (c === codigo) linhaClausula(payload.eventType, payload.eventType === "DELETE" ? payload.old : payload.new); })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "cofre", filter: `sala=eq.${c}` },
@@ -1168,6 +1170,7 @@
     carregarVales(c);
     campanhas = []; roteirosCampanha = {}; carregarCampanhas(c);
     enredos = []; carregarEnredos(c);
+    recados = []; marcandoLido = new Set(); carregarRecados(c);
     clausulasCat = []; clausulasSala = []; carregarClausulas(c);
     cardapioEnviaram = []; cardapioMatch = null; cardapioPingVisto = null;
     setTimeout(() => { if (c === codigo) statusCardapio(); }, 800);
@@ -1667,7 +1670,7 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vCardapio"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vCardapio", "vRecados"];
   const ABAS = { casa: "abaCasa", jogo: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
 
   function mostrarVista(nome) {
@@ -1700,6 +1703,9 @@
     if (vista !== "vMural" && muralJuntos) sairJuntos();
     if (nome === "vMural") entrarMural();
     if (nome === "vCardapio") abrirCardapio();
+    if (nome === "vRecados") desenharRecados();
+    if (nome === "vHistorico") desenharHistCompanhia();
+    if (nome === "casa") setTimeout(desenharRecados, 0);
     tickContador();
     window.scrollTo(0, 0);
   }
@@ -1741,6 +1747,7 @@
   const CAMPOS_MANUAL = [
     ["acalma", "O que me acalma", 300, "area"],
     ["naoFazer", "O que não fazer quando estou mal", 300, "area"],
+    ["naoPerguntar", "O que não me perguntar quando estou mal", 300, "area"],
     ["linguagemAmor", "Minha linguagem do amor", 0, "sel"],
     ["comidaConforto", "Comida de conforto", 120],
     ["doce", "Doce favorito", 80],
@@ -4338,6 +4345,7 @@
   const BATIMENTO = [120, 100, 120];
   function receberMao(p) {
     if (!p || (p.jogador !== 0 && p.jogador !== 1) || p.jogador === eu) return;
+    if (p.evento === "companhia" || p.evento === "toqueComp") return receberCompanhia(p);
     if (p.evento === "batida") { if (maos[0] && maos[1]) vibrar(BATIMENTO); return; }
     mudarMaos(p.jogador, !!p.segurando, false);
   }
@@ -5552,6 +5560,7 @@
     cartas = []; cartasOk = false; cofre = []; musicas = []; tocandoUrl = null;
     clearInterval(timerDc); timerDc = null; clearInterval(timerResgate); timerResgate = null; $("descongelar").hidden = true;
     pararMic();
+    sairCompanhia(); compOutro = { ativo: false, visto: 0, saiu: false };
     pendentes.forEach(p => clearTimeout(p.t)); pendentes.clear();
     desenharExtras();
     clearTimeout(timerCarta);
@@ -5643,6 +5652,10 @@
     }
     if (!Number.isInteger(e.campanhasFeitas)) e.campanhasFeitas = 0;
     if (e.secretaProx !== 0 && e.secretaProx !== 1) e.secretaProx = null;
+    const bt = e.bateria && typeof e.bateria === "object" && !Array.isArray(e.bateria) ? e.bateria : {};
+    e.bateria = {};
+    [0, 1].forEach(j => { if (typeof bt[j] === "string" && Date.parse(bt[j]) > Date.now()) e.bateria[j] = bt[j]; });
+    if (!Number.isFinite(e.companhiaTotal)) e.companhiaTotal = 0;
     const si = e.silencio;
     if (!si || typeof si !== "object" || !e.carta || si.chave !== e.carta.chave || !["preparando", "calibrando", "valendo", "falhou", "passou"].includes(si.fase)) e.silencio = null;
     const en = e.enredo;
@@ -5905,6 +5918,9 @@
     desenharCampanha(estado);
     desenharEnredo(estado);
     desenharSecreta(estado);
+    desenharBateria(estado);
+    desenharRecados();
+    desenharHistCompanhia();
     desenharSilencio(estado);
     desenharClausulas();
     const cpo = estado.campanha;
@@ -6292,7 +6308,7 @@
 
   // ---------- ações ----------
   function girar() {
-    if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null || estado.enredo) return;
+    if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null || estado.enredo || bateriaAlguem(estado)) return;
     let k = Math.floor(Math.random() * SEGMENTOS);
     const passo = 360 / SEGMENTOS;
     // roteiro: a etapa define os tipos (verdade/desafio pela roleta; os outros saem direto, como evento)
@@ -6332,7 +6348,7 @@
   }
 
   function escolher(tipo) {
-    if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null || estado.enredo) return;
+    if (!estado || girando || estado.vez !== eu || estado.carta || estado.vencedor !== null || estado.enredo || bateriaAlguem(estado)) return;
     if (!sortear(tipo, estado.niveis, [])) return erro("erroJogo", "Não consegui carregar as cartas. Recarregue a página.");
     gravar(n => {
       if (!n.secretas.length) n.secretas = sortearSecretas(n);   // começo da partida: missões secretas
@@ -7424,6 +7440,222 @@
     desenharTelaAno();
   }
 
+  // ---------- v9: dias ruins — bateria social baixa 🪫 ----------
+  const bateriaDe = (j, e = estado) => { const v = e && e.bateria && e.bateria[j]; return !!v && Date.parse(v) > Date.now(); };
+  const bateriaAlguem = e => !!(e && e.fixa) && (bateriaDe(0, e) || bateriaDe(1, e));
+  function ligarBateria(op) {
+    const ate = op === "2h" ? new Date(Date.now() + 2 * 3600000).toISOString()
+      : op === "amanha" ? new Date(`${somarDias(hojeISO(), 1)}T06:00:00-03:00`).toISOString()
+      : new Date(Date.now() + 30 * 86400000).toISOString();
+    $("bateriaOpcoes").hidden = true;
+    gravar(n => { n.bateria = { ...(n.bateria || {}), [eu]: ate }; n.aviso = novoAviso(`🪫 ${n.jogadores[eu]} está sem bateria social`); });
+  }
+  function desligarBateria() {
+    gravar(n => { const b = { ...(n.bateria || {}) }; delete b[eu]; n.bateria = b; });
+  }
+  let timerBateria = null;
+  function desenharBateria(e) {
+    const fixa = !!e.fixa, minha = fixa && bateriaDe(eu, e), o = 1 - eu, dele = fixa && !!e.jogadores[o] && bateriaDe(o, e);
+    document.body.dataset.bateriaEu = minha ? "1" : "";
+    document.body.dataset.bateriaOutro = dele ? "1" : "";
+    $("bateriaDesligada").hidden = minha;
+    $("bateriaLigada").hidden = !minha;
+    if (minha) {
+      const ate = new Date(e.bateria[eu]), dias = (ate - Date.now()) / 86400000;
+      $("bateriaTexto").textContent = dias > 2 ? "🪫 Você está sem bateria social até desligar. Tudo calmo por aqui."
+        : `🪫 Você está sem bateria social até ${hojeISO(ate) === hojeISO() ? "" : "amanhã, "}${ate.toLocaleTimeString("pt-BR", { timeZone: "America/Bahia", hour: "2-digit", minute: "2-digit" })}. Tudo calmo por aqui.`;
+    }
+    // sem jogo para os dois enquanto alguém está sem bateria
+    if ((minha || dele) && vista === "jogo") setTimeout(() => mostrarVista("casa"), 0);
+    desenharCuidado(e, dele);
+    // expira sozinho
+    clearTimeout(timerBateria);
+    const prox = [0, 1].map(j => (e.bateria && Date.parse(e.bateria[j])) || 0).filter(t => t > Date.now());
+    if (prox.length) timerBateria = setTimeout(() => estado && desenharBateria(estado), Math.min(Math.min(...prox) - Date.now() + 500, 2147483000));
+  }
+  // protocolo de cuidado, montado pelo Manual de quem está sem bateria
+  function desenharCuidado(e, ativo) {
+    $("casaCuidado").hidden = !ativo;
+    if (!ativo) return;
+    const o = 1 - eu, nome = nomeDe(o), ul = $("cuidadoItens"); ul.textContent = "";
+    $("cuidadoTitulo").textContent = `🪫 ${nome} está sem bateria social. Protocolo de cuidado:`;
+    const item = (t, cls) => ul.appendChild(el("li", cls || "", t));
+    const naoFazer = textoManual(o, "naoFazer"), naoPerg = textoManual(o, "naoPerguntar"), acalma = textoManual(o, "acalma");
+    const delivery = textoManual(o, "delivery"), musica = textoManual(o, "musicaConforto");
+    if (naoFazer) item(`🚫 Hoje, não: ${naoFazer}`);
+    if (naoPerg) item(`🤐 Não pergunte: ${naoPerg}`);
+    if (acalma) item(`🌿 O que acalma: ${acalma}`);
+    if (!naoFazer && !naoPerg && !acalma) sugestoes.filter(s => s.humor_min <= 1 && 1 <= s.humor_max).sort((a, b) => a.ordem - b.ordem).slice(0, 4).forEach(s => item(`💡 ${s.texto}`));
+    item(delivery ? `🛵 Ação silenciosa: peça ${delivery} sem avisar` : musica ? `🎵 Ação silenciosa: mande "${musica}"` : "🌙 Ação silenciosa: mande só um boa noite, sem esperar resposta", "acao");
+  }
+
+  // ---------- v9: recados sem resposta 💛 ----------
+  let recados = [], marcandoLido = new Set();
+  const chaveFechados = () => `lp-recados-fechados:${codigo}`;
+  const lerFechados = () => { const v = lerLocal(chaveFechados()); return Array.isArray(v) ? v : []; };
+  async function carregarRecados(c) {
+    const { data, error } = await sb.from("recados").select("*").eq("sala", c).order("criado_em", { ascending: false }).limit(100);
+    if (c !== codigo || error || !Array.isArray(data)) return;
+    recados = data;
+    desenharRecados();
+  }
+  function linhaRecado(ev, row) {
+    if (!row || !row.id) return;
+    const i = recados.findIndex(x => x.id === row.id);
+    if (ev === "DELETE") { if (i >= 0) recados.splice(i, 1); }
+    else if (row.sala === codigo) { if (i >= 0) recados[i] = { ...recados[i], ...row }; else recados.unshift(row); }
+    recados.sort((a, b) => (a.criado_em < b.criado_em ? 1 : -1));
+    desenharRecados();
+  }
+  function abrirRecado() {
+    if (!estado || !estado.fixa) return;
+    $("recadoNovo").value = "";
+    erro("erroRecado", "");
+    $("dlgRecado").showModal();
+  }
+  async function enviarRecado(ev) {
+    ev.preventDefault();
+    const texto = $("recadoNovo").value.trim().slice(0, 500);
+    if (!texto) return erro("erroRecado", "Escreva o recado.");
+    $("recadoEnviar").disabled = true;
+    const { data, error } = await sb.from("recados").insert({ sala: codigo, de: eu, texto }).select("*").single();
+    $("recadoEnviar").disabled = false;
+    if (error || !data) return erro("erroRecado", "Não consegui deixar o recado. Confira a internet.");
+    linhaRecado("INSERT", data);
+    $("dlgRecado").close();
+  }
+  async function marcarLido(r) {
+    if (r.lido_em || marcandoLido.has(r.id)) return;
+    marcandoLido.add(r.id);
+    const lido_em = new Date().toISOString();
+    const { error } = await sb.from("recados").update({ lido_em }).eq("id", r.id);
+    if (!error) linhaRecado("UPDATE", { ...r, lido_em });
+  }
+  function fecharRecado() {
+    const r = recados.find(x => x.de !== eu && !lerFechados().includes(x.id));
+    if (r) salvarLocal(chaveFechados(), [r.id, ...lerFechados()].slice(0, 200));
+    desenharRecados();
+  }
+  function desenharRecados() {
+    if (!estado || !estado.fixa) return;
+    const o = 1 - eu, fechados = lerFechados();
+    // quem recebe: um cartão suave, sem responder; abrir grava lido_em
+    const r = recados.find(x => x.de === o && !fechados.includes(x.id));
+    $("casaRecado").hidden = !r;
+    if (r) {
+      $("recadoTitulo").textContent = `💛 Recado de ${nomeDe(o)}`;
+      $("recadoTexto").textContent = r.texto;
+      if (!r.lido_em && !document.hidden && vista !== "jogo") marcarLido(r);
+    }
+    // quem mandou: viu que leu (o último dos últimos 3 dias)
+    const meu = recados.find(x => x.de === eu);
+    const recente = meu && Date.now() - Date.parse(meu.criado_em) < 3 * 86400000;
+    $("casaRecadoLido").hidden = !recente;
+    if (recente) $("casaRecadoLido").textContent = meu.lido_em ? `✓ ${nomeDe(o)} leu e está só absorvendo o carinho, sem pressão para conversar`
+      : `💛 Recado deixado. ${nomeDe(o)} ainda não viu.`;
+    const recebidos = recados.filter(x => x.de === o);
+    $("cardRecadosSub").textContent = recebidos.length ? `${recebidos.length} ${recebidos.length === 1 ? "recebido" : "recebidos"}` : "Sem resposta, só carinho";
+    if ($("vRecados").hidden) return;
+    $("recadosVazio").hidden = !!recebidos.length;
+    const ul = $("recadosLista"); ul.textContent = "";
+    recebidos.forEach(x => {
+      const li = el("li");
+      li.append(el("span", "t", x.texto), el("span", "autor", `${nomeDe(o)} · ${dataCurta(x.criado_em)}`));
+      ul.appendChild(li);
+    });
+  }
+  addEventListener("visibilitychange", () => { if (!document.hidden) desenharRecados(); });
+
+  // ---------- v9: companhia silenciosa 🕯️ (pelo broadcast da sala; não grava nada além do tempo) ----------
+  let emCompanhia = false, compOutro = { ativo: false, visto: 0, saiu: false }, compJuntoDesde = null, compUltimoToque = 0;
+  let compBatida = null, compWake = null, compVigia = null;
+  const compOutroAqui = () => compOutro.ativo && Date.now() - compOutro.visto < 45000 && presentes.has(1 - eu);
+  function avisarCompanhia(ativo) {
+    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "companhia", jogador: eu, ativo } }); } catch (err) {}
+  }
+  async function entrarCompanhia() {
+    if (!estado || !estado.fixa) return;
+    emCompanhia = true;
+    document.body.dataset.companhia = "1";   // o tempo aqui não conta como chamada
+    $("companhia").hidden = false;
+    $("compInicial").textContent = (nomeDe(1 - eu) || "?").trim().charAt(0).toUpperCase();
+    avisarCompanhia(true);
+    clearInterval(compBatida); compBatida = setInterval(() => avisarCompanhia(true), 15000);
+    clearInterval(compVigia); compVigia = setInterval(desenharCompanhia, 5000);
+    // música calma (romântico ou leve); o Spotify embutido não sincroniza entre aparelhos
+    const pool = musicas.filter(m => m.nivel === "romantico" || m.nivel === "leve");
+    const m = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+    $("compMusica").hidden = !m;
+    $("compPlayer").textContent = "";
+    if (m) { $("compMusicaTxt").textContent = `🎵 Sugestão: ${m.titulo}${m.artista ? " · " + m.artista : ""}`; $("compTocar").dataset.url = m.url; }
+    try { if (navigator.wakeLock) compWake = await navigator.wakeLock.request("screen"); } catch (err) { compWake = null; }
+    desenharCompanhia();
+  }
+  function sairCompanhia() {
+    if (!emCompanhia) return;
+    if (compJuntoDesde) somarCompanhia(true);
+    emCompanhia = false;
+    document.body.dataset.companhia = "";
+    $("companhia").hidden = true;
+    $("compPlayer").textContent = "";
+    avisarCompanhia(false);
+    clearInterval(compBatida); clearInterval(compVigia); compBatida = compVigia = null;
+    try { compWake && compWake.release(); } catch (err) {}
+    compWake = null;
+  }
+  // tempo com os dois na tela: grava quem saiu primeiro (para não somar duas vezes)
+  function somarCompanhia(grava) {
+    const seg = Math.max(0, Math.round((Date.now() - compJuntoDesde) / 1000));
+    compJuntoDesde = null;
+    if (grava && seg > 0) gravarFresco(n => { n.companhiaTotal = (Number(n.companhiaTotal) || 0) + seg; });
+  }
+  function receberCompanhia(p) {
+    if (p.evento === "toqueComp") {
+      if (!emCompanhia) return;
+      const l = $("compLuz"); l.classList.remove("brilho"); void l.offsetWidth; l.classList.add("brilho");
+      setTimeout(() => l.classList.remove("brilho"), 2000);
+      vibrar(40);
+      return;
+    }
+    const antes = compOutro.ativo;
+    compOutro = { ativo: !!p.ativo, visto: Date.now(), saiu: antes && !p.ativo };
+    if (p.ativo && !antes && emCompanhia) avisarCompanhia(true);   // responde para o outro saber que já estou aqui
+    if (!p.ativo && compJuntoDesde) somarCompanhia(false);
+    desenharCompanhia();
+  }
+  function tocarLuz() {
+    if (!emCompanhia || !compOutroAqui() || Date.now() - compUltimoToque < 30000) return;
+    compUltimoToque = Date.now();
+    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "toqueComp", jogador: eu } }); } catch (err) {}
+    $("compDica").textContent = "💫 Toque enviado";
+    setTimeout(() => { if (emCompanhia) desenharCompanhia(); }, 2000);
+  }
+  function desenharCompanhia() {
+    if (!emCompanhia) return;
+    const nome = nomeDe(1 - eu), junto = compOutroAqui();
+    if (junto && !compJuntoDesde) compJuntoDesde = Date.now();
+    if (!junto && compJuntoDesde) somarCompanhia(false);
+    $("compLuz").classList.toggle("junto", junto);
+    $("compStatus").textContent = junto ? `${nome} está aqui com você 🕯️` : compOutro.saiu ? `${nome} saiu, mas volta logo` : `Esperando ${nome} abrir a companhia…`;
+    const falta = Math.ceil((30000 - (Date.now() - compUltimoToque)) / 1000);
+    $("compDica").textContent = junto ? (falta > 0 && compUltimoToque ? `Dá para tocar de novo em ${falta} s` : "Toque na luz para fazer brilhar do outro lado") : "";
+  }
+  presencaMudou.push(() => { if (emCompanhia) desenharCompanhia(); });
+  function tocarCompanhia() {
+    const url = $("compTocar").dataset.url, id = url && idFaixa(url);
+    if (!id) return;
+    const f = document.createElement("iframe");
+    f.src = "https://open.spotify.com/embed/track/" + encodeURIComponent(id);
+    f.width = "100%"; f.height = "80"; f.loading = "lazy"; f.title = "Player do Spotify";
+    f.allow = "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
+    $("compPlayer").textContent = ""; $("compPlayer").appendChild(f);
+  }
+  function desenharHistCompanhia() {
+    const t = Number(estado && estado.companhiaTotal) || 0;
+    $("histCompanhia").hidden = !t;
+    if (t) { const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60); $("histCompanhia").textContent = `🕯️ Horas de companhia (sem contar como chamada): ${h ? `${h} h ` : ""}${m} min`; }
+  }
+
   // ---------- v9: carta secreta (segure para ler; virou o celular, escondeu) ----------
   let segurandoCarta = false, celularVirado = false;
   function alternarSecreta() {
@@ -8194,6 +8426,19 @@
     $("envFechar").addEventListener("click", () => { $("envAbrindo").hidden = true; });
     $("novaCapsula").addEventListener("click", abrirNovaCapsula);
     $("novaEspelho").addEventListener("click", abrirNovaEspelho);
+    $("bateriaLigar").addEventListener("click", () => { const o = $("bateriaOpcoes"); o.hidden = !o.hidden; $("bateriaLigar").setAttribute("aria-expanded", String(!o.hidden)); });
+    document.querySelectorAll("[data-bat]").forEach(b => b.addEventListener("click", () => ligarBateria(b.dataset.bat)));
+    $("bateriaDesligar").addEventListener("click", desligarBateria);
+    $("cuidadoRecado").addEventListener("click", abrirRecado);
+    $("cuidadoPensei").addEventListener("click", () => mandarCarinho("pensei"));
+    $("recadoNovoAbrir").addEventListener("click", abrirRecado);
+    $("formRecado").addEventListener("submit", enviarRecado);
+    $("recadoCancelar").addEventListener("click", () => $("dlgRecado").close());
+    $("recadoFechar").addEventListener("click", fecharRecado);
+    $("cardCompanhia").addEventListener("click", entrarCompanhia);
+    $("compSair").addEventListener("click", sairCompanhia);
+    $("compLuz").addEventListener("click", tocarLuz);
+    $("compTocar").addEventListener("click", tocarCompanhia);
     $("nossoAnoAbrir").addEventListener("click", abrirNossoAno);
     $("casaNossoAnoAbrir").addEventListener("click", abrirNossoAno);
     $("naFechar").addEventListener("click", () => { $("nossoAno").hidden = true; });

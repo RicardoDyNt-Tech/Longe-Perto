@@ -204,6 +204,21 @@
           <button class="primary" id="drAqui" type="button" hidden>Tô aqui quando precisar 🤍</button>
           <p class="erro" id="erroDengoResp" role="alert"></p>
         </div>
+        <div class="casa-bloco recado calmo" id="casaRecado" hidden role="status">
+          <p class="cumprir-titulo" id="recadoTitulo"></p>
+          <p class="recado-texto" id="recadoTexto"></p>
+          <p class="config-dica">Não precisa responder. É só para você receber o carinho.</p>
+          <button class="secondary" id="recadoFechar" type="button">Fechar</button>
+        </div>
+        <p class="casa-bloco recado-lido calmo" id="casaRecadoLido" hidden></p>
+        <div class="casa-bloco cuidado" id="casaCuidado" hidden>
+          <p class="cumprir-titulo" id="cuidadoTitulo"></p>
+          <ul class="cuidado-lista" id="cuidadoItens"></ul>
+          <div class="row">
+            <button class="secondary" id="cuidadoRecado" type="button">💛 Deixar um recado</button>
+            <button class="secondary" id="cuidadoPensei" type="button">💭 Pensei em você</button>
+          </div>
+        </div>
         <div class="casa-bloco dengo" id="casaDengo">
           <div class="dengo-resposta" id="dengoResposta" hidden role="status">
             <p class="dengo-resp-titulo" id="dengoRespTitulo"></p>
@@ -249,6 +264,23 @@
             <ul class="humor-sug" id="humorSug"></ul>
           </div>
           <p class="erro" id="erroHumor" role="alert"></p>
+        </div>
+        <div class="casa-bloco bateria calmo" id="casaBateria">
+          <div id="bateriaDesligada">
+            <button class="secondary" id="bateriaLigar" type="button" aria-expanded="false">🪫 Estou sem bateria social</button>
+            <div id="bateriaOpcoes" hidden>
+              <p class="config-dica">Sem jogo e sem cobrança por um tempo. Por quanto?</p>
+              <div class="row">
+                <button class="secondary" type="button" data-bat="2h">2 horas</button>
+                <button class="secondary" type="button" data-bat="amanha">Até amanhã</button>
+                <button class="secondary" type="button" data-bat="sempre">Até eu desligar</button>
+              </div>
+            </div>
+          </div>
+          <div id="bateriaLigada" hidden>
+            <p class="bateria-texto" id="bateriaTexto"></p>
+            <button class="linkbtn" id="bateriaDesligar" type="button">Desligar</button>
+          </div>
         </div>
         <div class="casa-bloco mural-inicio" id="casaMural">
           <p class="mural-inicio-titulo"><b>Mural</b> <span id="muralInicioTxt"></span></p>
@@ -308,6 +340,8 @@
         <button type="button" class="casa-card" data-abre="vAbra" id="cardAbra"><span class="ic">💌</span><b>Abra quando…</b><span class="sub" id="cardAbraSub"></span></button>
         <button type="button" class="casa-card" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="ic">📖</span><b>Diário</b><span class="sub" id="cardDiarioCasalSub"></span></button>
         <button type="button" class="casa-card" data-abre="vPlaylist" id="cardPlaylist"><span class="ic">🎵</span><b>Nossa playlist</b><span class="sub" id="cardPlaylistSub"></span></button>
+        <button type="button" class="casa-card calmo" data-abre="vRecados" id="cardRecados"><span class="ic">💛</span><b>Recados</b><span class="sub" id="cardRecadosSub">Sem resposta, só carinho</span></button>
+        <button type="button" class="casa-card calmo" id="cardCompanhia"><span class="ic">🕯️</span><b>Ficar junto em silêncio</b><span class="sub">Companhia sem conversa</span></button>
         <button type="button" class="casa-card" data-abre="vCardapio" id="cardCardapio"><span class="ic">🤫</span><b>Cardápio secreto</b><span class="sub" id="cardCardapioSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
@@ -512,6 +546,15 @@
         <p class="extras-sub" id="nossasVazio">Nenhuma música ainda. Na trilha da rodada, toque em "🤍 Nossa".</p>
         <ul class="lista-extras" id="listaNossas"></ul>
       </section>
+      <section class="casa-vista" id="vRecados" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>💛 Recados</h2>
+        <p class="extras-sub">Recados sem resposta: só para receber o carinho.</p>
+        <button class="primary" id="recadoNovoAbrir" type="button">💛 Deixar um recado</button>
+        <h3 class="casa-h3">Recebidos</h3>
+        <p class="extras-sub" id="recadosVazio">Nenhum recado ainda.</p>
+        <ul class="lista-extras recados-lista" id="recadosLista"></ul>
+      </section>
       <section class="casa-vista" id="vCardapio" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>🤫 Cardápio secreto</h2>
@@ -589,6 +632,7 @@
           <p id="histMesDengos"></p>
           <p id="histMesMural"></p>
           <p id="histMesPartidas"></p>
+          <p id="histCompanhia" hidden></p>
         </div>
         <div class="hist-semana">
           <p class="hist-mes-titulo">Humor da semana</p>
@@ -1118,6 +1162,19 @@
     <ul class="roteiros-lista" id="roteirosLista"></ul>
   </dialog>
 
+  <dialog id="dlgRecado" aria-labelledby="dlgRecadoTitulo">
+    <form id="formRecado" method="dialog">
+      <h2 id="dlgRecadoTitulo">💛 Deixar um recado</h2>
+      <p class="config-dica">Sem campo de resposta: é só para a outra pessoa receber o carinho.</p>
+      <textarea id="recadoNovo" maxlength="500" rows="5" aria-label="Recado"></textarea>
+      <p class="erro" id="erroRecado" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="recadoEnviar" type="submit">Deixar o recado</button>
+        <button class="secondary" id="recadoCancelar" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="dlgEnredos" class="dlg-posicoes" aria-labelledby="dlgEnredosTitulo">
     <div class="pos-topo">
       <h2 id="dlgEnredosTitulo">🎭 Enredos</h2>
@@ -1616,6 +1673,18 @@
     </form>
   </dialog>
 </main>
+
+<div class="companhia" id="companhia" role="dialog" aria-modal="true" aria-labelledby="compStatus" hidden>
+  <button class="comp-luz" id="compLuz" type="button" aria-label="Tocar na luz"><span id="compInicial"></span></button>
+  <p class="comp-status" id="compStatus"></p>
+  <p class="comp-dica" id="compDica"></p>
+  <div class="comp-musica" id="compMusica" hidden>
+    <p id="compMusicaTxt"></p>
+    <button class="linkbtn" id="compTocar" type="button">▶ Tocar aqui (cada um dá o play no seu)</button>
+    <div id="compPlayer"></div>
+  </div>
+  <button class="linkbtn comp-sair" id="compSair" type="button">Sair</button>
+</div>
 
 <div class="nosso-ano" id="nossoAno" role="dialog" aria-modal="true" aria-labelledby="naTitulo" hidden>
   <div class="na-topo">
