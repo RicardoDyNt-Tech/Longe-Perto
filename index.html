@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=54">
+<link rel="stylesheet" href="style.css?v=56">
 </head>
 <body>
 <main>
@@ -130,9 +130,43 @@
           <p class="ola" id="ola"></p>
           <div class="avatares" id="avatares" aria-hidden="true"></div>
         </header>
+        <div class="casa-bloco clausulas" id="casaClausulas" hidden>
+          <ul class="clausulas-lista" id="clausulasLista"></ul>
+          <p class="erro" id="erroClausula" role="alert"></p>
+        </div>
+        <div class="casa-bloco espelho-aviso" id="casaEspelho" hidden>
+          <p class="cumprir-titulo">🪞 Uma cápsula de espelho abre hoje</p>
+          <button class="primary" type="button" data-abre="vCapsulas">Abrir</button>
+        </div>
+        <div class="casa-bloco nosso-ano-aviso" id="casaNossoAno" hidden>
+          <p class="cumprir-titulo" id="casaNossoAnoTitulo">✨ Nosso ano</p>
+          <button class="primary" type="button" id="casaNossoAnoAbrir">Ver a retrospectiva</button>
+        </div>
+        <div class="casa-bloco cardapio-aviso" id="casaCardapio" hidden>
+          <p class="cumprir-titulo">🤫 Cardápio secreto</p>
+          <p class="extras-sub">Marque o que você quer fazer nos dias juntos.</p>
+          <button class="primary" type="button" data-abre="vCardapio">Abrir o cardápio</button>
+        </div>
         <div class="casa-bloco cumprir" id="casaCumprir" hidden>
-          <p class="cumprir-titulo">🎁 Hoje é dia de cumprir</p>
+          <p class="cumprir-titulo">🧾 A fatura chegou</p>
+          <p class="fatura-placar" id="faturaPlacar" hidden></p>
           <p class="cumprir-dias" id="cumprirDias"></p>
+          <div class="fatura-resgate" id="faturaResgate" hidden role="status">
+            <p class="fatura-resgate-quem" id="resgateQuem"></p>
+            <p class="cumprir-sorteado" id="resgateTexto"></p>
+            <p class="fatura-resgate-timer" id="resgateTimer" hidden></p>
+            <div class="row">
+              <button class="secondary" id="resgateIniciar" type="button" hidden></button>
+              <button class="done" id="resgateQuitar" type="button" hidden>Quitado ✓</button>
+              <button class="linkbtn" id="resgateFechar" type="button" hidden>Fechar</button>
+            </div>
+          </div>
+          <div class="chips fatura-filtros" role="radiogroup" aria-label="Filtrar a fatura">
+            <label class="chip"><input type="radio" name="filtroFatura" value="todos" checked><span>Tudo</span></label>
+            <label class="chip"><input type="radio" name="filtroFatura" value="vale"><span>🎟️ Vales</span></label>
+            <label class="chip"><input type="radio" name="filtroFatura" value="prenda"><span>🧾 Prendas</span></label>
+            <label class="chip"><input type="radio" name="filtroFatura" value="promessa"><span>💞 Promessas</span></label>
+          </div>
           <div class="cumprir-sorteio" id="cumprirSorteio" hidden>
             <p class="cumprir-sorteado" id="cumprirSorteado"></p>
             <div class="row">
@@ -173,6 +207,21 @@
           </div>
           <button class="primary" id="drAqui" type="button" hidden>Tô aqui quando precisar 🤍</button>
           <p class="erro" id="erroDengoResp" role="alert"></p>
+        </div>
+        <div class="casa-bloco recado calmo" id="casaRecado" hidden role="status">
+          <p class="cumprir-titulo" id="recadoTitulo"></p>
+          <p class="recado-texto" id="recadoTexto"></p>
+          <p class="config-dica">Não precisa responder. É só para você receber o carinho.</p>
+          <button class="secondary" id="recadoFechar" type="button">Fechar</button>
+        </div>
+        <p class="casa-bloco recado-lido calmo" id="casaRecadoLido" hidden></p>
+        <div class="casa-bloco cuidado" id="casaCuidado" hidden>
+          <p class="cumprir-titulo" id="cuidadoTitulo"></p>
+          <ul class="cuidado-lista" id="cuidadoItens"></ul>
+          <div class="row">
+            <button class="secondary" id="cuidadoRecado" type="button">💛 Deixar um recado</button>
+            <button class="secondary" id="cuidadoPensei" type="button">💭 Pensei em você</button>
+          </div>
         </div>
         <div class="casa-bloco dengo" id="casaDengo">
           <div class="dengo-resposta" id="dengoResposta" hidden role="status">
@@ -219,6 +268,23 @@
             <ul class="humor-sug" id="humorSug"></ul>
           </div>
           <p class="erro" id="erroHumor" role="alert"></p>
+        </div>
+        <div class="casa-bloco bateria calmo" id="casaBateria">
+          <div id="bateriaDesligada">
+            <button class="secondary" id="bateriaLigar" type="button" aria-expanded="false">🪫 Estou sem bateria social</button>
+            <div id="bateriaOpcoes" hidden>
+              <p class="config-dica">Sem jogo e sem cobrança por um tempo. Por quanto?</p>
+              <div class="row">
+                <button class="secondary" type="button" data-bat="2h">2 horas</button>
+                <button class="secondary" type="button" data-bat="amanha">Até amanhã</button>
+                <button class="secondary" type="button" data-bat="sempre">Até eu desligar</button>
+              </div>
+            </div>
+          </div>
+          <div id="bateriaLigada" hidden>
+            <p class="bateria-texto" id="bateriaTexto"></p>
+            <button class="linkbtn" id="bateriaDesligar" type="button">Desligar</button>
+          </div>
         </div>
         <div class="casa-bloco mural-inicio" id="casaMural">
           <p class="mural-inicio-titulo"><b>Mural</b> <span id="muralInicioTxt"></span></p>
@@ -279,6 +345,9 @@
         <button type="button" class="casa-card" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="ic">📖</span><b>Diário</b><span class="sub" id="cardDiarioCasalSub"></span></button>
         <button type="button" class="casa-card" data-abre="vChamadas" id="cardChamadas"><span class="ic">📞</span><b>Nossas chamadas</b><span class="sub" id="cardChamadasSub">Tempo em chamada</span></button>
         <button type="button" class="casa-card" data-abre="vPlaylist" id="cardPlaylist"><span class="ic">🎵</span><b>Nossa playlist</b><span class="sub" id="cardPlaylistSub"></span></button>
+        <button type="button" class="casa-card calmo" data-abre="vRecados" id="cardRecados"><span class="ic">💛</span><b>Recados</b><span class="sub" id="cardRecadosSub">Sem resposta, só carinho</span></button>
+        <button type="button" class="casa-card calmo" id="cardCompanhia"><span class="ic">🕯️</span><b>Ficar junto em silêncio</b><span class="sub">Companhia sem conversa</span></button>
+        <button type="button" class="casa-card" data-abre="vCardapio" id="cardCardapio"><span class="ic">🤫</span><b>Cardápio secreto</b><span class="sub" id="cardCardapioSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -352,7 +421,10 @@
         <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>Cápsulas do tempo</h2>
         <p class="extras-sub">A mesma pergunta, respondida agora e de novo numa data futura. Ninguém vê nada até lá.</p>
-        <button class="primary" id="novaCapsula" type="button">Nova cápsula</button>
+        <div class="row">
+          <button class="primary" id="novaCapsula" type="button">Nova cápsula</button>
+          <button class="secondary" id="novaEspelho" type="button">Nova cápsula de espelho 🪞</button>
+        </div>
         <p class="extras-sub" id="capVazio">Nenhuma cápsula ainda.</p>
         <div id="capGrupo-pronta" hidden><h3 class="casa-h3">Prontas para abrir</h3><ul class="lista-extras" id="capProntas"></ul></div>
         <div id="capGrupo-respondendo" hidden><h3 class="casa-h3">Esperando respostas</h3><ul class="lista-extras" id="capRespondendo"></ul></div>
@@ -499,6 +571,41 @@
         <p class="extras-sub" id="nossasVazio">Nenhuma música ainda. Na trilha da rodada, toque em "🤍 Nossa".</p>
         <ul class="lista-extras" id="listaNossas"></ul>
       </section>
+      <section class="casa-vista" id="vRecados" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>💛 Recados</h2>
+        <p class="extras-sub">Recados sem resposta: só para receber o carinho.</p>
+        <button class="primary" id="recadoNovoAbrir" type="button">💛 Deixar um recado</button>
+        <h3 class="casa-h3">Recebidos</h3>
+        <p class="extras-sub" id="recadosVazio">Nenhum recado ainda.</p>
+        <ul class="lista-extras recados-lista" id="recadosLista"></ul>
+      </section>
+      <section class="casa-vista" id="vCardapio" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>🤫 Cardápio secreto</h2>
+        <p class="extras-sub" id="cardapioRodada"></p>
+        <p class="extras-sub" id="cardapioSemData" hidden>Marquem a data do reencontro (no Início) para abrir o cardápio dessa viagem.</p>
+        <ul class="cardapio-status" id="cardapioStatus"></ul>
+        <div id="cardapioEscolha" hidden>
+          <p class="config-dica">Seus votos ficam só neste aparelho até você enviar. Ninguém vê o que você marcou: só aparece o que os dois quiserem.</p>
+          <div id="cardapioLista"></div>
+          <details class="cardapio-add">
+            <summary>+ Adicionar desejo</summary>
+            <form id="formDesejo">
+              <input id="desejoTexto" maxlength="140" placeholder="Ex.: Café da manhã na padaria da esquina" aria-label="Seu desejo">
+              <select id="desejoCat" aria-label="Categoria"></select>
+              <button class="secondary" id="desejoSalvar" type="submit">Adicionar</button>
+              <p class="config-dica">O outro também vai votar nele, sem saber quem escreveu.</p>
+            </form>
+          </details>
+          <p class="extras-sub" id="cardapioConta"></p>
+          <button class="primary" id="cardapioEnviar" type="button">Enviar meu cardápio</button>
+        </div>
+        <button class="primary" id="cardapioRevelar" type="button" hidden>✨ Ver o que deu match</button>
+        <ul class="cardapio-match" id="cardapioMatch" hidden></ul>
+        <p class="extras-sub" id="cardapioSemMatch" hidden>Nenhum match desta vez. Que tal conversar sobre isso? 😄</p>
+        <p class="erro" id="erroCardapio" role="alert"></p>
+      </section>
       <section class="casa-vista" id="vMural" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
         <h2>✏️ Mural</h2>
@@ -544,11 +651,13 @@
       </section>
       <section class="casa-vista aba-vista" id="vHistorico" hidden>
         <h2>🕘 Histórico</h2>
+        <button class="secondary" id="nossoAnoAbrir" type="button">✨ Nosso ano</button>
         <div class="hist-mes" id="histMes">
           <p class="hist-mes-titulo" id="histMesTitulo"></p>
           <p id="histMesDengos"></p>
           <p id="histMesMural"></p>
           <p id="histMesPartidas"></p>
+          <p id="histCompanhia" hidden></p>
         </div>
         <div class="hist-semana">
           <p class="hist-mes-titulo">Humor da semana</p>
@@ -612,7 +721,28 @@
         <button class="linkbtn" id="roteiroSair" type="button" hidden>Sair do roteiro</button>
       </div>
     </div>
+    <div class="faixa-campanha" id="faixaCampanha" hidden role="status">
+      <p class="fc-capa" id="campanhaCapa"></p>
+      <p class="fc-regra" id="campanhaRegra" hidden></p>
+      <p class="fc-info" id="campanhaInfo"></p>
+      <div class="fc-fichas" id="fichasAcoes" hidden>
+        <label>Ficha: nível da próxima carta
+          <select id="fichaNivel" aria-label="Nível da próxima carta"></select>
+        </label>
+        <button class="secondary" id="fichaNivelUsar" type="button">Usar ficha</button>
+        <button class="secondary" id="fichaQuem" type="button" hidden></button>
+        <button class="secondary" id="fichaPular" type="button" hidden>🎟️ Pular sem prenda</button>
+      </div>
+      <div class="fr-acoes">
+        <button class="primary" id="campanhaJogar" type="button" hidden></button>
+        <button class="linkbtn" id="campanhaQuebrei" type="button" hidden>Quebrei a regra 🙈</button>
+        <button class="secondary" id="campanhaRecomecar" type="button" hidden>Recomeçar</button>
+        <button class="linkbtn" id="campanhaSair" type="button">Sair da campanha</button>
+      </div>
+    </div>
     <div class="roteiro-entrada">
+      <button class="secondary" id="campanhaAbrir" type="button" hidden>🎞️ Campanha de 3 noites</button>
+      <button class="secondary" id="enredoAbrir" type="button" hidden>🎭 Enredos</button>
       <button class="secondary" id="roteiroAbrir" type="button" hidden>🎬 Jogar com roteiro</button>
       <p class="config-dica" id="roteiroEscolhendo" hidden></p>
     </div>
@@ -753,6 +883,40 @@
       </div>
     </div>
 
+    <section class="silencio" id="silencioBox" hidden aria-live="polite">
+      <p class="silencio-titulo" id="silencioTitulo">🤫 Valendo silêncio</p>
+      <p class="silencio-status" id="silencioStatus"></p>
+      <div id="silencioPreparo" hidden>
+        <div class="chips" role="radiogroup" aria-label="Sensibilidade">
+          <label class="chip"><input type="radio" name="silSens" value="facil"><span>Fácil</span></label>
+          <label class="chip"><input type="radio" name="silSens" value="normal" checked><span>Normal</span></label>
+          <label class="chip"><input type="radio" name="silSens" value="dificil"><span>Difícil</span></label>
+        </div>
+        <p class="config-dica">Deixe este celular perto de quem cumpre. Primeiro, 3 segundos em silêncio para medir o barulho do ambiente. Só mede o volume: nada é gravado nem enviado.</p>
+        <button class="primary" id="silencioComecar" type="button">Calibrar e começar</button>
+      </div>
+      <div class="silencio-medidor" id="silencioMedidor" hidden aria-hidden="true"><i id="silencioNivel"></i><b id="silencioLimite"></b></div>
+      <p class="silencio-tempo" id="silencioTempo" hidden></p>
+      <div class="silencio-prendas" id="silencioPrendas" hidden></div>
+      <button class="linkbtn" id="silencioCancelar" type="button" hidden>Cancelar o silêncio</button>
+    </section>
+    <section class="enredo" id="enredoBox" hidden aria-live="polite">
+      <p class="enredo-topo" id="enredoTopo"></p>
+      <p class="enredo-escolha" id="enredoEscolha" hidden></p>
+      <div id="enredoTrecho">
+        <p class="enredo-quem" id="enredoQuem"></p>
+        <p class="enredo-texto" id="enredoTexto"></p>
+        <button class="done" id="enredoCumpri" type="button" hidden>Cumpri</button>
+        <p class="config-dica" id="enredoEspera" hidden></p>
+        <div class="enredo-opcoes" id="enredoOpcoes"></div>
+      </div>
+      <div id="enredoFim" hidden>
+        <p class="enredo-fim-titulo">Fim do enredo 🎭</p>
+        <ol class="enredo-caminho" id="enredoCaminho"></ol>
+        <button class="primary" id="enredoContinuar" type="button">Continuar com cartas</button>
+      </div>
+      <button class="linkbtn" id="enredoSair" type="button">Sair do enredo</button>
+    </section>
     <p class="aviso" id="aviso" role="status" hidden></p>
     <div class="faixa-ms" id="faixaMS" hidden role="status">
       <p class="ms-titulo">⚡ Morte súbita! Próxima carta decide</p>
@@ -770,6 +934,7 @@
       <p class="level" id="level"></p>
       <p class="vendada-aviso" id="vendadaAviso" hidden></p>
       <button class="secondary" id="vendadaLer" type="button" hidden>👀 Toque para ler (só quem lê)</button>
+      <p class="secreta-dica" id="secretaDica" hidden>🔒 Carta secreta: segure a carta para ler. Virou o celular, escondeu.</p>
       <p class="text" id="text"></p>
       <ol class="seq-etapas" id="seqEtapas" hidden></ol>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
@@ -909,6 +1074,7 @@
     <div class="barra-acoes" id="barraAcoes">
       <div class="barra-in">
         <div class="acoes-giro" id="acoesGiro">
+          <button class="secondary secreta-btn" id="secretaBtn" type="button" aria-pressed="false" hidden>🔒 Carta secreta</button>
           <button class="primary" id="spin">Girar roleta</button>
           <div class="direct">
             <button id="pickV">Escolher verdade</button>
@@ -921,6 +1087,8 @@
         <button class="skip" id="msDesistir" type="button" hidden>Desistir</button>
         <button class="secondary reverso" id="reverso" type="button" hidden>🔄 Reverso</button>
         <button class="secondary liberar" id="liberar" type="button" hidden>Liberar da prenda</button>
+        <button class="secondary" id="deixarReencontro" type="button" hidden>🧾 Deixar para o reencontro</button>
+        <button class="secondary" id="silencioBtn" type="button" hidden>🤫 Valendo silêncio</button>
         <button class="done evento-fim" id="eventoFim" type="button" hidden>Concluir evento</button>
         <div class="evento-acoes duelo-acoes" id="dueloAcoes" hidden>
           <button class="done" id="dueloComecar" type="button">Começar duelo</button>
@@ -1067,6 +1235,53 @@
     </div>
     <p class="config-dica">Uma partida com começo, meio e fim. Os níveis de cada etapa seguem as configurações da sala.</p>
     <ul class="roteiros-lista" id="roteirosLista"></ul>
+  </dialog>
+
+  <dialog id="dlgRecado" aria-labelledby="dlgRecadoTitulo">
+    <form id="formRecado" method="dialog">
+      <h2 id="dlgRecadoTitulo">💛 Deixar um recado</h2>
+      <p class="config-dica">Sem campo de resposta: é só para a outra pessoa receber o carinho.</p>
+      <textarea id="recadoNovo" maxlength="500" rows="5" aria-label="Recado"></textarea>
+      <p class="erro" id="erroRecado" role="alert"></p>
+      <div class="row">
+        <button class="primary" id="recadoEnviar" type="submit">Deixar o recado</button>
+        <button class="secondary" id="recadoCancelar" type="button">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgEnredos" class="dlg-posicoes" aria-labelledby="dlgEnredosTitulo">
+    <div class="pos-topo">
+      <h2 id="dlgEnredosTitulo">🎭 Enredos</h2>
+      <button class="linkbtn" id="fecharEnredos" type="button">Fechar</button>
+    </div>
+    <div id="enredosEscolher">
+      <p class="config-dica">Uma história com escolhas: cada trecho cumprido abre o próximo.</p>
+      <ul class="roteiros-lista" id="enredosLista"></ul>
+    </div>
+    <div id="enredosPapeis" hidden>
+      <p class="enredo-nome" id="enredoPapeisNome"></p>
+      <p class="config-dica" id="enredoPapeisDesc"></p>
+      <fieldset class="enredo-papel">
+        <legend id="enredoPapel0"></legend>
+        <label class="chip"><input type="radio" name="papel0" value="0" checked><span id="enredoPapelJ0"></span></label>
+        <label class="chip"><input type="radio" name="papel0" value="1"><span id="enredoPapelJ1"></span></label>
+      </fieldset>
+      <p class="config-dica" id="enredoPapelOutro"></p>
+      <div class="row">
+        <button class="primary" id="enredoComecar" type="button">Começar</button>
+        <button class="secondary" id="enredoVoltar" type="button">Voltar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dlgCampanhas" class="dlg-posicoes" aria-labelledby="dlgCampanhasTitulo">
+    <div class="pos-topo">
+      <h2 id="dlgCampanhasTitulo">🎞️ Campanha de 3 noites</h2>
+      <button class="linkbtn" id="fecharCampanhas" type="button">Fechar</button>
+    </div>
+    <p class="config-dica">Uma noite por dia, cada uma com um roteiro e uma regra. Nas duas primeiras, cada 3 pontos viram uma ficha para gastar na última.</p>
+    <ul class="roteiros-lista" id="campanhasLista"></ul>
   </dialog>
 
   <dialog id="dlgMuralVer" class="dlg-mural" aria-labelledby="muralVerTitulo">
@@ -1544,10 +1759,69 @@
   </div>
 </div>
 
+<div class="companhia" id="companhia" role="dialog" aria-modal="true" aria-labelledby="compStatus" hidden>
+  <button class="comp-luz" id="compLuz" type="button" aria-label="Tocar na luz"><span id="compInicial"></span></button>
+  <p class="comp-status" id="compStatus"></p>
+  <p class="comp-dica" id="compDica"></p>
+  <div class="comp-musica" id="compMusica" hidden>
+    <p id="compMusicaTxt"></p>
+    <button class="linkbtn" id="compTocar" type="button">▶ Tocar aqui (cada um dá o play no seu)</button>
+    <div id="compPlayer"></div>
+  </div>
+  <button class="linkbtn comp-sair" id="compSair" type="button">Sair</button>
+</div>
+
+<div class="nosso-ano" id="nossoAno" role="dialog" aria-modal="true" aria-labelledby="naTitulo" hidden>
+  <div class="na-topo">
+    <div class="na-barra" id="naBarra" aria-hidden="true"></div>
+    <div class="na-controles">
+      <div class="chips" role="radiogroup" aria-label="Período">
+        <label class="chip"><input type="radio" name="naPeriodo" value="ano" checked><span>Este ano</span></label>
+        <label class="chip"><input type="radio" name="naPeriodo" value="tudo"><span>Desde o começo</span></label>
+      </div>
+      <button class="linkbtn" id="naFechar" type="button">Fechar</button>
+    </div>
+  </div>
+  <div class="na-tela" id="naTela">
+    <p class="na-emoji" id="naEmoji" aria-hidden="true"></p>
+    <h2 id="naTitulo"></h2>
+    <div class="na-linhas" id="naLinhas"></div>
+  </div>
+  <div class="na-nav">
+    <button class="secondary" id="naAntes" type="button">‹ Voltar</button>
+    <button class="primary" id="naDepois" type="button">Avançar ›</button>
+  </div>
+</div>
+
+<div class="descongelar" id="descongelar" role="dialog" aria-modal="true" aria-labelledby="dcTitulo" hidden>
+  <div class="dc-caixa">
+    <div id="dcOferta">
+      <h2 id="dcTituloOferta">💞 Descongelar primeiro?</h2>
+      <p>Uns minutos só de vocês, antes de qualquer jogo: abraço, olhar, mãos e respiração. Sem pontos.</p>
+      <div class="row">
+        <button class="primary" id="dcComecar" type="button">Começar</button>
+        <button class="secondary" id="dcPular" type="button">Pular</button>
+      </div>
+    </div>
+    <div id="dcPasso" hidden>
+      <p class="dc-conta" id="dcConta"></p>
+      <h2 id="dcTitulo"></h2>
+      <p id="dcTexto"></p>
+      <div class="dc-respirar" id="dcRespirar" hidden aria-hidden="true"><span></span></div>
+      <p class="dc-timer" id="dcTimer"></p>
+      <button class="primary" id="dcProximo" type="button">Próximo</button>
+    </div>
+    <div id="dcFim" hidden>
+      <h2>Pronto. Agora sim 💞</h2>
+      <button class="primary" id="dcJogar" type="button">Bora</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=54"></script>
-<script src="conquistas.js?v=54"></script>
-<script src="app.js?v=54"></script>
+<script src="config.js?v=56"></script>
+<script src="conquistas.js?v=56"></script>
+<script src="app.js?v=56"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
