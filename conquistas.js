@@ -3,6 +3,8 @@
 // `dados` vem pronto do app (tudo da sala):
 //   partidas: [{ placar: [p0, p1], vencedor }] já na ordem dos jogadores atuais
 //   autorais, envelopes, capsulas, apostas, observacoes, momentos, cofre, seq: [dias seguidos de cada um]
+//   chamadas: o chamadas_resumo da sala (028), ou {} antes de carregar
+// Opcionais: selo (emoji no lugar do 🏆) e aviso (texto do aviso ao desbloquear).
 // As partidas antigas não têm os contadores da v5 (porNivel, eventos, pulosUsados…) e contam como zero.
 (function () {
   const soma = (lista, f) => lista.reduce((s, x) => s + (Number(f(x)) || 0), 0);
@@ -14,6 +16,9 @@
   const TIPOS_EVENTO = ["efeito", "duelo", "sintonia", "missao_dupla"];
 
   const jornada = (codigo, titulo, descricao, escopo, meta, contar) => ({ codigo, titulo, descricao, categoria: "jornada", escopo, meta, contar });
+  const ch = d => d.chamadas || {};
+  const chamada = (codigo, selo, titulo, descricao, meta, contar, frase) =>
+    ({ ...jornada(codigo, titulo, descricao, "casal", meta, contar), selo, aviso: `${selo} ${titulo} desbloqueada: ${frase}` });
   const ousadia = (codigo, titulo, descricao, meta, contar) => ({ codigo, titulo, descricao, categoria: "ousadia", escopo: "jogador", meta, contar });
 
   window.CONQUISTAS = [
@@ -44,6 +49,13 @@
     jornada("sem_pulo", "Sem desculpas", "Terminar uma partida sem usar nenhum pulo", "jogador", 1,
       (d, i) => d.partidas.filter(p => p.placar[i] && p.placar[i].pulosUsados === 0).length),
     jornada("duelista_10", "Duelista", "10 duelos vencidos", "jogador", 10, (d, i) => doJogador(d, i, q => q.duelos)),
+    // Chamadas · casal
+    chamada("call_10h", "📞", "Primeiras 10 horas", "10 horas somadas em chamada", 10, d => Math.floor((ch(d).total_minutos || 0) / 60), "10 horas juntos na tela"),
+    chamada("call_100h", "🛡️", "Resistência à Distância", "100 horas somadas em chamada", 100, d => Math.floor((ch(d).total_minutos || 0) / 60), "100 horas juntos na tela"),
+    chamada("call_500h", "🏆", "Meio milhar", "500 horas somadas em chamada", 500, d => Math.floor((ch(d).total_minutos || 0) / 60), "500 horas juntos na tela"),
+    chamada("call_maratona", "🌙", "Maratona da Madrugada", "Uma chamada de 3 h ou mais que atravessa a meia-noite ou começa antes das 3h", 1, d => (ch(d).maratona_madrugada ? 1 : 0), "3 horas ou mais virando a noite"),
+    chamada("call_semana", "📅", "Semana Perfeita", "7 dias seguidos com chamada", 7, d => ch(d).sequencia_dias || 0, "7 dias seguidos com chamada"),
+    chamada("call_mes", "💯", "Mês Perfeito", "30 dias seguidos com chamada", 30, d => ch(d).sequencia_dias || 0, "30 dias seguidos com chamada"),
     // Ousadia · jogador
     ousadia("prendas_10", "Paga tudo", "10 prendas cumpridas", 10, (d, i) => doJogador(d, i, q => q.prendas)),
     ousadia("sem_filtro", "Sem filtro", "30 verdades Picante ou Pesado cumpridas", 30, (d, i) => doJogador(d, i, q => nivel(q, "picante", "v") + nivel(q, "pesado", "v"))),

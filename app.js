@@ -791,6 +791,12 @@
       g.append(col);
     });
     box.append(el("p", "ch-rotulo", "Últimos 14 dias"), g);
+    const selos = CONQ().filter(c => c.codigo.startsWith("call_"));
+    if (selos.length) {
+      const s = el("div", "ch-selos");
+      selos.forEach(c => { const f = linhaConquista(c.codigo, null); const x = el("span", "ch-selo" + (f ? " ok" : ""), `${f ? c.selo : "🔒"} ${c.titulo}`); x.title = c.descricao; s.append(x); });
+      box.append(s);
+    }
     const frases = frasesEquivalencia(r.total_minutos, tot);
     if (frases.length) {
       const [ini, resto, n] = frases[fraseCh % frases.length];
@@ -799,6 +805,14 @@
       box.append(p);
     }
   }
+  // marcos: o selo grava uma vez (conquistas); o recorde só avisa, nos dois aparelhos
+  resumoChamadasFns.push((r, antes) => {
+    verificarConquistas(c => c.codigo.startsWith("call_"));   // só os marcos de chamada: os outros esperam uma ação
+    if (antes && antes.recorde && r.recorde && r.recorde.minutos > antes.recorde.minutos) {
+      mostrarAviso(novoAviso(`⏱️ Novo recorde: ${fmtDur(r.recorde.minutos)} numa chamada só`), false);
+      vibrar(80);
+    }
+  });
   function desenharViagem() {
     if (!estado || [$("chViagemH"), $("chViagemM")].includes(document.activeElement)) return;
     const v = estado.viagemMin;
@@ -1174,7 +1188,7 @@
     tracos = []; pilhaMural = []; muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); esconderConvite(); $("muralLegenda").value = ""; filtroMural = "todos";
     poses = []; carregarPoses(c);
     roteiros = []; carregarRoteiros(c);
-    chamadas = []; clearInterval(timerSinalPres); timerSinalPres = null; carregarChamadas(c);
+    chamadas = []; resumoCh = null; clearInterval(timerSinalPres); timerSinalPres = null; carregarChamadas(c);
     dadoItens = []; ultimoDado = null; carregarDado(c);
     if (fixa) { carregarV5(c); carregarBaralho(c); }
     config = mesclarConfig({}); temDono = false; donoIndice = null; souDono = false; configPronta = false;
@@ -4055,20 +4069,20 @@
     return {
       partidas: partidasDoCasal(), autorais: cartas.filter(c => c.sala).length,
       envelopes: dados.envelopes, capsulas: dados.capsulas, apostas: dados.apostas, observacoes: dados.observacoes, momentos: dados.momentos,
-      cofre, seq: [sequencia(0), sequencia(1)]
+      cofre, seq: [sequencia(0), sequencia(1)], chamadas: resumoCh || {}
     };
   }
   function progresso(c, d, j) { try { return Number(c.contar(d, j)) || 0; } catch (err) { return 0; } }
 
   // só o aparelho que fez a ação chama isto; conquista repetida (23505) é ignorada
   let verificando = false, verificarDeNovo = false;
-  async function verificarConquistas() {
+  async function verificarConquistas(so) {
     if (!estado || !estado.fixa || !codigo) return;
-    if (verificando) { verificarDeNovo = true; return; }
+    if (verificando) { if (!so) verificarDeNovo = true; return; }
     verificando = true;
     try {
       const d = dadosConquistas(), sala = codigo;
-      for (const c of CONQ()) {
+      for (const c of CONQ().filter(x => !so || so(x))) {
         for (const j of c.escopo === "casal" ? [null] : [0, 1]) {
           if (linhaConquista(c.codigo, j) || progresso(c, d, j) < c.meta) continue;
           const { data, error } = await sb.from("conquistas").insert({ sala, codigo: c.codigo, jogador: j }).select("*").single();
@@ -4088,7 +4102,8 @@
     const c = defConquista(row.codigo);
     if (!c || (c.categoria === "ousadia" && !permitido("conquistasOusadia"))) return;
     // várias de uma vez (fim de partida): um aviso só
-    filaConquistas.push(`🏆 ${c.titulo}` + (row.jogador === 0 || row.jogador === 1 ? ` (${nomeDe(row.jogador)})` : ""));
+    filaConquistas.push(c.aviso || `🏆 ${c.titulo}` + (row.jogador === 0 || row.jogador === 1 ? ` (${nomeDe(row.jogador)})` : ""));
+    if (c.aviso) { vibrar(80); setTimeout(desenharResumoChamadas, 0); }
     clearTimeout(timerConquistas);
     timerConquistas = setTimeout(() => { mostrarAviso(novoAviso(filaConquistas.join(" · ")), false); filaConquistas = []; }, 300);
   });
@@ -4097,7 +4112,7 @@
     const quem = c.escopo === "casal" ? [null] : [0, 1];
     const feitas = quem.map(j => linhaConquista(c.codigo, j));
     const box = el("div", "conq" + (feitas.every(Boolean) ? " ok" : feitas.some(Boolean) ? " meio" : ""));
-    box.append(el("b", "", (feitas.some(Boolean) ? "🏆 " : "🔒 ") + c.titulo), el("span", "desc", c.descricao));
+    box.append(el("b", "", (feitas.some(Boolean) ? (c.selo || "🏆") + " " : "🔒 ") + c.titulo), el("span", "desc", c.descricao));
     quem.forEach((j, k) => {
       const linha = el("div", "conq-linha");
       if (j !== null) linha.appendChild(el("span", "quem", nomeDe(j)));

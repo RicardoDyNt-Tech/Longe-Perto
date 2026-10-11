@@ -908,3 +908,6 @@ body[data-modo="presencial"]{
 .ch-equiv b{color:var(--ink)}
 .ch-viagem{margin:0 0 12px}
 .ch-viagem summary{cursor:pointer; font-weight:600; margin-bottom:6px}
+.ch-selos{display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 10px}
+.ch-selo{font-size:.8rem; padding:4px 10px; border-radius:999px; border:1.5px solid var(--line); color:var(--muted)}
+.ch-selo.ok{color:var(--ink); background:var(--surface); font-weight:600}
