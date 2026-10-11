@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=53">
+<link rel="stylesheet" href="style.css?v=55">
 </head>
 <body>
 <main>
@@ -126,9 +126,31 @@
           <p class="ola" id="ola"></p>
           <div class="avatares" id="avatares" aria-hidden="true"></div>
         </header>
+        <div class="casa-bloco cardapio-aviso" id="casaCardapio" hidden>
+          <p class="cumprir-titulo">🤫 Cardápio secreto</p>
+          <p class="extras-sub">Marque o que você quer fazer nos dias juntos.</p>
+          <button class="primary" type="button" data-abre="vCardapio">Abrir o cardápio</button>
+        </div>
         <div class="casa-bloco cumprir" id="casaCumprir" hidden>
-          <p class="cumprir-titulo">🎁 Hoje é dia de cumprir</p>
+          <p class="cumprir-titulo">🧾 A fatura chegou</p>
+          <p class="fatura-placar" id="faturaPlacar" hidden></p>
           <p class="cumprir-dias" id="cumprirDias"></p>
+          <div class="fatura-resgate" id="faturaResgate" hidden role="status">
+            <p class="fatura-resgate-quem" id="resgateQuem"></p>
+            <p class="cumprir-sorteado" id="resgateTexto"></p>
+            <p class="fatura-resgate-timer" id="resgateTimer" hidden></p>
+            <div class="row">
+              <button class="secondary" id="resgateIniciar" type="button" hidden></button>
+              <button class="done" id="resgateQuitar" type="button" hidden>Quitado ✓</button>
+              <button class="linkbtn" id="resgateFechar" type="button" hidden>Fechar</button>
+            </div>
+          </div>
+          <div class="chips fatura-filtros" role="radiogroup" aria-label="Filtrar a fatura">
+            <label class="chip"><input type="radio" name="filtroFatura" value="todos" checked><span>Tudo</span></label>
+            <label class="chip"><input type="radio" name="filtroFatura" value="vale"><span>🎟️ Vales</span></label>
+            <label class="chip"><input type="radio" name="filtroFatura" value="prenda"><span>🧾 Prendas</span></label>
+            <label class="chip"><input type="radio" name="filtroFatura" value="promessa"><span>💞 Promessas</span></label>
+          </div>
           <div class="cumprir-sorteio" id="cumprirSorteio" hidden>
             <p class="cumprir-sorteado" id="cumprirSorteado"></p>
             <div class="row">
@@ -274,6 +296,7 @@
         <button type="button" class="casa-card" data-abre="vAbra" id="cardAbra"><span class="ic">💌</span><b>Abra quando…</b><span class="sub" id="cardAbraSub"></span></button>
         <button type="button" class="casa-card" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="ic">📖</span><b>Diário</b><span class="sub" id="cardDiarioCasalSub"></span></button>
         <button type="button" class="casa-card" data-abre="vPlaylist" id="cardPlaylist"><span class="ic">🎵</span><b>Nossa playlist</b><span class="sub" id="cardPlaylistSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vCardapio" id="cardCardapio"><span class="ic">🤫</span><b>Cardápio secreto</b><span class="sub" id="cardCardapioSub"></span></button>
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic">💞</span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
@@ -473,6 +496,32 @@
         <p class="extras-sub">Abra cada música no Spotify e adicione a uma playlist de vocês.</p>
         <p class="extras-sub" id="nossasVazio">Nenhuma música ainda. Na trilha da rodada, toque em "🤍 Nossa".</p>
         <ul class="lista-extras" id="listaNossas"></ul>
+      </section>
+      <section class="casa-vista" id="vCardapio" hidden>
+        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <h2>🤫 Cardápio secreto</h2>
+        <p class="extras-sub" id="cardapioRodada"></p>
+        <p class="extras-sub" id="cardapioSemData" hidden>Marquem a data do reencontro (no Início) para abrir o cardápio dessa viagem.</p>
+        <ul class="cardapio-status" id="cardapioStatus"></ul>
+        <div id="cardapioEscolha" hidden>
+          <p class="config-dica">Seus votos ficam só neste aparelho até você enviar. Ninguém vê o que você marcou: só aparece o que os dois quiserem.</p>
+          <div id="cardapioLista"></div>
+          <details class="cardapio-add">
+            <summary>+ Adicionar desejo</summary>
+            <form id="formDesejo">
+              <input id="desejoTexto" maxlength="140" placeholder="Ex.: Café da manhã na padaria da esquina" aria-label="Seu desejo">
+              <select id="desejoCat" aria-label="Categoria"></select>
+              <button class="secondary" id="desejoSalvar" type="submit">Adicionar</button>
+              <p class="config-dica">O outro também vai votar nele, sem saber quem escreveu.</p>
+            </form>
+          </details>
+          <p class="extras-sub" id="cardapioConta"></p>
+          <button class="primary" id="cardapioEnviar" type="button">Enviar meu cardápio</button>
+        </div>
+        <button class="primary" id="cardapioRevelar" type="button" hidden>✨ Ver o que deu match</button>
+        <ul class="cardapio-match" id="cardapioMatch" hidden></ul>
+        <p class="extras-sub" id="cardapioSemMatch" hidden>Nenhum match desta vez. Que tal conversar sobre isso? 😄</p>
+        <p class="erro" id="erroCardapio" role="alert"></p>
       </section>
       <section class="casa-vista" id="vMural" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
@@ -896,6 +945,7 @@
         <button class="skip" id="msDesistir" type="button" hidden>Desistir</button>
         <button class="secondary reverso" id="reverso" type="button" hidden>🔄 Reverso</button>
         <button class="secondary liberar" id="liberar" type="button" hidden>Liberar da prenda</button>
+        <button class="secondary" id="deixarReencontro" type="button" hidden>🧾 Deixar para o reencontro</button>
         <button class="done evento-fim" id="eventoFim" type="button" hidden>Concluir evento</button>
         <div class="evento-acoes duelo-acoes" id="dueloAcoes" hidden>
           <button class="done" id="dueloComecar" type="button">Começar duelo</button>
@@ -1459,10 +1509,35 @@
   </dialog>
 </main>
 
+<div class="descongelar" id="descongelar" role="dialog" aria-modal="true" aria-labelledby="dcTitulo" hidden>
+  <div class="dc-caixa">
+    <div id="dcOferta">
+      <h2 id="dcTituloOferta">💞 Descongelar primeiro?</h2>
+      <p>Uns minutos só de vocês, antes de qualquer jogo: abraço, olhar, mãos e respiração. Sem pontos.</p>
+      <div class="row">
+        <button class="primary" id="dcComecar" type="button">Começar</button>
+        <button class="secondary" id="dcPular" type="button">Pular</button>
+      </div>
+    </div>
+    <div id="dcPasso" hidden>
+      <p class="dc-conta" id="dcConta"></p>
+      <h2 id="dcTitulo"></h2>
+      <p id="dcTexto"></p>
+      <div class="dc-respirar" id="dcRespirar" hidden aria-hidden="true"><span></span></div>
+      <p class="dc-timer" id="dcTimer"></p>
+      <button class="primary" id="dcProximo" type="button">Próximo</button>
+    </div>
+    <div id="dcFim" hidden>
+      <h2>Pronto. Agora sim 💞</h2>
+      <button class="primary" id="dcJogar" type="button">Bora</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=53"></script>
-<script src="conquistas.js?v=53"></script>
-<script src="app.js?v=53"></script>
+<script src="config.js?v=55"></script>
+<script src="conquistas.js?v=55"></script>
+<script src="app.js?v=55"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));

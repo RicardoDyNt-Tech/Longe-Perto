@@ -197,6 +197,52 @@
     });
   }
   const trocaModoFns = [];
+  // ---------- v9: descongelar (uma vez por reencontro, ao ligar o Juntos) ----------
+  const PASSOS_DC = [
+    { t: "Abraço de 2 minutos", x: "Em silêncio. Só o abraço.", s: 120 },
+    { t: "Olhar nos olhos", x: "1 minuto, sem falar.", s: 60 },
+    { t: "Mãos dadas", x: "Reconheçam as mãos um do outro, com calma.", s: 60 },
+    { t: "Uma coisa que eu só consigo dizer ao vivo", x: "Cada um diz uma. Sem pressa.", s: 0 },
+    { t: "Respirar juntos", x: "Inspirem quando o círculo crescer e soltem quando ele diminuir.", s: 60, respirar: true }
+  ];
+  let timerDc = null, dcTocou = null;
+  trocaModoFns.push((n, para) => {
+    if (para === "presencial" && n.juntosDesde && n.descongelado !== n.juntosDesde) n.descongelar = { passo: -1, inicio: null };
+    else if (para !== "presencial") n.descongelar = null;
+  });
+  function desenharDescongelar(e) {
+    const d = juntos(e) && e.descongelar;
+    $("descongelar").hidden = !d;
+    clearInterval(timerDc); timerDc = null;
+    if (!d) return;
+    $("dcOferta").hidden = d.passo !== -1;
+    $("dcFim").hidden = d.passo < PASSOS_DC.length;
+    const p = PASSOS_DC[d.passo];
+    $("dcPasso").hidden = !p;
+    if (!p) return;
+    $("dcConta").textContent = `${d.passo + 1} de ${PASSOS_DC.length}`;
+    $("dcTitulo").textContent = p.t;
+    $("dcTexto").textContent = p.x;
+    $("dcRespirar").hidden = !p.respirar;
+    $("dcProximo").textContent = d.passo === PASSOS_DC.length - 1 ? "Terminar" : "Próximo";
+    const tick = () => {
+      if (!p.s) { $("dcTimer").textContent = ""; return; }
+      const s = Math.max(0, Math.ceil((d.inicio + p.s * 1000 - Date.now()) / 1000));
+      $("dcTimer").textContent = s ? relogioMs(s * 1000) : "Tempo! ✓";
+      if (!s && dcTocou !== d.passo + ":" + d.inicio) { dcTocou = d.passo + ":" + d.inicio; tom(660, 0.3); vibrar(150); }
+    };
+    tick();
+    if (p.s) timerDc = setInterval(tick, 250);
+  }
+  function passoDescongelar(de) {
+    gravarFresco(n => {
+      if (!n.descongelar || n.descongelar.passo !== de) return;   // o outro já avançou
+      n.descongelar = { passo: de + 1, inicio: Date.now() };
+    });
+  }
+  function terminarDescongelar() {
+    gravarFresco(n => { n.descongelar = null; n.descongelado = n.juntosDesde || hojeISO(); });
+  }
   function aoTrocarModo(n, para) {
     if (para === "distancia") {
       n.umCelular = false; n.umCelularDe = null;
@@ -408,7 +454,8 @@
   // tudo o que está esperando os dois, com chave para o check da lista
   function promessas(e) {
     const l = [];
-    cofre.forEach(x => l.push({ chave: "cofre:" + x.id, texto: x.carta + (x.nota ? ` · ${x.nota}` : ""), ic: "💞", feito: !!x.feito, cofre: x }));
+    cofre.forEach(x => l.push({ chave: "cofre:" + x.id, texto: x.carta + (x.nota ? ` · ${x.nota}` : "") + (x.minutos ? ` (${x.minutos} min)` : ""), ic: TIPO_FATURA[x.tipo] || "💞",
+      feito: !!x.feito, cofre: x, tipo: TIPO_FATURA[x.tipo] ? x.tipo : "promessa", credor: x.credor === 0 || x.credor === 1 ? x.credor : null }));
     if (permitido("posicoes")) marcasPos.filter(m => m.marca === "testar").forEach(m => {
       const p = posicoes.find(x => x.id === m.posicao_id);
       if (p) l.push({ chave: "pos:" + p.id, texto: `Posição: ${p.nome}`, ic: "📖", feito: !!e.lista["pos:" + p.id] });
@@ -442,13 +489,36 @@
     const s = e.sorteioCofre && cofre.find(x => x.id === e.sorteioCofre.id && !x.feito);
     $("cumprirSorteio").hidden = !s;
     $("cumprirSorteado").textContent = s ? `🎁 ${s.carta}` + (s.nota ? ` · ${s.nota}` : "") : "";
+    // placar: quanto cada um pode cobrar
+    const deve = [0, 1].map(j => l.filter(x => x.credor === j && !x.feito).length);
+    $("faturaPlacar").hidden = !deve[0] && !deve[1];
+    $("faturaPlacar").textContent = `${nomeDe(0)} pode cobrar ${deve[0]} · ${nomeDe(1)} pode cobrar ${deve[1]}`;
+    desenharResgate(e);
+    const filtro = (document.querySelector('input[name="filtroFatura"]:checked') || {}).value || "todos";
     const ul = $("cumprirLista"); ul.textContent = "";
-    l.forEach(x => {
-      const li = el("li", x.feito ? "feito" : "");
-      const lab = el("label", "check"), cb = el("input"); cb.type = "checkbox"; cb.checked = x.feito;
-      cb.addEventListener("change", () => marcarPromessa(x, cb.checked));
-      lab.append(cb, document.createTextNode(` ${x.ic} ${x.texto}`));
-      li.appendChild(lab); ul.appendChild(li);
+    [0, 1, null].forEach(cred => {
+      const grupo = l.filter(x => (x.credor ?? null) === cred && (filtro === "todos" || (x.tipo || "promessa") === filtro));
+      if (!grupo.length) return;
+      if (cred !== null || deve[0] || deve[1]) ul.appendChild(el("li", "fatura-grupo", cred === null ? "Dos dois" : `${nomeDe(cred)} pode cobrar`));
+      grupo.forEach(x => {
+        const li = el("li", x.feito ? "feito" : "");
+        if (cred === null) {   // sem credor (promessas antigas, posições, desejos): qualquer um marca
+          const lab = el("label", "check"), cb = el("input"); cb.type = "checkbox"; cb.checked = x.feito;
+          cb.addEventListener("change", () => marcarPromessa(x, cb.checked));
+          lab.append(cb, document.createTextNode(` ${x.ic} ${x.texto}`));
+          li.appendChild(lab);
+        } else {
+          li.appendChild(el("span", "fatura-item", `${x.ic} ${x.texto}`));
+          if (x.feito) li.appendChild(el("span", "fatura-quitado", x.cofre.quitado_em ? `Quitado em ${dataBR(hojeISO(new Date(x.cofre.quitado_em)))} ✓` : "Quitado ✓"));
+          else if (souCredor(cred)) {
+            const ac = el("div", "acoes");
+            const rb = el("button", "secondary", "Resgatar"); rb.type = "button"; rb.addEventListener("click", () => resgatar(x.cofre));
+            const qb = el("button", "done", "Quitado ✓"); qb.type = "button"; qb.addEventListener("click", () => quitar(x));
+            ac.append(rb, qb); li.appendChild(ac);
+          } else li.appendChild(el("span", "fatura-quem", `Só ${nomeDe(cred)} cobra`));
+        }
+        ul.appendChild(li);
+      });
     });
     // fechados: desafios surpresa e "Abra quando… faltar uma semana" (sem revelar o texto)
     const env = dados.envelopes.filter(x => x.tipo === "desafio" && !x.aberto_em).length;
@@ -458,6 +528,257 @@
     if (abra) partes.push(`${abra} ${abra === 1 ? "carta" : "cartas"} "Abra quando… faltar uma semana" (em Abra quando…)`);
     $("cumprirFechados").textContent = partes.length ? "Ainda fechados: " + partes.join(" · ") : "";
   }
+  // ---------- v9: cardápio secreto (votos só pelos RPCs desejos_*; antes de enviar, só neste aparelho) ----------
+  const CAT_DESEJO = { sair: ["🚶 Sair", "leve"], casa: ["🏠 Em casa", "leve"], romantico: ["💞 Romântico", "romantico"], picante: ["🌶️ Picante", "picante"], pesado: ["🔥 Pesado", "pesado"] };
+  let desejos = [], cardapioEnviaram = [], cardapioMatch = null, cardapioPingVisto = null;
+  const rodadaCardapio = e => (e && typeof e.reencontro === "string" && e.reencontro.slice(0, 10)) || null;
+  const chaveVotos = () => `lp-desejos:${codigo}:${rodadaCardapio(estado)}:${eu}`;
+  const lerVotos = () => { const v = lerLocal(chaveVotos()); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; };
+  const desejoOk = i => i && CAT_DESEJO[i.categoria] && config.niveis[i.nivel];
+  async function carregarDesejos() {
+    const c = codigo;
+    const [pad, sala] = await Promise.all([
+      sb.from("desejos_itens").select("*").is("sala", null),
+      sb.from("desejos_itens").select("*").eq("sala", c)
+    ]);
+    if (c !== codigo) return;
+    if (pad.error || sala.error) return erro("erroCardapio", "Não consegui abrir o cardápio. Confira a internet.");
+    desejos = [...(pad.data || []), ...(sala.data || [])].filter(i => typeof i.texto === "string");
+    desenharCardapio();
+  }
+  async function statusCardapio(revelar = true) {
+    const c = codigo, r = rodadaCardapio(estado);
+    if (!c || !r) return;
+    const { data, error } = await sb.rpc("desejos_status", { p_sala: c, p_rodada: r });
+    if (c !== codigo || error || !data) return;
+    cardapioEnviaram = Array.isArray(data.enviaram) ? data.enviaram : [];
+    if (revelar && cardapioEnviaram.length >= 2 && vista === "vCardapio" && !cardapioMatch) revelarCardapio();
+    desenharCardapio();
+    desenharCardCardapio(estado);
+  }
+  function abrirCardapio() {
+    cardapioMatch = null;
+    erro("erroCardapio", "");
+    desenharCardapio();
+    carregarDesejos();
+    statusCardapio();
+  }
+  function desenharCardCardapio(e) {
+    if (!e) return;
+    const ativo = !!e.fixa && config.cardapio.ativo;
+    $("cardCardapio").hidden = !ativo;
+    const r = rodadaCardapio(e), dias = r ? diasAte(r) : null;
+    $("casaCardapio").hidden = !ativo || !r || dias < 0 || dias > 3 || juntos(e) || cardapioEnviaram.includes(eu);
+    const outro = cardapioEnviaram.filter(j => j !== eu);
+    $("cardCardapioSub").textContent = !r ? "Desejos para o reencontro"
+      : cardapioEnviaram.length >= 2 ? "✨ Os dois enviaram"
+      : outro.length ? `${nomeDe(outro[0])} já enviou 🤫` : cardapioEnviaram.includes(eu) ? "Você já enviou ✓" : "Marque o que você quer";
+  }
+  function desenharCardapio() {
+    if ($("vCardapio").hidden || !estado) return;
+    const r = rodadaCardapio(estado);
+    $("cardapioSemData").hidden = !!r;
+    $("cardapioRodada").textContent = r ? `Para o reencontro de ${dataBR(r)}` : "";
+    const enviei = cardapioEnviaram.includes(eu), ambos = cardapioEnviaram.length >= 2;
+    const st = $("cardapioStatus"); st.textContent = "";
+    if (r) [0, 1].forEach(j => {
+      if (!estado.jogadores[j]) return;
+      const foi = cardapioEnviaram.includes(j);
+      st.appendChild(el("li", foi ? "ok" : "", j === eu && !umCelularAqui(estado) ? (foi ? "Você já enviou o seu ✓" : "Você ainda não enviou")
+        : foi ? `${nomeDe(j)} já enviou o cardápio 🤫` : `${nomeDe(j)} ainda não enviou`));
+    });
+    $("cardapioEscolha").hidden = !r || enviei;
+    $("cardapioRevelar").hidden = !r || !ambos || !!cardapioMatch;
+    $("cardapioMatch").hidden = !cardapioMatch || !cardapioMatch.length;
+    $("cardapioSemMatch").hidden = !cardapioMatch || !!cardapioMatch.length;
+    if (!r || enviei) return;
+    const votos = lerVotos(), box = $("cardapioLista"); box.textContent = "";
+    Object.keys(CAT_DESEJO).forEach(cat => {
+      const itens = desejos.filter(i => i.categoria === cat && desejoOk(i));
+      if (!itens.length) return;
+      box.appendChild(el("h3", "casa-h3", CAT_DESEJO[cat][0]));
+      const ul = el("ul", "cardapio-lista");
+      itens.forEach(i => {
+        const li = el("li", votos[i.id] === true ? "quero" : votos[i.id] === false ? "passo" : "");
+        li.appendChild(el("span", "t", `${i.emoji || "✨"} ${i.texto}`));
+        const ac = el("div", "acoes");
+        [[true, "Quero 💚"], [false, "Passo"]].forEach(([v, rot]) => {
+          const b = el("button", "chip-btn", rot); b.type = "button";
+          b.setAttribute("aria-pressed", String(votos[i.id] === v));
+          b.addEventListener("click", () => votarDesejo(i.id, v));
+          ac.appendChild(b);
+        });
+        li.appendChild(ac); ul.appendChild(li);
+      });
+      box.appendChild(ul);
+    });
+    const sel = $("desejoCat"), atual = sel.value; sel.textContent = "";
+    Object.entries(CAT_DESEJO).filter(([, [, niv]]) => config.niveis[niv]).forEach(([k, [rot]]) => { const o = el("option", "", rot); o.value = k; sel.appendChild(o); });
+    if (atual && [...sel.options].some(o => o.value === atual)) sel.value = atual;
+    const n = desejos.filter(i => desejoOk(i) && votos[i.id] === true).length;
+    $("cardapioConta").textContent = `Você marcou ${n} ${n === 1 ? "desejo" : "desejos"}.`;
+  }
+  function votarDesejo(id, v) {
+    const votos = lerVotos();
+    if (votos[id] === v) delete votos[id]; else votos[id] = v;
+    salvarLocal(chaveVotos(), votos);
+    desenharCardapio();
+  }
+  async function criarDesejo(ev) {
+    ev.preventDefault();
+    const texto = $("desejoTexto").value.trim(), cat = $("desejoCat").value;
+    if (texto.length < 3) return erro("erroCardapio", "Escreva o desejo (pelo menos 3 letras).");
+    if (!CAT_DESEJO[cat]) return;
+    $("desejoSalvar").disabled = true;
+    const { data, error } = await sb.rpc("desejos_item_criar", { p_sala: codigo, p_categoria: cat, p_nivel: CAT_DESEJO[cat][1], p_texto: texto.slice(0, 140), p_emoji: "✨" });
+    $("desejoSalvar").disabled = false;
+    if (error) return erro("erroCardapio", /limite/.test(error.message || "") ? "A sala já tem 100 desejos próprios." : "Não consegui adicionar. Confira a internet.");
+    erro("erroCardapio", "");
+    $("desejoTexto").value = "";
+    if (data) { const v = lerVotos(); v[data] = true; salvarLocal(chaveVotos(), v); }   // quem escreveu já quer
+    carregarDesejos();
+  }
+  async function enviarCardapio() {
+    const r = rodadaCardapio(estado);
+    if (!r || !confirm("Enviar seu cardápio? Depois de enviar não dá para mudar.")) return;
+    const votos = lerVotos();
+    const lista = desejos.filter(desejoOk).map(i => ({ item: i.id, quer: votos[i.id] === true }));
+    $("cardapioEnviar").disabled = true;
+    const { error } = await sb.rpc("desejos_enviar", { p_sala: codigo, p_rodada: r, p_jogador: eu, p_votos: lista });
+    $("cardapioEnviar").disabled = false;
+    if (error && !/já enviado/.test(error.message || "")) return erro("erroCardapio", "Não consegui enviar. Confira a internet.");
+    erro("erroCardapio", "");
+    gravar(n => { n.cardapioPing = { rodada: r, por: eu, id: Date.now().toString(36) }; });   // o outro confere o status
+    await statusCardapio(false);
+    // quem completou o envio põe os matches no cofre (o outro só vê)
+    if (cardapioEnviaram.length >= 2) revelarCardapio(true);
+  }
+  async function revelarCardapio(guardar) {
+    const c = codigo, r = rodadaCardapio(estado);
+    const { data, error } = await sb.rpc("desejos_revelar", { p_sala: c, p_rodada: r });
+    if (c !== codigo) return;
+    if (error || !data) return erro("erroCardapio", "Não consegui revelar. Confira a internet.");
+    if (!data.pronto) return statusCardapio();
+    cardapioMatch = Array.isArray(data.itens) ? data.itens.filter(i => i && typeof i.texto === "string") : [];
+    const ul = $("cardapioMatch"); ul.textContent = "";
+    cardapioMatch.forEach((i, k) => {
+      const li = el("li", "virar", `${i.emoji || "✨"} ${i.texto}`);
+      li.style.animationDelay = (k * 0.15) + "s";
+      ul.appendChild(li);
+    });
+    desenharCardapio();
+    if (guardar === true) matchNoCofre(r, cardapioMatch);
+  }
+  // cada match vira promessa no cofre, sem credor (uma vez por rodada)
+  async function matchNoCofre(r, itens) {
+    if (!itens.length || (estado.cardapioNoCofre || []).includes(r)) return;
+    gravarFresco(n => { n.cardapioNoCofre = [...(n.cardapioNoCofre || []), r].slice(-20); });
+    for (const i of itens) {
+      const carta = `${i.emoji || "✨"} ${i.texto}`.slice(0, 280);
+      if (cofre.some(x => x.carta === carta && x.nota === "Cardápio secreto")) continue;
+      const { data, error } = await sb.from("cofre").insert({ sala: codigo, carta, nota: "Cardápio secreto", autor: "Cardápio", tipo: "promessa" }).select("*").single();
+      if (!error && data) juntarCofre(data);
+    }
+  }
+
+  // ---------- v9: a fatura (vales, prendas e promessas com credor) ----------
+  const TIPO_FATURA = { vale: "🎟️", prenda: "🧾", promessa: "💞" };
+  let valesModelos = [], timerResgate = null, avisouResgate = null;
+  // num celular só, quem segura o aparelho é os dois
+  const souCredor = cred => eu === cred || umCelularAqui(estado);
+  async function carregarVales(c) {
+    const { data, error } = await sb.from("vales_modelos").select("*");
+    if (c !== codigo || error || !Array.isArray(data)) return;
+    valesModelos = data.filter(v => v && typeof v.texto === "string" && LEVEL_NAMES[v.nivel]);
+  }
+  function avisarVale(x) {
+    const quem = x.credor === eu && !umCelularAqui(estado) ? "Você ganhou" : `${nomeDe(x.credor)} ganhou`;
+    // junto com as conquistas da mesma vitória, num aviso só
+    filaConquistas.push(`🎟️ ${quem}: ${x.carta}` + (x.minutos ? ` (${x.minutos} min)` : ""));
+    clearTimeout(timerConquistas);
+    timerConquistas = setTimeout(() => { mostrarAviso(novoAviso(filaConquistas.join(" · ")), false); filaConquistas = []; }, 300);
+  }
+  // quem venceu ganha um vale dos níveis ligados (grava o aparelho do vencedor)
+  const valesDados = new Set();
+  async function ganharVale(e) {
+    const w = e.vencedor;
+    if (!config.fatura.vales || !codigo || (w !== 0 && w !== 1) || !(eu === w || umCelularAqui(e))) return;
+    const chave = `${codigo}:${(e.historico || []).length}:${e.placar.map(p => p.pontos).join("-")}`;
+    if (valesDados.has(chave)) return;
+    valesDados.add(chave);
+    const pool = valesModelos.filter(v => config.niveis[v.nivel]);
+    if (!pool.length) return;
+    const v = pool[Math.floor(Math.random() * pool.length)];
+    const { data, error } = await sb.from("cofre")
+      .insert({ sala: codigo, carta: v.texto.slice(0, 280), nota: null, autor: nomeDe(w).slice(0, 20), tipo: "vale", credor: w, minutos: v.minutos || null })
+      .select("*").single();
+    if (!error && data) juntarCofre(data);
+  }
+  // prenda deixada para o reencontro: sai da mesa e vai para o cofre; quem cobra é o outro
+  async function deixarParaReencontro() {
+    const c = estado && estado.carta;
+    if (!c || c.tipo !== "prenda" || juntos()) return;
+    const devedor = estado.vez, credor = 1 - devedor;
+    $("deixarReencontro").disabled = true;
+    const { data, error } = await sb.from("cofre")
+      .insert({ sala: codigo, carta: String(c.texto || "").slice(0, 280), nota: null, autor: nomeDe(devedor).slice(0, 20), tipo: "prenda", credor })
+      .select("*").single();
+    $("deixarReencontro").disabled = false;
+    if (error || !data) return erro("erroJogo", /limite/.test((error && error.message) || "") ? "O cofre desta sala chegou a 300 itens." : "Não consegui guardar a prenda. Confira a internet.");
+    juntarCofre(data);
+    gravar(n => {
+      if (!n.carta || n.carta.chave !== c.chave) return;
+      const final = n.carta.motivo === "final", cc = n.carta;
+      n.aviso = novoAviso(`🧾 Prenda de ${n.jogadores[devedor]} guardada para o reencontro (${n.jogadores[credor]} cobra)`);
+      n.carta = null;
+      if (!final) passarVez(n, cc);
+    });
+  }
+  function resgatar(x) {
+    if (!x) return;
+    gravarFresco(n => { n.resgate = { id: x.id, por: eu, ate: null }; });
+  }
+  function quitar(x) {
+    marcarPromessa(x, true);
+  }
+  function desenharResgate(e) {
+    const r = e.resgate, x = r && cofre.find(c => c.id === r.id);
+    $("faturaResgate").hidden = !x || !!x.feito;
+    clearInterval(timerResgate); timerResgate = null;
+    if (!x || x.feito) return;
+    const cred = x.credor === 0 || x.credor === 1 ? x.credor : null;
+    const credor = cred === null || souCredor(cred);
+    $("resgateQuem").textContent = `${nomeDe(r.por)} resgatou:`;
+    $("resgateTexto").textContent = `${TIPO_FATURA[x.tipo] || "💞"} ${x.carta}`;
+    $("resgateIniciar").hidden = !x.minutos || !!r.ate;
+    $("resgateIniciar").textContent = `⏱️ Começar (${x.minutos} min)`;
+    $("resgateQuitar").hidden = !credor;
+    $("resgateFechar").hidden = !credor;
+    $("resgateTimer").hidden = !r.ate;
+    if (r.ate) {
+      const tick = () => {
+        const s = Math.max(0, Math.ceil((r.ate - Date.now()) / 1000));
+        $("resgateTimer").textContent = s ? relogioMs(s * 1000) : "Tempo! ⏰";
+        if (!s) {
+          clearInterval(timerResgate); timerResgate = null;
+          if (avisouResgate !== r.id + r.ate) { avisouResgate = r.id + r.ate; tom(880, 0.4); vibrar([200, 100, 200]); }
+        }
+      };
+      tick();
+      timerResgate = setInterval(tick, 1000);
+    }
+  }
+  function iniciarResgate() {
+    const r = estado && estado.resgate, x = r && cofre.find(c => c.id === r.id);
+    if (!x || !x.minutos) return;
+    gravarFresco(n => { if (n.resgate && n.resgate.id === x.id) n.resgate.ate = Date.now() + x.minutos * 60000; });
+  }
+  function quitarResgate() {
+    const r = estado && estado.resgate, x = r && cofre.find(c => c.id === r.id);
+    if (!x) return;
+    marcarPromessa({ chave: "cofre:" + x.id, texto: x.carta, cofre: x }, true);
+  }
+
   async function marcarPromessa(x, feito, semMomento) {
     erro("erroCumprir", "");
     if (x.cofre) {
@@ -469,6 +790,7 @@
       if (!x.cofre) { if (feito) n.lista[x.chave] = hojeISO(); else delete n.lista[x.chave]; }
       if (feito) n.cumpridas = [...n.cumpridas, { texto: x.texto.slice(0, 200), dia: hojeISO() }].slice(-50);
       if (n.sorteioCofre && x.cofre && n.sorteioCofre.id === x.cofre.id) n.sorteioCofre = null;
+      if (feito && n.resgate && x.cofre && n.resgate.id === x.cofre.id) n.resgate = null;
     });
   }
   // "Cumprimos ✓": vai para o álbum de momentos com a data
@@ -841,6 +1163,9 @@
     mostrarVista(fixa ? "casa" : "jogo");
     carregarCartas(c);
     carregarCofre(c);
+    carregarVales(c);
+    cardapioEnviaram = []; cardapioMatch = null; cardapioPingVisto = null;
+    setTimeout(() => { if (c === codigo) statusCardapio(); }, 800);
     carregarMusicas(c);
     Object.keys(TABELAS_V5).forEach(t => { dados[t] = []; });
     marcas = new Map(); vistas = new Map(); partidasSala = [];
@@ -991,7 +1316,7 @@
 
   async function carregarCofre(c) {
     const { data, error } = await sb.from("cofre")
-      .select("id, sala, carta, nota, autor, feito, criada_em")
+      .select("*")
       .eq("sala", c)
       .order("criada_em", { ascending: true });
     if (c !== codigo) return;
@@ -1003,6 +1328,7 @@
     setTimeout(() => estado && desenharCumprir(estado), 0);
     if (!x || !x.id || x.sala !== codigo) return;
     const i = cofre.findIndex(y => y.id === x.id);
+    if (i < 0 && x.tipo === "vale" && x.credor !== null && x.credor !== undefined && Date.now() - new Date(x.criada_em).getTime() < 120000) avisarVale(x);
     if (i >= 0) cofre[i] = Object.assign(cofre[i], x); else cofre.push(x);
     cofre.sort((a, b) => (a.criada_em > b.criada_em ? 1 : -1));
     desenharCofre();
@@ -1078,7 +1404,7 @@
     $("salvarCofre").disabled = true;
     const { data, error } = await sb.from("cofre")
       .insert({ sala: codigo, carta, nota, autor: (estado.jogadores[eu] || "").trim().slice(0, 20) })
-      .select("id, sala, carta, nota, autor, feito, criada_em").single();
+      .select("*").single();
     $("salvarCofre").disabled = false;
     if (error) {
       return erro("erroCofre", /limite/.test(error.message || "")
@@ -1090,9 +1416,11 @@
   }
 
   async function marcarCofre(x, feito) {
-    const { error } = await sb.from("cofre").update({ feito }).eq("id", x.id);
+    const mud = { feito };
+    if ("quitado_em" in x) mud.quitado_em = feito ? new Date().toISOString() : null;   // 029: data da quitação
+    const { error } = await sb.from("cofre").update(mud).eq("id", x.id);
     if (error) { erro("erroJogo", "Não consegui marcar. Confira a internet e tente de novo."); return desenharCofre(); }
-    juntarCofre({ ...x, feito });
+    juntarCofre({ ...x, ...mud });
     if (feito) depoisDeAcao();
   }
 
@@ -1334,7 +1662,7 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vCardapio"];
   const ABAS = { casa: "abaCasa", jogo: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
 
   function mostrarVista(nome) {
@@ -1366,6 +1694,7 @@
     if (nome === "vHistorico") { diasHist = 30; desenharHistorico(); }
     if (vista !== "vMural" && muralJuntos) sairJuntos();
     if (nome === "vMural") entrarMural();
+    if (nome === "vCardapio") abrirCardapio();
     tickContador();
     window.scrollTo(0, 0);
   }
@@ -2677,7 +3006,7 @@
     $("posGuardar").disabled = true;
     const { data, error } = await sb.from("cofre")
       .insert({ sala: codigo, carta: estado.carta.texto.slice(0, 280), nota: ("Cardápio: " + c.itens.map(x => x.nome).join(" · ")).slice(0, 500), autor: (estado.jogadores[eu] || "").trim().slice(0, 20) })
-      .select("id, sala, carta, nota, autor, feito, criada_em").single();
+      .select("*").single();
     $("posGuardar").disabled = false;
     if (error) return erro("erroJogo", /limite/.test(error.message || "") ? "O cofre desta sala chegou a 300 itens." : "Não consegui guardar. Confira a internet e tente de novo.");
     juntarCofre(data);
@@ -4639,7 +4968,9 @@
     envelopes: { ativo: true, desafioNivelMax: "leve" },
     cartasDeVoces: { ativo: true, nivelMax: "leve" },
     conquistasOusadia: { ativo: false },
-    presencial: { ativo: true }
+    presencial: { ativo: true },
+    fatura: { vales: true },
+    cardapio: { ativo: true }
   };
   // merge profundo: o padrão preenche o que faltar (e o que vier com tipo errado)
   function mesclar(pad, x) {
@@ -4998,6 +5329,11 @@
     sm.appendChild(cfgModo("presencial", "Modo Juntos (presencial)"));
     d.appendChild(sm);
 
+    const sr = cfgSecao("Reencontro");
+    sr.appendChild(cfgInterruptor("Vale para quem vence a partida", config.fatura.vales, v => mudarConfig(c => { c.fatura.vales = v; }), "fatura.vales"));
+    sr.appendChild(cfgModo("cardapio", "Cardápio secreto de desejos"));
+    d.appendChild(sr);
+
     const sg = cfgSecao("Guias");
     sg.appendChild(cfgModo("posicoes", "Guia de posições", box => {
       box.appendChild(cfgNivelModo("posicoes"));
@@ -5149,6 +5485,7 @@
     mostrarVista("jogo");
     missaoAberta = false;
     cartas = []; cartasOk = false; cofre = []; musicas = []; tocandoUrl = null;
+    clearInterval(timerDc); timerDc = null; clearInterval(timerResgate); timerResgate = null; $("descongelar").hidden = true;
     pendentes.forEach(p => clearTimeout(p.t)); pendentes.clear();
     desenharExtras();
     clearTimeout(timerCarta);
@@ -5219,6 +5556,15 @@
     if (!e.noite || typeof e.noite !== "object" || !Array.isArray(e.noite.vitorias)) e.noite = null;
     if (e.umCelularDe !== 0 && e.umCelularDe !== 1) e.umCelularDe = null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(e.juntosDesde || "")) e.juntosDesde = null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(e.descongelado || "")) e.descongelado = null;
+    const dc = e.descongelar;
+    if (!dc || typeof dc !== "object" || !Number.isInteger(dc.passo) || dc.passo < -1 || dc.passo > PASSOS_DC.length) e.descongelar = null;
+    else if (typeof dc.inicio !== "number") dc.inicio = Date.now();
+    const rg = e.resgate;
+    if (!rg || typeof rg !== "object" || typeof rg.id !== "string" || (rg.por !== 0 && rg.por !== 1)) e.resgate = null;
+    else if (typeof rg.ate !== "number") rg.ate = null;
+    if (!Array.isArray(e.cardapioNoCofre)) e.cardapioNoCofre = [];
+    if (!e.cardapioPing || typeof e.cardapioPing !== "object") e.cardapioPing = null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(e.juntosAte || "")) e.juntosAte = null;
     if (e.perguntarAte !== 0 && e.perguntarAte !== 1) e.perguntarAte = null;
     if (!e.lista || typeof e.lista !== "object" || Array.isArray(e.lista)) e.lista = {};
@@ -5416,6 +5762,7 @@
     mostrarAviso(e.aviso, inicial);
     avisarMinhaVez(e, inicial || local);
     if (!inicial && e.vencedor !== null && ultimoVencedor === null) {
+      setTimeout(() => ganharVale(estado), 0);
       setTimeout(() => carregarHistorico(codigo), 1500);
       somVitoria();
       vibrar([300, 100, 300, 100, 500]);
@@ -5458,6 +5805,10 @@
     if (inicial && e.resumoJuntos) resumosVistos.add(e.resumoJuntos.id);
     desenharModo(e);
     desenharModosHoje(e);
+    desenharDescongelar(estado);
+    desenharCardCardapio(estado);
+    const ping = estado.cardapioPing;
+    if (ping && ping.id !== cardapioPingVisto) { cardapioPingVisto = ping.id; if (!inicial) statusCardapio(); }
     desenharRoteiro(e);
     talvezCofreRoteiro(e, inicial);
     desenharMorteSubita(e, inicial);
@@ -5588,6 +5939,7 @@
     }
     // Liberar da prenda: só o adversário de quem está pagando
     $("liberar").hidden = !completa || minhaVez || !c || c.tipo !== "prenda";
+    $("deixarReencontro").hidden = !completa || !c || c.tipo !== "prenda" || juntos(estado);
 
     const ag = $("aguardando");
     ag.hidden = (avaliando ? !minhaVez : minhaVez) || (evento && OS_DOIS_JOGAM.includes(c.tipo));
@@ -7197,6 +7549,18 @@
     $("done").addEventListener("click", cumprir);
     $("skip").addEventListener("click", pular);
     $("liberar").addEventListener("click", liberar);
+    $("deixarReencontro").addEventListener("click", deixarParaReencontro);
+    $("dcComecar").addEventListener("click", () => passoDescongelar(-1));
+    $("dcPular").addEventListener("click", terminarDescongelar);
+    $("dcJogar").addEventListener("click", terminarDescongelar);
+    $("dcProximo").addEventListener("click", () => estado && estado.descongelar && passoDescongelar(estado.descongelar.passo));
+    $("resgateIniciar").addEventListener("click", iniciarResgate);
+    $("resgateQuitar").addEventListener("click", quitarResgate);
+    $("resgateFechar").addEventListener("click", () => gravarFresco(n => { n.resgate = null; }));
+    document.querySelectorAll('input[name="filtroFatura"]').forEach(r => r.addEventListener("change", () => estado && desenharCumprir(estado)));
+    $("formDesejo").addEventListener("submit", criarDesejo);
+    $("cardapioEnviar").addEventListener("click", enviarCardapio);
+    $("cardapioRevelar").addEventListener("click", () => revelarCardapio(false));
     $("avaliar").addEventListener("click", ev => { const k = Number(ev.target.dataset && ev.target.dataset.n); if (k) avaliar(k); });
     $("notaAdv").addEventListener("change", mudarNota);
     $("escolhaCegas").addEventListener("change", mudarCegas);

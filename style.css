@@ -870,3 +870,43 @@ body[data-modo="presencial"]{
   body.cam-esquerda .contador-mini{margin-left:40vw}
 }
 .contador-juntos{flex:1 1 100%}
+
+/* v9: descongelar */
+.descongelar{position:fixed; inset:0; z-index:80; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:24px; text-align:center}
+.descongelar[hidden]{display:none}
+.dc-caixa{max-width:420px; width:100%}
+.dc-caixa h2{margin:6px 0 10px}
+.dc-caixa .row{justify-content:center}
+.dc-conta{color:var(--muted); margin:0}
+.dc-timer{font-size:2.4rem; font-weight:700; font-variant-numeric:tabular-nums; margin:12px 0 18px}
+.dc-respirar{height:180px; display:flex; align-items:center; justify-content:center}
+.dc-respirar span{display:block; width:70px; height:70px; border-radius:50%; background:var(--desafio); opacity:.75; animation:respirarDc 8s ease-in-out infinite}
+@keyframes respirarDc{0%,100%{transform:scale(1)} 50%{transform:scale(2.3)}}
+/* v9: fatura */
+.fatura-placar{font-weight:700; margin:4px 0}
+.fatura-filtros{margin:6px 0}
+.cumprir-lista .fatura-grupo{font-weight:700; color:var(--muted); font-size:.85rem; margin-top:8px; list-style:none}
+.cumprir-lista .fatura-item{display:block}
+.cumprir-lista .acoes{display:flex; gap:8px; margin-top:4px}
+.fatura-quitado,.fatura-quem{display:block; font-size:.85rem; color:var(--muted)}
+.fatura-resgate{border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; margin:8px 0; background:var(--surface)}
+.fatura-resgate-quem{margin:0; color:var(--muted); font-size:.85rem}
+.fatura-resgate-timer{font-size:1.8rem; font-weight:700; font-variant-numeric:tabular-nums; margin:6px 0}
+/* v9: cardápio secreto */
+.cardapio-status{list-style:none; padding:0; margin:6px 0 10px}
+.cardapio-status li{color:var(--muted)}
+.cardapio-status li.ok{color:var(--ink); font-weight:600}
+.cardapio-lista{list-style:none; padding:0; margin:0 0 10px; display:grid; gap:6px}
+.cardapio-lista li{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface)}
+.cardapio-lista li.quero{border-color:#2e9d5b}
+.cardapio-lista li.passo{opacity:.6}
+.cardapio-lista .acoes{display:flex; gap:6px; flex-shrink:0}
+.cardapio-lista button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.cardapio-add{margin:8px 0}
+.cardapio-add summary{cursor:pointer; font-weight:600}
+.cardapio-add form{display:grid; gap:6px; margin-top:6px}
+.cardapio-match{list-style:none; padding:0; display:grid; gap:8px; perspective:600px}
+.cardapio-match li{padding:12px; border-radius:14px; background:var(--surface); border:1.5px solid var(--line); font-weight:600}
+.cardapio-match li.virar{animation:virarCarta .6s ease-out both}
+@keyframes virarCarta{from{transform:rotateY(90deg); opacity:0} to{transform:rotateY(0); opacity:1}}
+@media (prefers-reduced-motion: reduce){.dc-respirar span{animation-duration:16s} .cardapio-match li.virar{animation:none}}
