@@ -1,0 +1,12 @@
+# nunca no repositório: assinatura e chaves (vêm dos GitHub Secrets só durante o build)
+*.jks
+*.keystore
+keystore.txt
+google-services.json
+*service-account*.json
+# dependências e builds
+node_modules/
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties

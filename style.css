@@ -745,3 +745,299 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 #histFiltro{margin-bottom:4px}
 .nav-in button{position:relative}
 .nav-in button.alerta .ic::after{content:""; position:absolute; top:4px; margin-left:2px; width:9px; height:9px; border-radius:50%; background:var(--desafio); border:2px solid var(--surface)}
+/* v8: cartas em etapas */
+.seq-etapas{list-style:none; padding:0; margin:12px 0 0; display:grid; gap:8px; text-align:left}
+.seq-etapa{display:flex; flex-direction:column; gap:2px; padding:10px 12px; border-radius:12px; border:1.5px solid var(--line); background:var(--bg)}
+.seq-etapa.atual{border-color:var(--lamp); box-shadow:0 0 0 3px color-mix(in srgb, var(--lamp) 25%, transparent)}
+.seq-etapa.feita{opacity:.6}
+.seq-etapa.oculta{border-style:dashed; color:var(--muted)}
+.seq-quem{font-size:.78rem; font-weight:800; color:var(--muted)}
+.seq-etapa.atual .seq-quem{color:var(--ink)}
+.seq-texto{font-size:1rem; font-weight:600; overflow-wrap:anywhere}
+.seq-acoes{display:grid; gap:8px}
+/* v8: escolha às cegas */
+.cegas{margin:14px 0 0; text-align:center}
+.cegas-titulo{margin:0 0 10px; font-weight:800}
+.cegas-opcoes{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.cega{display:flex; flex-direction:column; align-items:center; gap:6px; padding:18px 10px; min-height:170px; border-radius:18px; color:#fff; font-weight:700;
+  background:repeating-linear-gradient(45deg, var(--verdade) 0 12px, color-mix(in srgb, var(--verdade) 80%, #000) 12px 24px);
+  border:3px solid var(--surface); box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.cega:disabled{cursor:default; opacity:.9}
+.cega:not(:disabled):hover{transform:translateY(-2px)}
+.cega-letra{font-size:1.6rem; font-weight:800}
+.cega-tema{font-size:1rem}
+.cega-formato, .cega-pontos{font-size:.85rem; background:rgba(0,0,0,.25); border-radius:99px; padding:2px 10px}
+.card.cega-virada{animation:virarCega .6s ease}
+@keyframes virarCega{0%{transform:rotateY(90deg)} 100%{transform:none}}
+@media (prefers-reduced-motion:reduce){.card.cega-virada{animation:none}}
+.cega-nivel{font-size:.8rem; opacity:.9}
+/* v8: roteiro */
+.roteiro-entrada{margin:12px 0 0}
+.roteiro-entrada .secondary{width:100%}
+.faixa-roteiro{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin:12px 0 0; padding:10px 12px; border-radius:14px;
+  background:color-mix(in srgb, var(--verdade) 12%, var(--surface)); border:1.5px solid var(--verdade)}
+.faixa-roteiro.concluido{border-color:var(--lamp); background:color-mix(in srgb, var(--lamp) 16%, var(--surface))}
+.fr-texto{flex:1 1 100%; margin:0; font-weight:800; font-size:.9rem; overflow-wrap:anywhere}
+.fr-acoes{display:flex; flex-wrap:wrap; gap:8px}
+.fr-acoes .secondary{width:auto; padding:6px 12px}
+.roteiros-lista{list-style:none; padding:0; margin:0; display:grid; gap:10px}
+.roteiro-op{width:100%; display:flex; flex-direction:column; align-items:flex-start; gap:4px; text-align:left; background:var(--surface); color:var(--ink);
+  border:1.5px solid var(--line); border-radius:16px; padding:12px 14px}
+.ro-nome{font-weight:800; font-size:1.05rem}
+.ro-desc{font-size:.88rem}
+.ro-etapas{font-size:.8rem; color:var(--muted)}
+/* v8: morte súbita */
+.faixa-ms{margin:12px 0 0; padding:12px 14px; border-radius:14px; text-align:center; background:color-mix(in srgb, var(--desafio) 16%, var(--surface)); border:2px solid var(--desafio)}
+.ms-titulo{margin:0; font-weight:800; font-size:1.1rem}
+.ms-sub{margin:4px 0 0; font-size:.85rem; overflow-wrap:anywhere}
+/* modo presencial */
+.modo-linha{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:8px 0 0}
+.modo-btn{background:var(--surface); color:var(--ink); border:1.5px solid var(--line); border-radius:99px; padding:6px 14px; font-weight:800; font-size:.9rem}
+.modo-btn[aria-pressed="true"]{background:var(--desafio); color:var(--on-color); border-color:var(--desafio)}
+.modo-btn:disabled{opacity:.6}
+.juntos-cab{margin:0; font-weight:800; color:var(--desafio)}
+body[data-modo="presencial"]{
+  --bg:#FFF2E8; --surface:#FFFFFF; --ink:#3A1E1A; --muted:#8A5D52; --line:#F1D2C2;
+  --verdade:#C2410C; --desafio:#E11D48; --lamp:#F59E0B;
+}
+@media (prefers-color-scheme:dark){
+  body[data-modo="presencial"]{ --bg:#24130F; --surface:#331B15; --ink:#FFEDE5; --muted:#D3A596; --line:#55302A; --verdade:#FB923C; --desafio:#FB7185; --lamp:#FBBF24; }
+}
+/* num celular só */
+.um-celular{margin:0; font-size:.9rem}
+.passe-celular{position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:24px; background:var(--bg)}
+.passe-in{max-width:360px; text-align:center}
+.passe-ic{font-size:3rem; margin:0}
+.passe-titulo{font-size:1.5rem; font-weight:800; margin:8px 0; overflow-wrap:anywhere}
+.passe-sub{color:var(--muted); margin:0 0 18px}
+.passe-in .primary{width:100%}
+/* modos de hoje (presencial) */
+.modos-hoje{margin:14px 0 0; padding:12px 14px; border-radius:18px; background:var(--surface); border:1.5px solid var(--line)}
+.mh-titulo{margin:0 0 8px; font-weight:800}
+.mh-abas{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.mh-abas button{background:var(--bg); color:var(--ink); border:1.5px solid var(--line); border-radius:12px; padding:8px; font-weight:700; font-size:.9rem}
+.mh-abas button[aria-selected="true"]{border-color:var(--desafio); background:color-mix(in srgb, var(--desafio) 12%, var(--surface))}
+.mh-painel{margin-top:12px; display:grid; gap:8px}
+.mh-texto{margin:0; overflow-wrap:anywhere}
+.mh-acoes{display:flex; flex-wrap:wrap; gap:8px}
+.mh-acoes > *{flex:1 1 auto}
+.mh-relogio{margin:0; text-align:center; font-size:2rem; font-weight:800; font-variant-numeric:tabular-nums}
+.mh-placar{margin:0; font-weight:800}
+.mh-opcoes{display:flex; gap:10px; flex-wrap:wrap}
+.mh-opcoes label{flex:1 1 40%; font-weight:600; font-size:.9rem}
+.mh-opcoes select{width:100%; margin-top:4px; background:var(--bg)}
+.mh-nota .estrelas{display:flex; flex-wrap:wrap; gap:6px}
+.mh-nota .estrelas button{flex:1 1 auto; background:var(--bg); color:var(--lamp); border:1.5px solid var(--line); border-radius:10px; padding:6px; font-size:.9rem}
+.dados{display:grid; grid-template-columns:repeat(3, 1fr); gap:8px}
+.dado-face{display:grid; place-items:center; min-height:76px; padding:8px; border-radius:14px; text-align:center; font-weight:800; font-size:.9rem;
+  background:var(--bg); border:2px solid var(--desafio); overflow-wrap:anywhere}
+.dados.rolando .dado-face{animation:rolaDado .7s cubic-bezier(.2,.8,.3,1)}
+.dados.rolando .dado-face:nth-child(2){animation-delay:.08s}
+.dados.rolando .dado-face:nth-child(3){animation-delay:.16s}
+@keyframes rolaDado{0%{transform:rotate(-200deg) scale(.6); opacity:.3} 100%{transform:none; opacity:1}}
+@media (prefers-reduced-motion:reduce){.dados.rolando .dado-face{animation:none}}
+.vendada-aviso{margin:6px 0; font-weight:800; color:var(--desafio)}
+/* reencontro: hoje é dia de cumprir */
+.cumprir{border:2px solid var(--desafio)}
+.cumprir-titulo{margin:0 0 4px; font-weight:800; font-size:1.1rem}
+.cumprir-dias{margin:0 0 8px; font-weight:700; color:var(--desafio)}
+.cumprir-sorteio{margin:0 0 10px; padding:10px 12px; border-radius:12px; background:var(--bg)}
+.cumprir-sorteado{margin:0 0 8px; font-weight:800; overflow-wrap:anywhere}
+.cumprir-lista{list-style:none; padding:0; margin:10px 0 0; display:grid; gap:6px}
+.cumprir-lista li{overflow-wrap:anywhere}
+.cumprir-lista li.feito{opacity:.6; text-decoration:line-through}
+#cumprirSortear{width:100%}
+/* contador do reencontro ao vivo */
+.contador{flex:1 1 100%; display:flex; justify-content:center; gap:8px; margin:2px 0}
+.ct-caixa{flex:0 1 72px; display:flex; flex-direction:column; align-items:center; padding:8px 4px; border-radius:12px; background:var(--bg); border:1.5px solid var(--line)}
+.ct-caixa b{font-size:1.7rem; line-height:1.1; font-weight:800; font-variant-numeric:tabular-nums}
+.ct-caixa span{font-size:.72rem; color:var(--muted)}
+.contador.urgente .ct-caixa{border-color:var(--desafio); color:var(--desafio)}
+.contador.urgente{animation:pulsoContador 1.2s ease-in-out infinite}
+@keyframes pulsoContador{50%{transform:scale(1.04)}}
+.contador-quando{flex:1 1 100%; margin:0; text-align:center; font-weight:700; font-size:.9rem}
+.contador-dica{flex:1 1 100%; margin:0; text-align:center; font-size:.8rem; color:var(--muted)}
+.reencontro-form{flex-wrap:wrap}
+.reencontro-rotulo{flex:1 1 100%; font-size:.8rem; font-weight:700; color:var(--muted)}
+.reencontro-form input[type=time]{flex:0 1 120px}
+.contador-mini{margin:6px 0 0; font-weight:800; font-size:.9rem; font-variant-numeric:tabular-nums}
+.contador-festa{position:fixed; inset:0; pointer-events:none; z-index:80; overflow:hidden}
+.contador-festa span{position:absolute; top:-40px; font-size:1.8rem; animation:caiCoracao 2.4s ease-in forwards}
+@keyframes caiCoracao{to{transform:translateY(110vh) rotate(25deg); opacity:.2}}
+@media (prefers-reduced-motion:reduce){.contador.urgente{animation:none} .contador-festa{display:none}}
+@media (max-width:700px){
+  body.cam-direita .contador-mini{margin-right:40vw}
+  body.cam-esquerda .contador-mini{margin-left:40vw}
+}
+.contador-juntos{flex:1 1 100%}
+/* chamadas */
+.chamada-linha{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.chamada-btn{background:var(--surface); color:var(--ink); border:1.5px solid var(--line); border-radius:99px; padding:6px 12px; font-weight:800; font-size:.85rem}
+.chamada-btn[aria-pressed="true"]{background:#1FAF55; color:#fff; border-color:#1FAF55}
+.chamada-relogio{font-weight:800; font-size:.9rem; font-variant-numeric:tabular-nums}
+.chamadas-lista .acoes{display:flex; gap:10px}
+.ch-rotulo{margin:6px 0; font-weight:600}
+.ch-atalhos{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px}
+.ch-duracao{display:flex; gap:10px}
+.ch-duracao label{flex:1; font-weight:600; font-size:.9rem}
+.ch-duracao input{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:8px 10px; margin-top:4px}
+#chamadaRegistrar{width:100%; margin:12px 0 0}
+
+/* "Como foi a call?" */
+.call-card { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; width: min(92vw, 380px); background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); border-radius: 16px; box-shadow: 0 8px 28px rgba(0,0,0,.25); padding: 12px 14px; text-align: center; animation: subirCall .25s ease-out; }
+.call-card[hidden] { display: none; }
+.call-card-ops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.call-card-ops button { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .72rem; background: transparent; border: 1.5px solid var(--line); border-radius: 12px; padding: 6px 2px; color: inherit; cursor: pointer; }
+.call-card-ops button span { font-size: 1.5rem; line-height: 1; }
+@keyframes subirCall { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .call-card { animation: none; } }
+
+/* estatísticas de chamadas */
+.ch-total{display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; padding:14px 10px; margin:6px 0 10px; background:var(--surface); border:1.5px solid var(--line); border-radius:16px}
+.ch-total b{font-size:1.6rem; line-height:1.15}
+.ch-total .ch-sub{color:var(--muted); font-size:.9rem}
+.ch-total .ch-num{font-weight:700; margin-top:4px}
+.ch-stats{list-style:none; margin:0 0 10px; padding:0; display:grid; gap:6px}
+.ch-stats li{display:flex; flex-direction:column; padding:8px 12px; background:var(--surface); border:1.5px solid var(--line); border-radius:12px}
+.ch-stats .rot{color:var(--muted); font-size:.8rem}
+.ch-barras{display:grid; grid-template-columns:repeat(14, 1fr); gap:3px; align-items:end; height:110px; margin:0 0 6px}
+.ch-col{display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%}
+.ch-col i{display:block; width:100%; min-height:2px; background:var(--verdade); border-radius:4px 4px 0 0}
+.ch-col span{font-size:.65rem; color:var(--muted); margin-top:2px}
+.ch-equiv{text-align:center; color:var(--muted); margin:8px 0 12px}
+.ch-equiv b{color:var(--ink)}
+.ch-viagem{margin:0 0 12px}
+.ch-viagem summary{cursor:pointer; font-weight:600; margin-bottom:6px}
+.ch-selos{display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 10px}
+.ch-selo{font-size:.8rem; padding:4px 10px; border-radius:999px; border:1.5px solid var(--line); color:var(--muted)}
+.ch-selo.ok{color:var(--ink); background:var(--surface); font-weight:600}
+
+/* v9: descongelar */
+.descongelar{position:fixed; inset:0; z-index:80; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:24px; text-align:center}
+.descongelar[hidden]{display:none}
+.dc-caixa{max-width:420px; width:100%}
+.dc-caixa h2{margin:6px 0 10px}
+.dc-caixa .row{justify-content:center}
+.dc-conta{color:var(--muted); margin:0}
+.dc-timer{font-size:2.4rem; font-weight:700; font-variant-numeric:tabular-nums; margin:12px 0 18px}
+.dc-respirar{height:180px; display:flex; align-items:center; justify-content:center}
+.dc-respirar span{display:block; width:70px; height:70px; border-radius:50%; background:var(--desafio); opacity:.75; animation:respirarDc 8s ease-in-out infinite}
+@keyframes respirarDc{0%,100%{transform:scale(1)} 50%{transform:scale(2.3)}}
+/* v9: fatura */
+.fatura-placar{font-weight:700; margin:4px 0}
+.fatura-filtros{margin:6px 0}
+.cumprir-lista .fatura-grupo{font-weight:700; color:var(--muted); font-size:.85rem; margin-top:8px; list-style:none}
+.cumprir-lista .fatura-item{display:block}
+.cumprir-lista .acoes{display:flex; gap:8px; margin-top:4px}
+.fatura-quitado,.fatura-quem{display:block; font-size:.85rem; color:var(--muted)}
+.fatura-resgate{border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; margin:8px 0; background:var(--surface)}
+.fatura-resgate-quem{margin:0; color:var(--muted); font-size:.85rem}
+.fatura-resgate-timer{font-size:1.8rem; font-weight:700; font-variant-numeric:tabular-nums; margin:6px 0}
+/* v9: cardápio secreto */
+.cardapio-status{list-style:none; padding:0; margin:6px 0 10px}
+.cardapio-status li{color:var(--muted)}
+.cardapio-status li.ok{color:var(--ink); font-weight:600}
+.cardapio-lista{list-style:none; padding:0; margin:0 0 10px; display:grid; gap:6px}
+.cardapio-lista li{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface)}
+.cardapio-lista li.quero{border-color:#2e9d5b}
+.cardapio-lista li.passo{opacity:.6}
+.cardapio-lista .acoes{display:flex; gap:6px; flex-shrink:0}
+.cardapio-lista button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.cardapio-add{margin:8px 0}
+.cardapio-add summary{cursor:pointer; font-weight:600}
+.cardapio-add form{display:grid; gap:6px; margin-top:6px}
+.cardapio-match{list-style:none; padding:0; display:grid; gap:8px; perspective:600px}
+.cardapio-match li{padding:12px; border-radius:14px; background:var(--surface); border:1.5px solid var(--line); font-weight:600}
+.cardapio-match li.virar{animation:virarCarta .6s ease-out both}
+@keyframes virarCarta{from{transform:rotateY(90deg); opacity:0} to{transform:rotateY(0); opacity:1}}
+@media (prefers-reduced-motion: reduce){.dc-respirar span{animation-duration:16s} .cardapio-match li.virar{animation:none}}
+
+/* v9: campanha e cláusulas */
+.faixa-campanha{border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; margin:8px 0; background:var(--surface)}
+.faixa-campanha .fc-capa{font-weight:700; margin:0 0 4px}
+.faixa-campanha .fc-regra{margin:4px 0; padding:8px 10px; border-radius:10px; background:var(--bg); border-left:4px solid var(--desafio); font-weight:600}
+.faixa-campanha .fc-info{margin:4px 0; color:var(--muted); font-size:.9rem}
+.fc-fichas{display:flex; flex-wrap:wrap; gap:8px; align-items:end; margin:6px 0}
+.fc-fichas label{display:flex; flex-direction:column; font-size:.85rem; font-weight:600}
+.clausulas-lista{list-style:none; padding:0; margin:0; display:grid; gap:8px}
+.clausulas-lista li.feito{opacity:.7}
+.clausula-texto{margin:4px 0 8px; font-weight:600}
+
+/* v9: enredos */
+body[data-enredo="1"] .wheel-wrap, body[data-enredo="1"] #acoesGiro{display:none}
+.enredo{border:1.5px solid var(--line); border-radius:16px; padding:14px; margin:10px 0; background:var(--surface)}
+.enredo-topo{font-weight:700; margin:0 0 6px}
+.enredo-escolha{color:var(--muted); font-size:.9rem; margin:0 0 6px}
+.enredo-quem{font-weight:600; color:var(--muted); margin:6px 0 2px}
+.enredo-texto{font-size:1.1rem; line-height:1.4; margin:4px 0 12px}
+.enredo-texto.narracao{font-style:italic}
+.enredo-opcoes{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0}
+.enredo-fim-titulo{font-weight:700; font-size:1.2rem}
+.enredo-caminho{padding-left:20px; margin:6px 0 12px}
+.enredo-caminho .enredo-esc{list-style:none; color:var(--muted); font-size:.9rem}
+.enredo-papel{border:none; padding:0; margin:8px 0; display:flex; flex-wrap:wrap; gap:8px}
+.enredo-papel legend{font-weight:600; margin-bottom:6px}
+.enredo-nome{font-weight:700}
+
+/* v9: carta secreta */
+.card[data-secreta="1"] #text,.card[data-secreta="vendo"] #text{user-select:none; -webkit-user-select:none; transition:filter .1s}
+.card[data-secreta="1"] #text{filter:blur(9px)}
+.card[data-secreta="1"],.card[data-secreta="vendo"]{touch-action:none; -webkit-touch-callout:none}
+.secreta-dica{font-size:.85rem; color:var(--muted); margin:4px 0}
+.secreta-btn[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+/* v9: desafio do silêncio */
+.silencio{border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; margin:10px 0; background:var(--surface)}
+.silencio.falhou{border-color:var(--erro)}
+.silencio-titulo{font-weight:700; margin:0 0 4px}
+.silencio-tempo{font-size:2rem; font-weight:700; font-variant-numeric:tabular-nums; margin:6px 0}
+.silencio-medidor{position:relative; height:16px; border-radius:8px; background:var(--bg); border:1.5px solid var(--line); overflow:hidden; margin:8px 0}
+.silencio-medidor i{position:absolute; left:0; top:0; bottom:0; background:#2e9d5b; transition:width .1s}
+.silencio-medidor b{position:absolute; top:0; bottom:0; width:3px; background:var(--erro)}
+.silencio-prendas{display:grid; gap:6px; margin:6px 0}
+body.flash-falhou::after{content:""; position:fixed; inset:0; background:rgba(220,30,40,.45); z-index:90; pointer-events:none; animation:flashFalhou .9s ease-out}
+@keyframes flashFalhou{0%,40%{opacity:1} 100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){body.flash-falhou::after{animation:none; opacity:.5}}
+
+/* v9: cápsula de espelho */
+.cap-quadros.espelho{grid-template-columns:1fr 1fr}
+/* v9: Nosso ano */
+.nosso-ano{position:fixed; inset:0; z-index:85; background:linear-gradient(160deg, var(--surface), var(--bg)); display:flex; flex-direction:column; padding:14px 16px calc(16px + env(safe-area-inset-bottom, 0px))}
+.nosso-ano[hidden]{display:none}
+.na-barra{display:flex; gap:4px; margin-bottom:8px}
+.na-barra i{flex:1; height:4px; border-radius:2px; background:var(--line)}
+.na-barra i.ok{background:var(--desafio)}
+.na-controles{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.na-controles .chips{margin:0}
+.na-tela{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; cursor:pointer; user-select:none}
+.na-emoji{font-size:4rem; margin:0}
+.na-tela h2{font-size:1.7rem; margin:8px 0 12px}
+.na-linhas p{font-size:1.1rem; margin:4px 0}
+.na-nav{display:flex; justify-content:space-between; gap:10px}
+
+/* v9: bateria social baixa — tela calma para quem ligou; sem jogo nem pedir dengo para o outro */
+body[data-bateria-eu="1"] #abaJogo, body[data-bateria-outro="1"] #abaJogo{display:none}
+body[data-bateria-eu="1"] #casaGrade > :not(.calmo):not(header):not(#casaCarinhos):not(#casaCuidado){display:none}
+body[data-bateria-outro="1"] #casaDengo, body[data-bateria-outro="1"] #casaGrade > .casa-card[data-abre="vDiario"]{display:none}
+.bateria-texto{font-weight:600; margin:0 0 4px}
+.cuidado{border-left:4px solid var(--lamp)}
+.cuidado-lista{list-style:none; padding:0; margin:6px 0 10px; display:grid; gap:6px}
+.cuidado-lista li.acao{font-weight:600}
+/* v9: recados */
+.recado{border-left:4px solid #e9b949}
+.recado-texto{font-size:1.05rem; white-space:pre-wrap; margin:6px 0}
+.recado-lido{color:var(--muted); font-size:.9rem}
+.recados-lista .t{white-space:pre-wrap}
+/* v9: companhia silenciosa */
+.companhia{position:fixed; inset:0; z-index:85; background:#0d0b14; color:#d8d2e8; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px; text-align:center}
+.companhia[hidden]{display:none}
+.comp-luz{width:150px; height:150px; border-radius:50%; border:none; background:radial-gradient(circle, #f6c86b 0%, #a8742a 55%, transparent 70%); opacity:.25; font-size:2.2rem; color:#1a1420; font-weight:700; cursor:pointer}
+.comp-luz.junto{opacity:.85; animation:luzComp 4s ease-in-out infinite}
+.comp-luz.brilho{opacity:1; filter:brightness(1.6) drop-shadow(0 0 30px #f6c86b)}
+@keyframes luzComp{0%,100%{transform:scale(.92)} 50%{transform:scale(1.05)}}
+.comp-status{font-size:1.1rem; margin:0}
+.comp-dica{font-size:.85rem; opacity:.7; margin:0; min-height:1.2em}
+.comp-musica{max-width:420px; width:100%}
+.companhia .linkbtn{color:#d8d2e8}
+@media (prefers-reduced-motion: reduce){.comp-luz.junto{animation:none}}
+.cumprir-lista .acoes button{width:auto; flex:0 0 auto; padding:6px 14px; font-size:.9rem}
+.acoes-giro .secreta-btn{width:auto; align-self:center; padding:6px 14px; font-size:.9rem; margin-bottom:6px}
