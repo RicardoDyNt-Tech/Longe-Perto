@@ -25,20 +25,20 @@ Se as Configurações já existirem, tudo que for sorteado ou exibido passa por 
 
 ## Fase 0 — SQL (já pronto)
 
-O `025_presencial.sql` é fornecido pronto. O Claude Code coloca em `supabase/` e **não edita**. O Ricardo roda no SQL Editor.
+O `025_presencial.sql` e o `026_seed_presencial_equilibrio.sql` são fornecidos prontos. O Claude Code coloca os dois em `supabase/` e **não edita**. O Ricardo roda os dois no SQL Editor, nessa ordem.
 
 - **Coluna `cartas.modo`:** `distancia` (padrão), `presencial` ou `ambos`.
   - Verdades, sintonias, perguntas do dia, cápsulas e boa noite viram `ambos`, porque funcionam nos dois modos.
   - Desafios, prendas e cartas especiais existentes continuam `distancia`, porque pedem câmera ou WhatsApp.
-- **Cartas presenciais novas** (desafios e prendas), em pirâmide:
+- **Cartas presenciais novas** (desafios e prendas), em pirâmide. Com o `026_seed_presencial_equilibrio.sql`, ficam com **a mesma quantidade do modo a distância**, nível a nível:
 
-| Nível | Desafios | Prendas |
-|---|---|---|
-| Romântico | 30 | 6 |
-| Leve | 27 | 5 |
-| Criativo | 24 | 5 |
-| Picante | 21 | 4 |
-| Pesado | 18 | 4 |
+| Nível | Verdades (servem nos dois modos) | Desafios longe | Desafios perto | Prendas longe | Prendas perto |
+|---|---|---|---|---|---|
+| Romântico | 60 | 90 | 90 | 19 | 19 |
+| Leve | 55 | 85 | 85 | 18 | 18 |
+| Criativo | 50 | 80 | 80 | 17 | 17 |
+| Picante | 45 | 75 | 75 | 16 | 16 |
+| Pesado | 40 | 70 | 70 | 15 | 15 |
 
 - **Tabela `dado_itens`:** as faces do Dado do casal (ação, parte e tempo), por nível, com 46 itens. Só leitura.
 
@@ -159,7 +159,7 @@ noite: null               // placar de quente ou frio da noite
 ## Ordem de execução
 
 1. Branch `presencial` a partir da `main`.
-2. **Fase 0:** colocar `025_presencial.sql` em `supabase/`. Commit: `sql modo presencial`. **Parar para o Ricardo rodar.**
+2. **Fase 0:** colocar `025_presencial.sql` e `026_seed_presencial_equilibrio.sql` em `supabase/`. Commit: `sql modo presencial`. **Parar para o Ricardo rodar.**
 3. **Fase 1**, commit `botão de modo`.
 4. **Fase 2**, commit `um celular só`.
 5. **Fase 3**, commit `modos presenciais`.
@@ -182,4 +182,4 @@ Se o tempo for curto antes do encontro: **as Fases 0, 1 e 3 já entregam o modo 
 
 ## Prompt para colar no Claude Code
 
-> Leia `plano-longe-perto-presencial.md` na raiz do repositório. Crie a branch `presencial` a partir da `main` e siga a "Ordem de execução", com um commit por fase. Na Fase 0, coloque `025_presencial.sql` em `supabase/` sem editar e pare para eu rodar no Supabase. Aplique só o que existir no código hoje: partes que dependem de versões ainda não implementadas (Configurações, cofre, guias, v4 a v8) ficam preparadas e são ignoradas se o recurso não existir. Siga as regras da v2 (mudança mínima, não alterar `config.js`, não rodar SQL, texto só via `textContent`, padrão para salas antigas, sem dependências novas). Priorize as Fases 0, 1 e 3. No fim, rode o checklist, me conte o resultado e não faça merge na `main`.
+> Leia `plano-longe-perto-presencial.md` na raiz do repositório. Crie a branch `presencial` a partir da `main` e siga a "Ordem de execução", com um commit por fase. Na Fase 0, coloque `025_presencial.sql` e `026_seed_presencial_equilibrio.sql` em `supabase/` sem editar e pare para eu rodar no Supabase. Aplique só o que existir no código hoje: partes que dependem de versões ainda não implementadas (Configurações, cofre, guias, v4 a v8) ficam preparadas e são ignoradas se o recurso não existir. Siga as regras da v2 (mudança mínima, não alterar `config.js`, não rodar SQL, texto só via `textContent`, padrão para salas antigas, sem dependências novas). Priorize as Fases 0, 1 e 3. No fim, rode o checklist, me conte o resultado e não faça merge na `main`.
