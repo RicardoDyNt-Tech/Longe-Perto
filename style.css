@@ -1041,3 +1041,10 @@ body[data-bateria-outro="1"] #casaDengo, body[data-bateria-outro="1"] #casaGrade
 @media (prefers-reduced-motion: reduce){.comp-luz.junto{animation:none}}
 .cumprir-lista .acoes button{width:auto; flex:0 0 auto; padding:6px 14px; font-size:.9rem}
 .acoes-giro .secreta-btn{width:auto; align-self:center; padding:6px 14px; font-size:.9rem; margin-bottom:6px}
+
+/* app Android (nativo.js): boas-vindas e telas cheias abaixo da barra de status */
+.app-boasvindas{border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; margin:0 0 16px; background:var(--surface)}
+.app-boasvindas p{margin:4px 0}
+.app-bv-titulo{font-weight:700}
+.descongelar,.companhia{padding-top:max(24px, env(safe-area-inset-top, 0px))}
+.nosso-ano{padding-top:calc(14px + env(safe-area-inset-top, 0px))}

@@ -81,6 +81,21 @@
   const linkSala = c => location.origin + location.pathname + "?sala=" + c;
   const erro = (onde, msg) => { $(onde).textContent = msg || ""; };
 
+  // conexão ao vivo (Realtime): o celular corta a conexão em segundo plano. O supabase-js tenta voltar sozinho;
+  // se não voltar, recarrega a sala (a página guarda a sala no endereço; o estado está no banco).
+  const MSG_CAIU = "A conexão ao vivo caiu. Reconectando…";
+  let conexaoCaiu = false, timerReconectar = null;
+  function reconectarSeCaiu(ms) {
+    clearTimeout(timerReconectar);
+    timerReconectar = setTimeout(() => {
+      if (!conexaoCaiu || !codigo) return;
+      if (document.hidden || navigator.onLine === false) return;   // tenta de novo ao voltar para a tela ou à internet
+      location.reload();
+    }, ms);
+  }
+  addEventListener("online", () => { if (conexaoCaiu) reconectarSeCaiu(1500); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && conexaoCaiu) reconectarSeCaiu(3000); });
+
   function configurado() {
     const c = window.LP_CONFIG || {};
     return c.url && c.anonKey && !c.url.includes("SEU-PROJETO") && !c.anonKey.includes("SUA-CHAVE");
@@ -1481,9 +1496,15 @@
         conferirDono(c);   // ex.: "Gerar novo código" em outro aparelho
       })
       .subscribe(status => {
-        if (status === "SUBSCRIBED" && canal) { canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {}); marcarVisto(true); }
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
-          erro("erroJogo", "A conexão ao vivo caiu. Recarregue a página se a roleta parar de sincronizar.");
+        if (status === "SUBSCRIBED" && canal) {
+          canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {}); marcarVisto(true);
+          if (conexaoCaiu) { conexaoCaiu = false; if ($("erroJogo").textContent === MSG_CAIU) erro("erroJogo", ""); }
+        }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          conexaoCaiu = true;
+          erro("erroJogo", MSG_CAIU);
+          reconectarSeCaiu(8000);
+        }
       });
 
     // sala fixa: Casa do casal (cofre e desafio do dia moram lá); sala comum: cofre no jogo
