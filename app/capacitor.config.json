@@ -1,0 +1,18 @@
+{
+  "appId": "io.github.ricardodynt.longeperto",
+  "appName": "Longe & Perto",
+  "webDir": "www",
+  "server": {
+    "url": "https://ricardodynt-tech.github.io/Longe-Perto/",
+    "androidScheme": "https",
+    "allowNavigation": ["ricardodynt-tech.github.io", "xnvepcqxuevcvdccidkx.supabase.co"],
+    "errorPath": "index.html"
+  },
+  "android": {
+    "backgroundColor": "#17132A",
+    "appendUserAgent": "LongePertoApp"
+  },
+  "plugins": {
+    "StatusBar": { "overlaysWebView": true, "style": "DARK" }
+  }
+}

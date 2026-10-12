@@ -77,3 +77,46 @@ No Supabase: **Edge Functions → Secrets** (ou *Project Settings → Edge Funct
 ## Quando terminar
 
 Avise "Fase 0 pronta". A próxima fase (casca do Capacitor e o workflow do GitHub Actions que gera o APK) só usa os secrets acima; nada precisa ser colado aqui.
+
+---
+
+## Fase 1 — Gerar e instalar o APK
+
+O app abre o site do GitHub Pages (`https://ricardodynt-tech.github.io/Longe-Perto/`). Mudança no site aparece no app sozinha; só mudanças na parte nativa pedem um APK novo.
+
+### Gerar o APK (GitHub Actions)
+
+O workflow `.github/workflows/apk.yml` roda de dois jeitos:
+
+- **Por tag (funciona já, direto do branch `apk`):** criar uma tag que começa com `apk-v`.
+  1. No GitHub: **Releases → Draft a new release**.
+  2. Em **Choose a tag**, digite `apk-v0.1.0` (ou o próximo número) e clique em **Create new tag**.
+  3. Em **Target**, escolha o branch **`apk`**.
+  4. Clique em **Save draft** (não precisa publicar a release; a tag já dispara o build).
+- **Pelo botão "Run workflow"** (aba **Actions → APK**): só aparece depois que o arquivo do workflow estiver na `main`.
+
+O build leva uns 5 a 10 minutos. Se der erro, abra a execução na aba **Actions** e veja o passo que ficou vermelho. "Faltam os secrets" ou "keystore password was incorrect" quer dizer que algum secret da Fase 0 está faltando ou com valor errado.
+
+### Baixar e instalar
+
+1. Na aba **Actions**, abra a execução que terminou com ✅.
+2. Lá embaixo, em **Artifacts**, baixe `longe-perto-<versão>` (vem um `.zip` com o `.apk` dentro; só quem está logado consegue baixar, e some em 30 dias).
+3. Tire o `.apk` do zip e mande pelo WhatsApp para os dois celulares (pode ser para você mesmo).
+4. No celular, toque no arquivo. Na primeira vez, o Android pede para **permitir instalar apps desconhecidos** do WhatsApp (ou do app Arquivos): permita e volte.
+5. Instale. Aparece o ícone 💞 "Longe & Perto".
+
+**Atualizar** é igual: instala o APK novo por cima, sem desinstalar. A sala e os ajustes continuam.
+
+### Primeira vez no app
+
+O app é como um navegador novo: não sabe a sala, o nome nem o token de dono (cada um fica guardado no próprio aparelho, separado do Chrome).
+
+- Entre na mesma sala digitando o código ou o nome da sala, ou colando o link de convite no campo do código.
+- Quem é dono: depois de entrar, **Configurações → 👑 Entrar como dono** com o código de dono.
+
+### O que testar
+
+- Um no app e o outro no navegador: jogar uma partida inteira; tudo sincroniza nos dois sentidos.
+- Botão voltar do Android: fecha janelas e telas abertas antes de minimizar o app.
+- Links do Spotify e do WhatsApp abrem nos apps deles.
+- Sem internet: aparece "Sem internet 💔 · Tentar de novo".

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Longe & Perto</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; }
+  body { background: #17132A; color: #F3EEFF; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; box-sizing: border-box; }
+  .caixa { max-width: 320px; }
+  .emoji { font-size: 3.5rem; margin: 0; }
+  h1 { font-size: 1.5rem; margin: 12px 0 8px; }
+  p { color: #A89DC4; line-height: 1.4; }
+  button { margin-top: 18px; font: inherit; font-weight: 700; border: 0; border-radius: 14px; padding: 14px 22px; background: #FFD166; color: #17132A; width: 100%; }
+</style>
+</head>
+<body>
+  <div class="caixa">
+    <p class="emoji">💔</p>
+    <h1>Sem internet</h1>
+    <p>O Longe & Perto precisa de conexão para falar com o outro celular. Confira o Wi-Fi ou os dados e tente de novo.</p>
+    <button type="button" id="tentar">Tentar de novo</button>
+  </div>
+  <script>
+    document.getElementById("tentar").addEventListener("click", function () {
+      location.href = "https://ricardodynt-tech.github.io/Longe-Perto/";
+    });
+  </script>
+</body>
+</html>

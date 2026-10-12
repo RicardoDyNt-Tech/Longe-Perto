@@ -2,7 +2,7 @@
 // Página (navegação): rede primeiro, cache só sem internet — assim uma versão nova aparece ao recarregar.
 // Demais arquivos do site: stale-while-revalidate. Os links do index.html levam ?v=N, então versão nova = URL nova.
 // Nada fora deste site (Supabase, CDN do supabase-js, fontes) passa pelo cache.
-const CACHE = "lp-v3-1";
+const CACHE = "lp-v3-2";
 const ARQUIVOS = [
   "./",
   "index.html",
@@ -10,6 +10,7 @@ const ARQUIVOS = [
   "app.js",
   "conquistas.js",
   "config.js",
+  "nativo.js",
   "manifest.webmanifest",
   "icons/icon.svg",
   "icons/icon-192.png",
