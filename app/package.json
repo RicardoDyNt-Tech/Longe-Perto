@@ -1,0 +1,20 @@
+{
+  "name": "longe-perto-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Longe & Perto para Android: o site do GitHub Pages aberto pelo Capacitor",
+  "scripts": {
+    "sync": "cap sync android",
+    "icones": "capacitor-assets generate --android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.3"
+  }
+}

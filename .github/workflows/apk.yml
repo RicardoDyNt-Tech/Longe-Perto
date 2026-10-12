@@ -1,0 +1,104 @@
+# Gera o APK assinado do Longe & Perto (pasta app/).
+# Dispara pelo botão "Run workflow" (aba Actions) ou por uma tag apk-v* (ex.: apk-v1.0.0).
+# Keystore, senhas e google-services.json vêm dos GitHub Secrets e só existem durante o build.
+name: APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["apk-v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Conferir os secrets
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KSP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KA: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GS: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          falta=""
+          [ -n "$KS" ]  || falta="$falta ANDROID_KEYSTORE_BASE64"
+          [ -n "$KSP" ] || falta="$falta ANDROID_KEYSTORE_PASSWORD"
+          [ -n "$KA" ]  || falta="$falta ANDROID_KEY_ALIAS"
+          [ -n "$KP" ]  || falta="$falta ANDROID_KEY_PASSWORD"
+          [ -n "$GS" ]  || falta="$falta GOOGLE_SERVICES_JSON"
+          if [ -n "$falta" ]; then echo "::error::Faltam os secrets:$falta (veja app/LEIA-ME.md)"; exit 1; fi
+
+      - name: Versão
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/apk-v* ]]; then v="${GITHUB_REF_NAME#apk-v}"; else v="0.0.${GITHUB_RUN_NUMBER}"; fi
+          echo "LP_VERSION_NAME=$v" >> "$GITHUB_ENV"
+          echo "LP_VERSION_CODE=${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "Versão $v (versionCode ${GITHUB_RUN_NUMBER})"
+
+      - run: npm ci
+
+      - run: npx cap sync android
+
+      - name: Keystore e google-services.json (só durante o build)
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          GS: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          printf '%s' "$GS" > android/app/google-services.json
+          printf '%s' "$KS" | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/longeperto.jks"
+          echo "LP_KEYSTORE_FILE=$RUNNER_TEMP/longeperto.jks" >> "$GITHUB_ENV"
+
+      - name: Build (assembleRelease assinado)
+        working-directory: app/android
+        env:
+          LP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          LP_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          LP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Conferir a assinatura
+        run: |
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          test -f "$apk" || { echo "::error::APK assinado não foi gerado (confira a senha e o alias da keystore)"; exit 1; }
+          bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$bt/apksigner" verify --print-certs "$apk" | head -3
+          mkdir -p "$RUNNER_TEMP/saida"
+          cp "$apk" "$RUNNER_TEMP/saida/longe-perto-${LP_VERSION_NAME}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: longe-perto-${{ env.LP_VERSION_NAME }}
+          path: ${{ runner.temp }}/saida/*.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Apagar os segredos do runner
+        if: always()
+        run: rm -f android/app/google-services.json "$RUNNER_TEMP/longeperto.jks"
