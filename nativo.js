@@ -7,6 +7,9 @@
   const plugin = nome => (typeof C.isPluginAvailable === "function" && C.isPluginAvailable(nome) && C.Plugins && C.Plugins[nome]) || null;
   const $ = id => document.getElementById(id);
   document.documentElement.dataset.app = "android";
+  // app: sem zoom de pinça ou de dois toques (com zoom, as barras fixas de baixo saem da tela)
+  const vp = document.querySelector('meta[name="viewport"]');
+  if (vp) vp.setAttribute("content", "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover");
 
   // ---------- botão voltar: fecha o que estiver aberto antes de sair ----------
   function voltar() {
