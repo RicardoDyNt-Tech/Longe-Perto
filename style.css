@@ -1048,3 +1048,4 @@ body[data-bateria-outro="1"] #casaDengo, body[data-bateria-outro="1"] #casaGrade
 .app-bv-titulo{font-weight:700}
 .descongelar,.companhia{padding-top:max(24px, env(safe-area-inset-top, 0px))}
 .nosso-ano{padding-top:calc(14px + env(safe-area-inset-top, 0px))}
+html[data-app] body{overflow-x:hidden}
