@@ -12,5 +12,9 @@ public class MainActivity extends BridgeActivity {
         // "fonte grande" do Android e o layout estoura; fica igual ao site aberto no Chrome.
         WebSettings ajustes = getBridge().getWebView().getSettings();
         ajustes.setTextZoom(100);
+        // sem zoom de pinça: com zoom, as barras fixas de baixo saem da tela
+        ajustes.setSupportZoom(false);
+        ajustes.setBuiltInZoomControls(false);
+        ajustes.setDisplayZoomControls(false);
     }
 }
