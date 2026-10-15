@@ -79,7 +79,46 @@
     return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(f) && f.length >= 5 && f.length <= 30 ? f : null;
   }
   const linkSala = c => location.origin + location.pathname + "?sala=" + c;
-  const erro = (onde, msg) => { $(onde).textContent = msg || ""; };
+  const erro = (onde, msg) => {
+    const p = $(onde);
+    p.textContent = msg || "";
+    // erro que só se resolve recarregando: o botão faz isso por quem lê
+    if (msg && /Recarregue a página/.test(msg)) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "linkbtn"; b.textContent = "Recarregar";
+      b.addEventListener("click", () => location.reload());
+      p.append(" ", b);
+    }
+  };
+
+  // ---------- perguntas na cara do app (no lugar de confirm/alert/prompt do navegador) ----------
+  // perguntar(texto) → true/false; com { campo: valor } → texto digitado ou null
+  const VERBOS_BOTAO = ["Apagar", "Limpar", "Tirar", "Trocar", "Enviar", "Gerar", "Mostrar", "Parar", "Começar", "Recomeçar", "Sair", "Encerrar", "Usar", "Voltar", "Desistir"];
+  function perguntar(texto, opcoes = {}) {
+    const d = $("dlgPergunta"), campo = opcoes.campo ?? null;
+    if (d.open) return Promise.resolve(campo === null ? false : null);
+    const verbo = (/^\p{Lu}\p{Ll}+/u.exec(texto) || [""])[0];
+    const ok = opcoes.ok || (VERBOS_BOTAO.includes(verbo) ? verbo : "Confirmar");
+    const bOk = $("pergOk"), bNao = $("pergCancelar"), inp = $("pergCampo");
+    $("pergTexto").textContent = texto;
+    bOk.textContent = ok;
+    bOk.classList.toggle("perigo", !!opcoes.perigo || /^(Apagar|Limpar|Tirar|Desistir)$/.test(ok));
+    bNao.hidden = opcoes.cancelar === null;
+    bNao.textContent = opcoes.cancelar || "Cancelar";
+    inp.hidden = campo === null;
+    inp.value = campo ?? "";
+    d.returnValue = "";
+    return new Promise(resolve => {
+      d.addEventListener("close", () => {
+        const sim = d.returnValue === "ok";
+        resolve(campo === null ? sim : sim ? inp.value : null);
+      }, { once: true });
+      d.showModal();
+      if (campo !== null) inp.focus();
+    });
+  }
+  const avisar = texto => perguntar(texto, { ok: "Entendi", cancelar: null });
+  $("pergCampo").addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); $("dlgPergunta").close("ok"); } });
 
   // conexão ao vivo (Realtime): o celular corta a conexão em segundo plano. O supabase-js tenta voltar sozinho;
   // se não voltar, recarrega a sala (a página guarda a sala no endereço; o estado está no banco).
@@ -102,27 +141,34 @@
   }
 
   // ---------- roleta ----------
+  // cores pelo CSS (classes), então a roda acompanha tema e modo presencial sem redesenhar
   function desenharRoleta() {
-    const css = getComputedStyle(document.documentElement);
-    const cV = css.getPropertyValue("--verdade").trim();
-    const cD = css.getPropertyValue("--desafio").trim();
-    const onC = css.getPropertyValue("--on-color").trim();
-    const bg = css.getPropertyValue("--bg").trim();
-    const r = 96, passo = 360 / SEGMENTOS;
-    let html = "";
+    const r = 90, rPino = 94.5, passo = 360 / SEGMENTOS;
+    const ponto = (raio, graus) => { const a = (graus - 90) * Math.PI / 180; return `${(raio * Math.cos(a)).toFixed(2)} ${(raio * Math.sin(a)).toFixed(2)}`; };
+    let html = `<circle class="aro" r="99"/>`;
     for (let i = 0; i < SEGMENTOS; i++) {
-      const a0 = (i * passo - 90) * Math.PI / 180, a1 = ((i + 1) * passo - 90) * Math.PI / 180;
-      html += `<path d="M0 0 L${(r * Math.cos(a0)).toFixed(2)} ${(r * Math.sin(a0)).toFixed(2)} A${r} ${r} 0 0 1 ${(r * Math.cos(a1)).toFixed(2)} ${(r * Math.sin(a1)).toFixed(2)} Z" fill="${i % 2 === 0 ? cV : cD}" stroke="${bg}" stroke-width="2"/>`;
-      html += `<text transform="rotate(${(i + 0.5) * passo}) translate(0,-62)" text-anchor="middle" dominant-baseline="middle" fill="${onC}" font-size="11" font-weight="800" font-family="Bricolage Grotesque, system-ui, sans-serif">${i % 2 === 0 ? "Verdade" : "Desafio"}</text>`;
+      html += `<path class="fatia ${i % 2 === 0 ? "v" : "d"}" data-i="${i}" d="M0 0 L${ponto(r, i * passo)} A${r} ${r} 0 0 1 ${ponto(r, (i + 1) * passo)} Z"/>`;
+      html += `<text class="rotulo" transform="rotate(${(i + 0.5) * passo}) translate(0,-55) rotate(-90)" text-anchor="middle" dominant-baseline="middle">${i % 2 === 0 ? "Verdade" : "Desafio"}</text>`;
     }
+    for (let i = 0; i < SEGMENTOS; i++) { const [x, y] = ponto(rPino, i * passo).split(" "); html += `<circle class="pino" cx="${x}" cy="${y}" r="2.6"/>`; }
     $("wheel").innerHTML = html;
   }
 
   function posicionarRoleta(graus, animar) {
     const w = $("wheel");
     w.classList.toggle("anim", !!animar);
+    w.querySelectorAll(".vencedora").forEach(f => f.classList.remove("vencedora"));
+    if (animar) { w.classList.remove("puxa"); void w.getBoundingClientRect(); w.classList.add("puxa"); }   // a "puxada" antes do giro
     w.style.transform = `rotate(${graus}deg)`;
     rotacao = graus;
+  }
+
+  // a fatia que parou sob a ponteira acende
+  function marcarVencedora() {
+    const passo = 360 / SEGMENTOS;
+    const k = Math.floor(((360 - ((rotacao % 360) + 360) % 360) % 360) / passo);
+    const f = $("wheel").querySelector(`.fatia[data-i="${k}"]`);
+    if (f) f.classList.add("vencedora");
   }
 
   // ---------- modo da sala: a distância ou juntos (presencial) ----------
@@ -138,10 +184,10 @@
   const foraDoJuntos = c => modoDe(c) !== "presencial";   // recursos da distância (desafio do dia, envelopes)
 
   const podeTrocarModo = () => permitido("presencial") && (config.chipsQuemMuda !== "dono" || souDono);
-  function trocarModo() {
+  async function trocarModo() {
     if (!estado || !podeTrocarModo()) return;
     const para = juntos() ? "distancia" : "presencial";
-    if (!placarZerado(estado) && !confirm("Trocar de modo? O placar continua.")) return;
+    if (!placarZerado(estado) && !await perguntar("Trocar de modo? O placar continua.")) return;
     gravar(n => {
       n.modo = para;
       n.cegas = null;
@@ -655,7 +701,7 @@
   }
   async function enviarCardapio() {
     const r = rodadaCardapio(estado);
-    if (!r || !confirm("Enviar seu cardápio? Depois de enviar não dá para mudar.")) return;
+    if (!r || !await perguntar("Enviar seu cardápio? Depois de enviar não dá para mudar.")) return;
     const votos = lerVotos();
     const lista = desejos.filter(desejoOk).map(i => ({ item: i.id, quer: votos[i.id] === true }));
     $("cardapioEnviar").disabled = true;
@@ -1022,7 +1068,7 @@
     $("dlgChamadaPassada").close();
   }
   async function apagarChamada(x) {
-    if (!confirm(`Apagar a chamada de ${quandoChamada(x.inicio)} (${fmtDur(x.duracao_minutos || 0)})?`)) return;
+    if (!await perguntar(`Apagar a chamada de ${quandoChamada(x.inicio)} (${fmtDur(x.duracao_minutos || 0)})?`)) return;
     const { error } = await sb.rpc("chamada_apagar", { p_sala: codigo, p_id: x.id });
     if (error) erro("erroChamadas", "Não consegui apagar. Confira a internet.");
   }
@@ -1498,11 +1544,11 @@
       .subscribe(status => {
         if (status === "SUBSCRIBED" && canal) {
           canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {}); marcarVisto(true);
-          if (conexaoCaiu) { conexaoCaiu = false; if ($("erroJogo").textContent === MSG_CAIU) erro("erroJogo", ""); }
+          if (conexaoCaiu) { conexaoCaiu = false; $("conexao").hidden = true; if ($("erroJogo").textContent === MSG_CAIU) erro("erroJogo", ""); }
         }
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           conexaoCaiu = true;
-          erro("erroJogo", MSG_CAIU);
+          $("conexao").hidden = false;   // aviso no topo da sala, no lugar de um erro vermelho
           reconectarSeCaiu(8000);
         }
       });
@@ -1513,7 +1559,7 @@
     $("cofre").open = fixa;
     // v7: na sala fixa, o reencontro mora no Início e o histórico de partidas na aba Histórico
     if (fixa) { $("lugarReencontro").appendChild($("reencontro")); $("lugarHistorico").appendChild($("historico")); }
-    else { $("convite").before($("reencontro")); $("cofre").before($("historico")); }
+    else { $("cofre").before($("historico")); $("historico").before($("reencontro")); }   // sala comum: o reencontro fica abaixo do jogo; no topo, o contador de uma linha
     $("historico").open = fixa;
     $("casaConvite").hidden = fixa;
     $("casaGrade").hidden = !fixa;
@@ -1629,7 +1675,7 @@
     if ($("mapaReencontro")) $("mapaReencontro").textContent = curto;
     if ($("noiteReencontro")) $("noiteReencontro").textContent = curto;
     const mini = $("contadorMini");
-    mini.hidden = !(contando && e.fixa && vista === "jogo");
+    mini.hidden = !(contando && vista === "jogo");
     if (!mini.hidden) mini.textContent = `💞 ${textoFalta(st.falta, true)}`;
   }
   function festaReencontro() {
@@ -1788,7 +1834,7 @@
   }
 
   async function apagarCofre(x) {
-    if (!confirm(`Apagar do cofre?\n\n"${x.carta}"`)) return;
+    if (!await perguntar(`Apagar do cofre?\n\n"${x.carta}"`)) return;
     const { error } = await sb.from("cofre").delete().eq("id", x.id);
     if (error) return erro("erroJogo", "Não consegui apagar. Confira a internet e tente de novo.");
     tirarCofre(x.id);
@@ -2018,7 +2064,7 @@
   }
 
   async function apagarMusica(m) {
-    if (!confirm(`Apagar esta música?\n\n${m.titulo} — ${m.artista}`)) return;
+    if (!await perguntar(`Apagar esta música?\n\n${m.titulo} — ${m.artista}`)) return;
     const { error } = await sb.from("musicas").delete().eq("id", m.id);
     if (error) return erro("erroJogo", "Não consegui apagar a música. Confira a internet e tente de novo.");
     tirarMusica(m.id);
@@ -2447,7 +2493,7 @@
   }
   async function cancelarDengo() {
     const meu = meuPendente();
-    if (!meu || !confirm("Cancelar o pedido de dengo?")) return;
+    if (!meu || !await perguntar("Cancelar o pedido de dengo?", { ok: "Cancelar pedido", cancelar: "Manter" })) return;
     const { data, error } = await sb.from("dengos").update({ status: "cancelado" }).eq("id", meu.id).eq("status", "pendente").select().maybeSingle();
     if (error) return erro("erroDengo", "Não consegui cancelar. Confira a internet.");
     linhaV5("dengos", "UPDATE", data || { ...meu, status: "cancelado" });
@@ -2541,7 +2587,7 @@
     $("dlgPedidos").close();
   }
   async function restaurarPedidos() {
-    if (!codigo || !confirm("Voltar para os pedidos padrão? A sua lista editada será apagada.")) return;
+    if (!codigo || !await perguntar("Voltar para os pedidos padrão? A sua lista editada será apagada.")) return;
     const c = codigo;
     const { error } = await sb.from("pedidos_modelos").delete().eq("sala", c).eq("jogador", eu);
     if (error) return erro("erroPedidos", "Não consegui restaurar. Confira a internet.");
@@ -2938,8 +2984,8 @@
     } else if (pilhaMural.length) tracos = pilhaMural.pop();
     redesenharMural(); desenharFerramentas();
   }
-  function limparMural() {
-    if (!tracos.length || !confirm("Limpar o desenho?")) return;
+  async function limparMural() {
+    if (!tracos.length || !await perguntar("Limpar o desenho?")) return;
     if (!muralJuntos) guardarPasso();
     tracos = []; remotos.clear();
     if (muralJuntos) mandarMural({ t: "limpar" });
@@ -3004,9 +3050,9 @@
   }
   async function apagarMural() {
     const m = muralVendo;
-    if (!m || !confirm("Apagar este desenho? Some para os dois.")) return;
+    if (!m || !await perguntar("Apagar este desenho? Some para os dois.")) return;
     const { error } = await sb.from("murais").delete().eq("id", m.id);
-    if (error) return alert("Não consegui apagar. Confira a internet.");
+    if (error) return avisar("Não consegui apagar. Confira a internet.");
     linhaV5("murais", "DELETE", { id: m.id });
     $("dlgMuralVer").close();
   }
@@ -3324,7 +3370,7 @@
   // link externo escolhido pelo casal: guardado nas marcas da posição, abre fora do app
   async function referenciaPosicao(p) {
     const atual = linkPos(p.id) || "";
-    const r = prompt(`Link de referência para "${p.nome}" (começando com https://). Deixe vazio para tirar.`, atual);
+    const r = await perguntar(`Link de referência para "${p.nome}" (começando com https://). Deixe vazio para tirar.`, { campo: atual, ok: "Salvar" });
     if (r === null) return;
     const link = r.trim();
     if (link && (!/^https:\/\/\S+$/.test(link) || link.length > 500)) return erro("erroPosicoes", "O link precisa começar com https://");
@@ -3781,7 +3827,7 @@
   }
 
   async function apagarEnvelope(x) {
-    if (x.aberto_em || x.de !== eu || !confirm("Apagar este envelope? Ele ainda não foi aberto.")) return;
+    if (x.aberto_em || x.de !== eu || !await perguntar("Apagar este envelope? Ele ainda não foi aberto.")) return;
     const { error } = await sb.from("envelopes").delete().eq("id", x.id);
     if (error) return erro("erroJogo", "Não consegui apagar o envelope. Confira a internet e tente de novo.");
     linhaV5("envelopes", "DELETE", { id: x.id });
@@ -4347,7 +4393,7 @@
   }
 
   async function apagarMomento(m) {
-    if (!confirm("Apagar este momento do álbum?")) return;
+    if (!await perguntar("Apagar este momento do álbum?")) return;
     const { error } = await sb.from("momentos").delete().eq("id", m.id);
     if (error) return erro("erroJogo", "Não consegui apagar. Confira a internet e tente de novo.");
     linhaV5("momentos", "DELETE", m);
@@ -4409,7 +4455,7 @@
   async function marcarCarta(id, marca) {
     if (!baralhoAtivo() || !id) return;
     const tinha = temMarca(id, marca);
-    if (marca === "aposentada" && !tinha && !confirm("Essa carta não vai mais aparecer nesta sala.")) return;
+    if (marca === "aposentada" && !tinha && !await perguntar("Essa carta não vai mais aparecer nesta sala.", { ok: "Aposentar" })) return;
     const q = tinha
       ? sb.from("cartas_marcadas").delete().eq("sala", codigo).eq("carta_id", id).eq("marca", marca)
       : sb.from("cartas_marcadas").insert({ sala: codigo, carta_id: id, marca });
@@ -4864,7 +4910,7 @@
     $("dlgMarco").close();
   }
   async function apagarMarco(m) {
-    if (!confirm(`Apagar o marco "${m.titulo}"?`)) return;
+    if (!await perguntar(`Apagar o marco "${m.titulo}"?`)) return;
     const { error } = await sb.from("marcos").delete().eq("id", m.id);
     if (error) return erro("erroJogo", "Não consegui apagar. Confira a internet e tente de novo.");
     linhaV5("marcos", "DELETE", { id: m.id });
@@ -4947,7 +4993,7 @@
     linhaV5("motivos", "INSERT", data);
   }
   async function apagarMotivo(m) {
-    if (m.de !== eu || !confirm("Tirar este motivo do pote?")) return;
+    if (m.de !== eu || !await perguntar("Tirar este motivo do pote?")) return;
     const { error } = await sb.from("motivos").delete().eq("id", m.id);
     if (error) return erro("erroPote", "Não consegui apagar. Confira a internet e tente de novo.");
     linhaV5("motivos", "DELETE", { id: m.id });
@@ -5042,14 +5088,14 @@
     $("dlgAbra").close();
   }
   async function apagarAbra(x) {
-    if (x.de !== eu || x.aberto_em || !confirm("Apagar esta carta? Ela ainda não foi aberta.")) return;
+    if (x.de !== eu || x.aberto_em || !await perguntar("Apagar esta carta? Ela ainda não foi aberta.")) return;
     const { error } = await sb.from("abra_quando").delete().eq("id", x.id).is("aberto_em", null);
     if (error) return erro("erroJogo", "Não consegui apagar. Confira a internet e tente de novo.");
     linhaV5("abra_quando", "DELETE", { id: x.id });
   }
   async function abrirAbra(x) {
     if (x.de === eu || x.aberto_em) return;
-    if (!confirm("É mesmo a hora?")) return;
+    if (!await perguntar("É mesmo a hora?", { ok: "Abrir agora" })) return;
     const agora = new Date().toISOString();
     const { data, error } = await sb.from("abra_quando").update({ aberto_em: agora }).eq("id", x.id).is("aberto_em", null).select("*").maybeSingle();
     if (error) return erro("erroJogo", "Não consegui abrir agora. Confira a internet e tente de novo.");
@@ -5213,9 +5259,9 @@
 
   // ---------- v6: encerramento da noite e Boa noite (qualquer sala; o álbum só na fixa) ----------
   // estado.encerrando = { id, por, frases: [null | texto | false (pulou)], frase (boa noite, a mesma nos dois) }
-  function encerrarNoite() {
+  async function encerrarNoite() {
     if (!estado || !estado.jogadores[1] || estado.encerrando) return;
-    if (!confirm("Encerrar a noite? A tela abre para os dois.")) return;
+    if (!await perguntar("Encerrar a noite? A tela abre para os dois.")) return;
     gravar(n => comecarEncerrando(n));
   }
   function comecarEncerrando(n) {
@@ -5645,7 +5691,7 @@
     if (s) s.textContent = statusCfg;
   }
   async function gerarNovoCodigo() {
-    if (!confirm("Gerar um novo código? O código antigo para de funcionar em todos os aparelhos.")) return;
+    if (!await perguntar("Gerar um novo código? O código antigo para de funcionar em todos os aparelhos.")) return;
     const c = codigo, t = lerToken(c), novo = novoToken();
     const { error } = await sb.rpc("sala_dono_trocar", { p_sala: c, p_token_atual: t, p_token_novo: novo });
     if (error) { statusCfg = "Não consegui gerar o código. Confira a internet e tente de novo."; return desenharTelaConfig(); }
@@ -5719,7 +5765,7 @@
     if (donoIndice !== null && estado.jogadores[donoIndice]) dono.appendChild(el("p", "extras-sub", `O 👑 aparece para ${nomeDe(donoIndice)}.`));
     const botoes = el("div", "cfg-botoes");
     const mostrar = el("button", "secondary", "Mostrar código de dono"); mostrar.type = "button";
-    mostrar.addEventListener("click", () => { if (confirm("Mostrar o código de dono na tela?")) mostrarCodigoDono(lerToken(codigo)); });
+    mostrar.addEventListener("click", async () => { if (await perguntar("Mostrar o código de dono na tela?")) mostrarCodigoDono(lerToken(codigo)); });
     const gerar = el("button", "secondary", "Gerar novo código"); gerar.type = "button"; gerar.addEventListener("click", gerarNovoCodigo);
     botoes.append(mostrar, gerar);
     const outro = 1 - (donoIndice === null ? eu : donoIndice);
@@ -6254,12 +6300,15 @@
 
     const vez = $("vez");
     vez.innerHTML = "";
+    vez.classList.remove("girando");
     if (!completa) vez.textContent = "Esperando a outra pessoa entrar";
     else if (e.vencedor !== null && !e.carta) vez.textContent = "Partida encerrada";
     else if (minhaVez) vez.innerHTML = "Sua vez, <strong></strong>";
     else vez.innerHTML = "Vez de <strong></strong>";
     const s = vez.querySelector("strong");
     if (s) s.textContent = nomes[e.vez];
+    // quem espera vê a roda "respirando": a sala está viva do outro lado
+    $("stage").classList.toggle("espera", completa && !minhaVez && !e.carta && e.vencedor === null);
 
     desenharPlacar(e, nomes);
     desenharNoite(e);
@@ -6314,8 +6363,15 @@
       } else {
         girando = true;
         $("card").hidden = true;
+        const vez = $("vez"), vezHtml = vez.innerHTML;
+        if (e.vez !== eu) {   // do outro lado: "Carol está girando…"
+          vez.innerHTML = "<strong></strong> está girando…";
+          vez.querySelector("strong").textContent = nomes[e.vez];
+          vez.classList.add("girando");
+        }
+        $("stage").classList.remove("espera");
         requestAnimationFrame(() => { posicionarRoleta(g.alvo, true); tiquesDaRoleta(); });
-        timerCarta = setTimeout(() => { girando = false; mostrarCarta(estado); atualizarBotoes(); desenharCegas(estado); desenharTimer(estado, false); desenharTrilha(estado); revelarCarta(estado, false); }, GIRO_MS());
+        timerCarta = setTimeout(() => { girando = false; marcarVencedora(); if (vez.classList.contains("girando")) { vez.innerHTML = vezHtml; vez.classList.remove("girando"); } mostrarCarta(estado); atualizarBotoes(); desenharCegas(estado); desenharTimer(estado, false); desenharTrilha(estado); revelarCarta(estado, false); }, GIRO_MS());
       }
     } else if (!girando) {
       mostrarCarta(e);
@@ -6593,7 +6649,8 @@
 
   // tiques da roleta: um a cada fatia que passa pelo ponteiro (espaçam sozinhos quando ela desacelera)
   function tiquesDaRoleta() {
-    const w = $("wheel"), passo = 360 / SEGMENTOS;
+    const w = $("wheel"), p = $("ponteira"), passo = 360 / SEGMENTOS;
+    const fimEm = performance.now() + GIRO_MS();
     let ultimo = null;
     (function quadro() {
       if (!girando) return;
@@ -6602,7 +6659,11 @@
         const [a, b] = m.slice(7, -1).split(",").map(Number);
         const ang = (Math.atan2(b, a) * 180 / Math.PI + 360) % 360;
         const fatia = Math.floor(ang / passo);
-        if (ultimo !== null && fatia !== ultimo) somTique();
+        if (ultimo !== null && fatia !== ultimo) {
+          somTique();
+          p.classList.remove("tique"); void p.getBoundingClientRect(); p.classList.add("tique");   // a ponteira bate no pino
+          if (fimEm - performance.now() < 1000) vibrar(8);   // vibração só no último segundo da desaceleração
+        }
         ultimo = fatia;
       }
       requestAnimationFrame(quadro);
@@ -6623,7 +6684,7 @@
     document.body.classList.toggle("cam-esquerda", camera === "esquerda" && !juntos());
     $("camera").closest("label").hidden = juntos();
     $("camera").value = camera;
-    $("som").textContent = somLigado ? "🔊" : "🔇";
+    $("som").innerHTML = `<svg class="i" aria-hidden="true"><use href="#i-${somLigado ? "som" : "mudo"}"/></svg><span>${somLigado ? "Som e vibração ligados" : "Som e vibração desligados"}</span>`;
     $("som").setAttribute("aria-pressed", String(somLigado));
     $("som").setAttribute("aria-label", somLigado ? "Som e vibração ligados" : "Som e vibração desligados");
   }
@@ -6640,8 +6701,10 @@
     if (!c || $("card").hidden || c.chave === ultimaRevelada) return;
     ultimaRevelada = c.chave;
     if (inicial) return;
+    const card = $("card");
+    card.classList.remove("chegando"); void card.getBoundingClientRect(); card.classList.add("chegando");   // a carta chega virando
     const suave = !matchMedia("(prefers-reduced-motion: reduce)").matches;
-    try { $("card").scrollIntoView({ block: "center", behavior: suave ? "smooth" : "auto" }); } catch (err) {}
+    try { card.scrollIntoView({ block: "start", behavior: suave ? "smooth" : "auto" }); } catch (err) {}
     if (c.evento) { somEvento(); vibrar([100, 50, 100]); }
     else if (c.nivel === "pesado") vibrar([80, 60, 80, 60, 200]);
   }
@@ -7133,10 +7196,10 @@
     });
   }
   // "Parar aqui": ficam os pontos das etapas feitas; quem parou paga uma prenda do nível da carta
-  function pararSequencia() {
+  async function pararSequencia() {
     const c = estado && estado.carta;
     if (!c || c.tipo !== "sequencia" || !estado.sequencia) return;
-    if (!confirm("Parar a carta aqui? Você paga uma prenda.")) return;
+    if (!await perguntar("Parar a carta aqui? Você paga uma prenda.")) return;
     const chave = c.chave;
     gravarFresco(n => {
       const c2 = n.carta, s = n.sequencia;
@@ -7295,9 +7358,9 @@
     n.niveis = niveisEtapa(et);
     n.aviso = novoAviso(`🎬 Etapa ${r.etapa + 1}: ${et.nome}`);
   }
-  function sairRoteiro() {
+  async function sairRoteiro() {
     if (!estado || !estado.roteiro || !podeChipsAqui()) return;
-    if (!estado.roteiro.concluido && !confirm(estado.roteiro.campanha ? "Sair do roteiro? A noite da campanha não conta." : "Sair do roteiro? O placar continua.")) return;
+    if (!estado.roteiro.concluido && !await perguntar(estado.roteiro.campanha ? "Sair do roteiro? A noite da campanha não conta." : "Sair do roteiro? O placar continua.")) return;
     gravar(n => { if (n.roteiro && n.roteiro.campanha && !n.roteiro.concluido && n.campanha) n.campanha.jogando = false; n.roteiro = null; });
   }
   function abrirRoteiros() {
@@ -7422,11 +7485,11 @@
     if (ultima) { c.concluida = true; n.campanhasFeitas = (n.campanhasFeitas || 0) + 1; n.aviso = novoAviso(`${c.emoji} Campanha concluída 🎞️`); }
     else { c.noite = k + 1; n.aviso = novoAviso(`🎞️ Noite ${k + 1} concluída · fichas: ${n.jogadores[0]} ${c.bonus[0]} · ${n.jogadores[1]} ${c.bonus[1]}`); }
   }
-  function jogarNoite() {
+  async function jogarNoite() {
     const e = estado;
     if (!e || !e.campanha) return;
     const zerar = !placarZerado(e) || e.carta || e.vencedor !== null || e.roteiro;
-    if (zerar && !confirm(`Começar a noite ${e.campanha.noite + 1}? O placar de agora zera.`)) return;
+    if (zerar && !await perguntar(`Começar a noite ${e.campanha.noite + 1}? O placar de agora zera.`)) return;
     gravar(n => {
       const c = n.campanha;
       if (!c || c.jogando || c.concluida || (c.ultima || "") >= hojeISO()) return;
@@ -7434,8 +7497,8 @@
       iniciarNoite(n);
     });
   }
-  function recomecarCampanha() {
-    if (!estado || !estado.campanha || !confirm("Recomeçar a campanha da noite 1? As fichas zeram.")) return;
+  async function recomecarCampanha() {
+    if (!estado || !estado.campanha || !await perguntar("Recomeçar a campanha da noite 1? As fichas zeram.")) return;
     gravar(n => {
       const c = n.campanha;
       if (!c) return;
@@ -7443,15 +7506,15 @@
       if (n.roteiro && n.roteiro.campanha) n.roteiro = null;
     });
   }
-  function sairCampanha() {
+  async function sairCampanha() {
     if (!estado || !estado.campanha) return;
-    if (!estado.campanha.concluida && !confirm("Sair da campanha? O que foi jogado nas noites se perde.")) return;
+    if (!estado.campanha.concluida && !await perguntar("Sair da campanha? O que foi jogado nas noites se perde.")) return;
     gravar(n => { if (n.roteiro && n.roteiro.campanha) n.roteiro = null; n.campanha = null; });
   }
-  function quebreiRegra() {
+  async function quebreiRegra() {
     const c = estado && estado.campanha;
     if (!c || c.noite !== 1 || !c.jogando || c.quebrou[eu]) return;
-    if (!confirm("Quebrou a regra da noite? Palavra de honra: suas fichas zeram.")) return;
+    if (!await perguntar("Quebrou a regra da noite? Palavra de honra: suas fichas zeram.", { ok: "Quebrei", perigo: true })) return;
     gravar(n => { const x = n.campanha; if (!x) return; x.quebrou[eu] = true; x.bonus[eu] = 0; n.aviso = novoAviso(`🙈 ${n.jogadores[eu]} quebrou a regra e perdeu as fichas`); });
   }
   const naNoiteFinal = e => { const c = e && e.campanha; return !!(c && c.jogando && c.noite === c.noites.length - 1 && e.roteiro && e.roteiro.campanha && !e.roteiro.concluido); };
@@ -7608,10 +7671,10 @@
       n.aviso = novoAviso(`${n.jogadores[eu]} escolheu: ${o.rotulo}`);
     });
   }
-  function sairEnredo(continuar) {
+  async function sairEnredo(continuar) {
     const en = estado && estado.enredo;
     if (!en) return;
-    if (!continuar && !confirm("Sair do enredo? Os pontos ficam.")) return;
+    if (!continuar && !await perguntar("Sair do enredo? Os pontos ficam.")) return;
     gravar(n => {
       const x = n.enredo;
       if (!x) return;
@@ -8259,7 +8322,7 @@
     if (!podeVetar(x.para)) return;
     const outras = clausulasCat.filter(c => c.nivel === x.nivel && c.texto !== x.texto);
     if (!outras.length) return erro("erroClausula", "Não há outra cláusula desse nível para trocar.");
-    if (!confirm("Usar o veto da semana e trocar esta cláusula?")) return;
+    if (!await perguntar("Usar o veto da semana e trocar esta cláusula?")) return;
     const nova = outras[Math.floor(Math.random() * outras.length)];
     const { error } = await sb.from("clausulas_sala").update({ texto: nova.texto }).eq("id", x.id);
     if (error) return erro("erroClausula", "Não consegui trocar. Confira a internet.");
@@ -8329,9 +8392,9 @@
     n.aviso = novoAviso(`⚡ ${n.jogadores[w]} venceu a morte súbita!`);
     declararVencedor(n, w);
   }
-  function desistirMorteSubita() {
+  async function desistirMorteSubita() {
     if (!estado || !estado.emMorteSubita || estado.vez !== eu || !estado.carta) return;
-    if (!confirm("Desistir? Na morte súbita, desistir dá a vitória ao outro.")) return;
+    if (!await perguntar("Desistir? Na morte súbita, desistir dá a vitória ao outro.")) return;
     gravar(n => {
       if (!n.emMorteSubita || n.vez !== eu) return;
       n.aviso = novoAviso(`${n.jogadores[eu]} desistiu. ${n.jogadores[1 - eu]} venceu!`);
@@ -8671,12 +8734,18 @@
       q("IaGerar").disabled = true;
       q("IaStatus").textContent = "Pensando…";
       q("IaLista").textContent = "";
+      for (let i = 0; i < 3; i++) { const s = el("li", "esqueleto"); s.setAttribute("aria-hidden", "true"); q("IaLista").appendChild(s); }   // o formato das ideias que vão chegar
+      q("IaLista").setAttribute("aria-busy", "true");
+      const quase = setTimeout(() => { if (meu === pedido) q("IaStatus").textContent = "Quase lá…"; }, 8000);
       const r = await gerarIdeias(tipo, nivel, tema);
+      clearTimeout(quase);
       if (meu !== pedido) return;
+      q("IaLista").textContent = "";
+      q("IaLista").removeAttribute("aria-busy");
       q("IaGerar").disabled = false;
       if (typeof r.usadasHoje === "number" && typeof r.limite === "number") q("IaUso").textContent = `${r.usadasHoje} de ${r.limite} hoje`;
       const cartasIA = Array.isArray(r.cartas) ? r.cartas.filter(c => c && typeof c.texto === "string" && c.texto.trim()) : [];
-      if (r.erro || !cartasIA.length) { q("IaStatus").textContent = IA_ERROS[r.erro] || IA_ERROS.falha; return; }
+      if (r.erro || !cartasIA.length) { q("IaStatus").textContent = IA_ERROS[r.erro] || IA_ERROS.falha; if (r.erro !== "limite") q("IaGerar").textContent = "Tentar de novo"; return; }
       q("IaStatus").textContent = "Toque numa para usar. Dá para editar antes de salvar.";
       q("IaGerar").textContent = "Gerar outras";
       cartasIA.forEach(c => {
@@ -8747,7 +8816,7 @@
   }
 
   async function apagarCarta(x) {
-    if (!confirm(`Apagar esta carta?\n\n"${x.texto}"`)) return;
+    if (!await perguntar(`Apagar esta carta?\n\n"${x.texto}"`)) return;
     const { error } = await sb.from("cartas").delete().eq("id", x.id);
     if (error) return erro("erroJogo", "Não consegui apagar a carta. Confira a internet e tente de novo.");
     erro("erroJogo", "");
@@ -9056,6 +9125,29 @@
     $("entrar").addEventListener("click", () => entrarSala($("codigo").value));
     $("codigo").addEventListener("keydown", ev => { if (ev.key === "Enter") entrarSala($("codigo").value); });
     $("sair").addEventListener("click", sair);
+
+    // opções da sala: folha que sobe de baixo; fecha ao escolher uma opção (som e seletores mantêm aberta)
+    const folha = $("dlgSala");
+    $("abrirMenuSala").addEventListener("click", () => folha.showModal());
+    $("fecharMenuSala").addEventListener("click", () => folha.close());
+    folha.addEventListener("click", ev => {
+      const r = folha.getBoundingClientRect();
+      if (ev.target === folha && (ev.clientY < r.top || ev.clientY > r.bottom || ev.clientX < r.left || ev.clientX > r.right)) return folha.close();   // toque fora
+      const b = ev.target.closest("button");
+      if (b && !b.hasAttribute("data-fica") && folha.open) folha.close();
+    });
+
+    // cor da barra do navegador acompanha o fundo (modo presencial, tema e as telas cheias da noite e da companhia)
+    const corDaBarra = () => {
+      const cheia = ["noite", "companhia"].map($).find(x => x && !x.hidden);
+      const cor = getComputedStyle(cheia || document.body).backgroundColor;
+      document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute("content", cor));
+    };
+    const obs = new MutationObserver(corDaBarra);
+    obs.observe(document.body, { attributes: true, attributeFilter: ["data-modo"] });
+    ["noite", "companhia"].forEach(id => { if ($(id)) obs.observe($(id), { attributes: true, attributeFilter: ["hidden"] }); });
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", corDaBarra);
+    corDaBarra();
     $("spin").addEventListener("click", girar);
     $("pickV").addEventListener("click", () => escolher("verdade"));
     $("pickD").addEventListener("click", () => escolher("desafio"));

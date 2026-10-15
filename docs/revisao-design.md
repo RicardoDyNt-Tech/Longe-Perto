@@ -333,3 +333,59 @@ Antes de começar, listar os 31 pontos de `confirm`/`alert`/`prompt` para aprova
 
 ## Entrega
 Ao aprovar, o primeiro passo é salvar este documento em `docs/revisao-design.md`, que é o único arquivo criado nesse momento. Depois aplico as fases uma a uma, com um commit por fase, e mostro as screenshots de antes e depois a cada fase.
+
+---
+
+## Execução (15/10/2026)
+
+As Fases 2 a 7 foram aplicadas em seguida e a Fase 6 ficou por último, a pedido. Tudo está na branch `redesign`.
+
+### Checagem de dependências antes da Fase 2
+Os elementos que foram para a folha "Opções da sala" (`#dlgSala`) mantêm os mesmos IDs. Encontrei três dependências de posição, e as três continuam atendidas:
+- `app.js` `desenharEntradaConfig()` faz `document.querySelector(".ajustes")` e `menu.insertBefore(bm, $("som").nextSibling)`. Por isso `#som` continua filho direto de `.ajustes`, e o botão "Configurações" entra logo depois dele, dentro da folha.
+- `app.js` `desenharAjustes()` faz `$("camera").closest("label")`. O `<select>` continua dentro do seu `<label>`.
+- `style.css`: as margens da câmera do WhatsApp (`body.cam-direita .topbar/.ajustes`) foram reapontadas para o topo novo (`.sala-topo`, `.juntos-cab` e o resumo de "Níveis e regras").
+
+Nenhum código usa `parentElement` nem seletores por hierarquia nesses elementos. `#presenca`, `#chamadaRelogio` e `#contadorMini` mudaram de lugar, mas o app só chega neles por ID.
+
+### Os 31 diálogos nativos (Fase 6)
+Todos agora usam `perguntar()` ou `avisar()`, com um `<dialog id="dlgPergunta">`. O botão de confirmar leva o verbo da pergunta e fica vermelho quando a ação apaga algo.
+
+- **Trocar modo:** `trocarModo`.
+- **Cardápio secreto:** `enviarCardapio`.
+- **Apagar algo:**
+  - chamada: `apagarChamada`;
+  - cofre: `apagarCofre`;
+  - música: `apagarMusica`;
+  - envelope: `apagarEnvelope`;
+  - momento do álbum: `apagarMomento`;
+  - marco: `apagarMarco`;
+  - motivo do pote: `apagarMotivo`;
+  - carta "abra quando": `apagarAbra`;
+  - carta de vocês: `apagarCarta`;
+  - desenho do mural: `apagarMural`, mais o `alert` de falha, que virou `avisar()`.
+- **Mural:** `limparMural`.
+- **Dengo:** `cancelarDengo` (botões "Cancelar pedido" e "Manter") e `restaurarPedidos`.
+- **Posições:** `referenciaPosicao`. Era o único `prompt`; agora é um campo de link dentro do diálogo.
+- **Baralho:** `marcarCarta`, ao aposentar.
+- **Abra quando:** `abrirAbra` ("Abrir agora").
+- **Noite:** `encerrarNoite`.
+- **Dono:** `gerarNovoCodigo` e "Mostrar código de dono".
+- **Cartas em etapas:** `pararSequencia`.
+- **Roteiro:** `sairRoteiro`.
+- **Campanha:**
+  - `jogarNoite`;
+  - `recomecarCampanha`;
+  - `sairCampanha`;
+  - `quebreiRegra` ("Quebrei").
+- **Enredo:** `sairEnredo`.
+- **Cláusulas:** `vetarClausula`.
+- **Morte súbita:** `desistirMorteSubita`.
+
+São 29 `confirm`, 1 `alert` e 1 `prompt`. O `pedidoInstalar.prompt()` é a API de instalar o app e continua como estava. Todos os 31 ficam dentro de handlers de clique. Onze funções passaram a ser `async`; as outras já eram.
+
+### Desvios conscientes do lint do taste-skill
+- **Emoji:** continua no conteúdo e no texto dos botões, como linguagem do casal. Foi marcado com `aria-hidden`, então o leitor de tela lê só o texto. A navegação, as opções da sala, o som e as marcas da carta passaram a usar ícones SVG.
+- **Sombras:** ficam no botão principal (o "degrau") e nos elementos que flutuam (barra fixa, diálogos, convite do mural).
+- **Gradientes:** ficam nas cenas da noite e da companhia e no papel quadriculado do mural.
+- **Monospace:** fica no código de dono, que é um código de verdade e se lê caractere a caractere.

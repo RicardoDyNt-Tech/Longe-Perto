@@ -1,6 +1,6 @@
 :root{
-  --bg:#FBF3F6; --surface:#FFFFFF; --ink:#2A1F3D; --muted:#6E6285; --line:#E6D9E3;
-  --verdade:#5B4BDB; --desafio:#E0405F; --on-color:#FFFFFF; --erro:#B3261E;
+  --bg:#F6EBF0; --surface:#FFFFFF; --ink:#2A1F3D; --muted:#6E6285; --line:#E6D9E3;
+  --verdade:#5B4BDB; --desafio:#C92C50; --on-color:#FFFFFF; --erro:#B3261E;
   /* ação: a única cor de chamada (botão principal, ponteira) */
   --acao:#FFC23D; --acao-texto:#2A1F3D; --acao-tinta:#8A5A00;
   /* papéis antes soltos no CSS */
@@ -8,7 +8,7 @@
   /* escalas */
   --esp-1:4px; --esp-2:8px; --esp-3:12px; --esp-4:16px; --esp-5:24px; --esp-6:32px; --esp-7:48px;
   --raio-c:10px; --raio-b:20px; --raio-p:999px;
-  --t-display:clamp(1.6rem, 6vw, 2.1rem); --t-titulo:1.35rem; --t-destaque:1.1rem; --t-corpo:1rem; --t-apoio:.875rem; --t-min:.8rem;
+  --t-display:clamp(1.4rem, 5.6vw, 1.9rem); --t-titulo:1.35rem; --t-destaque:1.1rem; --t-corpo:1rem; --t-apoio:.875rem; --t-min:.8rem;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -37,11 +37,11 @@ input[type=text]{
   border:1.5px solid var(--line); border-radius:12px; padding:10px 12px;
 }
 #codigo{letter-spacing:.08em; font-weight:800}
-.fixa-box{background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px 16px}
+.fixa-box{background:var(--surface); border:1.5px solid transparent; border-radius:18px; padding:14px 16px}
 .fixa-box summary{font-weight:800; cursor:pointer}
 .fixa-box .field{margin-top:10px}
 .lista-recentes{list-style:none; padding:0; margin:0; display:grid; gap:8px}
-.lista-recentes button{width:100%; text-align:left; background:var(--surface); color:var(--ink); border:1.5px solid var(--line); padding:10px 14px; display:flex; justify-content:space-between; gap:10px}
+.lista-recentes button{width:100%; text-align:left; background:var(--surface); color:var(--ink); border:1.5px solid transparent; padding:10px 14px; display:flex; justify-content:space-between; gap:10px}
 .lista-recentes .cod{font-weight:800; overflow-wrap:anywhere}
 .lista-recentes .quem{color:var(--muted); font-size:.85rem; white-space:nowrap}
 .lista-hist li{display:block}
@@ -57,7 +57,6 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .row{display:flex; gap:10px}
 .erro{color:var(--erro); font-weight:600; min-height:1.4em; margin:12px 0 0}
 
-.topbar{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px}
 .sala{font-weight:800; letter-spacing:.15em; overflow-wrap:anywhere}
 .sala.fixa{letter-spacing:.02em}
 .linkbtn{background:transparent; color:var(--muted); text-decoration:underline; padding:4px 0}
@@ -69,7 +68,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .chips{display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 0}
 .chip{position:relative}
 .chip input{position:absolute; opacity:0; inset:0; margin:0; cursor:pointer}
-.chip span{display:inline-block; padding:8px 14px; border-radius:999px; border:1.5px solid var(--line); background:var(--surface); font-weight:600; font-size:.95rem}
+.chip > span{display:inline-block; padding:8px 14px; border-radius:999px; border:1.5px solid var(--line); background:var(--surface); font-weight:600; font-size:.95rem}
 .chip input:checked + span{background:var(--ink); color:var(--bg); border-color:var(--ink)}
 .chip input:focus-visible + span{outline:3px solid var(--foco); outline-offset:2px}
 
@@ -77,21 +76,43 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .turn{font-size:1.15rem; margin:0 0 12px; text-align:center}
 .turn strong{font-weight:800}
 .wheel-wrap{position:relative; width:min(84vw,340px); aspect-ratio:1}
-.pointer{position:absolute; top:-6px; left:50%; transform:translateX(-50%); width:0; height:0;
-  border-left:14px solid transparent; border-right:14px solid transparent; border-top:24px solid var(--acao); z-index:2}
+.pointer{position:absolute; top:-14px; left:50%; translate:-50% 0; width:30px; height:38px; z-index:2; transform-origin:50% 30%; overflow:visible}
+.pointer path{fill:var(--acao); stroke:var(--ink); stroke-width:2; stroke-linejoin:round}
+.pointer circle{fill:var(--ink)}
+.pointer.tique{animation:ponteiraTique .14s ease-out}
+@keyframes ponteiraTique{30%{rotate:-16deg} 100%{rotate:0deg}}
 #wheel{width:100%; height:100%}
 #wheel.anim{transition:transform 3.2s cubic-bezier(.17,.84,.24,1)}
-@media (prefers-reduced-motion:reduce){#wheel.anim{transition:transform .3s ease-out}}
+#wheel.puxa{animation:puxaRoleta .36s ease-out}
+@keyframes puxaRoleta{35%{rotate:-6deg} 100%{rotate:0deg}}
+#wheel .fatia.vencedora{animation:fatiaAcende .5s ease-out 2 alternate}
+@keyframes fatiaAcende{to{filter:brightness(1.3) saturate(1.15)}}
+@media (prefers-reduced-motion:reduce){#wheel.anim{transition:transform .3s ease-out} #wheel.puxa, .pointer.tique, #wheel .fatia.vencedora{animation:none}}
 .hub{position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%); width:26%; aspect-ratio:1; border-radius:50%;
-  background:var(--bg); border:4px solid var(--acao); display:grid; place-items:center; font-size:1.6rem}
+  background:var(--bg); border:4px solid var(--acao); display:grid; place-items:center}
+.hub svg{width:62%; height:auto; overflow:visible}
+.hub .hub-a{fill:none; stroke:var(--verdade); stroke-width:3.2}
+.hub .hub-b{fill:none; stroke:var(--desafio); stroke-width:3.2}
 #spin{width:100%; padding:14px 40px; font-size:1.2rem}
 .direct{display:flex; gap:10px; margin-top:6px; justify-content:center}
 .direct button{background:transparent; color:var(--muted); padding:6px 10px; text-decoration:underline}
 
-.card{margin-top:22px; background:var(--surface); border-radius:20px; padding:20px; border:2px solid var(--line)}
-.card.verdade{border-color:var(--verdade)}
-.card.desafio{border-color:var(--desafio)}
-.kind{font-weight:800; font-size:1.3rem; margin:0}
+.card{margin-top:22px; background:var(--surface); border-radius:var(--raio-b); padding:20px; border:0; scroll-margin-top:12px; overflow:hidden}
+/* a frente da carta: o campo inteiro na cor do naipe */
+.carta-frente{margin:-20px -20px 18px; padding:22px 20px 26px; background:color-mix(in srgb, var(--ink) 6%, var(--surface)); color:var(--ink)}
+.card.verdade .carta-frente{background:var(--verdade); color:var(--on-color)}
+.card.desafio .carta-frente{background:var(--desafio); color:var(--on-color)}
+.card.prenda .carta-frente, .card.evento .carta-frente{background:color-mix(in srgb, var(--acao) 32%, var(--surface)); color:var(--ink)}
+.card.reversa .carta-frente{outline:2px dashed color-mix(in srgb, currentColor 55%, transparent); outline-offset:-10px}
+.carta-frente .kind, .card.verdade .carta-frente .kind, .card.desafio .carta-frente .kind{color:inherit}
+.carta-frente .level{color:inherit; opacity:.88; margin-bottom:14px}
+.carta-frente .selo{color:inherit; opacity:.85}
+.carta-frente .text{margin:0; font-size:var(--t-display); font-weight:700; line-height:1.18; letter-spacing:-.015em; text-wrap:pretty}
+.card.chegando{animation:cartaChega .5s cubic-bezier(.2,.8,.3,1)}
+@keyframes cartaChega{from{opacity:0; transform:perspective(1100px) translateY(28px) rotateY(-70deg)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){.card.chegando{animation:cartaAparece .25s ease-out}}
+@keyframes cartaAparece{from{opacity:0}}
+.kind{font-weight:800; font-size:var(--t-destaque); margin:0}
 .verdade .kind{color:var(--verdade)}
 .desafio .kind{color:var(--desafio)}
 .level{color:var(--muted); font-size:.9rem; margin:2px 0 12px}
@@ -115,11 +136,11 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .estrelas{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
 .estrelas button{background:var(--acao); color:var(--acao-texto); font-size:1.2rem; padding:12px 0; letter-spacing:.05em}
 .selo{margin:0 0 4px; font-size:.8rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--acao-tinta)}
-.card.evento{border-color:var(--acao); box-shadow:0 0 0 3px color-mix(in srgb, var(--acao) 25%, transparent)}
+
 .evento .kind{color:var(--ink)}
 .evento-fim{grid-column:1/-1}
 .reverso{grid-column:1/-1}
-.card.reversa{border-style:dashed}
+
 .evento-acoes{grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .duelo-acoes{grid-template-columns:1fr}
 .votos{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
@@ -156,7 +177,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .barra-acoes{position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--bg); border-top:1.5px solid var(--line);
   padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px)); box-shadow:0 -8px 20px rgba(0,0,0,.08)}
 .barra-in{max-width:520px; margin:0 auto}
-.barra-in .actions{max-height:52vh; overflow-y:auto}
+.barra-in .actions{max-height:40vh; overflow-y:auto}
 #jogo{padding-bottom:calc(var(--barra, 130px) + 12px)}
 .card-links{margin-top:4px}
 .ajustes{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:6px 0 0; font-size:.85rem; color:var(--muted)}
@@ -167,12 +188,11 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 @media (max-width:700px){
   body.cam-direita .pip-zona{display:block; right:0; border-right:0; border-bottom-left-radius:18px}
   body.cam-esquerda .pip-zona{display:block; left:0; border-left:0; border-bottom-right-radius:18px}
-  body.cam-direita main > h1, body.cam-direita .topbar, body.cam-direita .ajustes, body.cam-direita .efeitos-barra,
+  body.cam-direita main > h1, body.cam-direita .sala-topo, body.cam-direita .juntos-cab, body.cam-direita .ajustes-partida > summary, body.cam-direita .efeitos-barra,
   body.cam-direita .reencontro{margin-right:40vw}
-  body.cam-esquerda main > h1, body.cam-esquerda .topbar, body.cam-esquerda .ajustes, body.cam-esquerda .efeitos-barra,
+  body.cam-esquerda main > h1, body.cam-esquerda .sala-topo, body.cam-esquerda .juntos-cab, body.cam-esquerda .ajustes-partida > summary, body.cam-esquerda .efeitos-barra,
   body.cam-esquerda .reencontro{margin-left:40vw}
   body.cam-direita main > h1, body.cam-esquerda main > h1{font-size:1.9rem}
-  .topbar{flex-wrap:wrap}
 }
 .done{background:var(--ink); color:var(--bg); font-weight:600; padding:12px}
 .skip{background:transparent; color:var(--ink); border:1.5px solid var(--line); padding:12px}
@@ -204,7 +224,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .casa{margin-top:14px}
 .casa-convite{background:var(--surface); border:2px dashed var(--acao); border-radius:18px; padding:16px; margin:0}
 .casa-grade{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.casa-card{display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; background:var(--surface); color:var(--ink); border:1.5px solid var(--line); border-radius:18px; padding:14px; min-height:96px}
+.casa-card{display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; background:var(--surface); color:var(--ink); border:1.5px solid transparent; border-radius:18px; padding:14px; min-height:96px}
 .casa-card .ic{font-size:1.5rem}
 .casa-card b{font-size:1rem}
 .casa-card .sub{color:var(--muted); font-size:.82rem}
@@ -217,7 +237,7 @@ body.vista-casa .barra-acoes{display:none}
 #vSemana .info > .t, .obs-minha .t{font-weight:700; overflow-wrap:anywhere}
 #vSemana .votos{margin-top:8px}
 .nivel-semana select{width:auto; margin-left:6px}
-.obs-minha{background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:12px 14px}
+.obs-minha{background:var(--surface); border:1.5px solid transparent; border-radius:14px; padding:12px 14px}
 .obs-minha button{width:auto; padding:8px 14px}
 .obs-titulo{margin:0 0 4px; font-weight:800}
 .semana-passada{margin-top:10px}
@@ -238,7 +258,7 @@ body.vista-casa .barra-acoes{display:none}
 .marcas button[aria-pressed="true"]{opacity:1; border-color:var(--line)}
 #vBaralho .t{overflow-wrap:anywhere}
 .conq-grade{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px}
-.conq{background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; opacity:.75; min-width:0}
+.conq{background:var(--surface); border:1.5px solid transparent; border-radius:14px; padding:10px 12px; opacity:.75; min-width:0}
 .conq.ok, .conq.meio{opacity:1; border-color:var(--acao)}
 .conq b{display:block; overflow-wrap:anywhere}
 .conq .desc{display:block; font-size:.85rem; color:var(--muted); margin:2px 0 6px}
@@ -272,7 +292,7 @@ body.vista-casa .barra-acoes{display:none}
 @keyframes envelope{0%{transform:translateY(40vh) scale(.6) rotate(-4deg); opacity:0} 60%{transform:translateY(-10px) scale(1.02) rotate(1deg); opacity:1} 100%{transform:none}}
 @media (prefers-reduced-motion:reduce){.env-abrindo.anima .env-papel{animation:none}}
 body.vista-casa #jogo{padding-bottom:24px}
-.reencontro{margin:10px 0 0; padding:10px 14px; border-radius:14px; background:var(--surface); border:1.5px solid var(--line); display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
+.reencontro{margin:10px 0 0; padding:10px 14px; border-radius:14px; background:var(--surface); border:1.5px solid transparent; display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
 .reencontro-txt{margin:0; font-weight:700; flex:1 1 auto}
 .reencontro-form{display:flex; gap:8px; flex:1 1 100%}
 .reencontro-form input{flex:1; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:8px 10px}
@@ -297,18 +317,18 @@ body.vista-casa #jogo{padding-bottom:24px}
 .diario-outro .diario-quem{color:var(--muted)}
 .fim{margin-top:22px; text-align:center; background:var(--surface); border:2px solid var(--acao); border-radius:20px; padding:18px}
 .venceu{font-size:1.5rem; font-weight:800; margin:0 0 12px}
-.card.prenda{border-color:var(--acao)}
+
 .actions .liberar{grid-column:1/-1}
 .aviso{margin:18px 0 0; padding:12px 14px; border-radius:14px; background:var(--acao); color:var(--acao-texto); font-weight:700; text-align:center}
 .prenda .kind{color:var(--ink)}
-.extras{margin-top:24px; background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px 16px}
+.extras{margin-top:24px; background:var(--surface); border:1.5px solid transparent; border-radius:18px; padding:14px 16px}
 .extras summary{font-weight:800; cursor:pointer}
 .extras summary span{color:var(--muted); font-weight:600}
 .extras-sub{color:var(--muted); font-size:.9rem; margin:8px 0 14px}
 .addcarta{display:block; margin:10px 0 0; font-weight:600}
 .adicionar{display:flex; flex-wrap:wrap; gap:0 18px}
 input[type=url]{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:6px}
-.trilha{margin-top:14px; background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px 16px}
+.trilha{margin-top:14px; background:var(--surface); border:1.5px solid transparent; border-radius:18px; padding:14px 16px}
 .trilha-titulo{margin:0; font-size:.8rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--muted)}
 .trilha-nome{margin:4px 0 10px; overflow-wrap:anywhere}
 .trilha-nome span{color:var(--muted)}
@@ -406,7 +426,7 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--foco); outli
 .selo-pos.ia{border-color:var(--acao)}
 
 /* v6 · carinhos e mãos juntas */
-.casa-bloco{grid-column:1 / -1; background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:14px}
+.casa-bloco{grid-column:1 / -1; background:var(--surface); border:1.5px solid transparent; border-radius:18px; padding:14px}
 .carinho-resumo{margin:0 0 10px; font-weight:700; display:flex; justify-content:space-between; align-items:center; gap:8px}
 .carinho-resumo button{width:auto}
 .carinho-botoes{display:grid; grid-template-columns:repeat(4, 1fr); gap:8px}
@@ -429,7 +449,7 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--foco); outli
 .juntos-anim[hidden], .carinho-anim[hidden]{display:none}
 .juntos-anim p, .carinho-anim p{font-weight:800; font-size:1.2rem; margin:12px 0 0; text-align:center; padding:0 16px}
 .juntos-par{position:relative; width:220px; height:80px}
-.juntos-par span{position:absolute; top:10px; font-size:3.4rem}
+.juntos-par > span{position:absolute; top:10px; font-size:3.4rem}
 .juntos-anim.anima .c1{animation:vemEsq 1.5s ease-out forwards}
 .juntos-anim.anima .c2{animation:vemDir 1.5s ease-out forwards}
 @keyframes vemEsq{from{left:-40px; opacity:0} 60%{opacity:1} to{left:70px}}
@@ -586,7 +606,7 @@ input[type=number]{width:100%; font:inherit; color:var(--ink); background:var(--
 .nav-in{max-width:520px; margin:0 auto; display:flex; gap:4px}
 .nav-in button{flex:1; min-width:0; background:transparent; color:var(--muted); display:flex; flex-direction:column; align-items:center; gap:1px;
   font-size:var(--t-min); font-weight:700; padding:6px 2px; border-radius:12px}
-.nav-in button .ic{font-size:1.25rem; line-height:1.15}
+.nav-in button .ic{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
 .nav-in button[aria-current="page"]{color:var(--ink); background:color-mix(in srgb, var(--acao) 28%, transparent)}
 .nav-in .nav-recolher{flex:0 0 34px; font-size:1rem; justify-content:center}
 .nav-baixo.recolhida .nav-in{display:none}
@@ -611,7 +631,7 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 .avatar.grande.emoji{font-size:2.2rem}
 .avatar.mini{width:22px; height:22px; font-size:.62rem; margin-right:4px; vertical-align:middle}
 .avatar.mini.emoji{font-size:.85rem}
-.perfil-bloco{background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:12px 14px; margin:0 0 12px}
+.perfil-bloco{background:var(--surface); border:1.5px solid transparent; border-radius:18px; padding:12px 14px; margin:0 0 12px}
 .perfil-bloco > summary{font-weight:800; cursor:pointer}
 .perfil-bloco .casa-h3{margin-top:0}
 .emoji-grade{display:grid; grid-template-columns:repeat(auto-fill, minmax(40px, 1fr)); gap:6px; margin:10px 0}
@@ -677,8 +697,8 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 .humor-caras{display:flex; justify-content:space-between; gap:6px}
 .humor-caras button{flex:1; font-size:1.8rem; padding:6px 0; background:var(--bg); border:1.5px solid var(--line); border-radius:14px; filter:grayscale(.6); opacity:.75}
 .humor-caras button[aria-pressed="true"]{filter:none; opacity:1; border-color:var(--acao); box-shadow:0 0 0 3px color-mix(in srgb, var(--acao) 30%, transparent); transform:scale(1.06)}
-.humor-caras.outro span{flex:1; text-align:center; font-size:1.8rem; filter:grayscale(1); opacity:.3}
-.humor-caras.outro span.destaque{filter:none; opacity:1; transform:scale(1.25)}
+.humor-caras.outro > span{flex:1; text-align:center; font-size:1.8rem; filter:grayscale(1); opacity:.3}
+.humor-caras.outro > span.destaque{filter:none; opacity:1; transform:scale(1.25)}
 .humor-nota{display:flex; gap:8px; margin-top:10px}
 .humor-nota input{flex:1; min-width:0; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:8px 10px}
 .humor-nota button{width:auto; padding:8px 14px}
@@ -732,7 +752,7 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 .mural-convite .primary{width:auto; padding:8px 16px}
 .carta-mural{margin-top:8px}
 /* v7: aba Histórico */
-.hist-mes, .hist-semana{background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:12px 14px; margin:0 0 12px}
+.hist-mes, .hist-semana{background:var(--surface); border:1.5px solid transparent; border-radius:18px; padding:12px 14px; margin:0 0 12px}
 .hist-mes p{margin:2px 0}
 .hist-mes-titulo{font-weight:800; margin:0 0 6px !important}
 .humor-svg{width:100%; height:auto; display:block}
@@ -744,7 +764,7 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 .hs-leg i{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px}
 .hist-dia{margin:16px 0 6px; font-size:.95rem}
 .hist-lista{list-style:none; padding:0; margin:0; display:grid; gap:8px}
-.hist-item{display:flex; align-items:flex-start; gap:10px; background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:10px 12px}
+.hist-item{display:flex; align-items:flex-start; gap:10px; background:var(--surface); border:1.5px solid transparent; border-radius:14px; padding:10px 12px}
 .hist-hora{flex:0 0 40px; color:var(--muted); font-size:.8rem; padding-top:2px}
 .hist-corpo{flex:1; min-width:0}
 .hist-corpo p{margin:0; overflow-wrap:anywhere}
@@ -753,7 +773,7 @@ body.vista-casa #jogo{padding-bottom:calc(var(--nav, 0px) + 24px)}
 .hist-mural{background:transparent; padding:0; flex:0 0 auto}
 #histFiltro{margin-bottom:4px}
 .nav-in button{position:relative}
-.nav-in button.alerta .ic::after{content:""; position:absolute; top:4px; margin-left:2px; width:9px; height:9px; border-radius:50%; background:var(--desafio); border:2px solid var(--surface)}
+.nav-in button.alerta::after{content:""; position:absolute; top:4px; left:calc(50% + 6px); width:9px; height:9px; border-radius:50%; background:var(--desafio); border:2px solid var(--surface)}
 /* v8: cartas em etapas */
 .seq-etapas{list-style:none; padding:0; margin:12px 0 0; display:grid; gap:8px; text-align:left}
 .seq-etapa{display:flex; flex-direction:column; gap:2px; padding:10px 12px; border-radius:12px; border:1.5px solid var(--line); background:var(--bg)}
@@ -821,7 +841,7 @@ body[data-modo="presencial"]{
 .passe-sub{color:var(--muted); margin:0 0 18px}
 .passe-in .primary{width:100%}
 /* modos de hoje (presencial) */
-.modos-hoje{margin:14px 0 0; padding:12px 14px; border-radius:18px; background:var(--surface); border:1.5px solid var(--line)}
+.modos-hoje{margin:14px 0 0; padding:12px 14px; border-radius:18px; background:var(--surface); border:1.5px solid transparent}
 .mh-titulo{margin:0 0 8px; font-weight:800}
 .mh-abas{display:grid; grid-template-columns:1fr 1fr; gap:6px}
 .mh-abas button{background:var(--bg); color:var(--ink); border:1.5px solid var(--line); border-radius:12px; padding:8px; font-weight:700; font-size:.9rem}
@@ -903,12 +923,12 @@ body[data-modo="presencial"]{
 @media (prefers-reduced-motion: reduce) { .call-card { animation: none; } }
 
 /* estatísticas de chamadas */
-.ch-total{display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; padding:14px 10px; margin:6px 0 10px; background:var(--surface); border:1.5px solid var(--line); border-radius:16px}
+.ch-total{display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; padding:14px 10px; margin:6px 0 10px; background:var(--surface); border:1.5px solid transparent; border-radius:16px}
 .ch-total b{font-size:1.6rem; line-height:1.15}
 .ch-total .ch-sub{color:var(--muted); font-size:.9rem}
 .ch-total .ch-num{font-weight:700; margin-top:4px}
 .ch-stats{list-style:none; margin:0 0 10px; padding:0; display:grid; gap:6px}
-.ch-stats li{display:flex; flex-direction:column; padding:8px 12px; background:var(--surface); border:1.5px solid var(--line); border-radius:12px}
+.ch-stats li{display:flex; flex-direction:column; padding:8px 12px; background:var(--surface); border:1.5px solid transparent; border-radius:12px}
 .ch-stats .rot{color:var(--muted); font-size:.8rem}
 .ch-barras{display:grid; grid-template-columns:repeat(14, 1fr); gap:3px; align-items:end; height:110px; margin:0 0 6px}
 .ch-col{display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%}
@@ -940,7 +960,7 @@ body[data-modo="presencial"]{
 .cumprir-lista .fatura-item{display:block}
 .cumprir-lista .acoes{display:flex; gap:8px; margin-top:4px}
 .fatura-quitado,.fatura-quem{display:block; font-size:.85rem; color:var(--muted)}
-.fatura-resgate{border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; margin:8px 0; background:var(--surface)}
+.fatura-resgate{border:1.5px solid transparent; border-radius:14px; padding:10px 12px; margin:8px 0; background:var(--surface)}
 .fatura-resgate-quem{margin:0; color:var(--muted); font-size:.85rem}
 .fatura-resgate-timer{font-size:1.8rem; font-weight:700; font-variant-numeric:tabular-nums; margin:6px 0}
 /* v9: cardápio secreto */
@@ -948,7 +968,7 @@ body[data-modo="presencial"]{
 .cardapio-status li{color:var(--muted)}
 .cardapio-status li.ok{color:var(--ink); font-weight:600}
 .cardapio-lista{list-style:none; padding:0; margin:0 0 10px; display:grid; gap:6px}
-.cardapio-lista li{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface)}
+.cardapio-lista li{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border:1.5px solid transparent; border-radius:12px; background:var(--surface)}
 .cardapio-lista li.quero{border-color:var(--ok)}
 .cardapio-lista li.passo{opacity:.6}
 .cardapio-lista .acoes{display:flex; gap:6px; flex-shrink:0}
@@ -957,13 +977,13 @@ body[data-modo="presencial"]{
 .cardapio-add summary{cursor:pointer; font-weight:600}
 .cardapio-add form{display:grid; gap:6px; margin-top:6px}
 .cardapio-match{list-style:none; padding:0; display:grid; gap:8px; perspective:600px}
-.cardapio-match li{padding:12px; border-radius:14px; background:var(--surface); border:1.5px solid var(--line); font-weight:600}
+.cardapio-match li{padding:12px; border-radius:14px; background:var(--surface); border:1.5px solid transparent; font-weight:600}
 .cardapio-match li.virar{animation:virarCarta .6s ease-out both}
 @keyframes virarCarta{from{transform:rotateY(90deg); opacity:0} to{transform:rotateY(0); opacity:1}}
 @media (prefers-reduced-motion: reduce){.dc-respirar span{animation-duration:16s} .cardapio-match li.virar{animation:none}}
 
 /* v9: campanha e cláusulas */
-.faixa-campanha{border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; margin:8px 0; background:var(--surface)}
+.faixa-campanha{border:1.5px solid transparent; border-radius:14px; padding:10px 12px; margin:8px 0; background:var(--surface)}
 .faixa-campanha .fc-capa{font-weight:700; margin:0 0 4px}
 .faixa-campanha .fc-regra{margin:4px 0; padding:8px 10px; border-radius:10px; background:var(--bg); border-left:4px solid var(--desafio); font-weight:600}
 .faixa-campanha .fc-info{margin:4px 0; color:var(--muted); font-size:.9rem}
@@ -975,7 +995,7 @@ body[data-modo="presencial"]{
 
 /* v9: enredos */
 body[data-enredo="1"] .wheel-wrap, body[data-enredo="1"] #acoesGiro{display:none}
-.enredo{border:1.5px solid var(--line); border-radius:16px; padding:14px; margin:10px 0; background:var(--surface)}
+.enredo{border:1.5px solid transparent; border-radius:16px; padding:14px; margin:10px 0; background:var(--surface)}
 .enredo-topo{font-weight:700; margin:0 0 6px}
 .enredo-escolha{color:var(--muted); font-size:.9rem; margin:0 0 6px}
 .enredo-quem{font-weight:600; color:var(--muted); margin:6px 0 2px}
@@ -996,7 +1016,7 @@ body[data-enredo="1"] .wheel-wrap, body[data-enredo="1"] #acoesGiro{display:none
 .secreta-dica{font-size:.85rem; color:var(--muted); margin:4px 0}
 .secreta-btn[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
 /* v9: desafio do silêncio */
-.silencio{border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; margin:10px 0; background:var(--surface)}
+.silencio{border:1.5px solid transparent; border-radius:16px; padding:12px 14px; margin:10px 0; background:var(--surface)}
 .silencio.falhou{border-color:var(--erro)}
 .silencio-titulo{font-weight:700; margin:0 0 4px}
 .silencio-tempo{font-size:2rem; font-weight:700; font-variant-numeric:tabular-nums; margin:6px 0}
@@ -1053,7 +1073,7 @@ body[data-bateria-outro="1"] #casaDengo, body[data-bateria-outro="1"] #casaGrade
 .acoes-giro .secreta-btn{width:auto; align-self:center; padding:6px 14px; font-size:.9rem; margin-bottom:6px}
 
 /* app Android (nativo.js): boas-vindas e telas cheias abaixo da barra de status */
-.app-boasvindas{border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; margin:0 0 16px; background:var(--surface)}
+.app-boasvindas{border:1.5px solid transparent; border-radius:16px; padding:12px 14px; margin:0 0 16px; background:var(--surface)}
 .app-boasvindas p{margin:4px 0}
 .app-bv-titulo{font-weight:700}
 .descongelar,.companhia{padding-top:max(24px, env(safe-area-inset-top, 0px))}
@@ -1067,3 +1087,130 @@ html[data-app] body{overflow-x:hidden}
   .juntos-par .c1{left:70px} .juntos-par .c2{left:100px}
   .carinho-anim.anima .carinho-emoji{animation:none}
 }
+
+/* ===================== redesign: fases 2 a 7 ===================== */
+
+/* ícones (sprite no topo do index.html) */
+.i{width:22px; height:22px; flex:none; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+.i .cheio, .ic .cheio{fill:currentColor; stroke:none}
+
+/* topo da sala: uma linha (sala, presença, opções) */
+main:has(> #lobby[hidden]) > h1{display:none}
+.sala-topo{display:flex; align-items:center; gap:var(--esp-2); min-height:52px; margin:0 0 var(--esp-2)}
+.sala-info{flex:1; min-width:0}
+.sala-linha{margin:0; color:var(--muted); font-size:var(--t-apoio); overflow-wrap:anywhere}
+.sala-linha .sala{color:var(--ink); font-size:var(--t-destaque)}
+.sala-topo .presenca{margin:2px 0 0; font-size:var(--t-apoio)}
+.sala-topo .chamada-relogio{font-size:var(--t-apoio); white-space:nowrap}
+.topo-mais{flex:none; width:44px; height:44px; display:grid; place-items:center; padding:0; background:var(--surface); color:var(--ink); border-radius:var(--raio-p)}
+.conexao{display:inline-flex; align-items:center; gap:6px; white-space:nowrap; font-size:var(--t-apoio); font-weight:700; color:var(--desafio);
+  background:color-mix(in srgb, var(--desafio) 12%, var(--surface)); border-radius:var(--raio-p); padding:6px 10px}
+.conexao::before{content:""; width:8px; height:8px; border-radius:50%; background:currentColor; animation:pisca 1s ease-in-out infinite alternate}
+@keyframes pisca{to{opacity:.3}}
+.juntos-cab{margin:0 0 var(--esp-2)}
+.ajustes-partida{margin:0 0 var(--esp-2)}
+.ajustes-partida[open] > summary{margin-bottom:var(--esp-3)}
+
+/* folha de opções da sala */
+.folha{margin:auto auto 0; width:100%; max-width:520px; border-radius:var(--raio-b) var(--raio-b) 0 0;
+  padding:16px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); max-height:85dvh; overflow:auto}
+.folha[open]{animation:folhaSobe .25s cubic-bezier(.2,.8,.3,1)}
+@keyframes folhaSobe{from{transform:translateY(40px); opacity:0}}
+.folha-topo{display:flex; align-items:center; justify-content:space-between; gap:var(--esp-2); margin-bottom:var(--esp-2)}
+.folha-topo h2{margin:0}
+.folha-fechar{width:44px; height:44px; display:grid; place-items:center; padding:0; background:transparent; color:var(--ink)}
+.folha .modo-linha{flex-direction:column; align-items:stretch; gap:var(--esp-2); margin:0 0 var(--esp-3)}
+.folha .modo-btn, .folha .chamada-btn{width:100%; min-height:48px; font-size:var(--t-corpo)}
+.folha .chamada-linha{flex-direction:column; align-items:stretch}
+.folha .um-celular{min-height:48px; font-size:var(--t-corpo)}
+.folha .ajustes{flex-direction:column; align-items:stretch; gap:0; margin:0; font-size:var(--t-corpo); color:var(--ink)}
+.folha .ajustes > button, .folha .sair{display:flex; align-items:center; gap:12px; width:100%; min-height:52px; padding:8px 6px; border:0; border-radius:var(--raio-c);
+  background:transparent; color:var(--ink); font-size:var(--t-corpo); font-weight:600; text-decoration:none; text-align:left}
+.folha .ajustes > button[hidden]{display:none}
+.folha .camera-campo{display:flex; align-items:center; justify-content:space-between; gap:var(--esp-3); min-height:52px; padding:4px 6px; font-weight:600}
+.folha .camera-campo[hidden]{display:none}
+.folha .camera-campo select{width:auto; margin:0}
+.folha .sair{color:var(--desafio); margin-top:var(--esp-2)}
+@media (hover:hover){ .folha .ajustes > button:hover, .folha .sair:hover{background:color-mix(in srgb, var(--ink) 6%, transparent)} }
+
+/* barra de ações: Cumpri e Pular fortes, o resto em pílulas */
+#acoesCarta > .secondary{font-size:var(--t-apoio); padding:10px 12px; border-radius:var(--raio-p)}
+
+/* roleta: quem espera vê a roda respirando */
+.stage.espera .wheel-wrap{animation:respira 4s ease-in-out infinite}
+@keyframes respira{50%{transform:scale(1.015)}}
+.turn.girando{color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.stage.espera .wheel-wrap{animation:none}}
+
+/* toque: retorno em tudo que é tocável */
+html{-webkit-tap-highlight-color:transparent}
+button, .wa, .spotify, .chip > span{transition:transform .15s ease-out, background-color .2s ease-out, border-color .2s ease-out, color .2s ease-out, box-shadow .15s ease-out}
+button:not(.primary):not(:disabled):active, .wa:active, .spotify:active{transform:scale(.97)}
+.chip input:active + span{transform:scale(.96)}
+@media (hover:hover){
+  .secondary:hover, .skip:hover, .chip > span:hover, .casa-card:hover, .votos button:hover, .timer-opcoes button:hover{border-color:var(--muted)}
+  .linkbtn:hover, .direct button:hover{color:var(--ink)}
+  .primary:hover:not(:disabled){filter:brightness(1.04)}
+}
+
+/* alvos de toque de no mínimo 44px */
+.linkbtn{min-height:44px; display:inline-flex; align-items:center; gap:6px}
+.direct button{min-height:44px; padding:10px 12px}
+.marcas button{min-width:44px; min-height:44px; display:inline-grid; place-items:center; color:var(--ink)}
+.marcas button[data-marca="favorita"][aria-pressed="true"]{color:var(--acao-tinta)}
+.marcas button[data-marca="favorita"][aria-pressed="true"] .i{fill:currentColor}
+.estrela{min-width:44px; min-height:44px}
+.cor-op{width:44px; height:44px; padding:5px; border:0; background-clip:content-box !important}
+.mural-cor{width:44px; height:44px; padding:7px; border:0; background-clip:content-box !important}
+.mural-esp{width:44px; height:44px}
+.nav-in .nav-recolher{flex:0 0 44px}
+.nav-mostrar{display:inline-flex; align-items:center; gap:4px; min-height:36px}
+.chip > span{min-height:44px; display:inline-flex; align-items:center}
+.filtro button, .pos-marcas button, .marco-sugestoes button, .chip-btn, .lista-extras button{min-height:44px}
+.som{min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:12px; color:var(--ink)}
+
+/* pergunta do app (no lugar de confirm/alert/prompt) */
+.dlg-pergunta{width:min(92vw,400px)}
+.perg-texto{margin:0; font-size:var(--t-destaque); font-weight:600; line-height:1.4; white-space:pre-line; overflow-wrap:anywhere}
+.dlg-pergunta input[type=url]{margin-top:var(--esp-3)}
+.dlg-pergunta .row{margin-top:var(--esp-4)}
+.dlg-pergunta .primary.perigo{background:var(--desafio); color:var(--on-color); box-shadow:0 4px 0 color-mix(in srgb, var(--desafio) 70%, #000)}
+
+/* carregando: o formato do que vai chegar */
+.esqueleto{height:48px; border-radius:12px; background:var(--line); animation:pulsaEsq 1.1s ease-in-out infinite alternate}
+.esqueleto:nth-child(2){animation-delay:.15s} .esqueleto:nth-child(3){animation-delay:.3s}
+@keyframes pulsaEsq{from{opacity:.45} to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.esqueleto, .conexao::before{animation:none}}
+
+/* estados vazios */
+.vazio{display:flex; flex-direction:column; align-items:center; gap:var(--esp-2); text-align:center; text-wrap:balance; padding:20px 16px; margin:var(--esp-3) 0;
+  color:var(--muted); background:color-mix(in srgb, var(--amor) 7%, transparent); border-radius:var(--raio-b)}
+.vazio::before{content:""; width:34px; height:34px; background:var(--amor);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 20s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.6-7.5 10-7.5 10z'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 20s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.6-7.5 10-7.5 10z'/%3E%3C/svg%3E") center/contain no-repeat}
+.vazio:empty{display:none}
+
+/* erro com ação */
+.erro .linkbtn{margin-left:6px; color:inherit; font-weight:700}
+
+/* cenas: o céu da noite e a luz da companhia são cenas, não ornamento. taste-skill-ignore */
+
+/* roleta: cores pelas classes, acompanham tema e modo presencial */
+#wheel .aro{fill:var(--ink)}
+#wheel .fatia{stroke:var(--ink); stroke-width:1.2}
+#wheel .fatia.v{fill:var(--verdade)}
+#wheel .fatia.d{fill:var(--desafio)}
+#wheel .rotulo{fill:var(--on-color); font:800 12.5px "Bricolage Grotesque", system-ui, sans-serif; letter-spacing:.02em}
+#wheel .pino{fill:var(--acao)}
+
+/* ajustes finos da tela de jogo em 360×740 */
+.sala-linha .sala{letter-spacing:.04em}
+.sala-topo .contador-mini{margin:2px 0 0; font-size:var(--t-apoio)}
+body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contador-mini{margin-left:0; margin-right:0}
+#spin{padding:12px 40px}
+.direct{margin-top:2px}
+.direct button{font-size:var(--t-apoio); white-space:nowrap}
+.folha .som{justify-content:flex-start}
+#wheel .rotulo{font-size:13px}
+#erroJogo:empty{display:none}
+.turn{margin-bottom:18px}
