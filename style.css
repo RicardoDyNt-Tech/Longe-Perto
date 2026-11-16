@@ -21,6 +21,27 @@
   }
 }
 *,*::before,*::after{box-sizing:border-box}
+
+/* Ícones de linha (Lucide / Marca) */
+.icone{
+  display:inline-block;
+  vertical-align:middle;
+  width:20px;
+  height:20px;
+  stroke:currentColor;
+  stroke-width:1.75;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  fill:none;
+  flex-shrink:0;
+}
+.icone-16{width:16px; height:16px}
+.icone-20{width:20px; height:20px}
+.icone-24{width:24px; height:24px}
+.icone-32{width:32px; height:32px}
+.icone-40{width:40px; height:40px}
+.icone-cheio{fill:currentColor}
+
 body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;

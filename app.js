@@ -60,6 +60,48 @@
   let musicas = [];       // músicas padrão + músicas desta sala (tabela `musicas`)
 
   // ---------- util ----------
+  function el(tag, classe, texto) { const x = document.createElement(tag); if (classe) x.className = classe; if (texto !== undefined) x.textContent = texto; return x; }
+
+  // Ícones do sistema (Lucide / Marca)
+  const ICONES_CONHECIDOS = new Set([
+    "marca", "ponto-neutro", "alarm-clock", "angry", "arrow-down", "arrow-up", "arrow-up-right", "baby", "ban", "bath",
+    "battery-low", "bed", "book-open", "bot", "briefcase", "cake", "calendar", "calendar-heart", "camera", "check",
+    "chevron-left", "chevron-right", "clapperboard", "cloud-moon", "cloud-sun", "coffee", "crown", "dices", "door-open",
+    "drama", "droplets", "eye", "eye-off", "feather", "film", "flame", "flask-conical", "flower-2", "frame", "frown",
+    "gem", "gift", "graduation-cap", "guitar", "hand-heart", "handshake", "heart", "heart-handshake", "history",
+    "hourglass", "house", "ice-cream-cone", "key-round", "lamp", "laugh", "leaf", "lightbulb", "link", "lock", "mail",
+    "map", "map-pin", "martini", "meh", "message-circle", "message-circle-heart", "mic", "moon", "moon-star", "music",
+    "music-2", "palette", "party-popper", "paw-print", "pencil", "phone", "plane", "popcorn", "receipt", "refresh-cw",
+    "ribbon", "sandwich", "scroll-text", "search", "settings", "shirt", "shopping-basket", "shower-head", "skip-forward",
+    "smartphone", "smile", "snowflake", "sofa", "sparkles", "square", "square-stack", "star", "sun", "sunrise", "sunset",
+    "target", "thermometer", "ticket", "timer", "tree-palm", "trophy", "tv", "user", "users", "utensils",
+    "utensils-crossed", "volume-2", "volume-x", "wine", "x", "zap"
+  ]);
+
+  function icone(nome, tamanho = 20, classeExtra = "") {
+    let id = (nome || "").trim();
+    if (!id || !ICONES_CONHECIDOS.has(id)) {
+      if (id) console.warn(`[icone] Ícone não encontrado: "${nome}". Usando ponto neutro.`);
+      id = "ponto-neutro";
+    }
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", `icone icone-${tamanho}` + (classeExtra ? " " + classeExtra : ""));
+    svg.setAttribute("aria-hidden", "true");
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttribute("href", `icones.svg#${id}`);
+    svg.appendChild(use);
+    return svg;
+  }
+
+  function iconeHtml(nome, tamanho = 20, classeExtra = "") {
+    let id = (nome || "").trim();
+    if (!id || !ICONES_CONHECIDOS.has(id)) {
+      if (id) console.warn(`[icone] Ícone não encontrado: "${nome}". Usando ponto neutro.`);
+      id = "ponto-neutro";
+    }
+    const cls = `icone icone-${tamanho}` + (classeExtra ? " " + classeExtra : "");
+    return `<svg class="${cls}" aria-hidden="true"><use href="icones.svg#${id}"></use></svg>`;
+  }
   const salvarLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
   const lerLocal = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
   const mesmoNome = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
