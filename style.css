@@ -41,6 +41,12 @@
 .icone-32{width:32px; height:32px}
 .icone-40{width:40px; height:40px}
 .icone-cheio{fill:currentColor}
+.icone-estrela{fill:none; stroke:currentColor}
+.icone-estrela-cheia{fill:currentColor; stroke:currentColor}
+[data-marca="favorita"][aria-pressed="true"] .icone-estrela{fill:var(--acao); stroke:var(--acao)}
+.estrela.on .icone{fill:var(--acao); stroke:var(--acao)}
+button.voltar{display:inline-flex; align-items:center; gap:6px}
+
 
 body{
   margin:0; background:var(--bg); color:var(--ink);

@@ -506,7 +506,7 @@
       $("massagemNotaTexto").textContent = `${nome(1 - m.quem)}, que nota a massagem merece?`;
       $("massagemEspera").textContent = acabou && !daNota ? `Esperando a nota de ${nome(1 - m.quem)}…` : "";
       if (!$("massagemEstrelas").childElementCount) [1, 2, 3, 4, 5].forEach(v => {
-        const b = el("button", "", "★".repeat(v)); b.type = "button"; b.setAttribute("aria-label", `${v} ${v === 1 ? "estrela" : "estrelas"}`);
+        const b = el("button", "estrela-btn"); b.type = "button"; b.setAttribute("aria-label", `${v} ${v === 1 ? "estrela" : "estrelas"}`); for (let k = 0; k < v; k++) { b.appendChild(icone("star", 20, "icone-estrela-cheia")); }
         b.addEventListener("click", () => notaMassagem(v)); $("massagemEstrelas").appendChild(b);
       });
     }
@@ -1036,7 +1036,7 @@
     linha.hidden = !(estado && estado.jogadores[1]);
     const a = chamadaAberta(), lig = botaoLigado();
     $("chamadaBtn").setAttribute("aria-pressed", String(lig));
-    $("chamadaBtn").textContent = lig ? "⏹ Encerrar chamada" : "📞 Em chamada agora";
+    $("chamadaBtn").innerHTML = lig ? iconeHtml("square", 16) + " <span>Encerrar chamada</span>" : iconeHtml("phone", 16) + " <span>Em chamada agora</span>";
     $("chamadaRelogio").hidden = !a;
     clearInterval(timerRelogioCh); timerRelogioCh = null;
     if (!a) return;
@@ -1288,7 +1288,7 @@
     const b = $("modoBtn");
     b.hidden = !permitido("presencial") || !e.jogadores[1];
     b.disabled = !podeTrocarModo();
-    b.textContent = j ? "💞 Juntos" : "📍 A distância";
+    b.innerHTML = j ? iconeHtml("heart", 16) + " <span>Juntos</span>" : iconeHtml("map-pin", 16) + " <span>A distância</span>";
     b.setAttribute("aria-pressed", String(j));
     b.title = j ? "Tocar para voltar ao modo a distância" : "Tocar para ligar o modo Juntos";
     const dia = j && e.juntosDesde ? 1 - diasAte(e.juntosDesde) : null;
@@ -4413,7 +4413,7 @@
         el("span", "t", m.carta_texto));
       if (m.frase) info.appendChild(el("span", "frase", `“${m.frase}”`));
       const acoes = el("div", "acoes");
-      const fav = el("button", "estrela" + (m.favorito ? " on" : ""), m.favorito ? "★" : "☆");
+      const fav = el("button", "estrela" + (m.favorito ? " on" : "")); fav.appendChild(icone("star", 18, m.favorito ? "icone-estrela-cheia" : ""));
       fav.type = "button";
       fav.setAttribute("aria-label", m.favorito ? "Tirar dos favoritos" : "Favoritar");
       fav.setAttribute("aria-pressed", String(!!m.favorito));
@@ -6726,7 +6726,7 @@
     document.body.classList.toggle("cam-esquerda", camera === "esquerda" && !juntos());
     $("camera").closest("label").hidden = juntos();
     $("camera").value = camera;
-    $("som").innerHTML = `<svg class="i" aria-hidden="true"><use href="#i-${somLigado ? "som" : "mudo"}"/></svg><span>${somLigado ? "Som e vibração ligados" : "Som e vibração desligados"}</span>`;
+    $("som").innerHTML = `<svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#${somLigado ? "volume-2" : "volume-x"}"/></svg><span>${somLigado ? "Som e vibração ligados" : "Som e vibração desligados"}</span>`;
     $("som").setAttribute("aria-pressed", String(somLigado));
     $("som").setAttribute("aria-label", somLigado ? "Som e vibração ligados" : "Som e vibração desligados");
   }
@@ -8145,7 +8145,7 @@
     const pode = !c && e.vez === eu && e.vencedor === null && !!e.jogadores[1] && !e.enredo;
     $("secretaBtn").hidden = !pode;
     $("secretaBtn").setAttribute("aria-pressed", String(e.secretaProx === eu));
-    $("secretaBtn").textContent = e.secretaProx === eu ? "🔒 Carta secreta: ligada" : "🔒 Carta secreta";
+    $("secretaBtn").innerHTML = e.secretaProx === eu ? iconeHtml("lock", 16) + " <span>Carta secreta: ligada</span>" : iconeHtml("lock", 16) + " <span>Carta secreta</span>";
   }
   function segurarCarta(v) {
     segurandoCarta = v;

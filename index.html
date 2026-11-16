@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#F6EBF0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#17132A" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💞</text></svg>">
+<link rel="icon" href="icons/marca.svg" type="image/svg+xml"><text y='.9em' font-size='90'>💞</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
@@ -81,7 +81,7 @@
       </div>
       <span class="conexao" id="conexao" hidden role="status">Reconectando…</span>
       <span class="chamada-relogio" id="chamadaRelogio" hidden aria-live="off"></span>
-      <button class="topo-mais" id="abrirMenuSala" type="button" aria-haspopup="dialog" aria-label="Opções da sala"><svg class="i" aria-hidden="true"><use href="#i-mais"/></svg></button>
+      <button class="topo-mais" id="abrirMenuSala" type="button" aria-haspopup="dialog" aria-label="Opções da sala"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#settings"/></svg></button>
     </header>
     <p class="juntos-cab" id="juntosCab" hidden></p>
 
@@ -89,13 +89,13 @@
     <dialog class="folha" id="dlgSala" aria-labelledby="dlgSalaTitulo">
       <div class="folha-topo">
         <h2 id="dlgSalaTitulo">Opções da sala</h2>
-        <button class="folha-fechar" id="fecharMenuSala" type="button" aria-label="Fechar"><svg class="i" aria-hidden="true"><use href="#i-fechar"/></svg></button>
+        <button class="folha-fechar" id="fecharMenuSala" type="button" aria-label="Fechar"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#x"/></svg></button>
       </div>
       <div class="modo-linha">
-        <button class="modo-btn" id="modoBtn" type="button" hidden aria-pressed="false"><span aria-hidden="true">📍</span> A distância</button>
-        <label class="check um-celular" id="umCelularLinha" hidden><input type="checkbox" id="umCelular"> <span aria-hidden="true">📱</span> Jogar num celular só</label>
+        <button class="modo-btn" id="modoBtn" type="button" hidden aria-pressed="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#map-pin"/></svg> <span>A distância</span></button>
+        <label class="check um-celular" id="umCelularLinha" hidden><input type="checkbox" id="umCelular"> <svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#smartphone"/></svg> <span>Jogar num celular só</span></label>
         <div class="chamada-linha" id="chamadaLinha" hidden>
-          <button class="chamada-btn" id="chamadaBtn" type="button" aria-pressed="false"><span aria-hidden="true">📞</span> Em chamada agora</button>
+          <button class="chamada-btn" id="chamadaBtn" type="button" aria-pressed="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#phone"/></svg> <span>Em chamada agora</span></button>
         </div>
       </div>
       <div class="ajustes">
@@ -187,7 +187,7 @@
             <p class="fatura-resgate-timer" id="resgateTimer" hidden></p>
             <div class="row">
               <button class="secondary" id="resgateIniciar" type="button" hidden></button>
-              <button class="done" id="resgateQuitar" type="button" hidden>Quitado ✓</button>
+              <button class="done" id="resgateQuitar" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#check"/></svg> Quitado</button>
               <button class="linkbtn" id="resgateFechar" type="button" hidden>Fechar</button>
             </div>
           </div>
@@ -200,7 +200,7 @@
           <div class="cumprir-sorteio" id="cumprirSorteio" hidden>
             <p class="cumprir-sorteado" id="cumprirSorteado"></p>
             <div class="row">
-              <button class="done" id="cumprirSim" type="button">Cumprimos ✓</button>
+              <button class="done" id="cumprirSim" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#check"/></svg> Cumprimos</button>
               <button class="secondary" id="cumprirNao" type="button">Hoje não</button>
             </div>
           </div>
@@ -323,7 +323,7 @@
           <button class="secondary" type="button" id="muralInicioDesenhar"><span aria-hidden="true">✏️</span> Desenhar</button>
         </div>
         <div class="casa-bloco carinhos" id="casaCarinhos">
-          <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo">✕</button></p>
+          <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#x"/></svg></button></p>
           <div class="carinho-botoes" id="carinhoBotoes">
             <button type="button" data-carinho="pensei"><span class="ic"><span aria-hidden="true">💭</span></span>Pensei em você</button>
             <button type="button" data-carinho="beijo"><span class="ic"><span aria-hidden="true">😘</span></span>Beijo</button>
@@ -381,7 +381,7 @@
         <button type="button" class="casa-card" data-abre="vCofre"><span class="ic"><span aria-hidden="true">💞</span></span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <section class="diario" id="diario" hidden aria-label="Desafio do dia">
           <div class="diario-topo">
             <h2>Desafio do dia</h2>
@@ -411,7 +411,7 @@
         </section>
       </section>
       <section class="casa-vista" id="vEnvelopes" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Envelopes</h2>
         <p class="extras-sub">Uma mensagem fechada ou um desafio surpresa. A mensagem só abre com os dois aqui; o desafio vira a primeira carta da próxima partida.</p>
         <button class="primary" id="novoEnvelope" type="button">Novo envelope</button>
@@ -424,7 +424,7 @@
         </details>
       </section>
       <section class="casa-vista" id="vSemana" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>A semana</h2>
         <p class="extras-sub" id="semanaInfo"></p>
         <label class="field nivel-semana">Nível da semana
@@ -448,7 +448,7 @@
         </details>
       </section>
       <section class="casa-vista" id="vCapsulas" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Cápsulas do tempo</h2>
         <p class="extras-sub">A mesma pergunta, respondida agora e de novo numa data futura. Ninguém vê nada até lá.</p>
         <div class="row">
@@ -462,28 +462,28 @@
         <div id="capGrupo-aberta" hidden><h3 class="casa-h3">Abertas</h3><ul class="lista-extras" id="capAbertas"></ul></div>
       </section>
       <section class="casa-vista" id="vAlbum" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Álbum de momentos</h2>
         <div class="filtro" id="albumFiltro" role="group" aria-label="Filtro do álbum">
           <button type="button" data-filtro="todos" aria-pressed="true">Todos</button>
-          <button type="button" data-filtro="favoritos" aria-pressed="false">★ Favoritos</button>
+          <button type="button" data-filtro="favoritos" aria-pressed="false"><svg class="icone icone-16 icone-estrela-cheia" aria-hidden="true"><use href="icones.svg#star"/></svg> Favoritos</button>
         </div>
         <p class="extras-sub vazio" id="albumVazio"></p>
         <ul class="lista-extras" id="listaAlbum"></ul>
       </section>
       <section class="casa-vista" id="vBaralho" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Baralho</h2>
         <p class="extras-sub">As cartas lembram o que já saiu: as menos vistas aparecem mais, as favoritas aparecem mais e as aposentadas não aparecem.</p>
         <h3 class="casa-h3"><span aria-hidden="true">⭐</span> Favoritas <span id="baralhoFavQtd"></span></h3>
         <ul class="lista-extras" id="baralhoFavoritas"></ul>
-        <h3 class="casa-h3"><span aria-hidden="true">🚫</span> Aposentadas <span id="baralhoAposQtd"></span></h3>
+        <h3 class="casa-h3"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#ban"/></svg> Aposentadas <span id="baralhoAposQtd"></span></h3>
         <ul class="lista-extras" id="baralhoAposentadas"></ul>
         <h3 class="casa-h3">Mais vistas</h3>
         <ul class="lista-extras" id="baralhoVistas"></ul>
       </section>
       <section class="casa-vista" id="vConquistas" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Conquistas</h2>
         <p class="extras-sub" id="conqResumo"></p>
         <label class="field meu-titulo">Seu título no placar
@@ -495,7 +495,7 @@
         <div class="conq-grade" id="conqOusadia"></div>
       </section>
       <section class="casa-vista" id="vMapa" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Mapa da saudade</h2>
         <svg class="mapa-svg" id="mapaSvg" viewBox="0 0 320 110" role="img" aria-label="Distância entre as cidades de vocês"></svg>
         <p class="mapa-km" id="mapaKm"></p>
@@ -527,14 +527,14 @@
         <p class="osm-credito">Busca de cidades: © OpenStreetMap</p>
       </section>
       <section class="casa-vista" id="vHistoria" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Nossa história</h2>
         <button class="secondary" id="novoMarco" type="button">+ Novo marco</button>
         <p class="extras-sub vazio" id="marcosVazio">Nenhum marco ainda. Comece pelo primeiro encontro.</p>
         <ul class="linha-tempo" id="listaMarcos"></ul>
       </section>
       <section class="casa-vista" id="vPote" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Pote de motivos</h2>
         <svg class="pote-svg" id="poteSvg" viewBox="0 0 160 170" role="img" aria-label="Pote de motivos"></svg>
         <p class="pote-conta" id="poteConta"></p>
@@ -554,7 +554,7 @@
         </details>
       </section>
       <section class="casa-vista" id="vAbra" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Abra quando…</h2>
         <button class="secondary" id="novaAbra" type="button">+ Nova carta Abra quando…</button>
         <h3 class="casa-h3" id="abraParaMimTitulo">Para você</h3>
@@ -568,14 +568,14 @@
         </details>
       </section>
       <section class="casa-vista" id="vDiarioCasal" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Diário do casal</h2>
         <p class="extras-sub vazio" id="diarioVazio">Os dias anteriores da pergunta do dia aparecem aqui.</p>
         <ul class="diario-lista" id="listaDiario"></ul>
         <button class="secondary" id="diarioMais" type="button" hidden>Ver mais</button>
       </section>
       <section class="casa-vista" id="vChamadas" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2><span aria-hidden="true">📞</span> Nossas chamadas</h2>
         <div class="ch-resumo" id="chamadasResumo"></div>
         <details class="ch-viagem" id="chViagem">
@@ -595,14 +595,14 @@
         <p class="erro" id="erroChamadas" role="alert"></p>
       </section>
       <section class="casa-vista" id="vPlaylist" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Nossa playlist</h2>
         <p class="extras-sub">Abra cada música no Spotify e adicione a uma playlist de vocês.</p>
         <p class="extras-sub vazio" id="nossasVazio">Nenhuma música ainda. Na trilha da rodada, toque em "<span aria-hidden="true">🤍</span> Nossa".</p>
         <ul class="lista-extras" id="listaNossas"></ul>
       </section>
       <section class="casa-vista" id="vRecados" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2><span aria-hidden="true">💛</span> Recados</h2>
         <p class="extras-sub">Recados sem resposta: só para receber o carinho.</p>
         <button class="primary" id="recadoNovoAbrir" type="button"><span aria-hidden="true">💛</span> Deixar um recado</button>
@@ -611,7 +611,7 @@
         <ul class="lista-extras recados-lista" id="recadosLista"></ul>
       </section>
       <section class="casa-vista" id="vCardapio" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2><span aria-hidden="true">🤫</span> Cardápio secreto</h2>
         <p class="extras-sub" id="cardapioRodada"></p>
         <p class="extras-sub" id="cardapioSemData" hidden>Marquem a data do reencontro (no Início) para abrir o cardápio dessa viagem.</p>
@@ -637,7 +637,7 @@
         <p class="erro" id="erroCardapio" role="alert"></p>
       </section>
       <section class="casa-vista" id="vMural" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2><span aria-hidden="true">✏️</span> Mural</h2>
         <p class="mural-juntos-status" id="muralJuntosStatus" hidden aria-live="polite"></p>
         <div class="mural-ferramentas" role="toolbar" aria-label="Ferramentas de desenho">
@@ -731,7 +731,7 @@
         <div class="perfil-config" id="perfilConfig"></div>
       </section>
       <section class="casa-vista" id="vCofre" hidden>
-        <button type="button" class="linkbtn voltar" data-abre="casa">← Início</button>
+        <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <div id="lugarCofre"></div>
       </section>
     </section>
@@ -740,7 +740,7 @@
     <div class="faixa-humor" id="faixaHumor" hidden role="status">
       <p>Dia difícil? Que tal Romântico e prendas fofas hoje?</p>
       <button class="secondary" id="faixaHumorUsar" type="button">Usar</button>
-      <button class="linkbtn" id="faixaHumorFechar" type="button" aria-label="Fechar sugestão">✕</button>
+      <button class="linkbtn" id="faixaHumorFechar" type="button" aria-label="Fechar sugestão"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#x"/></svg></button>
     </div>
 
     <div class="faixa-roteiro" id="faixaRoteiro" hidden role="status">
@@ -994,9 +994,9 @@
         </div>
       </div>
       <div class="marcas" id="marcas" hidden role="group" aria-label="Marcar esta carta">
-        <button type="button" data-marca="favorita" aria-pressed="false" title="Favoritar" aria-label="Favoritar"><svg class="i" aria-hidden="true"><use href="#i-estrela"/></svg></button>
-        <button type="button" data-marca="repetir" aria-pressed="false" title="Jogar de novo" aria-label="Jogar de novo"><svg class="i" aria-hidden="true"><use href="#i-repetir"/></svg></button>
-        <button type="button" data-marca="aposentada" aria-pressed="false" title="Aposentar" aria-label="Aposentar"><svg class="i" aria-hidden="true"><use href="#i-aposentar"/></svg></button>
+        <button type="button" data-marca="favorita" aria-pressed="false" title="Favoritar" aria-label="Favoritar"><svg class="icone icone-20 icone-estrela" aria-hidden="true"><use href="icones.svg#star"/></svg></button>
+        <button type="button" data-marca="repetir" aria-pressed="false" title="Jogar de novo" aria-label="Jogar de novo"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#refresh-cw"/></svg></button>
+        <button type="button" data-marca="aposentada" aria-pressed="false" title="Aposentar" aria-label="Aposentar"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#ban"/></svg></button>
       </div>
       <div class="sintonia" id="sintoniaBox" hidden>
         <div id="sintoniaResponder">
@@ -1142,7 +1142,7 @@
           <p class="wait" id="duplaStatus"></p>
         </div>
         <div class="evento-acoes seq-acoes" id="seqAcoes" hidden>
-          <button class="done" id="seqFeito" type="button">Feito ✓</button>
+          <button class="done" id="seqFeito" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#check"/></svg> Feito</button>
           <p class="wait" id="seqStatus"></p>
           <button class="linkbtn" id="seqParar" type="button">Parar aqui</button>
         </div>
@@ -1153,9 +1153,9 @@
         <div class="avaliar" id="avaliar" hidden>
           <p>Como foi?</p>
           <div class="estrelas">
-            <button type="button" data-n="1" aria-label="1 estrela">★</button>
-            <button type="button" data-n="2" aria-label="2 estrelas">★★</button>
-            <button type="button" data-n="3" aria-label="3 estrelas">★★★</button>
+            <button type="button" data-n="1" aria-label="1 estrela"><svg class="icone icone-20 icone-estrela-cheia" aria-hidden="true"><use href="icones.svg#star"/></svg></button>
+            <button type="button" data-n="2" aria-label="2 estrelas"><svg class="icone icone-20 icone-estrela-cheia" aria-hidden="true"><use href="icones.svg#star"/></svg><svg class="icone icone-20 icone-estrela-cheia" aria-hidden="true"><use href="icones.svg#star"/></svg></button>
+            <button type="button" data-n="3" aria-label="3 estrelas"><svg class="icone icone-20 icone-estrela-cheia" aria-hidden="true"><use href="icones.svg#star"/></svg><svg class="icone icone-20 icone-estrela-cheia" aria-hidden="true"><use href="icones.svg#star"/></svg><svg class="icone icone-20 icone-estrela-cheia" aria-hidden="true"><use href="icones.svg#star"/></svg></button>
           </div>
         </div>
         <p class="wait" id="aguardando" hidden></p>
@@ -1164,13 +1164,13 @@
     </div>
     <nav class="nav-baixo" id="navBaixo" aria-label="Seções da sala">
       <div class="nav-in">
-        <button type="button" data-abre="casa" id="abaCasa"><svg class="ic" aria-hidden="true"><use href="#i-casa"/></svg>Início</button>
-        <button type="button" data-abre="jogo" id="abaJogo"><svg class="ic" aria-hidden="true"><use href="#i-jogo"/></svg>Jogo</button>
-        <button type="button" data-abre="vHistorico" id="abaHistorico"><svg class="ic" aria-hidden="true"><use href="#i-hist"/></svg>Histórico</button>
-        <button type="button" data-abre="vPerfil" id="abaPerfil"><svg class="ic" aria-hidden="true"><use href="#i-perfil"/></svg>Perfil</button>
-        <button type="button" class="nav-recolher" id="navRecolher" aria-label="Recolher a barra" hidden><svg class="i" aria-hidden="true"><use href="#i-baixo"/></svg></button>
+        <button type="button" data-abre="casa" id="abaCasa"><svg class="icone icone-24 ic" aria-hidden="true"><use href="icones.svg#house"/></svg>Início</button>
+        <button type="button" data-abre="jogo" id="abaJogo"><svg class="icone icone-24 ic" aria-hidden="true"><use href="icones.svg#dices"/></svg>Jogo</button>
+        <button type="button" data-abre="vHistorico" id="abaHistorico"><svg class="icone icone-24 ic" aria-hidden="true"><use href="icones.svg#history"/></svg>Histórico</button>
+        <button type="button" data-abre="vPerfil" id="abaPerfil"><svg class="icone icone-24 ic" aria-hidden="true"><use href="icones.svg#user"/></svg>Perfil</button>
+        <button type="button" class="nav-recolher" id="navRecolher" aria-label="Recolher a barra" hidden><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#arrow-down"/></svg></button>
       </div>
-      <button type="button" class="nav-mostrar" id="navMostrar" hidden><svg class="i" aria-hidden="true"><use href="#i-cima"/></svg> Menu</button>
+      <button type="button" class="nav-mostrar" id="navMostrar" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#arrow-up"/></svg> Menu</button>
     </nav>
   </section>
 
