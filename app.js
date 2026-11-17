@@ -74,7 +74,7 @@
     "music-2", "palette", "party-popper", "paw-print", "pencil", "phone", "plane", "popcorn", "receipt", "refresh-cw",
     "ribbon", "sandwich", "scroll-text", "search", "settings", "shirt", "shopping-basket", "shower-head", "skip-forward",
     "smartphone", "smile", "snowflake", "sofa", "sparkles", "square", "square-stack", "star", "sun", "sunrise", "sunset",
-    "target", "thermometer", "ticket", "timer", "tree-palm", "trophy", "tv", "user", "users", "utensils",
+    "target", "thermometer", "ticket", "timer", "tree-palm", "shield", "trophy", "tv", "user", "users", "utensils",
     "utensils-crossed", "volume-2", "volume-x", "wine", "x", "zap"
   ]);
 
@@ -463,9 +463,9 @@
       const w = x.tempos[0] === x.tempos[1] ? null : x.tempos[0] < x.tempos[1] ? 0 : 1;
       x.ultimos = x.tempos.slice();
       x.tempos = [null, null];
-      if (w === null) { n.aviso = novoAviso("🔥 Empate na rodada!"); return; }
+      if (w === null) { n.aviso = novoAviso("Empate na rodada!"); return; }
       x.vitorias[w]++;
-      n.aviso = novoAviso(`🔥 ${n.jogadores[w]} venceu a rodada (${x.vitorias[0]} × ${x.vitorias[1]})`);
+      n.aviso = novoAviso(`${n.jogadores[w]} venceu a rodada (${x.vitorias[0]} × ${x.vitorias[1]})`);
       if (x.vitorias[w] < 2) return;
       x.fim = true; x.vencedor = w;
       const prenda = sortearPrenda(nivelDaPrenda(n, "final"), n.usados || [], n);
@@ -491,7 +491,7 @@
     const segDado = d ? tempoDaCarta(d.faces.tempo) : 0;
     $("dadoTimer").hidden = !segDado || !!(d.timer && restaMs(d.timer) > 0);
     $("dadoTimer").textContent = segDado ? `Iniciar ${rotuloTempo(segDado)}` : "";
-    $("dadoRolar").textContent = d ? "🎲 Rolar de novo" : "🎲 Rolar o dado";
+    $("dadoRolar").innerHTML = iconeHtml("dices", 16) + (d ? " <span>Rolar de novo</span>" : " <span>Rolar o dado</span>");
     // massagem
     const m = e.massagem && e.massagem.id ? e.massagem : null;
     $("massagemForm").hidden = !!m; $("massagemVivo").hidden = !m;
@@ -515,7 +515,7 @@
     $("vendadoTexto").textContent = vd ? `🙈 A próxima carta de ${nome(vd.jogador)} vai de olhos vendados: ${nome(1 - vd.jogador)} lê em voz alta. Vale +1 ponto.`
       : `Na próxima carta, ${nome(e.vez)} cumpre de olhos vendados (lenço, travesseiro ou a mão) e ${nome(1 - e.vez)} lê a carta. Vale +1 ponto.`;
     $("vendadoLigar").hidden = !!vd;
-    $("vendadoLigar").textContent = `🙈 Vendar ${nome(e.vez)} na próxima carta`;
+    $("vendadoLigar").textContent = `Vendar ${nome(e.vez)} na próxima carta`;
     $("vendadoDesligar").hidden = !vd;
     // quente ou frio
     const q = e.noite;
@@ -539,13 +539,13 @@
     $("dadoRelogio").hidden = !t;
     if (t) {
       const r = restaMs(t);
-      $("dadoRelogio").textContent = r > 0 ? relogioMs(r) : "Tempo! ⏰";
+      $("dadoRelogio").textContent = r > 0 ? relogioMs(r) : "Tempo!";
       if (r <= 0 && !avisouFim.has("d" + d.id)) { avisouFim.add("d" + d.id); tom(880, 0.4); vibrar([200, 100, 200]); $("dadoTimer").hidden = false; }
     }
     const m = e.massagem && e.massagem.id ? e.massagem : null;
     if (m) {
       const r = restaMs(m);
-      $("massagemRelogio").textContent = m.terminou ? "Terminou" : r > 0 ? relogioMs(r) : "Tempo! ⏰";
+      $("massagemRelogio").textContent = m.terminou ? "Terminou" : r > 0 ? relogioMs(r) : "Tempo!";
       if ((r <= 0 || m.terminou) && !avisouFim.has("m" + m.id)) { avisouFim.add("m" + m.id); if (r <= 0) { tom(880, 0.4); vibrar([200, 100, 200]); } desenharModosHoje(e); }
     }
     const q = e.noite;
@@ -785,7 +785,7 @@
   }
 
   // ---------- v9: a fatura (vales, prendas e promessas com credor) ----------
-  const TIPO_FATURA = { vale: "🎟️", prenda: "🧾", promessa: "💞" };
+  const TIPO_FATURA = { vale: "ticket", prenda: "receipt", promessa: "heart" };
   let valesModelos = [], timerResgate = null, avisouResgate = null;
   // num celular só, quem segura o aparelho é os dois
   const souCredor = cred => eu === cred || umCelularAqui(estado);
@@ -852,16 +852,16 @@
     const cred = x.credor === 0 || x.credor === 1 ? x.credor : null;
     const credor = cred === null || souCredor(cred);
     $("resgateQuem").textContent = `${nomeDe(r.por)} resgatou:`;
-    $("resgateTexto").textContent = `${TIPO_FATURA[x.tipo] || "💞"} ${x.carta}`;
+    $("resgateTexto").innerHTML = iconeHtml(TIPO_FATURA[x.tipo] || "heart", 20) + " " + el("span", "", x.carta).outerHTML;
     $("resgateIniciar").hidden = !x.minutos || !!r.ate;
-    $("resgateIniciar").textContent = `⏱️ Começar (${x.minutos} min)`;
+    $("resgateIniciar").innerHTML = iconeHtml("timer", 16) + ` <span>Começar (${x.minutos} min)</span>`;
     $("resgateQuitar").hidden = !credor;
     $("resgateFechar").hidden = !credor;
     $("resgateTimer").hidden = !r.ate;
     if (r.ate) {
       const tick = () => {
         const s = Math.max(0, Math.ceil((r.ate - Date.now()) / 1000));
-        $("resgateTimer").textContent = s ? relogioMs(s * 1000) : "Tempo! ⏰";
+        $("resgateTimer").textContent = s ? relogioMs(s * 1000) : "Tempo!";
         if (!s) {
           clearInterval(timerResgate); timerResgate = null;
           if (avisouResgate !== r.id + r.ate) { avisouResgate = r.id + r.ate; tom(880, 0.4); vibrar([200, 100, 200]); }
@@ -1221,7 +1221,14 @@
     const selos = CONQ().filter(c => c.codigo.startsWith("call_"));
     if (selos.length) {
       const s = el("div", "ch-selos");
-      selos.forEach(c => { const f = linhaConquista(c.codigo, null); const x = el("span", "ch-selo" + (f ? " ok" : ""), `${f ? c.selo : "🔒"} ${c.titulo}`); x.title = c.descricao; s.append(x); });
+      selos.forEach(c => {
+        const f = linhaConquista(c.codigo, null);
+        const x = el("span", "ch-selo" + (f ? " ok" : ""));
+        x.appendChild(icone(f ? (c.selo || "trophy") : "lock", 16));
+        x.append(" " + c.titulo);
+        x.title = c.descricao;
+        s.append(x);
+      });
       box.append(s);
     }
     const frases = frasesEquivalencia(r.total_minutos, tot);
@@ -4119,7 +4126,7 @@
     const dow = (new Date(hoje + "T12:00:00Z").getUTCDay() + 6) % 7;   // 0 = segunda … 6 = domingo
     return { semana: somarDias(hoje, -dow), dia: dow, podeApostar: dow <= 2, podeConferir: dow >= 5 };
   }
-  const RESULTADOS = { acertou: "✓ Acertou", quase: "≈ Quase", errou: "✗ Errou" };
+  const RESULTADOS = { acertou: "Acertou", quase: "Quase", errou: "Errou" };
   const trocaNome = (t, nome) => t.split("{nome}").join(nome);
 
   // sorteio determinístico (como o desafio do dia): mesma sala + semana + jogador = mesmas cartas nos dois aparelhos
@@ -4345,7 +4352,7 @@
     const jogador = PARA_OS_DOIS.includes(c.tipo) || c.tipo === "sintonia" ? null : antes.vez;
     n.historico = [...(n.historico || []), { texto: c.texto, tipo: c.tipo, nivel: c.nivel, jogador, resultado: r }].slice(-50);
   }
-  const RESULTADO_HIST = { cumpriu: "✓ cumpriu", pulou: "⏭ pulou", liberado: "🕊 liberado", revertida: "🔄 revertida", "em jogo": "✨ efeito em jogo", passou: "" };
+  const RESULTADO_HIST = { cumpriu: "cumpriu", pulou: "pulou", liberado: "liberado", revertida: "revertida", "em jogo": "efeito em jogo", passou: "" };
 
   function desenharRodadas(e) {
     const lista = e && e.fixa ? (e.historico || []).slice().reverse() : [];
@@ -4612,7 +4619,11 @@
     const quem = c.escopo === "casal" ? [null] : [0, 1];
     const feitas = quem.map(j => linhaConquista(c.codigo, j));
     const box = el("div", "conq" + (feitas.every(Boolean) ? " ok" : feitas.some(Boolean) ? " meio" : ""));
-    box.append(el("b", "", (feitas.some(Boolean) ? (c.selo || "🏆") + " " : "🔒 ") + c.titulo), el("span", "desc", c.descricao));
+    const tituloB = el("b", "");
+    const icNome = feitas.some(Boolean) ? (c.selo || "trophy") : "lock";
+    tituloB.appendChild(icone(icNome, 18));
+    tituloB.append(" " + c.titulo);
+    box.append(tituloB, el("span", "desc", c.descricao));
     quem.forEach((j, k) => {
       const linha = el("div", "conq-linha");
       if (j !== null) linha.appendChild(el("span", "quem", nomeDe(j)));
@@ -6550,7 +6561,7 @@
     desenharPosCarta(e);
     desenharPoseCarta(e);
     $("selo").hidden = !c.evento;
-    $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "⚡ Evento especial · 🤝 Missão em dupla" : c.tipo === "sequencia" ? "⚡ Evento especial · 🔗 Em etapas" : "⚡ Evento especial";
+    $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "Evento especial · Missão em dupla" : c.tipo === "sequencia" ? "Evento especial · Em etapas" : "Evento especial";
     $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
       : c.motivo === "duelo" ? "Prenda por perder o duelo"
       : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
@@ -6558,13 +6569,13 @@
       : c.motivo === "final" ? "Prenda final"
       : c.motivo === "sequencia" ? "Prenda por parar a carta em etapas"
       : c.surpresa ? `🎲 Desafio surpresa de ${e.jogadores[c.surpresaDe] || ""}`
-      : c.reversa ? `🔄 Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
-      : c.cega ? `🂠 Escolhida às cegas · ${TIPO_NOMES[c.tipo] || c.tipo}`
+      : c.reversa ? `Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
+      : c.cega ? `Escolhida às cegas · ${TIPO_NOMES[c.tipo] || c.tipo}`
       : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
       + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome
       + (c.tipo === "efeito" && c.rodadas ? ` · dura ${c.rodadas} ${c.rodadas === 1 ? "rodada" : "rodadas"}` : "")
-      + (e.emMorteSubita && (c.tipo === "verdade" || c.tipo === "desafio") ? " · ⚡ vale o dobro" : "");
+      + (e.emMorteSubita && (c.tipo === "verdade" || c.tipo === "desafio") ? " · vale o dobro" : "");
     $("text").textContent = c.texto;
     desenharVendada(e);
     desenharEtapas(e);
@@ -7266,7 +7277,7 @@
   }
 
   // ---------- v8: escolha às cegas ----------
-  const TEMAS = { camera: "📸 Câmera", provocacao: "🔥 Provocação", criatividade: "🎨 Criatividade", carinho: "💗 Carinho", conversa: "🗣️ Conversa", diversao: "😂 Diversão" };
+  const TEMAS = { camera: "Câmera", provocacao: "Provocação", criatividade: "Criatividade", carinho: "Carinho", conversa: "Conversa", diversao: "Diversão" };
   function temaDe(c) {
     const t = c.texto || "";
     if (c.midia || /c[âa]mera|mostre|foto|v[íi]deo/i.test(t)) return "camera";
@@ -8414,7 +8425,7 @@
     if (a !== b || n.meta - a > 3) return;
     n.emMorteSubita = true;
     n.ms = { res: [null, null] };
-    n.aviso = novoAviso("⚡ Morte súbita! Próxima carta decide");
+    n.aviso = novoAviso("Morte súbita! Próxima carta decide");
   }
   // um degrau acima do nível mais alto dos chips, sem passar do máximo da sala
   function nivelMorteSubita(n) {
@@ -8427,11 +8438,11 @@
     if (r[0] === null || r[1] === null) return;
     if (r[0] === r[1]) {
       n.ms.res = [null, null];
-      n.aviso = novoAviso("⚡ Empate de novo! Mais uma carta para cada um");
+      n.aviso = novoAviso("Empate de novo! Mais uma carta para cada um");
       return;
     }
     const w = r[0] > r[1] ? 0 : 1;
-    n.aviso = novoAviso(`⚡ ${n.jogadores[w]} venceu a morte súbita!`);
+    n.aviso = novoAviso(`${n.jogadores[w]} venceu a morte súbita!`);
     declararVencedor(n, w);
   }
   async function desistirMorteSubita() {
