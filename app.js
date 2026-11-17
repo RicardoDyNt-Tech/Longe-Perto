@@ -49,7 +49,7 @@
   let timerTick = null;
   let timerAcabou = null;   // id do timer que já deu "Tempo!" aqui
   const efeitosAbertos = new Set();   // efeitos com o texto completo aberto neste aparelho
-  let missaoAberta = false;           // "🤫 Minha missão" aberta neste aparelho
+  let missaoAberta = false;           // Minha missão aberta neste aparelho
   let vista = "jogo";                 // "casa", "jogo" ou uma vista da Casa (vEnvelopes, vCofre...)
   let presentes = new Set();          // jogadores com o app aberto agora (Presence do Realtime)
   let presencaPronta = false;
@@ -178,7 +178,7 @@
   };
 
   // ---------- perguntas na cara do app (no lugar de confirm/alert/prompt do navegador) ----------
-  // perguntar(texto) → true/false; com { campo: valor } → texto digitado ou null
+  // perguntar(texto): true/false; com { campo: valor }: texto digitado ou null
   const VERBOS_BOTAO = ["Apagar", "Limpar", "Tirar", "Trocar", "Enviar", "Gerar", "Mostrar", "Parar", "Começar", "Recomeçar", "Sair", "Encerrar", "Usar", "Voltar", "Desistir"];
   function perguntar(texto, opcoes = {}) {
     const d = $("dlgPergunta"), campo = opcoes.campo ?? null;
@@ -278,7 +278,7 @@
       n.modo = para;
       n.cegas = null;
       if (para === "presencial" && !n.juntosDesde) n.juntosDesde = hojeISO();
-      n.aviso = novoAviso(para === "presencial" ? "💞 Modo Juntos ligado" : "📍 De volta ao modo a distância");
+      n.aviso = novoAviso(para === "presencial" ? "Modo Juntos ligado" : "De volta ao modo a distância");
       if (typeof aoTrocarModo === "function") aoTrocarModo(n, para);
     });
   }
@@ -320,7 +320,7 @@
     if (ator === eu) { if (passeAberto) { passeAberto = null; $("passeCelular").hidden = true; } return; }
     const segredo = segredoAberto(e), nome = e.jogadores[ator] || "";
     passeAberto = { ator, segredo };
-    $("passeTitulo").textContent = segredo ? `Agora é a vez de ${nome}, não espie 🙈` : `Passe o celular para ${nome} 💞`;
+    $("passeTitulo").textContent = segredo ? `Agora é a vez de ${nome}, não espie` : `Passe o celular para ${nome}`;
     $("passeSub").textContent = segredo ? `Entregue o celular para ${nome} sem olhar a tela.` : "";
     $("passeOk").textContent = `Sou ${nome}, pode mostrar`;
     $("passeCelular").hidden = false;
@@ -340,7 +340,7 @@
       n.umCelular = v;
       n.umCelularDe = v ? euReal : null;
       if (v) n.secretas = [];                          // missão secreta não dá para esconder num celular só
-      n.aviso = novoAviso(v ? "📱 Jogando num celular só" : "📱 Cada um no seu celular de novo");
+      n.aviso = novoAviso(v ? "Jogando num celular só" : "Cada um no seu celular de novo");
     });
   }
   const trocaModoFns = [];
@@ -375,7 +375,7 @@
     const tick = () => {
       if (!p.s) { $("dcTimer").textContent = ""; return; }
       const s = Math.max(0, Math.ceil((d.inicio + p.s * 1000 - Date.now()) / 1000));
-      $("dcTimer").textContent = s ? relogioMs(s * 1000) : "Tempo! ✓";
+      $("dcTimer").textContent = s ? relogioMs(s * 1000) : "Tempo esgotado";
       if (!s && dcTocou !== d.passo + ":" + d.inicio) { dcTocou = d.passo + ":" + d.inicio; tom(660, 0.3); vibrar(150); }
     };
     tick();
@@ -441,7 +441,7 @@
   }
   const restaMs = t => (t ? t.inicio + t.segundos * 1000 - Date.now() : 0);
   const relogioMs = ms => relogio(Math.max(0, Math.ceil(ms / 1000)));
-  // massagem cronometrada: quem faz, quem recebe, tempo e região; no fim, quem recebeu dá de 1 a 5 ⭐
+  // massagem cronometrada: quem faz, quem recebe, tempo e região; no fim, quem recebeu avalia de 1 a 5 estrelas
   function comecarMassagem() {
     if (!estado || !juntos()) return;
     const seg = Number($("massagemTempo").value), regiao = $("massagemRegiao").value;
@@ -466,7 +466,7 @@
       const p = n.placar[x.quem];
       p.estrelas += v; p.pontos += v;                  // como a nota do adversário: cada estrela vale 1 ponto
       n.pontos = n.placar.map(q => q.pontos);
-      n.aviso = novoAviso(`${n.jogadores[x.quem]} ganhou ${"★".repeat(v)} pela massagem`);
+      n.aviso = novoAviso(`${n.jogadores[x.quem]} ganhou ${v} ${v === 1 ? "estrela" : "estrelas"} pela massagem`);
       n.massagem = { proximo: 1 - x.quem };            // troca de lugar
       conferirMeta(n);
     });
@@ -480,7 +480,7 @@
     const c = e.carta, v = !!(c && c.vendada), quem = e.jogadores[e.vez] || "";
     const leitor = v && (umCelularAqui(e) ? vendadaLida === c.chave : eu !== e.vez);
     $("vendadaAviso").hidden = !v;
-    $("vendadaAviso").textContent = !v ? "" : leitor ? `🙈 Leia para ${quem} em voz alta (+1 ponto)` : eu === e.vez && !umCelularAqui(e) ? `🙈 Você está de olhos vendados. ${e.jogadores[1 - e.vez]} vai ler a carta.` : `🙈 ${quem} está de olhos vendados`;
+    $("vendadaAviso").textContent = !v ? "" : leitor ? `Leia para ${quem} em voz alta (+1 ponto)` : eu === e.vez && !umCelularAqui(e) ? `Você está de olhos vendados. ${e.jogadores[1 - e.vez]} vai ler a carta.` : `${quem} está de olhos vendados`;
     $("vendadaLer").hidden = !(v && umCelularAqui(e) && vendadaLida !== c.chave);
     $("text").hidden = v && !leitor;
   }
@@ -556,7 +556,7 @@
     }
     // vendado
     const vd = e.vendado;
-    $("vendadoTexto").textContent = vd ? `🙈 A próxima carta de ${nome(vd.jogador)} vai de olhos vendados: ${nome(1 - vd.jogador)} lê em voz alta. Vale +1 ponto.`
+    $("vendadoTexto").textContent = vd ? `A próxima carta de ${nome(vd.jogador)} vai de olhos vendados: ${nome(1 - vd.jogador)} lê em voz alta. Vale +1 ponto.`
       : `Na próxima carta, ${nome(e.vez)} cumpre de olhos vendados (lenço, travesseiro ou a mão) e ${nome(1 - e.vez)} lê a carta. Vale +1 ponto.`;
     $("vendadoLigar").hidden = !!vd;
     $("vendadoLigar").textContent = `Vendar ${nome(e.vez)} na próxima carta`;
@@ -567,9 +567,9 @@
     $("quenteRelogio").hidden = !(q && q.fase === "procurando" && !q.fim);
     $("quenteDesistir").hidden = $("quenteRelogio").hidden;
     if (!q) { $("quenteTexto").textContent = "Um esconde um objeto ou um bilhete pela casa; o outro procura com dicas de quente ou frio. Quem achar mais rápido vence a rodada."; $("quenteAcao").textContent = "Começar (melhor de 3)"; }
-    else if (q.fim) { $("quenteTexto").textContent = `🏆 ${nome(q.vencedor)} venceu o quente ou frio!` + (q.prenda ? ` ${nome(1 - q.vencedor)} paga: ${q.prenda}` : ""); $("quenteAcao").textContent = "Jogar de novo"; }
+    else if (q.fim) { $("quenteTexto").textContent = `${nome(q.vencedor)} venceu o quente ou frio!` + (q.prenda ? ` ${nome(1 - q.vencedor)} paga: ${q.prenda}` : ""); $("quenteAcao").textContent = "Jogar de novo"; }
     else if (q.fase === "esconder") { $("quenteTexto").textContent = `${nome(q.escondedor)} esconde; ${nome(1 - q.escondedor)} fecha os olhos.` + (q.ultimos ? ` Última rodada: ${nome(0)} ${fmtBusca(q.ultimos[0])}, ${nome(1)} ${fmtBusca(q.ultimos[1])}.` : ""); $("quenteAcao").textContent = "Escondi, valendo!"; }
-    else { $("quenteTexto").textContent = `${nome(1 - q.escondedor)} procurando… ${nome(q.escondedor)} dá as dicas: quente ou frio!`; $("quenteAcao").textContent = "Achei! 🎉"; }
+    else { $("quenteTexto").textContent = `${nome(1 - q.escondedor)} procurando… ${nome(q.escondedor)} dá as dicas: quente ou frio!`; $("quenteAcao").textContent = "Achei!"; }
     tickModos();
     if (!timerModos) timerModos = setInterval(tickModos, 500);
   }
@@ -601,16 +601,16 @@
   // tudo o que está esperando os dois, com chave para o check da lista
   function promessas(e) {
     const l = [];
-    cofre.forEach(x => l.push({ chave: "cofre:" + x.id, texto: x.carta + (x.nota ? ` · ${x.nota}` : "") + (x.minutos ? ` (${x.minutos} min)` : ""), ic: TIPO_FATURA[x.tipo] || "💞",
+    cofre.forEach(x => l.push({ chave: "cofre:" + x.id, texto: x.carta + (x.nota ? ` · ${x.nota}` : "") + (x.minutos ? ` (${x.minutos} min)` : ""), ic: TIPO_FATURA[x.tipo] || "heart",
       feito: !!x.feito, cofre: x, tipo: TIPO_FATURA[x.tipo] ? x.tipo : "promessa", credor: x.credor === 0 || x.credor === 1 ? x.credor : null }));
     if (permitido("posicoes")) marcasPos.filter(m => m.marca === "testar").forEach(m => {
       const p = posicoes.find(x => x.id === m.posicao_id);
-      if (p) l.push({ chave: "pos:" + p.id, texto: `Posição: ${p.nome}`, ic: "📖", feito: !!e.lista["pos:" + p.id] });
+      if (p) l.push({ chave: "pos:" + p.id, texto: `Posição: ${p.nome}`, ic: "book-open", feito: !!e.lista["pos:" + p.id] });
     });
     [0, 1].forEach(j => {
       const sonhos = textoManual(j, "sonhos");
       if (sonhos) sonhos.split(/\n|;/).map(x => x.trim()).filter(Boolean).slice(0, 6).forEach((t, i) =>
-        l.push({ chave: `sonho:${j}:${i}`, texto: `Desejo de ${nomeDe(j)}: ${t}`, ic: "✨", feito: !!e.lista[`sonho:${j}:${i}`] }));
+        l.push({ chave: `sonho:${j}:${i}`, texto: `Desejo de ${nomeDe(j)}: ${t}`, ic: "sparkles", feito: !!e.lista[`sonho:${j}:${i}`] }));
     });
     return l;
   }
@@ -624,7 +624,7 @@
     if (e.juntosDesde) {
       const dia = 1 - diasAte(e.juntosDesde);
       const total = e.juntosAte ? diasAte(e.juntosAte) - diasAte(e.juntosDesde) + 1 : null;
-      dias = e.juntosAte && hoje === e.juntosAte ? `Último dia juntos 💞 · já cumpriram ${feitas} de ${l.length} promessas`
+      dias = e.juntosAte && hoje === e.juntosAte ? `Último dia juntos · já cumpriram ${feitas} de ${l.length} promessas`
         : total && total > 0 ? `Dia ${dia} de ${total} juntos · ${feitas} de ${l.length} promessas cumpridas`
         : `Dia ${dia} juntos · ${feitas} de ${l.length} promessas cumpridas`;
     }
@@ -635,7 +635,7 @@
     $("cumprirVazio").hidden = !!l.length;
     const s = e.sorteioCofre && cofre.find(x => x.id === e.sorteioCofre.id && !x.feito);
     $("cumprirSorteio").hidden = !s;
-    $("cumprirSorteado").textContent = s ? `🎁 ${s.carta}` + (s.nota ? ` · ${s.nota}` : "") : "";
+    $("cumprirSorteado").textContent = s ? s.carta + (s.nota ? ` · ${s.nota}` : "") : "";
     // placar: quanto cada um pode cobrar
     const deve = [0, 1].map(j => l.filter(x => x.credor === j && !x.feito).length);
     $("faturaPlacar").hidden = !deve[0] && !deve[1];
@@ -658,11 +658,11 @@
           const spanItem = el("span", "fatura-item");
           spanItem.append(icone(x.ic || "heart", 16), document.createTextNode(` ${x.texto}`));
           li.appendChild(spanItem);
-          if (x.feito) li.appendChild(el("span", "fatura-quitado", x.cofre.quitado_em ? `Quitado em ${dataBR(hojeISO(new Date(x.cofre.quitado_em)))} ✓` : "Quitado ✓"));
+          if (x.feito) li.appendChild(el("span", "fatura-quitado", x.cofre.quitado_em ? `Quitado em ${dataBR(hojeISO(new Date(x.cofre.quitado_em)))}` : "Quitado"));
           else if (souCredor(cred)) {
             const ac = el("div", "acoes");
             const rb = el("button", "secondary", "Resgatar"); rb.type = "button"; rb.addEventListener("click", () => resgatar(x.cofre));
-            const qb = el("button", "done", "Quitado ✓"); qb.type = "button"; qb.addEventListener("click", () => quitar(x));
+            const qb = el("button", "done", "Quitado"); qb.type = "button"; qb.addEventListener("click", () => quitar(x));
             ac.append(rb, qb); li.appendChild(ac);
           } else li.appendChild(el("span", "fatura-quem", `Só ${nomeDe(cred)} cobra`));
         }
@@ -783,7 +783,7 @@
     if (texto.length < 3) return erro("erroCardapio", "Escreva o desejo (pelo menos 3 letras).");
     if (!CAT_DESEJO[cat]) return;
     $("desejoSalvar").disabled = true;
-    const { data, error } = await sb.rpc("desejos_item_criar", { p_sala: codigo, p_categoria: cat, p_nivel: CAT_DESEJO[cat][1], p_texto: texto.slice(0, 140), p_emoji: "✨" });
+    const { data, error } = await sb.rpc("desejos_item_criar", { p_sala: codigo, p_categoria: cat, p_nivel: CAT_DESEJO[cat][1], p_texto: texto.slice(0, 140), p_emoji: "\u2728" });
     $("desejoSalvar").disabled = false;
     if (error) return erro("erroCardapio", /limite/.test(error.message || "") ? "A sala já tem 100 desejos próprios." : "Não consegui adicionar. Confira a internet.");
     erro("erroCardapio", "");
@@ -851,7 +851,7 @@
   function avisarVale(x) {
     const quem = x.credor === eu && !umCelularAqui(estado) ? "Você ganhou" : `${nomeDe(x.credor)} ganhou`;
     // junto com as conquistas da mesma vitória, num aviso só
-    filaConquistas.push(`🎟️ ${quem}: ${x.carta}` + (x.minutos ? ` (${x.minutos} min)` : ""));
+    filaConquistas.push(`${quem}: ${x.carta}` + (x.minutos ? ` (${x.minutos} min)` : ""));
     clearTimeout(timerConquistas);
     timerConquistas = setTimeout(() => { mostrarAviso(novoAviso(filaConquistas.join(" · ")), false); filaConquistas = []; }, 300);
   }
@@ -886,7 +886,7 @@
     gravar(n => {
       if (!n.carta || n.carta.chave !== c.chave) return;
       const final = n.carta.motivo === "final", cc = n.carta;
-      n.aviso = novoAviso(`🧾 Prenda de ${n.jogadores[devedor]} guardada para o reencontro (${n.jogadores[credor]} cobra)`);
+      n.aviso = novoAviso(`Prenda de ${n.jogadores[devedor]} guardada para o reencontro (${n.jogadores[credor]} cobra)`);
       n.carta = null;
       if (!final) passarVez(n, cc);
     });
@@ -950,11 +950,11 @@
       if (feito && n.resgate && x.cofre && n.resgate.id === x.cofre.id) n.resgate = null;
     });
   }
-  // "Cumprimos ✓": vai para o álbum de momentos com a data
+  // Cumprimos: vai para o álbum de momentos com a data
   async function guardarMomentoCumprido(texto) {
     if (!MOMENTOS_OK()) return;
     const { data, error } = await sb.from("momentos")
-      .insert({ sala: codigo, carta_texto: texto.slice(0, 500), carta_tipo: "desafio", frase: `Cumprido no reencontro em ${dataBR(hojeISO())} 💞`, autor: nomeDe(eu) }).select("*").single();
+      .insert({ sala: codigo, carta_texto: texto.slice(0, 500), carta_tipo: "desafio", frase: `Cumprido no reencontro em ${dataBR(hojeISO())}`, autor: nomeDe(eu) }).select("*").single();
     if (!error && data) linhaV5("momentos", "INSERT", data);
   }
   function sortearPromessa() {
@@ -991,7 +991,7 @@
     if (inicial) return;
     $("resumoJuntosPeriodo").textContent = `De ${dataBR(r.desde)} a ${dataBR(r.ate)}`;
     const ul = $("resumoJuntosLista"); ul.textContent = "";
-    (r.cumpridas || []).forEach(x => ul.appendChild(el("li", "feito", `✓ ${x.texto}`)));
+    (r.cumpridas || []).forEach(x => ul.appendChild(el("li", "feito", x.texto)));
     if (!ul.childElementCount) ul.appendChild(el("li", "", "Nenhuma promessa marcada como cumprida."));
     const mom = dados.momentos.filter(m => m.criada_em && hojeISO(new Date(m.criada_em)) >= r.desde).length;
     $("resumoJuntosMomentos").textContent = mom ? `${mom} ${mom === 1 ? "momento salvo" : "momentos salvos"} no álbum` : "";
@@ -1009,7 +1009,7 @@
 
   // ---------- tempo em chamada (tabela chamadas; escrita só pelos RPCs) ----------
   let chamadas = [], timerSinalPres = null, ultimoToqueCh = 0, timerRelogioCh = null, paginasChamadas = 1;
-  const ORIGEM_IC = { presenca: "👥", botao: "📞", manual: "✍️", app: "📱", android: "🤖" };
+  const ORIGEM_IC = { presenca: "users", botao: "phone", manual: "pencil", app: "smartphone", android: "bot" };
   const ORIGEM_NOME = { presenca: "pela presença", botao: "pelo botão", manual: "registrada à mão", app: "chamada do app", android: "detectada no Android" };
   const chamadaAberta = () => chamadas.find(r => !r.fim) || null;
   const botaoLigado = () => { const a = chamadaAberta(); return !!(a && a.tolerancia_min >= 360); };
@@ -1094,7 +1094,7 @@
     $("chamadaRelogio").hidden = !a;
     clearInterval(timerRelogioCh); timerRelogioCh = null;
     if (!a) return;
-    const tick = () => { const x = chamadaAberta(); if (x) $("chamadaRelogio").textContent = (botaoLigado() ? "📞 " : "👥 ") + fmtCrono(Date.now() - new Date(x.inicio).getTime()); };
+    const tick = () => { const x = chamadaAberta(); if (x) $("chamadaRelogio").textContent = fmtCrono(Date.now() - new Date(x.inicio).getTime()); };
     tick();
     timerRelogioCh = setInterval(tick, 1000);   // sempre a partir de `inicio`: não acumula erro
   }
@@ -1301,7 +1301,7 @@
   resumoChamadasFns.push((r, antes) => {
     verificarConquistas(c => c.codigo.startsWith("call_"));   // só os marcos de chamada: os outros esperam uma ação
     if (antes && antes.recorde && r.recorde && r.recorde.minutos > antes.recorde.minutos) {
-      mostrarAviso(novoAviso(`⏱️ Novo recorde: ${fmtDur(r.recorde.minutos)} numa chamada só`), false);
+      mostrarAviso(novoAviso(`Novo recorde: ${fmtDur(r.recorde.minutos)} numa chamada só`), false);
       vibrar(80);
     }
   });
@@ -1359,7 +1359,7 @@
     const dia = j && e.juntosDesde ? 1 - diasAte(e.juntosDesde) : null;
     const total = j && e.juntosDesde && e.juntosAte ? diasAte(e.juntosAte) - diasAte(e.juntosDesde) + 1 : null;
     $("juntosCab").hidden = !j;
-    $("juntosCab").textContent = !j ? "" : total && total > 0 && dia ? `💞 Juntos de novo · dia ${dia} de ${total}` : "💞 Juntos de novo" + (dia ? ` · dia ${dia} do reencontro` : "");
+    $("juntosCab").textContent = !j ? "" : total && total > 0 && dia ? `Juntos de novo · dia ${dia} de ${total}` : "Juntos de novo" + (dia ? ` · dia ${dia} do reencontro` : "");
     if (j && e.perguntarAte === euReal && !e.juntosAte && !$("dlgJuntosAte").open) { setTimeout(() => gravar(n => { n.perguntarAte = null; }), 0); abrirJuntosAte(); }
     talvezResumoJuntos(e, false);
     $("umCelularLinha").hidden = !j || !podeTrocarModo();
@@ -1719,7 +1719,7 @@
   const RE_REENCONTRO = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
   const alvoReencontro = r => new Date((r.length === 10 ? r + "T00:00" : r) + ":00-03:00").getTime();
   const JUNTOS_ATE = 14 * 86400000;        // "Vocês estão juntos há…" até 14 dias depois; depois, pede a próxima data
-  const AGORA_MS = 60000;                   // "É agora! 💞" no primeiro minuto
+  const AGORA_MS = 60000;                   // "É agora" no primeiro minuto
   let timerContador = null, faltavaAntes = null;
   const dois = n => String(n).padStart(2, "0");
   function partes(ms) {
@@ -1769,28 +1769,28 @@
     $("contadorQuando").hidden = !contando;
     if (contando) $("contadorQuando").textContent = quandoReencontro(st.r);
     $("contadorDica").hidden = !(contando && st.r.length === 10);
-    const txt = st.fase === "sem" ? "Quando é o reencontro? 💞"
-      : contando ? "Contagem para o reencontro 💞"
-      : st.fase === "agora" ? "É agora! 💞"
-      : st.fase === "juntos" ? `Vocês estão juntos há ${textoJuntos(-st.falta)} 💞`
+    const txt = st.fase === "sem" ? "Quando é o reencontro?"
+      : contando ? "Contagem para o reencontro"
+      : st.fase === "agora" ? "É agora"
+      : st.fase === "juntos" ? `Vocês estão juntos há ${textoJuntos(-st.falta)}`
       : `O reencontro foi em ${dataBR(st.r)}. Marcar uma nova data?`;
     if ($("reencontroTxt").textContent !== txt) $("reencontroTxt").textContent = txt;
     // chegou a hora: oferece o modo Juntos (se a sala tiver e ele ainda não estiver ligado)
     $("contadorJuntos").hidden = !((st.fase === "agora" || st.fase === "juntos") && !juntos(e) && podeTrocarModo() && e.jogadores[1]);
     // mapa da saudade (v6), boa noite (v6) e cabeçalho do jogo
-    const curto = contando ? `Faltam ${textoFalta(st.falta)} para o reencontro` : st.fase === "agora" ? "É agora! 💞" : st.fase === "juntos" ? `Juntos há ${textoJuntos(-st.falta)} 💞` : "";
+    const curto = contando ? `Faltam ${textoFalta(st.falta)} para o reencontro` : st.fase === "agora" ? "É agora" : st.fase === "juntos" ? `Juntos há ${textoJuntos(-st.falta)}` : "";
     if ($("mapaReencontro")) $("mapaReencontro").textContent = curto;
     if ($("noiteReencontro")) $("noiteReencontro").textContent = curto;
     const mini = $("contadorMini");
     mini.hidden = !(contando && vista === "jogo");
-    if (!mini.hidden) mini.textContent = `💞 ${textoFalta(st.falta, true)}`;
+    if (!mini.hidden) mini.textContent = textoFalta(st.falta, true);
   }
   function festaReencontro() {
     vibrar([200, 100, 200, 100, 400]);
     const f = $("contadorFesta");
     f.textContent = "";
     for (let i = 0; i < 18; i++) {
-      const c = el("span", "", i % 3 ? "💞" : "❤️");
+      const c = el("span", "marca-chuva"); c.appendChild(icone("marca", 24));
       c.style.left = (5 + Math.random() * 90) + "%";
       c.style.animationDelay = (Math.random() * 0.6) + "s";
       f.appendChild(c);
@@ -1892,7 +1892,7 @@
       cb.type = "checkbox";
       cb.checked = !!x.feito;
       cb.addEventListener("change", () => marcarCofre(x, cb.checked));
-      lab.append(cb, document.createTextNode("Feito ✓"));
+      lab.append(cb, document.createTextNode(" Feito"));
       const apagar = document.createElement("button");
       apagar.type = "button";
       apagar.textContent = "Apagar";
@@ -1976,7 +1976,7 @@
     return n;
   }
 
-  const textoSeq = n => n ? `🔥 ${n} ${n === 1 ? "dia seguido" : "dias seguidos"}` : "Ainda sem sequência";
+  const textoSeq = n => n ? `${n} ${n === 1 ? "dia seguido" : "dias seguidos"}` : "Ainda sem sequência";
 
   function desenharDiario() {
     const box = $("diario");
@@ -1994,14 +1994,14 @@
     $("diarioMeuTexto").textContent = !cartasOk ? "Carregando…" : meu ? meu.texto : "Sem desafios neste nível.";
     $("diarioMeuSeq").textContent = textoSeq(sequencia(eu));
     const feito = cumpriuNoDia(hoje, eu);
-    $("diarioCumpri").textContent = feito ? "Cumprido hoje ✓" : "Cumpri hoje";
+    $("diarioCumpri").textContent = feito ? "Cumprido hoje" : "Cumpri hoje";
     $("diarioCumpri").disabled = feito || !meu;
     $("diarioWa").href = "https://wa.me/?text=" + encodeURIComponent(meu ? `Meu desafio do dia: ${meu.texto}` : "");
     const outro = 1 - eu;
     $("diarioOutro").hidden = !nomes[outro];
     if (nomes[outro]) {
       const dele = cartasOk ? desafioDoDia(hoje, outro) : null;
-      $("diarioOutroTitulo").textContent = `Desafio do dia de ${nomes[outro]}` + (cumpriuNoDia(hoje, outro) ? " · cumprido ✓" : "");
+      $("diarioOutroTitulo").textContent = `Desafio do dia de ${nomes[outro]}` + (cumpriuNoDia(hoje, outro) ? " · cumprido" : "");
       $("diarioOutroTexto").textContent = !cartasOk ? "Carregando…" : dele ? dele.texto : "Sem desafios neste nível.";
       $("diarioOutroSeq").textContent = textoSeq(sequencia(outro));
     }
@@ -2223,7 +2223,7 @@
   function desenharCasa(e) {
     if (!e.fixa) return;
     const hoje = hojeISO();
-    $("cardDiarioSub").textContent = cumpriuNoDia(hoje, eu) ? "Cumprido hoje ✓" : "Seu desafio de hoje";
+    $("cardDiarioSub").textContent = cumpriuNoDia(hoje, eu) ? "Cumprido hoje" : "Seu desafio de hoje";
     const pend = cofre.filter(x => !x.feito).length;
     $("cardCofreSub").textContent = cofre.length ? `${pend} ${pend === 1 ? "pendente" : "pendentes"}` : "Guardem cartas para o reencontro";
     desenharCabecalho(e);
@@ -2328,7 +2328,7 @@
     const { error } = await sb.from("manuais").upsert({ sala: c, jogador: eu, campos: limparManual(manuais[eu]), atualizado_em: new Date().toISOString() }, { onConflict: "sala,jogador" });
     salvandoManual--;
     if (c !== codigo) return;
-    statusManual(error ? "Não consegui salvar. Confira a internet." : "Salvo ✓");
+    statusManual(error ? "Não consegui salvar. Confira a internet." : "Salvo");
   }
   function statusManual(t) { $("manualSalvo").textContent = t; $("manualSalvo").classList.toggle("erro-txt", /Não consegui/.test(t)); }
 
@@ -2389,7 +2389,7 @@
   function desenharManualOutro() {
     const o = 1 - eu, nome = nomeDe(o), m = manuais[o] || {}, dl = $("manualOutroLista");
     $("manualOutro").hidden = !nome;
-    $("manualOutroTitulo").textContent = `📗 Manual ${nome ? "de " + nome : ""}`;
+    $("manualOutroTitulo").textContent = `Manual ${nome ? "de " + nome : ""}`;
     dl.textContent = "";
     CAMPOS_MANUAL.forEach(([k, rotulo, , tipo]) => {
       let v = "";
@@ -2473,7 +2473,7 @@
       $("drMsg").hidden = !p.mensagem; $("drMsg").textContent = p.mensagem || "";
       $("drQuando").textContent = `Pedido ${haQuanto(p.criada_em)}`;
       const lanche = temChave(p, "lanche") && textoManual(1 - eu, "delivery");
-      $("drDica").hidden = !lanche; $("drDica").textContent = lanche ? `💡 ${outro} costuma pedir: ${lanche}` : "";
+      $("drDica").hidden = !lanche; $("drDica").textContent = lanche ? `${outro} costuma pedir: ${lanche}` : "";
       const ex = $("drExtras"); ex.textContent = "";
       if (!sozinho && (temChave(p, "ligar") || temChave(p, "dormir"))) {
         const a = el("a", "wa", "Abrir o WhatsApp"); a.href = "https://wa.me/"; a.target = "_blank"; a.rel = "noopener"; ex.appendChild(a);
@@ -2551,8 +2551,8 @@
     const lista = minhaLista();
     const escolhidos = dengoSel.map(id => lista.find(m => m.id === id)).filter(Boolean);
     dengoRascunho = escolhidos.length
-      ? escolhidos.map(m => ({ icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "💗", titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
-      : [{ icone: "hand-heart", emoji: "💗", titulo: "Dengo", detalhe: "", chave: null }];
+      ? escolhidos.map(m => ({ icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "\u{1F497}", titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
+      : [{ icone: "hand-heart", emoji: "\u{1F497}", titulo: "Dengo", detalhe: "", chave: null }];
     const ul = $("dengoResumo"); ul.textContent = "";
     dengoRascunho.forEach((x, i) => {
       const li = el("li");
@@ -2578,7 +2578,7 @@
     // o detalhe sugerido sem nada depois ("O que eu quero: ") não vai
     const itens = dengoRascunho.map(x => {
       const d = (x.detalhe || "").trim(), sug = (minhaLista().find(m => m.titulo === x.titulo) || {}).detalhe || "";
-      const o = { icone: x.icone || iconeDeEmoji(x.emoji, "hand-heart"), emoji: x.emoji || "💗", titulo: x.titulo };
+      const o = { icone: x.icone || iconeDeEmoji(x.emoji, "hand-heart"), emoji: x.emoji || "\u{1F497}", titulo: x.titulo };
       if (d && d !== sug.trim()) o.detalhe = d.slice(0, 80);
       if (x.chave) o.chave = x.chave;
       return o;
@@ -2633,7 +2633,7 @@
   function abrirPedidos() {
     const minhas = meusModelos();
     pedidosRascunho = (minhas.length ? minhas : padroes()).map(m => ({
-      id: minhas.length ? m.id : null, chave: m.chave || null, icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "💗", titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false }));
+      id: minhas.length ? m.id : null, chave: m.chave || null, icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "\u{1F497}", titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false }));
     erro("erroPedidos", "");
     desenharPedidosEdit();
     $("dlgPedidos").showModal();
@@ -2650,7 +2650,7 @@
       btnIc.addEventListener("click", () => {
         const idx = DENGO_ICONES.indexOf(p.icone || "hand-heart");
         p.icone = DENGO_ICONES[(idx + 1) % DENGO_ICONES.length];
-        p.emoji = EMOJI_DE_ICONE[p.icone] || "💗";
+        p.emoji = EMOJI_DE_ICONE[p.icone] || "\u{1F497}";
         btnIc.textContent = "";
         btnIc.appendChild(icone(p.icone, 20));
       });
@@ -2670,7 +2670,7 @@
       const at = el("label", "check"), cb = el("input"); cb.type = "checkbox"; cb.checked = p.ativo;
       cb.addEventListener("change", () => { p.ativo = cb.checked; li.classList.toggle("inativo", !p.ativo); });
       at.append(cb, document.createTextNode(" ativo"));
-      ac.append(mover(-1, "↑", "Subir"), mover(1, "↓", "Descer"), at);
+      ac.append(mover(-1, "Subir", "Subir"), mover(1, "Descer", "Descer"), at);
       if (!p.chave) {
         const x = el("button", "linkbtn", "Apagar"); x.type = "button";
         x.addEventListener("click", () => { pedidosRascunho.splice(i, 1); desenharPedidosEdit(); });
@@ -2682,7 +2682,7 @@
   }
   async function salvarPedidos() {
     if (!codigo || !pedidosRascunho) return;
-    const linhas = pedidosRascunho.map((p, i) => ({ id: p.id, sala: codigo, jogador: eu, chave: p.chave, icone: p.icone || iconeDeEmoji(p.emoji, "hand-heart"), emoji: (p.emoji || EMOJI_DE_ICONE[p.icone] || "💗").trim(), titulo: p.titulo.trim(),
+    const linhas = pedidosRascunho.map((p, i) => ({ id: p.id, sala: codigo, jogador: eu, chave: p.chave, icone: p.icone || iconeDeEmoji(p.emoji, "hand-heart"), emoji: (p.emoji || EMOJI_DE_ICONE[p.icone] || "\u{1F497}").trim(), titulo: p.titulo.trim(),
       detalhe: p.detalhe.trim() ? p.detalhe.slice(0, 120) : null, ordem: i + 1, ativo: p.ativo }));
     if (linhas.some(l => l.titulo.length < 2)) return erro("erroPedidos", "Cada pedido precisa de um nome (2 letras ou mais).");
     if (!linhas.some(l => l.ativo)) return erro("erroPedidos", "Deixe pelo menos um pedido ativo.");
@@ -2710,7 +2710,7 @@
   }
   function novoPedido() {
     if (pedidosRascunho.length >= 30) return erro("erroPedidos", "Dá para ter até 30 pedidos.");
-    pedidosRascunho.push({ id: null, chave: null, emoji: "💗", titulo: "", detalhe: "", ativo: true });
+    pedidosRascunho.push({ id: null, chave: null, emoji: "\u{1F497}", titulo: "", detalhe: "", ativo: true });
     desenharPedidosEdit();
     const ts = $("pedidosEdit").querySelectorAll(".pe-titulo");
     ts[ts.length - 1].focus();
@@ -2753,7 +2753,7 @@
     erro("erroHumor", "");
     const { error } = await sb.from("humores").upsert(row, { onConflict: "sala,dia,jogador" });
     if (error) return erro("erroHumor", "Não consegui salvar o humor. Confira a internet e tente de novo.");
-    $("humorSalvo").textContent = "Salvo ✓";
+    $("humorSalvo").textContent = "Salvo";
   }
   function escolherHumor(v) {
     gravarHumor(r => { r.valor = v; });
@@ -2772,10 +2772,10 @@
     ligar: () => wa("Abrir o WhatsApp"),
     desculpas: () => wa("Abrir o WhatsApp"),
     abra_quando: () => botaoAcao("Escrever uma carta", () => { mostrarVista("vAbra"); abrirNovaAbra(null); }),
-    pensei: () => botaoAcao("Mandar agora 💭", () => mandarCarinho("pensei")),
+    pensei: () => botaoAcao("Mandar agora", () => mandarCarinho("pensei")),
     dengo_lanche: () => {
       const d = textoManual(1 - eu, "delivery");
-      return el("span", "sug-info", d ? `💡 ${nomeDe(1 - eu)} costuma pedir: ${d}` : `O pedido favorito ainda não está no Manual de ${nomeDe(1 - eu)}.`);
+      return el("span", "sug-info", d ? `${nomeDe(1 - eu)} costuma pedir: ${d}` : `O pedido favorito ainda não está no Manual de ${nomeDe(1 - eu)}.`);
     },
     manual: () => botaoAcao("Ver o Manual", () => abrirManualOutro("acalma")),
     mural: () => botaoAcao("Abrir o mural", () => abrirMural(false)),
@@ -2804,8 +2804,8 @@
     const dicas = $("humorDicas"); dicas.textContent = "";
     if (h && h.valor <= 2) {
       const acalma = textoManual(o, "acalma"), evitar = textoManual(o, "naoFazer");
-      if (acalma) dicas.appendChild(el("p", "humor-dica", `💡 O que acalma ${nome}: ${acalma}`));
-      if (evitar) dicas.appendChild(el("p", "humor-dica", `🚫 Evite: ${evitar}`));
+      if (acalma) dicas.appendChild(el("p", "humor-dica", `O que acalma ${nome}: ${acalma}`));
+      if (evitar) dicas.appendChild(el("p", "humor-dica", `Evite: ${evitar}`));
     }
     // sugestões de cuidado pela faixa do humor
     const ul = $("humorSug"); ul.textContent = "";
@@ -2904,7 +2904,7 @@
     return box;
   }
   function entrarMural() {
-    $("muralEnviar").textContent = `Enviar para ${nomeDe(1 - eu) || "o outro"} 💌`;
+    $("muralEnviar").textContent = `Enviar para ${nomeDe(1 - eu) || "o outro"}`;
     desenharFerramentas();
     requestAnimationFrame(() => { redesenharMural(); document.querySelector(".mural-ferramentas").scrollIntoView({ block: "start" }); });
     desenharMuralEstado();
@@ -2941,7 +2941,7 @@
     $("muralGuardar").hidden = !muralJuntos;
     $("muralEnviar").hidden = muralJuntos;
     $("muralJuntosStatus").hidden = !muralJuntos;
-    $("muralJuntosStatus").textContent = !muralJuntos ? "" : muralOutroNoJuntos ? `🤝 Desenhando junto com ${outro}` : `Esperando ${outro} entrar no desenho…`;
+    $("muralJuntosStatus").textContent = !muralJuntos ? "" : muralOutroNoJuntos ? `Desenhando junto com ${outro}` : `Esperando ${outro} entrar no desenho…`;
     $("muralCursor").style.background = avatarDe(1 - eu).cor;
   }
   function guardarPasso() {
@@ -3042,7 +3042,7 @@
     if (p.t === "convite") {
       if (muralJuntos) { muralOutroNoJuntos = true; mandarMural({ t: "entrou" }); mandarEstadoMural(); return desenharMuralEstado(); }
       conviteMural = Date.now();
-      $("muralConviteTxt").textContent = `${outro} quer desenhar junto com você ✏️`;
+      $("muralConviteTxt").textContent = `${outro} quer desenhar junto com você`;
       $("muralConvite").hidden = false;
       vibrar([60, 40, 60]);
       return;
@@ -3127,7 +3127,7 @@
     linhaV5("murais", "INSERT", data);
     if (juntos) { mandarMural({ t: "guardado" }); muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); }
     tracos = []; pilhaMural = []; $("muralLegenda").value = "";
-    erro("erroMural", juntos ? "Guardado ✓" : `Enviado para ${nomeDe(1 - eu)} 💌`);
+    erro("erroMural", juntos ? "Guardado" : `Enviado para ${nomeDe(1 - eu)}`);
     redesenharMural(); desenharMuralEstado(); desenharFerramentas();
   }
   const quemMural = m => m.para === null || m.para === undefined ? "Feito juntos" : m.de === eu ? `Para ${nomeDe(m.para)}` : `De ${nomeDe(m.de)}`;
@@ -3183,7 +3183,7 @@
     const outro = nomeDe(1 - eu) || "o outro";
     const recebidos = dados.murais.filter(m => m.para === eu).sort((a, b) => a.criada_em < b.criada_em ? 1 : -1);
     const novo = recebidos.find(m => !m.visto_em), m = novo || recebidos[0];
-    $("muralInicioTxt").textContent = novo ? `— ${nomeDe(novo.de)} deixou algo para você ❤️` : m ? `— de ${nomeDe(m.de)}` : `— desenhe algo para ${outro}`;
+    $("muralInicioTxt").textContent = novo ? `— ${nomeDe(novo.de)} deixou algo para você` : m ? `— de ${nomeDe(m.de)}` : `— desenhe algo para ${outro}`;
     $("casaMural").classList.toggle("tem-novo", !!novo);
     const v = $("muralInicioVer");
     v.hidden = !m; v.textContent = "";
@@ -3235,11 +3235,11 @@
     const corpo = el("div", "hist-corpo");
     if (e.tipo === "dengo") {
       const quem = nomeDe(x.de), outro = nomeDe(1 - x.de);
-      corpo.appendChild(el("p", "hist-t", `💗 ${quem} pediu dengo`));
+      corpo.appendChild(el("p", "hist-t", `${quem} pediu dengo`));
       corpo.appendChild(el("p", "hist-itens", itensDe(x).map(i => `${i.emoji || ""} ${i.titulo || ""}${i.detalhe ? " (" + i.detalhe + ")" : ""}`.trim()).join(" · ")));
       if (x.mensagem) corpo.appendChild(el("p", "hist-sub", `“${x.mensagem}”`));
       const tempo = x.respondido_em ? " em " + duracao(new Date(x.respondido_em) - new Date(x.criada_em)) : "";
-      const r = x.status === "indo" ? (soSozinho(x) ? `${outro}: ${x.resposta || "Tô aqui quando precisar 🤍"}` : `${outro} respondeu “Tô indo 💨”${tempo}`)
+      const r = x.status === "indo" ? (soSozinho(x) ? `${outro}: ${x.resposta || "Tô aqui quando precisar"}` : `${outro} respondeu “Tô indo”${tempo}`)
         : x.status === "nao_consigo" ? `${outro} não conseguiu${tempo}` : x.status === "cancelado" ? "Cancelado" : "Esperando resposta";
       corpo.appendChild(el("p", "hist-sub", r + (x.resposta && !soSozinho(x) ? `: “${x.resposta}”` : "")));
     } else if (e.tipo === "humor") {
@@ -3253,11 +3253,11 @@
       b.setAttribute("aria-label", "Ver o desenho");
       b.addEventListener("click", () => verMural(x));
       li.insertBefore(b, null);
-      corpo.appendChild(el("p", "hist-t", x.para == null ? "✏️ Desenho feito juntos" : `✏️ ${nomeDe(x.de)} desenhou para ${nomeDe(x.para)}`));
+      corpo.appendChild(el("p", "hist-t", x.para == null ? "Desenho feito juntos" : `${nomeDe(x.de)} desenhou para ${nomeDe(x.para)}`));
       if (x.legenda) corpo.appendChild(el("p", "hist-sub", x.legenda));
     } else {
       const j = x.jogadores || [], pts = (x.placar || []).map(p => p && p.pontos);
-      corpo.appendChild(el("p", "hist-t", `🎲 Partida: ${j[0] || ""} ${pts[0] ?? ""} × ${pts[1] ?? ""} ${j[1] || ""}`));
+      corpo.appendChild(el("p", "hist-t", `Partida: ${j[0] || ""} ${pts[0] ?? ""} × ${pts[1] ?? ""} ${j[1] || ""}`));
       if (j[x.vencedor]) corpo.appendChild(el("p", "hist-sub", `Venceu ${j[x.vencedor]}`));
     }
     li.insertBefore(corpo, li.children[1] || null);
@@ -3402,7 +3402,7 @@
     if (!nome) return;
     const on = presentes.has(1 - eu);
     const visto = !on && vistos[1 - eu] ? quandoVisto(vistos[1 - eu]) : null;
-    el.textContent = on ? `💚 ${nome} está aqui agora` : `${nome} está fora` + (visto ? ` · visto por último ${visto}` : "");
+    el.textContent = on ? `${nome} está aqui agora` : `${nome} está fora` + (visto ? ` · visto por último ${visto}` : "");
     el.classList.toggle("on", on);
   }
 
@@ -3440,7 +3440,7 @@
   let posModo = null;   // null (guia) | "cardapio"
   const POS_DIF = { facil: "Fácil", media: "Média", dificil: "Difícil" };
   const POS_CLIMA = { romantica: "Romântica", intensa: "Intensa", aventura: "Aventura" };
-  const POS_MARCAS = [["favorita", "⭐ Favorita"], ["testar", "🎯 Queremos testar"], ["feita", "✅ Já fizemos"]];
+  const POS_MARCAS = [["favorita", "Favorita"], ["testar", "Queremos testar"], ["feita", "Já fizemos"]];
   const MAX_CARDAPIO = 5;
   const RE_POSICAO = /posi[çc](ão|ao|ões|oes)/i;
   const RE_CARDAPIO = /card[áa]pio|posi[çc](ões|oes)/i;
@@ -3551,7 +3551,7 @@
     $("posGuardar").disabled = false;
     if (error) return erro("erroJogo", /limite/.test(error.message || "") ? "O cofre desta sala chegou a 300 itens." : "Não consegui guardar. Confira a internet e tente de novo.");
     juntarCofre(data);
-    gravarFresco(n => { if (n.cardapio && n.cardapio.chave === c.chave) n.cardapio.guardado = true; n.aviso = novoAviso(`${n.jogadores[eu]} guardou o cardápio no cofre 💞`); });
+    gravarFresco(n => { if (n.cardapio && n.cardapio.chave === c.chave) n.cardapio.guardado = true; n.aviso = novoAviso(`${n.jogadores[eu]} guardou o cardápio no cofre`); });
   }
 
   function abrirGuia(modo) {
@@ -3602,19 +3602,19 @@
       acoes.appendChild(esc);
       if (posModo === "cardapio") {
         const no = !!(cardapio && cardapio.itens.some(x => x.id === p.id));
-        const b = el("button", "secondary", no ? "✓ No cardápio" : "＋ Cardápio"); b.type = "button";
+        const b = el("button", "secondary", no ? "No cardápio" : "＋ Cardápio"); b.type = "button";
         b.setAttribute("aria-pressed", String(no));
         b.disabled = !no && !!cardapio && cardapio.itens.length >= MAX_CARDAPIO;
         b.addEventListener("click", () => alternarCardapio(p));
         acoes.appendChild(b);
       }
       if (marcasPos.some(x => x.posicao_id === p.id)) {
-        const ref = el("button", "linkbtn", "🔗 Referência"); ref.type = "button";
+        const ref = el("button", "linkbtn", "Referência"); ref.type = "button";
         ref.addEventListener("click", () => referenciaPosicao(p));
         acoes.appendChild(ref);
         const link = linkPos(p.id);
         if (link) {
-          const a = el("a", "pos-link", "Abrir referência ↗");
+          const a = el("a", "pos-link", "Abrir referência");
           a.href = link; a.target = "_blank"; a.rel = "noopener noreferrer";
           acoes.appendChild(a);
         }
@@ -3640,7 +3640,7 @@
     ul.textContent = "";
     if (cardapio) cardapio.itens.forEach(x => ul.appendChild(el("li", "", x.nome)));
     $("posGuardar").disabled = !!(cardapio && cardapio.guardado);
-    $("posGuardar").textContent = cardapio && cardapio.guardado ? "Guardado no cofre ✓" : "Guardar para o reencontro";
+    $("posGuardar").textContent = cardapio && cardapio.guardado ? "Guardado no cofre" : "Guardar para o reencontro";
   }
 
   // ---------- guia de poses para fotos e vídeos (só texto; ícones opcionais em icones/poses/) ----------
@@ -3715,7 +3715,7 @@
     li.appendChild(topo);
     li.appendChild(el("p", "pos-desc", p.como));
     const selos = el("div", "pos-selos");
-    if (ia) selos.appendChild(el("span", "selo-pos ia", "✨ IA"));
+    if (ia) selos.appendChild(el("span", "selo-pos ia", "IA"));
     selos.appendChild(el("span", "selo-pos", POSE_ENQ[p.enquadramento] || p.enquadramento));
     if (p.tipo) selos.appendChild(el("span", "selo-pos", p.tipo === "video" ? "Vídeo" : "Foto"));
     if (p.nivel) selos.appendChild(el("span", "selo-pos nivel", LEVEL_NAMES[p.nivel] || p.nivel));
@@ -3754,7 +3754,7 @@
     $("poseComo").hidden = !r;
     $("poseComo").textContent = r ? r.como : "";
   }
-  // ✨ Ideias da IA no guia de poses: sugestões só na tela (somem ao fechar), "Usar esta" grava em estado.pose
+  // Ideias da IA no guia de poses: sugestões só na tela (somem ao fechar), "Usar esta" grava em estado.pose
   let iaPose = null;
   function painelIAPose() {
     let pedido = 0;
@@ -3859,10 +3859,10 @@
       const meu = x.de === eu;
       const nivel = x.nivel ? ` · ${LEVEL_NAMES[x.nivel]}` : "";
       if (meu) {
-        info.append(el("span", "tag", x.tipo === "mensagem" ? `💌 Mensagem para ${nOutro}` : `🎲 Desafio surpresa para ${nOutro}${nivel}`),
+        info.append(el("span", "tag", x.tipo === "mensagem" ? `Mensagem para ${nOutro}` : `Desafio surpresa para ${nOutro}${nivel}`),
           el("span", "t", x.texto), el("span", "autor", `escrito em ${dataCurta(x.criada_em)} · só você vê o texto`));
       } else {
-        info.append(el("span", "tag", x.tipo === "mensagem" ? `💌 1 envelope de ${nomeDe(x.de)}` : `🎲 1 desafio surpresa de ${nomeDe(x.de)}`),
+        info.append(el("span", "tag", x.tipo === "mensagem" ? `1 envelope de ${nomeDe(x.de)}` : `1 desafio surpresa de ${nomeDe(x.de)}`),
           el("span", "autor", x.tipo === "mensagem" ? `chegou em ${dataCurta(x.criada_em)}`
             : "Vai aparecer como a sua primeira carta na próxima partida com vocês dois aqui."));
       }
@@ -3890,7 +3890,7 @@
     abertos.forEach(x => {
       const li = el("li");
       const info = el("div", "info");
-      info.append(el("span", "tag", (x.tipo === "mensagem" ? `💌 De ${nomeDe(x.de)}` : `🎲 Desafio surpresa de ${nomeDe(x.de)}`) + ` · aberto em ${dataCurta(x.aberto_em)}`),
+      info.append(el("span", "tag", (x.tipo === "mensagem" ? `De ${nomeDe(x.de)}` : `Desafio surpresa de ${nomeDe(x.de)}`) + ` · aberto em ${dataCurta(x.aberto_em)}`),
         el("span", "t", x.texto));
       li.appendChild(info);
       ua.appendChild(li);
@@ -3907,7 +3907,7 @@
     $("dlgEnvelope").showModal();
   }
 
-  // "🎲 Sugerir": desafio do banco (com o peso do baralho) no campo; na mensagem, só uma ideia acima do campo
+  // Sugerir: desafio do banco (com o peso do baralho) no campo; na mensagem, só uma ideia acima do campo
   const sugeridas = { desafio: [], ideia_mensagem: [] };
   let iaCarta = null, iaEnvelope = null;   // últimas 5 de cada, para não repetir
   function tipoDoEnvelope() {
@@ -3933,7 +3933,7 @@
       $("envTexto").value = c.texto.slice(0, 500);
       $("envContador").textContent = `${$("envTexto").value.length}/500`;
     } else {
-      $("envIdeia").textContent = `💡 Ideia: ${c.texto}`;
+      $("envIdeia").textContent = `Ideia: ${c.texto}`;
       $("envIdeia").hidden = false;
     }
   }
@@ -3974,7 +3974,7 @@
   escutar("envelopes", (ev, row, antes) => {
     if (ev !== "UPDATE" || row.tipo !== "mensagem" || !row.aberto_em || (antes && antes.aberto_em) || envelopesAnimados.has(row.id)) return;
     envelopesAnimados.add(row.id);
-    $("envAbrindoDe").textContent = `💌 De ${nomeDe(row.de)} para ${nomeDe(1 - row.de)}`;
+    $("envAbrindoDe").textContent = `De ${nomeDe(row.de)} para ${nomeDe(1 - row.de)}`;
     $("envAbrindoTexto").textContent = row.texto;
     const ov = $("envAbrindo");
     ov.hidden = false;
@@ -4028,7 +4028,7 @@
     "Que promessa você me faz hoje para cobrar daqui a um ano?", "Em que você mudou desde que começou a namorar comigo?",
     "Qual é o seu lugar preferido para pensar em mim?", "O que você ainda não teve coragem de me pedir?",
     "Qual foi o momento deste ano em que você mais precisou de mim?", "Onde você quer que a gente more um dia?"]);
-  const ESPELHO = "🪞 ";
+  const ESPELHO = "[Espelho] ";
   const ehEspelho = x => typeof x.pergunta === "string" && x.pergunta.startsWith(ESPELHO);
   let capEspelho = false;
   function abrirNovaEspelho() {
@@ -4054,7 +4054,7 @@
     perguntaAtual = -1;
     outraPergunta();
     const hoje = hojeISO();
-    $("dlgCapTitulo").textContent = capEspelho ? "Nova cápsula de espelho 🪞" : "Nova cápsula do tempo";
+    $("dlgCapTitulo").textContent = capEspelho ? "Nova cápsula de espelho" : "Nova cápsula do tempo";
     $("capData").min = somarDias(hoje, 7);
     $("capData").max = somarDias(hoje, 730);
     $("capData").value = somarMeses(hoje, capEspelho ? 12 : 1);
@@ -4133,18 +4133,18 @@
         info.appendChild(el("span", "autor", `abre em ${dataBR(x.abre_em)} · as respostas ficam escondidas até lá`));
         const r = x.respostas || [null, null];
         if (r[eu] == null) info.appendChild(campoResposta(x, "respostas", "Sua resposta de hoje"));
-        else info.appendChild(el("span", "cap-status", "Você respondeu ✓"));
-        info.appendChild(el("span", "cap-status", r[outro] == null ? `Esperando ${nOutro} responder` : `${nOutro} respondeu ✓`));
+        else info.appendChild(el("span", "cap-status", "Você respondeu"));
+        info.appendChild(el("span", "cap-status", r[outro] == null ? `Esperando ${nOutro} responder` : `${nOutro} respondeu`));
       } else if (fase === "selada") {
-        info.appendChild(el("span", "cap-status", `🔒 Selada · abre em ${dias} ${dias === 1 ? "dia" : "dias"} (${dataBR(x.abre_em)})`));
+        info.appendChild(el("span", "cap-status", `Selada · abre em ${dias} ${dias === 1 ? "dia" : "dias"} (${dataBR(x.abre_em)})`));
       } else if ((fase === "pronta" || fase === "aberta") && ehEspelho(x)) {
         desenharEspelho(x, info);
       } else if (fase === "pronta") {
-        info.appendChild(el("span", "cap-status", "⏳ Cápsula pronta para abrir: respondam de novo, sem ver a antiga."));
+        info.appendChild(el("span", "cap-status", "Cápsula pronta para abrir: respondam de novo, sem ver a antiga."));
         const d = x.respostas_depois || [null, null];
         if (d[eu] == null) info.appendChild(campoResposta(x, "respostas_depois", "Sua resposta de agora"));
-        else info.appendChild(el("span", "cap-status", "Você respondeu de novo ✓"));
-        info.appendChild(el("span", "cap-status", d[outro] == null ? `Esperando ${nOutro} responder de novo` : `${nOutro} respondeu de novo ✓`));
+        else info.appendChild(el("span", "cap-status", "Você respondeu de novo"));
+        info.appendChild(el("span", "cap-status", d[outro] == null ? `Esperando ${nOutro} responder de novo` : `${nOutro} respondeu de novo`));
       } else {
         info.appendChild(el("span", "autor", `guardada em ${dataCurta(x.criada_em)} · aberta em ${dataBR(x.abre_em)}`));
         const q = el("div", "cap-quadros");
@@ -4168,9 +4168,9 @@
   function desenharEspelho(x, info) {
     const outro = 1 - eu, nOutro = nomeDe(outro), d = x.respostas_depois || [null, null];
     if (d[eu] == null) {
-      info.appendChild(el("span", "cap-status", "🪞 Responda como você se sente hoje, antes de ver o que disse há um ano."));
+      info.appendChild(el("span", "cap-status", "Responda como você se sente hoje, antes de ver o que disse há um ano."));
       info.appendChild(campoResposta(x, "respostas_depois", "Sua resposta de hoje"));
-      info.appendChild(el("span", "cap-status", d[outro] == null ? `${nOutro} ainda não respondeu de novo` : `${nOutro} já respondeu de novo ✓`));
+      info.appendChild(el("span", "cap-status", d[outro] == null ? `${nOutro} ainda não respondeu de novo` : `${nOutro} já respondeu de novo`));
       return;
     }
     const antes = dataCurta(x.criada_em), agora = dataBR(x.abre_em);
@@ -4189,7 +4189,7 @@
     const prontas = dados.capsulas.filter(x => faseCapsula(x) === "pronta").length;
     const seladas = dados.capsulas.filter(x => faseCapsula(x) === "selada").length;
     const resp = dados.capsulas.filter(x => faseCapsula(x) === "respondendo" && (x.respostas || [])[eu] == null).length;
-    $("cardCapSub").textContent = prontas ? `⏳ ${prontas} pronta${prontas > 1 ? "s" : ""} para abrir`
+    $("cardCapSub").textContent = prontas ? `${prontas} pronta${prontas > 1 ? "s" : ""} para abrir`
       : resp ? `${resp} esperando sua resposta` : seladas ? `${seladas} selada${seladas > 1 ? "s" : ""}` : "Perguntas para o futuro";
     $("cardCap").classList.toggle("destaque", prontas > 0 || resp > 0);
     const hoje = hojeISO();
@@ -4281,7 +4281,7 @@
     }
     gravar(n => {
       n.obsPedida[dono] = null;
-      n.aviso = novoAviso(confirma ? `${n.jogadores[eu]} confirmou: ${n.jogadores[dono]} cumpriu a missão da semana 👀`
+      n.aviso = novoAviso(confirma ? `${n.jogadores[eu]} confirmou: ${n.jogadores[dono]} cumpriu a missão da semana`
         : `${n.jogadores[eu]} disse que a missão de ${n.jogadores[dono]} ainda não foi mostrada.`);
     });
     if (confirma) depoisDeAcao();
@@ -4317,7 +4317,7 @@
       } else {
         info.appendChild(el("span", "cap-status", `Seu palpite: ${a.palpite}`));
         if (a.resultado) info.appendChild(el("span", "cap-status", `${nOutro} respondeu: ${a.resposta || "—"} · ${RESULTADOS[a.resultado]}`));
-        else info.appendChild(el("span", "autor", podeConferir ? `Esperando ${nOutro} conferir.` : `Aposta feita ✓ · ${nOutro} confere a partir de sábado.`));
+        else info.appendChild(el("span", "autor", podeConferir ? `Esperando ${nOutro} conferir.` : `Aposta feita · ${nOutro} confere a partir de sábado.`));
       }
       ul.appendChild(li);
     });
@@ -4356,9 +4356,9 @@
     const feita = i => dados.observacoes.find(x => x.semana === semana && x.jogador === i);
     const pedida = i => { const p = estado.obsPedida[i]; return p && p.semana === semana ? p : null; };
     const meu = el("div", "obs-minha");
-    meu.appendChild(el("p", "obs-titulo", "👀 Sua missão da semana"));
+    meu.appendChild(el("p", "obs-titulo", "Sua missão da semana"));
     meu.appendChild(el("p", "t", minha || "Carregando…"));
-    if (feita(eu)) meu.appendChild(el("p", "cap-status", `Mostrada ✓ · ${nOutro} confirmou`));
+    if (feita(eu)) meu.appendChild(el("p", "cap-status", `Mostrada · ${nOutro} confirmou`));
     else if (pedida(eu)) meu.appendChild(el("p", "cap-status", `Esperando ${nOutro} confirmar`));
     else if (minha) {
       const b = el("button", "secondary", "Mostrei!"); b.type = "button";
@@ -4367,7 +4367,7 @@
     }
     box.appendChild(meu);
     const dele = feita(outro), pd = pedida(outro);
-    if (dele) box.appendChild(el("p", "missao-outro", `${nOutro} mostrou: “${dele.missao}” ✓`));
+    if (dele) box.appendChild(el("p", "missao-outro", `${nOutro} mostrou: “${dele.missao}”`));
     else if (pd) {
       const c = el("div", "confirmar-missao");
       c.appendChild(el("p", "", `${nOutro} mostrou: “${pd.missao}”. Confirmar?`));
@@ -4393,7 +4393,7 @@
       });
       dados.observacoes.filter(o => o.semana === s).forEach(o => {
         const li = el("li"); const info = el("div", "info");
-        info.append(el("span", "tag", `👀 ${nomeDe(o.jogador)} mostrou`), el("span", "t", o.missao));
+        info.append(el("span", "tag", `${nomeDe(o.jogador)} mostrou`), el("span", "t", o.missao));
         li.appendChild(info); lu.appendChild(li);
       });
       bloco.appendChild(lu); sp.appendChild(bloco);
@@ -4445,7 +4445,7 @@
         info.append(el("span", "tag", [TIPO_NOMES[h.tipo] || h.tipo, LEVEL_NAMES[h.nivel] || h.nivel, quem, RESULTADO_HIST[h.resultado]].filter(Boolean).join(" · ")),
           el("span", "t", h.texto));
         const guardado = (dados.momentos || []).some(m => m.carta_texto === h.texto);
-        const b = el("button", "linkbtn", guardado ? "📸 No álbum ✓" : "📸 Guardar no álbum");
+        const b = el("button", "linkbtn", guardado ? "No álbum" : "Guardar no álbum");
         b.type = "button";
         b.disabled = guardado;
         b.addEventListener("click", () => abrirMomento(h));
@@ -4487,7 +4487,7 @@
     const todos = dados.momentos.slice().sort((a, b) => (a.criada_em < b.criada_em ? 1 : -1));
     const lista = filtroAlbum === "favoritos" ? todos.filter(m => m.favorito) : todos;
     $("albumVazio").textContent = todos.length ? (lista.length ? "" : "Nenhum favorito ainda. Toque na estrela de um momento.")
-      : "O álbum está vazio. No fim de uma partida, toque em \"📸 Guardar no álbum\" numa carta que marcou.";
+      : "O álbum está vazio. No fim de uma partida, toque em \"Guardar no álbum\" numa carta que marcou.";
     $("albumVazio").hidden = !!lista.length;
     const ul = $("listaAlbum");
     ul.textContent = "";
@@ -4529,7 +4529,7 @@
   redesenhar("momentos", () => { desenharAlbum(); if (estado) desenharRodadas(estado); });
   extrasDaCasa.push(() => {
     const n = dados.momentos.length, f = dados.momentos.filter(m => m.favorito).length;
-    $("cardAlbumSub").textContent = n ? `${n} ${n === 1 ? "momento" : "momentos"}${f ? ` · ${f} ★` : ""}` : "Guarde as cartas que marcaram";
+    $("cardAlbumSub").textContent = n ? `${n} ${n === 1 ? "momento" : "momentos"}${f ? ` · ${f} favoritas` : ""}` : "Guarde as cartas que marcaram";
   });
 
   // ---------- baralho com memória (só sala fixa) ----------
@@ -4624,7 +4624,7 @@
     const fav = comMarca("favorita"), apos = comMarca("aposentada");
     $("baralhoFavQtd").textContent = fav.length ? `(${fav.length})` : "";
     $("baralhoAposQtd").textContent = apos.length ? `(${apos.length})` : "";
-    lista($("baralhoFavoritas"), fav.map(c => ({ c })), "Nenhuma favorita. Toque em ⭐ numa carta durante o jogo.", botao("Tirar ⭐", c => marcarCarta(c.id, "favorita")));
+    lista($("baralhoFavoritas"), fav.map(c => ({ c })), "Nenhuma favorita. Marque uma carta como favorita durante o jogo.", botao("Desmarcar favorita", c => marcarCarta(c.id, "favorita")));
     lista($("baralhoAposentadas"), apos.map(c => ({ c })), "Nenhuma carta aposentada.", botao("Restaurar", c => marcarCarta(c.id, "aposentada")));
     const top = [...vistas].filter(([id, n]) => n > 0 && porId.has(id)).sort((a, b) => b[1] - a[1]).slice(0, 20);
     lista($("baralhoVistas"), top.map(([id, n]) => ({ c: porId.get(id), extra: `${n}×` })), "Nenhuma carta sorteada ainda nesta sala.");
@@ -4687,7 +4687,7 @@
     const c = defConquista(row.codigo);
     if (!c || (c.categoria === "ousadia" && !permitido("conquistasOusadia"))) return;
     // várias de uma vez (fim de partida): um aviso só
-    filaConquistas.push(c.aviso || `🏆 ${c.titulo}` + (row.jogador === 0 || row.jogador === 1 ? ` (${nomeDe(row.jogador)})` : ""));
+    filaConquistas.push(c.aviso || c.titulo + (row.jogador === 0 || row.jogador === 1 ? ` (${nomeDe(row.jogador)})` : ""));
     if (c.aviso) { vibrar(80); setTimeout(desenharResumoChamadas, 0); }
     clearTimeout(timerConquistas);
     timerConquistas = setTimeout(() => { mostrarAviso(novoAviso(filaConquistas.join(" · ")), false); filaConquistas = []; }, 300);
@@ -4986,13 +4986,13 @@
     const g0 = svgEl("g", { class: "mapa-ponto p0" }), g1 = svgEl("g", { class: "mapa-ponto p1" });
     g0.append(svgEl("circle", { cx: 50, cy: 60, r: 9 }), svgEl("text", { x: 50, y: 95, "text-anchor": "middle" }, nomes[0]));
     g1.append(svgEl("circle", { cx: 270, cy: 60, r: 9 }), svgEl("text", { x: 270, y: 95, "text-anchor": "middle" }, nomes[1]));
-    svg.append(g0, g1, svgEl("text", { x: 160, y: 68, "text-anchor": "middle", class: "mapa-coracao" }, "❤"));
-    $("mapaKm").textContent = hoje0 ? "Hoje é 0 km 💞" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Digam as cidades de vocês para ver a distância";
+    const mc = document.createElementNS("http://www.w3.org/2000/svg", "use"); mc.setAttribute("href", "icones.svg#marca"); mc.setAttribute("x", "148"); mc.setAttribute("y", "56"); mc.setAttribute("width", "24"); mc.setAttribute("height", "24"); svg.append(g0, g1, mc);
+    $("mapaKm").textContent = hoje0 ? "Hoje é 0 km" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Digam as cidades de vocês para ver a distância";
     tickContador();   // "Faltam 8 dias, 14 h…" ao vivo
     // configuração "Nossas cidades"
     [0, 1].forEach(i => {
       $("cidadeRotulo" + i).textContent = `Cidade de ${nomeDe(i)}`;
-      $("cidadeAtual" + i).textContent = cidadeValida(e.cidades[i]) ? `📍 ${e.cidades[i].nome}${temCoord(e.cidades[i]) ? "" : " (só o nome)"}` : "";
+      $("cidadeAtual" + i).textContent = cidadeValida(e.cidades[i]) ? `${e.cidades[i].nome}${temCoord(e.cidades[i]) ? "" : " (só o nome)"}` : "";
       const ul = $("cidadeOpcoes" + i);
       ul.textContent = "";
       resultadosCidade[i].forEach(c => {
@@ -5008,7 +5008,7 @@
   }
 
   // ---------- v6: linha do tempo do casal ----------
-  const SUGESTOES_MARCO = [["💘", "Primeiro encontro"], ["💋", "Primeiro beijo"], ["💍", "Pedido"], ["✈️", "Viagem"], ["🎂", "Aniversário"], ["🏠", "Visita"]];
+  const SUGESTOES_MARCO = [["heart", "Primeiro encontro"], ["heart", "Primeiro beijo"], ["gem", "Pedido"], ["plane", "Viagem"], ["cake", "Aniversário"], ["house", "Visita"]];
   const mesesEntre = (de, ate) => {
     const [a1, m1, d1] = de.split("-").map(Number), [a2, m2, d2] = ate.split("-").map(Number);
     return (a2 - a1) * 12 + (m2 - m1) - (d2 < d1 ? 1 : 0);
@@ -5037,7 +5037,7 @@
     const data = $("marcoData").value;
     const descricao = $("marcoDescricao").value.trim().slice(0, 300) || null;
     const iconeNome = $("marcoIcone").value || "calendar-heart";
-    const emoji = EMOJI_DE_ICONE[iconeNome] || "✨";
+    const emoji = EMOJI_DE_ICONE[iconeNome] || "\u2728";
     const ehPrincipal = $("marcoPrincipal").checked;
     if (!titulo) return erro("erroMarco", "Dê um título ao marco.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("erroMarco", "Escolha a data.");
@@ -5108,10 +5108,10 @@
       if (m.data >= hoje) return;
       if (mm === hm && d === hd) {
         const anos = ha - a;
-        cartoes.push(m.principal ? `Feliz ${anos} ${anos === 1 ? "ano" : "anos"} de namoro! 💞` : `Há ${anos} ${anos === 1 ? "ano" : "anos"}: ${m.titulo}`);
+        cartoes.push(m.principal ? `Feliz ${anos} ${anos === 1 ? "ano" : "anos"} de namoro!` : `Há ${anos} ${anos === 1 ? "ano" : "anos"}: ${m.titulo}`);
       } else if (m.principal && d === hd) {
         const meses = mesesEntre(m.data, hoje);
-        cartoes.push(`Feliz mesversário! 🎉 ${meses} ${meses === 1 ? "mês" : "meses"} juntos`);
+        cartoes.push(`Feliz mesversário! ${meses} ${meses === 1 ? "mês" : "meses"} juntos`);
       }
     });
     const box = $("datasEspeciais");
@@ -5123,7 +5123,7 @@
   extrasDaCasa.push(e => {
     desenharJuntosHa();
     const km = distanciaKm(e);
-    $("cardMapaSub").textContent = e.reencontro && diasAte(e.reencontro) === 0 ? "Hoje é 0 km 💞" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Nossas cidades";
+    $("cardMapaSub").textContent = e.reencontro && diasAte(e.reencontro) === 0 ? "Hoje é 0 km" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Nossas cidades";
     $("distMapaTxt").textContent = "Mapa da saudade" + (km !== null ? ` · ${km.toLocaleString("pt-BR")} km` : "");
     $("cardHistoriaSub").textContent = dados.marcos.length ? `${dados.marcos.length} ${dados.marcos.length === 1 ? "marco" : "marcos"}` : "Nossa linha do tempo";
     if (vista === "vMapa") desenharMapa();
@@ -5170,7 +5170,7 @@
   // o autor fica sabendo (sem saber qual)
   escutar("motivos", (ev, row, antes) => {
     if (ev === "UPDATE" && antes && row.de === eu && (row.vezes || 0) > (antes.vezes || 0))
-      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} tirou um motivo seu do pote 🥰`), false);
+      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} tirou um motivo seu do pote`), false);
   });
   function desenharPote() {
     if (!estado || !estado.fixa || !$("poteSvg")) return;
@@ -5188,8 +5188,15 @@
     defs.appendChild(clip);
     svg.append(defs, svgEl("rect", { x: 20, y: 164 - alto, width: 120, height: alto, class: "pote-cheio", "clip-path": "url(#poteClip)" }),
       svgEl("path", { d: forma, class: "pote-vidro" }), svgEl("rect", { x: 36, y: 20, width: 88, height: 12, rx: 4, class: "pote-tampa" }));
-    for (let i = 0; i < Math.min(paraMim.length, 14); i++)
-      svg.appendChild(svgEl("text", { x: 44 + (i * 23) % 76, y: 156 - Math.floor(i / 4) * 16, class: "pote-coracao" }, "❤"));
+    for (let i = 0; i < Math.min(paraMim.length, 14); i++) {
+      const pc = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      pc.setAttribute("href", "icones.svg#heart");
+      pc.setAttribute("x", String(44 + (i * 23) % 76));
+      pc.setAttribute("y", String(146 - Math.floor(i / 4) * 16));
+      pc.setAttribute("width", "14");
+      pc.setAttribute("height", "14");
+      svg.appendChild(pc);
+    }
     $("motivoTirar").disabled = !paraMim.length;
     $("motivoRotulo").textContent = `Um motivo pelo qual eu te amo, ${nomeDe(outro)}`;
     const meus = dados.motivos.filter(m => m.de === eu).slice().reverse();
@@ -5261,7 +5268,7 @@
   }
   escutar("abra_quando", (ev, row, antes) => {
     if (ev === "UPDATE" && antes && !antes.aberto_em && row.aberto_em && row.de === eu)
-      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} abriu a carta "Abra quando… ${row.ocasiao}" 💌`), false);
+      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} abriu a carta "Abra quando… ${row.ocasiao}"`), false);
   });
   function desenharAbra() {
     if (!estado || !estado.fixa || !$("abraFechadas")) return;
@@ -5350,7 +5357,7 @@
     if (ev !== "INSERT" || antes || row.dia !== hojeISO()) return;
     const hoje = hojeISO();
     if ([0, 1].every(i => dados.respostas_dia.some(r => r.dia === hoje && r.jogador === i)))
-      mostrarAviso(novoAviso("As respostas de hoje estão abertas 💬"), false);
+      mostrarAviso(novoAviso("As respostas de hoje estão abertas"), false);
   });
   function desenharPergunta() {
     if (!estado || !estado.fixa || !$("pdPergunta")) return;
@@ -5364,7 +5371,7 @@
     if (escrevendo && minha && document.activeElement !== $("pdResposta") && !$("pdResposta").value) $("pdResposta").value = minha.resposta;
     $("pdResponder").textContent = minha ? "Salvar" : "Responder";
     // a resposta do outro fica escondida até você responder
-    $("pdAviso").textContent = !minha && dele ? `${nomeDe(outro)} já respondeu! Responda para ver 👀` : minha && !dele ? `Esperando ${nomeDe(outro)} responder…` : "";
+    $("pdAviso").textContent = !minha && dele ? `${nomeDe(outro)} já respondeu! Responda para ver.` : minha && !dele ? `Esperando ${nomeDe(outro)} responder…` : "";
     const lado = $("pdLado");
     lado.textContent = "";
     lado.hidden = !(minha && dele) || editandoResposta;
@@ -5419,7 +5426,7 @@
     const pool = cartas.filter(c => c.tipo === "boa_noite");
     const f = pool.length ? pool[Math.floor(Math.random() * pool.length)].texto : "Boa noite, meu amor.";
     n.encerrando = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), por: eu, frases: [null, null], frase: f };
-    n.aviso = novoAviso(`${n.jogadores[eu]} quer encerrar a noite 🌙`);
+    n.aviso = novoAviso(`${n.jogadores[eu]} quer encerrar a noite`);
   }
   function enviarFraseNoite(pular) {
     const e = estado && estado.encerrando;
@@ -5730,10 +5737,10 @@
     $("dlgCodigoDono").showModal();
   }
   async function copiarCodigoDono() {
-    try { await navigator.clipboard.writeText($("codigoDono").textContent); $("codigoDonoCopiado").textContent = "Copiado ✓"; }
+    try { await navigator.clipboard.writeText($("codigoDono").textContent); $("codigoDonoCopiado").textContent = "Copiado"; }
     catch (err) { $("codigoDonoCopiado").textContent = "Não consegui copiar. Anote o código."; }
   }
-  // "👑 Entrar como dono": só o campo do código; com o código certo, este aparelho vira dono
+  // Entrar como dono: só o campo do código; com o código certo, este aparelho vira dono
   function abrirEntrarDono() {
     $("entrarDonoCodigo").value = "";
     erro("erroEntrarDono", "");
@@ -5769,19 +5776,19 @@
 
   // ---------- tela de Configurações (só existe no DOM do aparelho do dono) ----------
   let timerSalvarCfg = null, salvandoCfg = 0, statusCfg = "", avisoNiveisCfg = "";
-  // entradas: "⚙️ Configurações" no menu da sala e um card na Casa, criados só para o dono
+  // entradas: Configurações no menu da sala e um card na Casa, criados só para o dono
   function desenharEntradaConfig() {
     const menu = document.querySelector(".ajustes");
     let bm = $("abrirConfigMenu"), bc = $("cardConfig");
     if (souDono) {
       if (!bm && menu) {
-        bm = el("button", "linkbtn", "⚙️ Configurações"); bm.id = "abrirConfigMenu"; bm.type = "button";
+        bm = el("button", "linkbtn", "Configurações"); bm.prepend(icone("settings", 16)); bm.id = "abrirConfigMenu"; bm.type = "button";
         bm.addEventListener("click", abrirConfig);
         menu.insertBefore(bm, $("som").nextSibling);
       }
       if (!bc) {
         bc = el("button", "casa-card"); bc.id = "cardConfig"; bc.type = "button";
-        bc.append(el("span", "ic", "⚙️"), el("b", "", "Configurações"), el("span", "sub", "Só você vê"));
+        const icCfg = el("span", "ic"); icCfg.appendChild(icone("settings", 20)); bc.append(icCfg, el("b", "", "Configurações"), el("span", "sub", "Só você vê"));
         bc.addEventListener("click", abrirConfig);
         $("perfilConfig").appendChild(bc);
       }
@@ -5836,7 +5843,7 @@
     const { error } = await sb.rpc("sala_config_salvar", { p_sala: c, p_token: t, p_config: config });
     salvandoCfg--;
     if (c !== codigo) return;
-    statusCfg = error ? "Não consegui salvar. Confira a internet e tente de novo." : "Salvo ✓";
+    statusCfg = error ? "Não consegui salvar. Confira a internet e tente de novo." : "Salvo";
     if (error && /dono/.test(error.message || "")) { statusCfg = "Este aparelho não é mais o dono."; conferirDono(c); }
     const s = $("cfgStatus");
     if (s) s.textContent = statusCfg;
@@ -5855,7 +5862,7 @@
     const outro = 1 - (donoIndice === null ? eu : donoIndice);
     if (!estado.jogadores[outro]) return;
     const { error } = await sb.rpc("sala_dono_indice", { p_sala: codigo, p_token: lerToken(codigo), p_jogador: outro });
-    statusCfg = error ? "Não consegui passar o 👑." : `O 👑 agora aparece para ${nomeDe(outro)}.`;
+    statusCfg = error ? "Não consegui passar o controle." : `O controle agora aparece para ${nomeDe(outro)}.`;
     if (!error) donoIndice = outro;
     desenharTelaConfig();
   }
@@ -5907,13 +5914,13 @@
     const rolagem = d.scrollTop;
     d.textContent = "";
     const topo = el("div", "pos-topo");
-    topo.appendChild(el("h2", "", "⚙️ Configurações"));
+    topo.appendChild(el("h2", "", "Configurações"));
     const fechar = el("button", "linkbtn", "Fechar"); fechar.type = "button"; fechar.addEventListener("click", () => d.close());
     topo.appendChild(fechar);
     d.appendChild(topo);
     const dono = el("div", "cfg-dono");
-    dono.appendChild(el("p", "cfg-dono-titulo", "Você é o dono desta sala 👑"));
-    if (donoIndice !== null && estado.jogadores[donoIndice]) dono.appendChild(el("p", "extras-sub", `O 👑 aparece para ${nomeDe(donoIndice)}.`));
+    dono.appendChild(el("p", "cfg-dono-titulo", "Você é o dono desta sala"));
+    if (donoIndice !== null && estado.jogadores[donoIndice]) dono.appendChild(el("p", "extras-sub", `O controle aparece para ${nomeDe(donoIndice)}.`));
     const botoes = el("div", "cfg-botoes");
     const mostrar = el("button", "secondary", "Mostrar código de dono"); mostrar.type = "button";
     mostrar.addEventListener("click", async () => { if (await perguntar("Mostrar o código de dono na tela?")) mostrarCodigoDono(lerToken(codigo)); });
@@ -5921,7 +5928,7 @@
     botoes.append(mostrar, gerar);
     const outro = 1 - (donoIndice === null ? eu : donoIndice);
     if (estado.jogadores[outro]) {
-      const passar = el("button", "secondary", `Passar o 👑 para ${nomeDe(outro)}`); passar.type = "button"; passar.addEventListener("click", passarCoroa);
+      const passar = el("button", "secondary", `Passar o controle para ${nomeDe(outro)}`); passar.type = "button"; passar.addEventListener("click", passarCoroa);
       botoes.appendChild(passar);
     }
     dono.appendChild(botoes);
@@ -6579,7 +6586,7 @@
     ultimaVez = e.jogadores[1] ? e.vez : null;
   }
 
-  // som e vibração: um botão só (🔊/🔇), guardado neste aparelho
+  // som e vibração: guardado neste aparelho
   let somLigado = lerLocal("lp-som") !== false;
   const vibrar = padrao => { if (!somLigado) return; try { navigator.vibrate?.(padrao); } catch (err) {} };
 
@@ -6666,7 +6673,7 @@
       : ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
       : c.motivo === "final" ? "Prenda final"
       : c.motivo === "sequencia" ? "Prenda por parar a carta em etapas"
-      : c.surpresa ? `🎲 Desafio surpresa de ${e.jogadores[c.surpresaDe] || ""}`
+      : c.surpresa ? `Desafio surpresa de ${e.jogadores[c.surpresaDe] || ""}`
       : c.reversa ? `Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
       : c.cega ? `Escolhida às cegas · ${TIPO_NOMES[c.tipo] || c.tipo}`
       : TIPO_NOMES[c.tipo] || c.tipo;
@@ -7024,7 +7031,7 @@
       txt.className = "ef-texto";
       const aberto = efeitosAbertos.has(ef.id);
       const quem = document.createElement("b");
-      quem.textContent = `✨ ${e.jogadores[ef.dono]}: `;
+      quem.textContent = `${e.jogadores[ef.dono]}: `;
       const corpo = document.createTextNode(aberto ? ef.texto : resumo(ef.texto, 48));
       const rest = document.createElement("span");
       rest.className = "ef-rest";
@@ -7203,8 +7210,8 @@
       $("sintoniaRespB").textContent = s.respostas[outro];
       $("sintoniaStatus").textContent = eu === alvo ? "Julgue o palpite:" : `Aguardando ${e.jogadores[alvo]} julgar.`;
     } else {
-      $("sintoniaStatus").textContent = minha !== null ? `Resposta enviada ✓ Esperando ${e.jogadores[1 - eu]}…`
-        : dele !== null ? `${e.jogadores[1 - eu]} já respondeu ✓` : "";
+      $("sintoniaStatus").textContent = minha !== null ? `Resposta enviada. Esperando ${e.jogadores[1 - eu]}…`
+        : dele !== null ? `${e.jogadores[1 - eu]} já respondeu` : "";
     }
   }
 
@@ -7290,7 +7297,7 @@
       const li = el("li", "seq-etapa" + (i < s.etapa ? " feita" : i === s.etapa ? " atual" : " oculta"));
       const q = quemFaz(girou, et);
       if (i > s.etapa) { li.appendChild(el("span", "seq-quem", `Etapa ${i + 1} · ???`)); ol.appendChild(li); return; }
-      li.appendChild(el("span", "seq-quem", `${i < s.etapa ? "✓ " : ""}Etapa ${i + 1} · ${rotuloQuem(e, q)}`));
+      li.appendChild(el("span", "seq-quem", `Etapa ${i + 1} · ${rotuloQuem(e, q)}`));
       li.appendChild(el("span", "seq-texto", et.texto));
       ol.appendChild(li);
     });
@@ -7522,7 +7529,7 @@
       const spanNome = el("span", "ro-nome");
       spanNome.append(icone(r.icone || iconeDeEmoji(r.emoji, "clapperboard"), 18), document.createTextNode(" " + r.nome));
       b.append(spanNome, el("span", "ro-desc", r.descricao || ""),
-        el("span", "ro-etapas", r.etapas.map(et => et.nome).join(" → ")));
+        el("span", "ro-etapas", r.etapas.map(et => et.nome).join(" · ")));
       b.addEventListener("click", () => escolherRoteiro(r));
       li.appendChild(b); ul.appendChild(li);
     });
@@ -7598,7 +7605,7 @@
       const spanNome = el("span", "ro-nome");
       spanNome.append(icone(x.icone || iconeDeEmoji(x.emoji, "film"), 18), document.createTextNode(" " + x.nome));
       b.append(spanNome, el("span", "ro-desc", x.descricao || ""),
-        el("span", "ro-etapas", x.noites.map((nt, i) => `Noite ${i + 1}: ${nt.titulo}`).join(" → ")));
+        el("span", "ro-etapas", x.noites.map((nt, i) => `Noite ${i + 1}: ${nt.titulo}`).join(" · ")));
       b.addEventListener("click", () => comecarCampanha(x));
       li.appendChild(b); ul.appendChild(li);
     });
@@ -7671,7 +7678,7 @@
     const c = estado && estado.campanha;
     if (!c || c.noite !== 1 || !c.jogando || c.quebrou[eu]) return;
     if (!await perguntar("Quebrou a regra da noite? Palavra de honra: suas fichas zeram.", { ok: "Quebrei", perigo: true })) return;
-    gravar(n => { const x = n.campanha; if (!x) return; x.quebrou[eu] = true; x.bonus[eu] = 0; n.aviso = novoAviso(`🙈 ${n.jogadores[eu]} quebrou a regra e perdeu as fichas`); });
+    gravar(n => { const x = n.campanha; if (!x) return; x.quebrou[eu] = true; x.bonus[eu] = 0; n.aviso = novoAviso(`${n.jogadores[eu]} quebrou a regra e perdeu as fichas`); });
   }
   const naNoiteFinal = e => { const c = e && e.campanha; return !!(c && c.jogando && c.noite === c.noites.length - 1 && e.roteiro && e.roteiro.campanha && !e.roteiro.concluido); };
   function usarFicha(tipo) {
@@ -7685,17 +7692,17 @@
       if (tipo === "nivel") {
         if (n.carta || !permitido("nivel", nivel)) return;
         c.nivelProx = nivel;
-        n.aviso = novoAviso(`🎟️ ${quem} gastou uma ficha: a próxima carta é ${LEVEL_NAMES[nivel]}`);
+        n.aviso = novoAviso(`${quem} gastou uma ficha: a próxima carta é ${LEVEL_NAMES[nivel]}`);
       } else if (tipo === "quem") {
         if (!n.carta || !["verdade", "desafio"].includes(n.carta.tipo)) return;
         n.vez = 1 - n.vez;
-        n.aviso = novoAviso(`🎟️ ${quem} gastou uma ficha: quem cumpre esta carta é ${n.jogadores[n.vez]}`);
+        n.aviso = novoAviso(`${quem} gastou uma ficha: quem cumpre esta carta é ${n.jogadores[n.vez]}`);
       } else if (tipo === "pular") {
         if (!n.carta || n.vez !== eu || !["verdade", "desafio"].includes(n.carta.tipo)) return;
         const cc = n.carta;
         n.carta = null;
         passarVez(n, cc);
-        n.aviso = novoAviso(`🎟️ ${quem} gastou uma ficha e pulou sem prenda`);
+        n.aviso = novoAviso(`${quem} gastou uma ficha e pulou sem prenda`);
       } else return;
       c.bonus[eu]--;
     });
@@ -7712,12 +7719,12 @@
     const parado = c.ultima ? -diasAte(c.ultima) : 0;
     let info = "";
     if (c.concluida) {
-      $("campanhaCapa").textContent = `${c.emoji} ${c.nome} · Campanha concluída 🎞️`;
+      $("campanhaCapa").textContent = `${c.nome} · Campanha concluída`;
       info = c.placares.map((p, i) => `Noite ${i + 1}: ${e.jogadores[0]} ${p[0]} × ${p[1]} ${e.jogadores[1] || ""}`).join(" · ");
     } else {
       $("campanhaCapa").textContent = `${c.emoji} Noite ${k + 1} de ${N} · ${nt.titulo}`;
       if (c.jogando) info = k === N - 1 ? fichas + " (valem agora)" : fichas;
-      else if (!liberada) info = `A noite ${k + 1} fica liberada amanhã 🌙 · ${fichas}`;
+      else if (!liberada) info = `A noite ${k + 1} fica liberada amanhã · ${fichas}`;
       else info = fichas;
     }
     $("campanhaInfo").textContent = info;
@@ -7739,7 +7746,7 @@
     $("fichaNivelUsar").disabled = !semCarta || !!c.nivelProx;
     const vd = e.carta && ["verdade", "desafio"].includes(e.carta.tipo);
     $("fichaQuem").hidden = !vd;
-    $("fichaQuem").textContent = vd ? `🎟️ ${e.jogadores[1 - e.vez]} cumpre esta` : "";
+    $("fichaQuem").textContent = vd ? `${e.jogadores[1 - e.vez]} cumpre esta` : "";
     $("fichaPular").hidden = !(vd && e.vez === eu);
   }
 
@@ -7910,7 +7917,7 @@
     if (!estado || !estado.fixa) { $("casaNossoAno").hidden = true; return; }
     const hoje = hojeISO(), dez = hoje.slice(5, 7) === "12", aniv = diaNamoro() === hoje.slice(5);
     $("casaNossoAno").hidden = !(dez || aniv);
-    $("casaNossoAnoTitulo").textContent = aniv ? "✨ Hoje é aniversário de namoro: vejam o Nosso ano" : "✨ Nosso ano: a retrospectiva de vocês";
+    $("casaNossoAnoTitulo").textContent = aniv ? "Hoje é aniversário de namoro: vejam o Nosso ano" : "Nosso ano: a retrospectiva de vocês";
   }
   // partidas na ordem dos jogadores de agora, só do período
   function partidasDoPeriodo(ini) {
@@ -7926,7 +7933,7 @@
     const e = estado, c = codigo, ano = hojeISO().slice(0, 4), ini = periodo === "ano" ? `${ano}-01-01` : null;
     const noPeriodo = iso => !!iso && (!ini || diaBahia(iso) >= ini);
     const n0 = nomeDe(0), n1 = nomeDe(1), telas = [];
-    telas.push({ emoji: "✨", titulo: periodo === "ano" ? `Nosso ${ano}` : "Nossa história até aqui", linhas: [`${n0} & ${n1}`, "Toque para avançar"] });
+    telas.push({ icone: "sparkles", titulo: periodo === "ano" ? `Nosso ${ano}` : "Nossa história até aqui", linhas: [`${n0} & ${n1}`, "Toque para avançar"] });
     // 1. chamadas (se a tabela existir)
     try {
       const { data, error } = await sb.from("chamadas").select("inicio, fim, duracao_minutos").eq("sala", c).limit(5000);
@@ -7936,7 +7943,7 @@
         if (tot > 0) {
           const rec = l.slice().sort((a, b) => (b.duracao_minutos || 0) - (a.duracao_minutos || 0))[0];
           const h = Math.floor(tot / 60);
-          telas.push({ emoji: "📞", titulo: h ? `${h} ${h === 1 ? "hora" : "horas"} em chamada` : `${tot} minutos em chamada`,
+          telas.push({ icone: "phone", titulo: h ? `${h} ${h === 1 ? "hora" : "horas"} em chamada` : `${tot} minutos em chamada`,
             linhas: [`${l.length} ${l.length === 1 ? "chamada" : "chamadas"}`, `Recorde: ${fmtDuracao(rec.duracao_minutos || 0)} em ${dataBR(diaBahia(rec.inicio))}`] });
         }
       }
@@ -7946,7 +7953,7 @@
     const ps = partidasDoPeriodo(ini);
     if (ps.length) {
       const v = [0, 1].map(j => ps.filter(p => p.vencedor === j).length);
-      telas.push({ emoji: "🎲", titulo: `${ps.length} ${ps.length === 1 ? "partida" : "partidas"}`, linhas: [`${n0} ${v[0]} × ${v[1]} ${n1}`, v[0] === v[1] ? "Empate técnico 💞" : `${v[0] > v[1] ? n0 : n1} venceu mais`] });
+      telas.push({ icone: "dices", titulo: `${ps.length} ${ps.length === 1 ? "partida" : "partidas"}`, linhas: [`${n0} ${v[0]} × ${v[1]} ${n1}`, v[0] === v[1] ? "Empate técnico" : `${v[0] > v[1] ? n0 : n1} venceu mais`] });
       const porMes = {};
       ps.forEach(p => {
         if (!p.quando) return;
@@ -7961,19 +7968,19 @@
         const top = Object.entries(porMes[m]).sort((a, b) => b[1] - a[1])[0];
         return top && top[1] > 0 ? `${MESES[Number(m.slice(5)) - 1]}/${m.slice(2, 4)} · ${LEVEL_NAMES[top[0]]}` : null;
       }).filter(Boolean).slice(-12);
-      if (linhas.length) telas.push({ emoji: "🌡️", titulo: "O nível mais jogado, mês a mês", linhas });
+      if (linhas.length) telas.push({ icone: "thermometer", titulo: "O nível mais jogado, mês a mês", linhas });
     }
     // 4. dengos
     const dg = (dados.dengos || []).filter(d => noPeriodo(d.criada_em));
     if (dg.length) {
       const indo = dg.filter(d => d.status === "indo").length;
-      telas.push({ emoji: "🫂", titulo: `${dg.length} ${dg.length === 1 ? "dengo pedido" : "dengos pedidos"}`, linhas: [`${indo} com "Tô indo" 🏃`] });
+      telas.push({ icone: "hand-heart", titulo: `${dg.length} ${dg.length === 1 ? "dengo pedido" : "dengos pedidos"}`, linhas: [`${indo} com "Tô indo"`] });
     }
-    // 5. a verdade favorita (marcada com ⭐; desempate: a mais vista)
+    // 5. a verdade favorita (favoritada; desempate: a mais vista)
     const favs = [...marcas.entries()].filter(([, s]) => s.has("favorita")).map(([id]) => cartas.find(x => x.id === id)).filter(x => x && x.tipo === "verdade");
     if (favs.length) {
       const f = favs.sort((a, b) => (vistas.get(b.id) || 0) - (vistas.get(a.id) || 0))[0];
-      telas.push({ emoji: "⭐", titulo: "A verdade favorita", linhas: [`“${f.texto}”`] });
+      telas.push({ icone: "star", titulo: "A verdade favorita", linhas: [`“${f.texto}”`] });
     }
     // 6. o dia de mais saudade: o dia com mais carinhos ("Pensei em você", saudade…)
     const porDia = {};
@@ -7981,7 +7988,7 @@
     const pico = Object.entries(porDia).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? 1 : -1))[0];
     if (pico) {
       const hum = humores.filter(h => h.dia === pico[0]).map(h => h.valor);
-      telas.push({ emoji: "🥺", titulo: "O dia de mais saudade", linhas: [`${dataBR(pico[0])}: ${pico[1]} ${pico[1] === 1 ? "carinho" : "carinhos"} pela tela`].concat(hum.length ? [`Humor mais baixo do dia: ${Math.min(...hum)} de 5`] : []) });
+      telas.push({ icone: "cloud-moon", titulo: "O dia de mais saudade", linhas: [`${dataBR(pico[0])}: ${pico[1]} ${pico[1] === 1 ? "carinho" : "carinhos"} pela tela`].concat(hum.length ? [`Humor mais baixo do dia: ${Math.min(...hum)} de 5`] : []) });
     }
     // 7. cofre quitado e reencontros
     const fe = cofre.filter(x => x.feito && noPeriodo(x.quitado_em || x.criada_em));
@@ -7992,14 +7999,14 @@
     }
     const reenc = (dados.momentos || []).filter(m => noPeriodo(m.criada_em) && /^Cumprido no reencontro/.test(m.frase || "")).map(m => diaBahia(m.criada_em));
     if (reenc.length) linhas7.push(`${new Set(reenc).size} ${new Set(reenc).size === 1 ? "dia juntos" : "dias juntos"} com promessa cumprida`);
-    if (linhas7.length) telas.push({ emoji: "🧾", titulo: "O que foi cumprido ao vivo", linhas: linhas7 });
+    if (linhas7.length) telas.push({ icone: "receipt", titulo: "O que foi cumprido ao vivo", linhas: linhas7 });
     // 8. conquistas
     const cq = (dados.conquistas || []).filter(x => noPeriodo(x.desbloqueada_em)).map(x => defConquista(x.codigo)).filter(Boolean);
-    if (cq.length) telas.push({ emoji: "🏆", titulo: `${cq.length} ${cq.length === 1 ? "conquista" : "conquistas"}`, linhas: [...new Set(cq.map(x => `${x.selo || "🏆"} ${x.titulo}`))].slice(0, 6) });
+    if (cq.length) telas.push({ icone: "trophy", titulo: `${cq.length} ${cq.length === 1 ? "conquista" : "conquistas"}`, linhas: [...new Set(cq.map(x => x.titulo))].slice(0, 6) });
     // 9. fechamento
     const st = situacaoReencontro(e), fim = ["Obrigado por mais um ano de nós dois."];
-    if (st.fase === "contando") { const d = Math.max(0, diasAte(st.r)); fim.push(d ? `Próximo reencontro em ${d} ${d === 1 ? "dia" : "dias"} 💞` : "O próximo reencontro é hoje 💞"); }
-    telas.push({ emoji: "💞", titulo: "Ano que vem tem mais 💞", linhas: fim });
+    if (st.fase === "contando") { const d = Math.max(0, diasAte(st.r)); fim.push(d ? `Próximo reencontro em ${d} ${d === 1 ? "dia" : "dias"}` : "O próximo reencontro é hoje"); }
+    telas.push({ icone: "marca", titulo: "Ano que vem tem mais", linhas: fim });
     return telas;
   }
   const fmtDuracao = min => { const h = Math.floor(min / 60), m = Math.round(min % 60); return h ? `${h}h${m ? ` ${String(m).padStart(2, "0")}min` : ""}` : `${m}min`; };
@@ -8007,7 +8014,7 @@
     if (!estado || !estado.fixa) return;
     const periodo = (document.querySelector('input[name="naPeriodo"]:checked') || {}).value || "ano";
     $("nossoAno").hidden = false;
-    $("naTitulo").textContent = "Calculando…"; $("naLinhas").textContent = ""; $("naEmoji").textContent = "✨";
+    $("naTitulo").textContent = "Calculando…"; $("naLinhas").textContent = ""; $("naEmoji").textContent = ""; $("naEmoji").appendChild(icone("sparkles", 32));
     const t = await montarNossoAno(periodo);
     if (!t) return;
     telasAno = t; telaAno = 0;
@@ -8016,7 +8023,7 @@
   function desenharTelaAno() {
     const t = telasAno[telaAno];
     if (!t) return;
-    $("naEmoji").textContent = t.emoji;
+    $("naEmoji").textContent = ""; $("naEmoji").appendChild(icone(t.icone || "sparkles", 32));
     $("naTitulo").textContent = t.titulo;
     const box = $("naLinhas"); box.textContent = "";
     t.linhas.forEach(l => box.appendChild(el("p", "", l)));
@@ -8031,7 +8038,7 @@
     desenharTelaAno();
   }
 
-  // ---------- v9: dias ruins — bateria social baixa 🪫 ----------
+  // ---------- v9: dias ruins — bateria social baixa ----------
   const bateriaDe = (j, e = estado) => { const v = e && e.bateria && e.bateria[j]; return !!v && Date.parse(v) > Date.now(); };
   const bateriaAlguem = e => !!(e && e.fixa) && (bateriaDe(0, e) || bateriaDe(1, e));
   function ligarBateria(op) {
@@ -8039,7 +8046,7 @@
       : op === "amanha" ? new Date(`${somarDias(hojeISO(), 1)}T06:00:00-03:00`).toISOString()
       : new Date(Date.now() + 30 * 86400000).toISOString();
     $("bateriaOpcoes").hidden = true;
-    gravar(n => { n.bateria = { ...(n.bateria || {}), [eu]: ate }; n.aviso = novoAviso(`🪫 ${n.jogadores[eu]} está sem bateria social`); });
+    gravar(n => { n.bateria = { ...(n.bateria || {}), [eu]: ate }; n.aviso = novoAviso(`${n.jogadores[eu]} está sem bateria social`); });
   }
   function desligarBateria() {
     gravar(n => { const b = { ...(n.bateria || {}) }; delete b[eu]; n.bateria = b; });
@@ -8053,8 +8060,8 @@
     $("bateriaLigada").hidden = !minha;
     if (minha) {
       const ate = new Date(e.bateria[eu]), dias = (ate - Date.now()) / 86400000;
-      $("bateriaTexto").textContent = dias > 2 ? "🪫 Você está sem bateria social até desligar. Tudo calmo por aqui."
-        : `🪫 Você está sem bateria social até ${hojeISO(ate) === hojeISO() ? "" : "amanhã, "}${ate.toLocaleTimeString("pt-BR", { timeZone: "America/Bahia", hour: "2-digit", minute: "2-digit" })}. Tudo calmo por aqui.`;
+      $("bateriaTexto").textContent = dias > 2 ? "Você está sem bateria social até desligar. Tudo calmo por aqui."
+        : `Você está sem bateria social até ${hojeISO(ate) === hojeISO() ? "" : "amanhã, "}${ate.toLocaleTimeString("pt-BR", { timeZone: "America/Bahia", hour: "2-digit", minute: "2-digit" })}. Tudo calmo por aqui.`;
     }
     // sem jogo para os dois enquanto alguém está sem bateria
     if ((minha || dele) && vista === "jogo") setTimeout(() => mostrarVista("casa"), 0);
@@ -8069,18 +8076,18 @@
     $("casaCuidado").hidden = !ativo;
     if (!ativo) return;
     const o = 1 - eu, nome = nomeDe(o), ul = $("cuidadoItens"); ul.textContent = "";
-    $("cuidadoTitulo").textContent = `🪫 ${nome} está sem bateria social. Protocolo de cuidado:`;
+    $("cuidadoTitulo").textContent = `${nome} está sem bateria social. Protocolo de cuidado:`;
     const item = (t, cls) => ul.appendChild(el("li", cls || "", t));
     const naoFazer = textoManual(o, "naoFazer"), naoPerg = textoManual(o, "naoPerguntar"), acalma = textoManual(o, "acalma");
     const delivery = textoManual(o, "delivery"), musica = textoManual(o, "musicaConforto");
-    if (naoFazer) item(`🚫 Hoje, não: ${naoFazer}`);
-    if (naoPerg) item(`🤐 Não pergunte: ${naoPerg}`);
-    if (acalma) item(`🌿 O que acalma: ${acalma}`);
-    if (!naoFazer && !naoPerg && !acalma) sugestoes.filter(s => s.humor_min <= 1 && 1 <= s.humor_max).sort((a, b) => a.ordem - b.ordem).slice(0, 4).forEach(s => item(`💡 ${s.texto}`));
-    item(delivery ? `🛵 Ação silenciosa: peça ${delivery} sem avisar` : musica ? `🎵 Ação silenciosa: mande "${musica}"` : "🌙 Ação silenciosa: mande só um boa noite, sem esperar resposta", "acao");
+    if (naoFazer) item(`Hoje, não: ${naoFazer}`);
+    if (naoPerg) item(`Não pergunte: ${naoPerg}`);
+    if (acalma) item(`O que acalma: ${acalma}`);
+    if (!naoFazer && !naoPerg && !acalma) sugestoes.filter(s => s.humor_min <= 1 && 1 <= s.humor_max).sort((a, b) => a.ordem - b.ordem).slice(0, 4).forEach(s => item(s.texto));
+    item(delivery ? `Ação silenciosa: peça ${delivery} sem avisar` : musica ? `Ação silenciosa: mande "${musica}"` : "Ação silenciosa: mande só um boa noite, sem esperar resposta", "acao");
   }
 
-  // ---------- v9: recados sem resposta 💛 ----------
+  // ---------- v9: recados sem resposta ----------
   let recados = [], marcandoLido = new Set();
   const chaveFechados = () => `lp-recados-fechados:${codigo}`;
   const lerFechados = () => { const v = lerLocal(chaveFechados()); return Array.isArray(v) ? v : []; };
@@ -8134,7 +8141,7 @@
     const r = recados.find(x => x.de === o && !fechados.includes(x.id));
     $("casaRecado").hidden = !r;
     if (r) {
-      $("recadoTitulo").textContent = `💛 Recado de ${nomeDe(o)}`;
+      $("recadoTitulo").textContent = `Recado de ${nomeDe(o)}`;
       $("recadoTexto").textContent = r.texto;
       if (!r.lido_em && !document.hidden && vista !== "jogo") marcarLido(r);
     }
@@ -8142,8 +8149,8 @@
     const meu = recados.find(x => x.de === eu);
     const recente = meu && Date.now() - Date.parse(meu.criado_em) < 3 * 86400000;
     $("casaRecadoLido").hidden = !recente;
-    if (recente) $("casaRecadoLido").textContent = meu.lido_em ? `✓ ${nomeDe(o)} leu e está só absorvendo o carinho, sem pressão para conversar`
-      : `💛 Recado deixado. ${nomeDe(o)} ainda não viu.`;
+    if (recente) $("casaRecadoLido").textContent = meu.lido_em ? `${nomeDe(o)} leu e está só absorvendo o carinho, sem pressão para conversar`
+      : `Recado deixado. ${nomeDe(o)} ainda não viu.`;
     const recebidos = recados.filter(x => x.de === o);
     $("cardRecadosSub").textContent = recebidos.length ? `${recebidos.length} ${recebidos.length === 1 ? "recebido" : "recebidos"}` : "Sem resposta, só carinho";
     if ($("vRecados").hidden) return;
@@ -8157,7 +8164,7 @@
   }
   addEventListener("visibilitychange", () => { if (!document.hidden) desenharRecados(); });
 
-  // ---------- v9: companhia silenciosa 🕯️ (pelo broadcast da sala; não grava nada além do tempo) ----------
+  // ---------- v9: companhia silenciosa (pelo broadcast da sala; não grava nada além do tempo) ----------
   let emCompanhia = false, compOutro = { ativo: false, visto: 0, saiu: false }, compJuntoDesde = null, compUltimoToque = 0;
   let compBatida = null, compWake = null, compVigia = null;
   const compOutroAqui = () => compOutro.ativo && Date.now() - compOutro.visto < 45000 && presentes.has(1 - eu);
@@ -8179,7 +8186,7 @@
     const m = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
     $("compMusica").hidden = !m;
     $("compPlayer").textContent = "";
-    if (m) { $("compMusicaTxt").textContent = `🎵 Sugestão: ${m.titulo}${m.artista ? " · " + m.artista : ""}`; $("compTocar").dataset.url = m.url; }
+    if (m) { $("compMusicaTxt").textContent = `Sugestão: ${m.titulo}${m.artista ? " · " + m.artista : ""}`; $("compTocar").dataset.url = m.url; }
     try { if (navigator.wakeLock) compWake = await navigator.wakeLock.request("screen"); } catch (err) { compWake = null; }
     desenharCompanhia();
   }
@@ -8220,7 +8227,7 @@
     if (!emCompanhia || !compOutroAqui() || Date.now() - compUltimoToque < 30000) return;
     compUltimoToque = Date.now();
     try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "toqueComp", jogador: eu } }); } catch (err) {}
-    $("compDica").textContent = "💫 Toque enviado";
+    $("compDica").textContent = "Toque enviado";
     setTimeout(() => { if (emCompanhia) desenharCompanhia(); }, 2000);
   }
   function desenharCompanhia() {
@@ -8229,7 +8236,7 @@
     if (junto && !compJuntoDesde) compJuntoDesde = Date.now();
     if (!junto && compJuntoDesde) somarCompanhia(false);
     $("compLuz").classList.toggle("junto", junto);
-    $("compStatus").textContent = junto ? `${nome} está aqui com você 🕯️` : compOutro.saiu ? `${nome} saiu, mas volta logo` : `Esperando ${nome} abrir a companhia…`;
+    $("compStatus").textContent = junto ? `${nome} está aqui com você` : compOutro.saiu ? `${nome} saiu, mas volta logo` : `Esperando ${nome} abrir a companhia…`;
     const falta = Math.ceil((30000 - (Date.now() - compUltimoToque)) / 1000);
     $("compDica").textContent = junto ? (falta > 0 && compUltimoToque ? `Dá para tocar de novo em ${falta} s` : "Toque na luz para fazer brilhar do outro lado") : "";
   }
@@ -8246,7 +8253,7 @@
   function desenharHistCompanhia() {
     const t = Number(estado && estado.companhiaTotal) || 0;
     $("histCompanhia").hidden = !t;
-    if (t) { const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60); $("histCompanhia").textContent = `🕯️ Horas de companhia (sem contar como chamada): ${h ? `${h} h ` : ""}${m} min`; }
+    if (t) { const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60); $("histCompanhia").textContent = `Horas de companhia (sem contar como chamada): ${h ? `${h} h ` : ""}${m} min`; }
   }
 
   // ---------- v9: carta secreta (segure para ler; virou o celular, escondeu) ----------
@@ -8355,7 +8362,7 @@
           n.silencio.fase = "passou";
           n.placar[n.vez].pontos += 2;
           n.pontos = n.placar.map(p => p.pontos);
-          n.aviso = novoAviso(`🤫 ${n.jogadores[n.vez]} aguentou em silêncio! +2`);
+          n.aviso = novoAviso(`${n.jogadores[n.vez]} aguentou em silêncio! +2`);
           conferirMeta(n);
         });
       }
@@ -8392,7 +8399,7 @@
       carta.motivo = "pulo"; carta.origem = c.tipo === "prenda" ? "desafio" : c.tipo;
       n.carta = carta;
       n.silencio = null;
-      n.aviso = novoAviso(`🤫 Falhou! ${n.jogadores[1 - n.vez]} escolheu a prenda`);
+      n.aviso = novoAviso(`Falhou! ${n.jogadores[1 - n.vez]} escolheu a prenda`);
     });
   }
   function desenharSilencio(e) {
@@ -8408,7 +8415,7 @@
     $("silencioStatus").textContent = s.fase === "preparando" ? (ouvinte ? "" : `O celular de ${e.jogadores[s.ouvinte] || "vocês"} vai ouvir.`)
       : s.fase === "calibrando" ? "Calibrando: 3 segundos em silêncio…"
       : s.fase === "valendo" ? `${quem} não pode fazer nenhum som.`
-      : s.fase === "falhou" ? "Falhou! 🤫" : `${quem} aguentou em silêncio! +2`;
+      : s.fase === "falhou" ? "Falhou!" : `${quem} aguentou em silêncio! +2`;
     $("silencioBox").classList.toggle("falhou", s.fase === "falhou");
     // falhou: tela vermelha piscando e vibração, uma vez em cada aparelho
     if (s.fase === "falhou" && falhouVisto !== s.chave) {
@@ -8453,7 +8460,7 @@
     const i = clausulasSala.findIndex(x => x.id === row.id);
     if (ev === "DELETE") { if (i >= 0) clausulasSala.splice(i, 1); }
     else if (row.sala === codigo) {
-      if (i < 0 && ev === "INSERT") mostrarAviso(novoAviso(`📜 Cláusula para amanhã (${nomeDe(row.para)}): ${row.texto}`), false);
+      if (i < 0 && ev === "INSERT") mostrarAviso(novoAviso(`Cláusula para amanhã (${nomeDe(row.para)}): ${row.texto}`), false);
       if (i >= 0) clausulasSala[i] = { ...clausulasSala[i], ...row }; else clausulasSala.unshift(row);
     }
     desenharClausulas();
@@ -8491,7 +8498,7 @@
     const { error } = await sb.from("clausulas_sala").update({ texto: nova.texto }).eq("id", x.id);
     if (error) return erro("erroClausula", "Não consegui trocar. Confira a internet.");
     linhaClausula("UPDATE", { ...x, texto: nova.texto });
-    gravar(n => { n.vetos = { ...(n.vetos || {}), [x.para]: hojeISO() }; n.aviso = novoAviso(`📜 ${n.jogadores[x.para]} usou o veto da semana`); });
+    gravar(n => { n.vetos = { ...(n.vetos || {}), [x.para]: hojeISO() }; n.aviso = novoAviso(`${n.jogadores[x.para]} usou o veto da semana`); });
   }
   // não cumpriu até o fim do dia: vira prenda na fatura (o aparelho de quem cobra grava)
   let vencendoClausulas = false;
@@ -8515,11 +8522,11 @@
     const ul = $("clausulasLista"); ul.textContent = "";
     l.forEach(x => {
       const li = el("li", x.cumprida_em ? "feito" : "");
-      li.append(el("p", "cumprir-titulo", `📜 Cláusula de hoje para ${nomeDe(x.para)}`), el("p", "clausula-texto", x.texto));
-      if (x.cumprida_em) li.appendChild(el("p", "extras-sub", "Cumpriu ✓"));
+      li.append(el("p", "cumprir-titulo", `Cláusula de hoje para ${nomeDe(x.para)}`), el("p", "clausula-texto", x.texto));
+      if (x.cumprida_em) li.appendChild(el("p", "extras-sub", "Cumpriu"));
       else {
         const ac = el("div", "row");
-        if (eu === 1 - x.para || umCelularAqui(estado)) { const b = el("button", "done", "Cumpriu ✓"); b.type = "button"; b.addEventListener("click", () => cumpriuClausula(x)); ac.appendChild(b); }
+        if (eu === 1 - x.para || umCelularAqui(estado)) { const b = el("button", "done", "Cumpriu"); b.type = "button"; b.addEventListener("click", () => cumpriuClausula(x)); ac.appendChild(b); }
         if ((eu === x.para || umCelularAqui(estado)) && podeVetar(x.para)) { const v = el("button", "linkbtn", "Vetar (1 por semana)"); v.type = "button"; v.addEventListener("click", () => vetarClausula(x)); ac.appendChild(v); }
         if (eu === x.para && !umCelularAqui(estado)) ac.appendChild(el("span", "extras-sub", `Quem marca é ${nomeDe(1 - x.para)}.`));
         li.appendChild(ac);
@@ -8639,7 +8646,7 @@
     $("minhaMissao").hidden = !missaoAberta;
     $("mmTexto").textContent = minha.texto;
     $("mmInfo").textContent = `Nível ${LEVEL_NAMES[minha.nivel] || minha.nivel} · vale ${PONTOS_MISSAO[minha.nivel] || 2} pontos · `
-      + (minha.status === "cumprida" ? "cumprida ✓" : minha.status === "pedida" ? `esperando ${outro} confirmar` : "ninguém mais vê");
+      + (minha.status === "cumprida" ? "cumprida" : minha.status === "pedida" ? `esperando ${outro} confirmar` : "ninguém mais vê");
     $("mmCumpri").hidden = minha.status !== "ativa" || acabou;
     $("missaoOutro").textContent = dele.status === "cumprida" ? `${outro} cumpriu a missão: ${dele.texto}` : `${outro} tem uma missão secreta`;
     const pedindo = dele.status === "pedida" && !acabou;
@@ -8718,7 +8725,7 @@
       const c = n.carta, quem = n.vez;
       n.carta = null;
       n.avaliacao = null;
-      n.aviso = novoAviso(`${n.jogadores[quem]} ganhou ${"★".repeat(estrelas)} de ${n.jogadores[1 - quem]}`);
+      n.aviso = novoAviso(`${n.jogadores[quem]} ganhou ${estrelas} ${estrelas === 1 ? "estrela" : "estrelas"} de ${n.jogadores[1 - quem]}`);
       pontuar(n, c, estrelas);
       n.pontos = n.placar.map(x => x.pontos);
     });
@@ -9241,7 +9248,7 @@
       responderDengo("nao_consigo", t);
     });
     document.querySelectorAll("#drFrases button").forEach(b => b.addEventListener("click", () => responderDengo("nao_consigo", b.textContent)));
-    $("drAqui").addEventListener("click", () => responderDengo("indo", "Tô aqui quando precisar 🤍"));
+    $("drAqui").addEventListener("click", () => responderDengo("indo", "Tô aqui quando precisar"));
     $("dengoEditar").addEventListener("click", abrirPedidos);
     $("fecharPedidos").addEventListener("click", () => $("dlgPedidos").close());
     $("pedidosSalvar").addEventListener("click", salvarPedidos);

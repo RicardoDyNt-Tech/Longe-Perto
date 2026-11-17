@@ -27,6 +27,8 @@ EXCECOES = [
     {'arquivo': 'app.js', 'prefixo': 'ICONE_DE_EMOJI'},
     {'arquivo': 'app.js', 'prefixo': 'EMOJI_DE_ICONE'},
     {'arquivo': 'app.js', 'prefixo': 'ROTULO_PLAYLIST'},
+    # config.js é intocável pelas regras do projeto (comentário de instruções com seta ->)
+    {'arquivo': 'config.js', 'prefixo': 'Project Settings'},
 ]
 
 def verificar_arquivos(diretorio_base="."):
@@ -72,6 +74,15 @@ def verificar_arquivos(diretorio_base="."):
                     continue
 
                 if not matches:
+                    continue
+                
+                # Checa exceções pontuais
+                ignorar = False
+                for exc in EXCECOES:
+                    if exc.get('arquivo') == caminho and exc.get('prefixo') in linha:
+                        ignorar = True
+                        break
+                if ignorar:
                     continue
                 
                 ocorrencias_arquivo.append((num_linha, matches, linha.strip()))

@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#F6EBF0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#17132A" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" href="icons/marca.svg" type="image/svg+xml"><text y='.9em' font-size='90'>💞</text></svg>">
+<link rel="icon" href="icons/marca.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
@@ -100,10 +100,10 @@
       </div>
       <div class="ajustes">
         <button class="som" id="som" type="button" aria-pressed="true" aria-label="Som e vibração ligados" data-fica></button>
-        <button class="linkbtn" id="abrirPosicoesSala" type="button" hidden><span aria-hidden="true">📖</span> Posições</button>
-        <button class="linkbtn" id="encerrarNoite" type="button"><span aria-hidden="true">🌙</span> Encerrar a noite</button>
-        <button class="linkbtn entrar-dono" id="entrarDono" type="button" hidden><span aria-hidden="true">👑</span> Entrar como dono</button>
-        <label class="camera-campo"><span aria-hidden="true">📷</span> Câmera do WhatsApp
+        <button class="linkbtn" id="abrirPosicoesSala" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#book-open"/></svg> Posições</button>
+        <button class="linkbtn" id="encerrarNoite" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#moon"/></svg> Encerrar a noite</button>
+        <button class="linkbtn entrar-dono" id="entrarDono" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#crown"/></svg> Entrar como dono</button>
+        <label class="camera-campo"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#camera"/></svg> Câmera do WhatsApp
           <select id="camera">
             <option value="direita">Direita</option>
             <option value="esquerda">Esquerda</option>
@@ -126,7 +126,7 @@
       <p class="contador-quando" id="contadorQuando" hidden></p>
       <p class="contador-dica" id="contadorDica" hidden>Coloque o horário para o contador ficar exato.</p>
       <div class="contador-festa" id="contadorFesta" hidden aria-hidden="true"></div>
-      <button class="primary contador-juntos" id="contadorJuntos" type="button" hidden><span aria-hidden="true">💞</span> Ligar o modo Juntos</button>
+      <button class="primary contador-juntos" id="contadorJuntos" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#marca"/></svg> Ligar o modo Juntos</button>
       <div class="reencontro-form" id="reencontroForm" hidden>
         <span class="reencontro-rotulo">Data e hora do encontro</span>
         <input type="date" id="reencontroData" aria-label="Data do reencontro">
@@ -165,20 +165,20 @@
           <p class="erro" id="erroClausula" role="alert"></p>
         </div>
         <div class="casa-bloco espelho-aviso" id="casaEspelho" hidden>
-          <p class="cumprir-titulo"><span aria-hidden="true">🪞</span> Uma cápsula de espelho abre hoje</p>
+          <p class="cumprir-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#frame"/></svg> Uma cápsula de espelho abre hoje</p>
           <button class="primary" type="button" data-abre="vCapsulas">Abrir</button>
         </div>
         <div class="casa-bloco nosso-ano-aviso" id="casaNossoAno" hidden>
-          <p class="cumprir-titulo" id="casaNossoAnoTitulo"><span aria-hidden="true">✨</span> Nosso ano</p>
+          <p class="cumprir-titulo" id="casaNossoAnoTitulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#sparkles"/></svg> Nosso ano</p>
           <button class="primary" type="button" id="casaNossoAnoAbrir">Ver a retrospectiva</button>
         </div>
         <div class="casa-bloco cardapio-aviso" id="casaCardapio" hidden>
-          <p class="cumprir-titulo"><span aria-hidden="true">🤫</span> Cardápio secreto</p>
+          <p class="cumprir-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#eye-off"/></svg> Cardápio secreto</p>
           <p class="extras-sub">Marque o que você quer fazer nos dias juntos.</p>
           <button class="primary" type="button" data-abre="vCardapio">Abrir o cardápio</button>
         </div>
         <div class="casa-bloco cumprir" id="casaCumprir" hidden>
-          <p class="cumprir-titulo"><span aria-hidden="true">🧾</span> A fatura chegou</p>
+          <p class="cumprir-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#receipt"/></svg> A fatura chegou</p>
           <p class="fatura-placar" id="faturaPlacar" hidden></p>
           <p class="cumprir-dias" id="cumprirDias"></p>
           <div class="fatura-resgate" id="faturaResgate" hidden role="status">
@@ -193,9 +193,9 @@
           </div>
           <div class="chips fatura-filtros" role="radiogroup" aria-label="Filtrar a fatura">
             <label class="chip"><input type="radio" name="filtroFatura" value="todos" checked><span>Tudo</span></label>
-            <label class="chip"><input type="radio" name="filtroFatura" value="vale"><span><span aria-hidden="true">🎟️</span> Vales</span></label>
-            <label class="chip"><input type="radio" name="filtroFatura" value="prenda"><span><span aria-hidden="true">🧾</span> Prendas</span></label>
-            <label class="chip"><input type="radio" name="filtroFatura" value="promessa"><span><span aria-hidden="true">💞</span> Promessas</span></label>
+            <label class="chip"><input type="radio" name="filtroFatura" value="vale"><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#ticket"/></svg> Vales</span></label>
+            <label class="chip"><input type="radio" name="filtroFatura" value="prenda"><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#receipt"/></svg> Prendas</span></label>
+            <label class="chip"><input type="radio" name="filtroFatura" value="promessa"><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#heart"/></svg> Promessas</span></label>
           </div>
           <div class="cumprir-sorteio" id="cumprirSorteio" hidden>
             <p class="cumprir-sorteado" id="cumprirSorteado"></p>
@@ -204,7 +204,7 @@
               <button class="secondary" id="cumprirNao" type="button">Hoje não</button>
             </div>
           </div>
-          <button class="primary" id="cumprirSortear" type="button"><span aria-hidden="true">🎁</span> Sortear do cofre</button>
+          <button class="primary" id="cumprirSortear" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#gift"/></svg> Sortear do cofre</button>
           <p class="extras-sub vazio" id="cumprirVazio" hidden>Nada guardado para o reencontro. Guardem cartas no cofre durante a distância.</p>
           <ul class="cumprir-lista" id="cumprirLista"></ul>
           <p class="extras-sub" id="cumprirFechados"></p>
@@ -219,7 +219,7 @@
           <p class="dr-dica" id="drDica" hidden></p>
           <div class="dr-extras" id="drExtras"></div>
           <div class="dr-acoes" id="drAcoes">
-            <button class="primary dr-indo" id="drIndo" type="button">TÔ INDO <span aria-hidden="true">💨</span></button>
+            <button class="primary dr-indo" id="drIndo" type="button">Tô indo</button>
             <button class="secondary" id="drNao" type="button">Agora não consigo</button>
           </div>
           <div class="dr-resp" id="drRespIndo" hidden>
@@ -235,7 +235,7 @@
             <input type="text" id="drNaoTexto" maxlength="200" placeholder="Ou escreva…" aria-label="Resposta">
             <button class="secondary" id="drNaoEnviar" type="button">Enviar</button>
           </div>
-          <button class="primary" id="drAqui" type="button" hidden>Tô aqui quando precisar <span aria-hidden="true">🤍</span></button>
+          <button class="primary" id="drAqui" type="button" hidden>Tô aqui quando precisar</button>
           <p class="erro" id="erroDengoResp" role="alert"></p>
         </div>
         <div class="casa-bloco recado calmo" id="casaRecado" hidden role="status">
@@ -259,7 +259,7 @@
             <p class="dengo-resp-texto" id="dengoRespTexto" hidden></p>
             <button class="secondary" id="dengoRespOk" type="button">Ok</button>
           </div>
-          <button class="primary dengo-botao" id="dengoPedir" type="button">PEDIR DENGO <span aria-hidden="true">💗</span></button>
+          <button class="primary dengo-botao" id="dengoPedir" type="button">Pedir dengo</button>
           <div class="dengo-meu" id="dengoMeu" hidden>
             <p class="dengo-esperando" id="dengoEsperando"></p>
             <ul class="dengo-itens" id="dengoMeuItens"></ul>
@@ -271,7 +271,7 @@
           <div class="dengo-grade" id="dengoGrade" role="group" aria-label="Pedidos rápidos"></div>
           <div class="dengo-rodape">
             <span class="dengo-conta" id="dengoConta"></span>
-            <button class="linkbtn" id="dengoEditar" type="button"><span aria-hidden="true">✏️</span> Editar pedidos</button>
+            <button class="linkbtn" id="dengoEditar" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#pencil"/></svg> Editar pedidos</button>
           </div>
           <p class="erro" id="erroDengo" role="alert"></p>
         </div>
@@ -301,7 +301,7 @@
         </div>
         <div class="casa-bloco bateria calmo" id="casaBateria">
           <div id="bateriaDesligada">
-            <button class="secondary" id="bateriaLigar" type="button" aria-expanded="false"><span aria-hidden="true">🪫</span> Estou sem bateria social</button>
+            <button class="secondary" id="bateriaLigar" type="button" aria-expanded="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#battery-low"/></svg> Estou sem bateria social</button>
             <div id="bateriaOpcoes" hidden>
               <p class="config-dica">Sem jogo e sem cobrança por um tempo. Por quanto?</p>
               <div class="row">
@@ -320,7 +320,7 @@
           <p class="mural-inicio-titulo"><b>Mural</b> <span id="muralInicioTxt"></span></p>
           <button type="button" class="mural-mini" id="muralInicioVer" hidden aria-label="Ver o desenho"></button>
           <p class="extras-sub mural-legenda" id="muralInicioLegenda" hidden></p>
-          <button class="secondary" type="button" id="muralInicioDesenhar"><span aria-hidden="true">✏️</span> Desenhar</button>
+          <button class="secondary" type="button" id="muralInicioDesenhar"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#pencil"/></svg> Desenhar</button>
         </div>
         <div class="casa-bloco carinhos" id="casaCarinhos">
           <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#x"/></svg></button></p>
@@ -332,7 +332,7 @@
           </div>
           <p class="carinho-hoje"><span id="carinhoHoje"></span> <span class="carinho-enviado" id="carinhoEnviado" aria-live="polite"></span></p>
           <div class="maos">
-            <button class="maos-coracao" id="maosCoracao" type="button" aria-label="Segure junto"><span aria-hidden="true">❤</span></button>
+            <button class="maos-coracao" id="maosCoracao" type="button" aria-label="Segure junto"><svg class="icone icone-24 icone-cheio" aria-hidden="true"><use href="icones.svg#heart"/></svg></button>
             <p class="maos-status" id="maosStatus" aria-live="polite">Segure junto</p>
             <p class="maos-msg" id="maosMsg" aria-live="polite"></p>
             <p class="maos-total" id="maosTotal"></p>
@@ -342,10 +342,10 @@
           <div id="lugarReencontro"></div>
           <p class="juntos-ha" id="juntosHa" hidden></p>
           <div class="datas-especiais" id="datasEspeciais" hidden></div>
-          <button type="button" class="linkbtn" data-abre="vMapa" id="distMapa"><span aria-hidden="true">🗺️</span> <span id="distMapaTxt">Mapa da saudade</span></button>
+          <button type="button" class="linkbtn" data-abre="vMapa" id="distMapa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#map"/></svg> <span id="distMapaTxt">Mapa da saudade</span></button>
         </div>
         <div class="casa-bloco pergunta-dia" id="casaPergunta">
-          <p class="pd-titulo"><span aria-hidden="true">💬</span> Pergunta de hoje</p>
+          <p class="pd-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#message-circle"/></svg> Pergunta de hoje</p>
           <p class="pd-pergunta" id="pdPergunta"></p>
           <p class="pd-aviso" id="pdAviso"></p>
           <div id="pdForm">
@@ -358,27 +358,27 @@
           <p class="erro" id="erroPergunta" role="alert"></p>
         </div>
         <h3 class="casa-mais" id="casaMais">Mais</h3>
-        <button type="button" class="casa-card" data-abre="vMural" id="cardMural"><span class="ic"><span aria-hidden="true">✏️</span></span><b>Mural</b><span class="sub" id="cardMuralSub">Desenhos de vocês</span></button>
-        <button type="button" class="casa-card" data-abre="vDiario"><span class="ic"><span aria-hidden="true">🔥</span></span><b>Desafio do dia</b><span class="sub" id="cardDiarioSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vEnvelopes" id="cardEnv"><span class="ic"><span aria-hidden="true">💌</span></span><b>Envelopes</b><span class="sub" id="cardEnvSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vSemana" id="cardSemana"><span class="ic"><span aria-hidden="true">📅</span></span><b>Semana</b><span class="sub" id="cardSemanaSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vCapsulas" id="cardCap"><span class="ic"><span aria-hidden="true">⏳</span></span><b>Cápsulas</b><span class="sub" id="cardCapSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vAlbum" id="cardAlbum"><span class="ic"><span aria-hidden="true">📸</span></span><b>Álbum</b><span class="sub" id="cardAlbumSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vBaralho" id="cardBaralho"><span class="ic"><span aria-hidden="true">🃏</span></span><b>Baralho</b><span class="sub" id="cardBaralhoSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vConquistas" id="cardConq"><span class="ic"><span aria-hidden="true">🏆</span></span><b>Conquistas</b><span class="sub" id="cardConqSub"></span></button>
-        <button type="button" class="casa-card" id="cardPoses" hidden><span class="ic"><span aria-hidden="true">📸</span></span><b>Poses</b><span class="sub">Ideias para fotos e vídeos</span></button>
-        <button type="button" class="casa-card" id="cardPosicoes" hidden><span class="ic"><span aria-hidden="true">📖</span></span><b>Posições</b><span class="sub">Guia para escolher e sortear</span></button>
-        <button type="button" class="casa-card" data-abre="vMapa" id="cardMapa"><span class="ic"><span aria-hidden="true">🗺️</span></span><b>Mapa da saudade</b><span class="sub" id="cardMapaSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vHistoria" id="cardHistoria"><span class="ic"><span aria-hidden="true">📜</span></span><b>Nossa história</b><span class="sub" id="cardHistoriaSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vPote" id="cardPote"><span class="ic"><span aria-hidden="true">🫙</span></span><b>Pote de motivos</b><span class="sub" id="cardPoteSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vAbra" id="cardAbra"><span class="ic"><span aria-hidden="true">💌</span></span><b>Abra quando…</b><span class="sub" id="cardAbraSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="ic"><span aria-hidden="true">📖</span></span><b>Diário</b><span class="sub" id="cardDiarioCasalSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vChamadas" id="cardChamadas"><span class="ic"><span aria-hidden="true">📞</span></span><b>Nossas chamadas</b><span class="sub" id="cardChamadasSub">Tempo em chamada</span></button>
-        <button type="button" class="casa-card" data-abre="vPlaylist" id="cardPlaylist"><span class="ic"><span aria-hidden="true">🎵</span></span><b>Nossa playlist</b><span class="sub" id="cardPlaylistSub"></span></button>
-        <button type="button" class="casa-card calmo" data-abre="vRecados" id="cardRecados"><span class="ic"><span aria-hidden="true">💛</span></span><b>Recados</b><span class="sub" id="cardRecadosSub">Sem resposta, só carinho</span></button>
-        <button type="button" class="casa-card calmo" id="cardCompanhia"><span class="ic"><span aria-hidden="true">🕯️</span></span><b>Ficar junto em silêncio</b><span class="sub">Companhia sem conversa</span></button>
-        <button type="button" class="casa-card" data-abre="vCardapio" id="cardCardapio"><span class="ic"><span aria-hidden="true">🤫</span></span><b>Cardápio secreto</b><span class="sub" id="cardCardapioSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vCofre"><span class="ic"><span aria-hidden="true">💞</span></span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vMural" id="cardMural"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#pencil"/></svg></span><b>Mural</b><span class="sub" id="cardMuralSub">Desenhos de vocês</span></button>
+        <button type="button" class="casa-card" data-abre="vDiario"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#flame"/></svg></span><b>Desafio do dia</b><span class="sub" id="cardDiarioSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vEnvelopes" id="cardEnv"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#mail"/></svg></span><b>Envelopes</b><span class="sub" id="cardEnvSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vSemana" id="cardSemana"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#calendar"/></svg></span><b>Semana</b><span class="sub" id="cardSemanaSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vCapsulas" id="cardCap"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#hourglass"/></svg></span><b>Cápsulas</b><span class="sub" id="cardCapSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vAlbum" id="cardAlbum"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#camera"/></svg></span><b>Álbum</b><span class="sub" id="cardAlbumSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vBaralho" id="cardBaralho"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#square-stack"/></svg></span><b>Baralho</b><span class="sub" id="cardBaralhoSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vConquistas" id="cardConq"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#trophy"/></svg></span><b>Conquistas</b><span class="sub" id="cardConqSub"></span></button>
+        <button type="button" class="casa-card" id="cardPoses" hidden><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#camera"/></svg></span><b>Poses</b><span class="sub">Ideias para fotos e vídeos</span></button>
+        <button type="button" class="casa-card" id="cardPosicoes" hidden><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#book-open"/></svg></span><b>Posições</b><span class="sub">Guia para escolher e sortear</span></button>
+        <button type="button" class="casa-card" data-abre="vMapa" id="cardMapa"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#map"/></svg></span><b>Mapa da saudade</b><span class="sub" id="cardMapaSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vHistoria" id="cardHistoria"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#scroll-text"/></svg></span><b>Nossa história</b><span class="sub" id="cardHistoriaSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vPote" id="cardPote"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#sparkles"/></svg></span><b>Pote de motivos</b><span class="sub" id="cardPoteSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vAbra" id="cardAbra"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#mail"/></svg></span><b>Abra quando…</b><span class="sub" id="cardAbraSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#book-open"/></svg></span><b>Diário</b><span class="sub" id="cardDiarioCasalSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vChamadas" id="cardChamadas"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#phone"/></svg></span><b>Nossas chamadas</b><span class="sub" id="cardChamadasSub">Tempo em chamada</span></button>
+        <button type="button" class="casa-card" data-abre="vPlaylist" id="cardPlaylist"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#music"/></svg></span><b>Nossa playlist</b><span class="sub" id="cardPlaylistSub"></span></button>
+        <button type="button" class="casa-card calmo" data-abre="vRecados" id="cardRecados"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#mail"/></svg></span><b>Recados</b><span class="sub" id="cardRecadosSub">Sem resposta, só carinho</span></button>
+        <button type="button" class="casa-card calmo" id="cardCompanhia"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#lamp"/></svg></span><b>Ficar junto em silêncio</b><span class="sub">Companhia sem conversa</span></button>
+        <button type="button" class="casa-card" data-abre="vCardapio" id="cardCardapio"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#sparkles"/></svg></span><b>Cardápio secreto</b><span class="sub" id="cardCardapioSub"></span></button>
+        <button type="button" class="casa-card" data-abre="vCofre"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart"/></svg></span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
@@ -453,7 +453,7 @@
         <p class="extras-sub">A mesma pergunta, respondida agora e de novo numa data futura. Ninguém vê nada até lá.</p>
         <div class="row">
           <button class="primary" id="novaCapsula" type="button">Nova cápsula</button>
-          <button class="secondary" id="novaEspelho" type="button">Nova cápsula de espelho <span aria-hidden="true">🪞</span></button>
+          <button class="secondary" id="novaEspelho" type="button">Nova cápsula de espelho</button>
         </div>
         <p class="extras-sub vazio" id="capVazio">Nenhuma cápsula ainda.</p>
         <div id="capGrupo-pronta" hidden><h3 class="casa-h3">Prontas para abrir</h3><ul class="lista-extras" id="capProntas"></ul></div>
@@ -475,7 +475,7 @@
         <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Baralho</h2>
         <p class="extras-sub">As cartas lembram o que já saiu: as menos vistas aparecem mais, as favoritas aparecem mais e as aposentadas não aparecem.</p>
-        <h3 class="casa-h3"><span aria-hidden="true">⭐</span> Favoritas <span id="baralhoFavQtd"></span></h3>
+        <h3 class="casa-h3"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#star"/></svg> Favoritas <span id="baralhoFavQtd"></span></h3>
         <ul class="lista-extras" id="baralhoFavoritas"></ul>
         <h3 class="casa-h3"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#ban"/></svg> Aposentadas <span id="baralhoAposQtd"></span></h3>
         <ul class="lista-extras" id="baralhoAposentadas"></ul>
@@ -576,7 +576,7 @@
       </section>
       <section class="casa-vista" id="vChamadas" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
-        <h2><span aria-hidden="true">📞</span> Nossas chamadas</h2>
+        <h2>Nossas chamadas</h2>
         <div class="ch-resumo" id="chamadasResumo"></div>
         <details class="ch-viagem" id="chViagem">
           <summary>Tempo de viagem entre nós</summary>
@@ -598,21 +598,21 @@
         <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <h2>Nossa playlist</h2>
         <p class="extras-sub">Abra cada música no Spotify e adicione a uma playlist de vocês.</p>
-        <p class="extras-sub vazio" id="nossasVazio">Nenhuma música ainda. Na trilha da rodada, toque em "<span aria-hidden="true">🤍</span> Nossa".</p>
+        <p class="extras-sub vazio" id="nossasVazio">Nenhuma música ainda. Na trilha da rodada, toque em "Nossa".</p>
         <ul class="lista-extras" id="listaNossas"></ul>
       </section>
       <section class="casa-vista" id="vRecados" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
-        <h2><span aria-hidden="true">💛</span> Recados</h2>
+        <h2>Recados</h2>
         <p class="extras-sub">Recados sem resposta: só para receber o carinho.</p>
-        <button class="primary" id="recadoNovoAbrir" type="button"><span aria-hidden="true">💛</span> Deixar um recado</button>
+        <button class="primary" id="recadoNovoAbrir" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#mail"/></svg> Deixar um recado</button>
         <h3 class="casa-h3">Recebidos</h3>
         <p class="extras-sub vazio" id="recadosVazio">Nenhum recado ainda.</p>
         <ul class="lista-extras recados-lista" id="recadosLista"></ul>
       </section>
       <section class="casa-vista" id="vCardapio" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
-        <h2><span aria-hidden="true">🤫</span> Cardápio secreto</h2>
+        <h2>Cardápio secreto</h2>
         <p class="extras-sub" id="cardapioRodada"></p>
         <p class="extras-sub" id="cardapioSemData" hidden>Marquem a data do reencontro (no Início) para abrir o cardápio dessa viagem.</p>
         <ul class="cardapio-status" id="cardapioStatus"></ul>
@@ -631,21 +631,21 @@
           <p class="extras-sub" id="cardapioConta"></p>
           <button class="primary" id="cardapioEnviar" type="button">Enviar meu cardápio</button>
         </div>
-        <button class="primary" id="cardapioRevelar" type="button" hidden><span aria-hidden="true">✨</span> Ver o que deu match</button>
+        <button class="primary" id="cardapioRevelar" type="button" hidden>Ver o que deu match</button>
         <ul class="cardapio-match" id="cardapioMatch" hidden></ul>
-        <p class="extras-sub" id="cardapioSemMatch" hidden>Nenhum match desta vez. Que tal conversar sobre isso? <span aria-hidden="true">😄</span></p>
+        <p class="extras-sub" id="cardapioSemMatch" hidden>Nenhum match desta vez. Que tal conversar sobre isso?</p>
         <p class="erro" id="erroCardapio" role="alert"></p>
       </section>
       <section class="casa-vista" id="vMural" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
-        <h2><span aria-hidden="true">✏️</span> Mural</h2>
+        <h2>Mural</h2>
         <p class="mural-juntos-status" id="muralJuntosStatus" hidden aria-live="polite"></p>
         <div class="mural-ferramentas" role="toolbar" aria-label="Ferramentas de desenho">
           <div class="mural-cores" id="muralCores"></div>
           <div class="mural-esps" id="muralEsps"></div>
-          <button type="button" class="mural-ferr" id="muralBorracha" aria-pressed="false"><span aria-hidden="true">🧽</span> Borracha</button>
-          <button type="button" class="mural-ferr" id="muralDesfazer">↶ Desfazer</button>
-          <button type="button" class="mural-ferr" id="muralLimpar"><span aria-hidden="true">🗑️</span> Limpar</button>
+          <button type="button" class="mural-ferr" id="muralBorracha" aria-pressed="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#droplets"/></svg> Borracha</button>
+          <button type="button" class="mural-ferr" id="muralDesfazer">Desfazer</button>
+          <button type="button" class="mural-ferr" id="muralLimpar"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#x"/></svg> Limpar</button>
           <label class="mural-fundo-sel">Fundo
             <select id="muralFundo">
               <option value="papel">Papel</option>
@@ -666,7 +666,7 @@
         <div class="mural-acoes">
           <button class="primary" id="muralEnviar" type="button"></button>
           <button class="primary" id="muralGuardar" type="button" hidden>Guardar o desenho</button>
-          <button class="secondary" id="muralJuntos" type="button" hidden><span aria-hidden="true">🤝</span> Desenhar juntos</button>
+          <button class="secondary" id="muralJuntos" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#handshake"/></svg> Desenhar juntos</button>
           <button class="secondary" id="muralSairJuntos" type="button" hidden>Sair do desenho juntos</button>
         </div>
         <h3 class="casa-h3">Galeria</h3>
@@ -680,8 +680,8 @@
         <div class="mural-galeria" id="muralGaleria"></div>
       </section>
       <section class="casa-vista aba-vista" id="vHistorico" hidden>
-        <h2><span aria-hidden="true">🕘</span> Histórico</h2>
-        <button class="secondary" id="nossoAnoAbrir" type="button"><span aria-hidden="true">✨</span> Nosso ano</button>
+        <h2>Histórico</h2>
+        <button class="secondary" id="nossoAnoAbrir" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#sparkles"/></svg> Nosso ano</button>
         <div class="hist-mes" id="histMes">
           <p class="hist-mes-titulo" id="histMesTitulo"></p>
           <p id="histMesDengos"></p>
@@ -708,7 +708,7 @@
         <div id="lugarHistorico"></div>
       </section>
       <section class="casa-vista aba-vista" id="vPerfil" hidden>
-        <h2><span aria-hidden="true">👤</span> Perfil</h2>
+        <h2>Perfil</h2>
         <div class="perfil-eu">
           <span class="perfil-avatar" id="perfilAvatar"></span>
           <p class="perfil-nome" id="perfilNome"></p>
@@ -724,7 +724,7 @@
           <div class="manual-form" id="manualForm"></div>
         </section>
         <section class="perfil-bloco" id="manualOutro" aria-labelledby="manualOutroTitulo">
-          <h3 class="casa-h3" id="manualOutroTitulo"><span aria-hidden="true">📗</span> Manual</h3>
+          <h3 class="casa-h3" id="manualOutroTitulo">Manual</h3>
           <p class="extras-sub" id="manualOutroVazio" hidden></p>
           <dl class="manual-ler" id="manualOutroLista"></dl>
         </section>
@@ -761,11 +761,11 @@
         </label>
         <button class="secondary" id="fichaNivelUsar" type="button">Usar ficha</button>
         <button class="secondary" id="fichaQuem" type="button" hidden></button>
-        <button class="secondary" id="fichaPular" type="button" hidden><span aria-hidden="true">🎟️</span> Pular sem prenda</button>
+        <button class="secondary" id="fichaPular" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#ticket"/></svg> Pular sem prenda</button>
       </div>
       <div class="fr-acoes">
         <button class="primary" id="campanhaJogar" type="button" hidden></button>
-        <button class="linkbtn" id="campanhaQuebrei" type="button" hidden>Quebrei a regra <span aria-hidden="true">🙈</span></button>
+        <button class="linkbtn" id="campanhaQuebrei" type="button" hidden>Quebrei a regra</button>
         <button class="secondary" id="campanhaRecomecar" type="button" hidden>Recomeçar</button>
         <button class="linkbtn" id="campanhaSair" type="button">Sair da campanha</button>
       </div>
@@ -773,13 +773,13 @@
     <details class="extras ajustes-partida" id="ajustesPartida">
     <summary>Níveis e regras</summary>
     <div class="roteiro-entrada">
-      <button class="secondary" id="campanhaAbrir" type="button" hidden><span aria-hidden="true">🎞️</span> Campanha de 3 noites</button>
-      <button class="secondary" id="enredoAbrir" type="button" hidden><span aria-hidden="true">🎭</span> Enredos</button>
-      <button class="secondary" id="roteiroAbrir" type="button" hidden><span aria-hidden="true">🎬</span> Jogar com roteiro</button>
+      <button class="secondary" id="campanhaAbrir" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#film"/></svg> Campanha de 3 noites</button>
+      <button class="secondary" id="enredoAbrir" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#drama"/></svg> Enredos</button>
+      <button class="secondary" id="roteiroAbrir" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#clapperboard"/></svg> Jogar com roteiro</button>
       <p class="config-dica" id="roteiroEscolhendo" hidden></p>
     </div>
     <div class="chips" id="niveis" aria-label="Níveis">
-      <label class="chip"><input type="checkbox" value="romantico"><span><span aria-hidden="true">💗</span> Romântico</span></label>
+      <label class="chip"><input type="checkbox" value="romantico"><span>Romântico</span></label>
       <label class="chip"><input type="checkbox" value="leve"><span>Leve</span></label>
       <label class="chip"><input type="checkbox" value="criativo"><span>Criativo</span></label>
       <label class="chip"><input type="checkbox" value="picante"><span>Picante</span></label>
@@ -817,17 +817,17 @@
         </select>
       </label>
     </div>
-    <label class="check nota-cfg"><input type="checkbox" id="notaAdv"> Nota do adversário (★ valem pontos nos desafios)</label>
+    <label class="check nota-cfg"><input type="checkbox" id="notaAdv"> Nota do adversário (estrelas valem pontos nos desafios)</label>
     <label class="check nota-cfg" id="morteSubitaLinha"><input type="checkbox" id="morteSubita"> Morte súbita (empate perto da meta: a próxima carta decide)</label>
     <label class="check nota-cfg" id="escolhaCegasLinha"><input type="checkbox" id="escolhaCegas"> Escolha às cegas (escolher entre duas cartas viradas)</label>
     <label class="check nota-cfg"><input type="checkbox" id="prendasFofas"> Prendas fofas (toda prenda sai do nível Romântico)</label>
     <label class="check nota-cfg" id="soNossasLinha" hidden><input type="checkbox" id="soNossas"> Trilha: só as nossas</label>
-    <p class="config-dica" id="soNossasAviso" hidden>Marquem pelo menos 5 músicas com <span aria-hidden="true">🤍</span> Nossa para usar "só as nossas".</p>
+    <p class="config-dica" id="soNossasAviso" hidden>Marquem pelo menos 5 músicas na trilha para usar "só as nossas".</p>
     <p class="config-dica" id="configDica"></p>
     </details>
 
     <div class="secretas" id="secretasBox" hidden>
-      <button class="linkbtn" id="minhaMissaoBtn" type="button" aria-expanded="false"><span aria-hidden="true">🤫</span> Minha missão</button>
+      <button class="linkbtn" id="minhaMissaoBtn" type="button" aria-expanded="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#eye-off"/></svg> Minha missão</button>
       <div class="minha-missao" id="minhaMissao" hidden>
         <p class="mm-texto" id="mmTexto"></p>
         <p class="mm-info" id="mmInfo"></p>
@@ -844,12 +844,12 @@
     </div>
 
     <section class="modos-hoje" id="modosHoje" hidden aria-label="Modos de hoje">
-      <p class="mh-titulo"><span aria-hidden="true">💞</span> Modos de hoje</p>
+      <p class="mh-titulo">Modos de hoje</p>
       <div class="mh-abas" role="tablist">
-        <button type="button" role="tab" data-modo-hoje="dado" aria-selected="false"><span aria-hidden="true">🎲</span> Dado</button>
-        <button type="button" role="tab" data-modo-hoje="massagem" aria-selected="false"><span aria-hidden="true">⏱️</span> Massagem</button>
-        <button type="button" role="tab" data-modo-hoje="vendado" aria-selected="false"><span aria-hidden="true">🙈</span> Vendado</button>
-        <button type="button" role="tab" data-modo-hoje="quente" aria-selected="false"><span aria-hidden="true">🔥</span> Quente ou frio</button>
+        <button type="button" role="tab" data-modo-hoje="dado" aria-selected="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#dices"/></svg> Dado</button>
+        <button type="button" role="tab" data-modo-hoje="massagem" aria-selected="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#timer"/></svg> Massagem</button>
+        <button type="button" role="tab" data-modo-hoje="vendado" aria-selected="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#eye-off"/></svg> Vendado</button>
+        <button type="button" role="tab" data-modo-hoje="quente" aria-selected="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#flame"/></svg> Quente ou frio</button>
       </div>
       <div class="mh-painel" id="mhDado" hidden>
         <div class="dados" id="dados" aria-live="polite">
@@ -917,7 +917,7 @@
     </div>
 
     <section class="silencio" id="silencioBox" hidden aria-live="polite">
-      <p class="silencio-titulo" id="silencioTitulo"><span aria-hidden="true">🤫</span> Valendo silêncio</p>
+      <p class="silencio-titulo" id="silencioTitulo">Valendo silêncio</p>
       <p class="silencio-status" id="silencioStatus"></p>
       <div id="silencioPreparo" hidden>
         <div class="chips" role="radiogroup" aria-label="Sensibilidade">
@@ -944,7 +944,7 @@
         <div class="enredo-opcoes" id="enredoOpcoes"></div>
       </div>
       <div id="enredoFim" hidden>
-        <p class="enredo-fim-titulo">Fim do enredo <span aria-hidden="true">🎭</span></p>
+        <p class="enredo-fim-titulo">Fim do enredo</p>
         <ol class="enredo-caminho" id="enredoCaminho"></ol>
         <button class="primary" id="enredoContinuar" type="button">Continuar com cartas</button>
       </div>
@@ -952,7 +952,7 @@
     </section>
     <p class="aviso" id="aviso" role="status" hidden></p>
     <div class="faixa-ms" id="faixaMS" hidden role="status">
-      <p class="ms-titulo"><span aria-hidden="true">⚡</span> Morte súbita! Próxima carta decide</p>
+      <p class="ms-titulo">Morte súbita · Próxima carta decide</p>
       <p class="ms-sub" id="msSub"></p>
     </div>
 
@@ -969,21 +969,21 @@
         <p class="text" id="text"></p>
       </div>
       <p class="vendada-aviso" id="vendadaAviso" hidden></p>
-      <button class="secondary" id="vendadaLer" type="button" hidden><span aria-hidden="true">👀</span> Toque para ler (só quem lê)</button>
-      <p class="secreta-dica" id="secretaDica" hidden><span aria-hidden="true">🔒</span> Carta secreta: segure a carta para ler. Virou o celular, escondeu.</p>
+      <button class="secondary" id="vendadaLer" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#eye"/></svg> Toque para ler (só quem lê)</button>
+      <p class="secreta-dica" id="secretaDica" hidden>Carta secreta: segure a carta para ler. Virou o celular, escondeu.</p>
       <ol class="seq-etapas" id="seqEtapas" hidden></ol>
       <p class="midia" id="midia" hidden>Mande pelo WhatsApp em visualização única.</p>
-      <button class="secondary carta-mural" id="cartaMural" type="button" hidden><span aria-hidden="true">✏️</span> Desenhar no mural</button>
+      <button class="secondary carta-mural" id="cartaMural" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#pencil"/></svg> Desenhar no mural</button>
       <div class="pos-carta" id="poseCarta" hidden>
         <div class="pos-carta-botoes">
-          <button class="secondary" id="abrirPoses" type="button"><span aria-hidden="true">📸</span> Ideias de pose</button>
+          <button class="secondary" id="abrirPoses" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#camera"/></svg> Ideias de pose</button>
         </div>
         <p class="pos-escolhida" id="poseEscolhida" hidden></p>
         <p class="pose-como" id="poseComo" hidden></p>
       </div>
       <div class="pos-carta" id="posCarta" hidden>
         <div class="pos-carta-botoes">
-          <button class="secondary" id="abrirPosicoes" type="button"><span aria-hidden="true">📖</span> Posições</button>
+          <button class="secondary" id="abrirPosicoes" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#book-open"/></svg> Posições</button>
           <button class="secondary" id="montarCardapio" type="button">Montar cardápio</button>
         </div>
         <p class="pos-escolhida" id="posEscolhida" hidden></p>
@@ -1037,7 +1037,7 @@
       </div>
       <div class="actions card-links">
         <a class="wa" id="wa" target="_blank" rel="noopener">Mandar no WhatsApp</a>
-        <button class="linkbtn guardar" id="guardar" type="button">Guardar para o reencontro <span aria-hidden="true">💞</span></button>
+        <button class="linkbtn guardar" id="guardar" type="button">Guardar para o reencontro</button>
       </div>
     </article>
 
@@ -1061,7 +1061,7 @@
         <ul class="lista-extras" id="fimRodadas"></ul>
       </div>
       <button class="primary" id="novaPartida" type="button">Nova partida</button>
-      <button class="secondary" id="encerrarNoiteFim" type="button"><span aria-hidden="true">🌙</span> Encerrar a noite</button>
+      <button class="secondary" id="encerrarNoiteFim" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#moon"/></svg> Encerrar a noite</button>
     </div>
 
     <div class="placar">
@@ -1188,7 +1188,7 @@
 
   <div class="passe-celular" id="passeCelular" hidden role="dialog" aria-modal="true" aria-labelledby="passeTitulo">
     <div class="passe-in">
-      <p class="passe-ic" aria-hidden="true">📱</p>
+      <p class="passe-ic" aria-hidden="true"><svg class="icone icone-32" aria-hidden="true"><use href="icones.svg#smartphone"/></svg></p>
       <p class="passe-titulo" id="passeTitulo"></p>
       <p class="passe-sub" id="passeSub"></p>
       <button class="primary" id="passeOk" type="button"></button>
@@ -1197,7 +1197,7 @@
 
   <dialog id="dlgChamadaPassada" aria-labelledby="chPassadaTitulo">
     <form id="formChamadaPassada" method="dialog">
-      <h2 id="chPassadaTitulo"><span aria-hidden="true">📞</span> Registrar chamada passada</h2>
+      <h2 id="chPassadaTitulo">Registrar chamada passada</h2>
       <div class="tipo" role="radiogroup" aria-label="Dia">
         <label class="chip"><input type="radio" name="chDia" value="hoje" checked><span>Hoje</span></label>
         <label class="chip"><input type="radio" name="chDia" value="ontem"><span>Ontem</span></label>
@@ -1247,7 +1247,7 @@
 
   <dialog id="dlgJuntosAte" aria-labelledby="juntosAteTitulo">
     <form id="formJuntosAte" method="dialog">
-      <h2 id="juntosAteTitulo"><span aria-hidden="true">💞</span> Até quando vocês ficam juntos?</h2>
+      <h2 id="juntosAteTitulo">Até quando vocês ficam juntos?</h2>
       <p class="config-dica">Assim o app conta os dias do reencontro ("Dia 2 de 5 juntos").</p>
       <label class="field">Último dia juntos
         <input type="date" id="juntosAteData">
@@ -1261,7 +1261,7 @@
 
   <dialog id="dlgResumoJuntos" aria-labelledby="resumoJuntosTitulo">
     <form id="formResumoJuntos" method="dialog">
-      <h2 id="resumoJuntosTitulo"><span aria-hidden="true">💞</span> O que fizemos juntos</h2>
+      <h2 id="resumoJuntosTitulo">O que fizemos juntos</h2>
       <p class="config-dica" id="resumoJuntosPeriodo"></p>
       <ul class="cumprir-lista" id="resumoJuntosLista"></ul>
       <p class="extras-sub" id="resumoJuntosMomentos"></p>
@@ -1286,7 +1286,7 @@
 
   <dialog id="dlgRecado" aria-labelledby="dlgRecadoTitulo">
     <form id="formRecado" method="dialog">
-      <h2 id="dlgRecadoTitulo"><span aria-hidden="true">💛</span> Deixar um recado</h2>
+      <h2 id="dlgRecadoTitulo">Deixar um recado</h2>
       <p class="config-dica">Sem campo de resposta: é só para a outra pessoa receber o carinho.</p>
       <textarea id="recadoNovo" maxlength="500" rows="5" aria-label="Recado"></textarea>
       <p class="erro" id="erroRecado" role="alert"></p>
@@ -1382,8 +1382,8 @@
     <form id="formEnvelope" method="dialog">
       <h2 id="dlgEnvTitulo">Novo envelope</h2>
       <div class="tipo" role="radiogroup" aria-label="Tipo de envelope">
-        <label class="chip"><input type="radio" name="envTipo" value="mensagem" checked><span><span aria-hidden="true">💌</span> Mensagem</span></label>
-        <label class="chip"><input type="radio" name="envTipo" value="desafio"><span><span aria-hidden="true">🎲</span> Desafio surpresa</span></label>
+        <label class="chip"><input type="radio" name="envTipo" value="mensagem" checked><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#mail"/></svg> Mensagem</span></label>
+        <label class="chip"><input type="radio" name="envTipo" value="desafio"><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#dices"/></svg> Desafio surpresa</span></label>
       </div>
       <label class="field"><span id="envNivelRotulo">Nível da sugestão</span>
         <select id="envNivel">
@@ -1395,10 +1395,10 @@
         </select>
       </label>
       <div class="env-sugerir">
-        <button class="secondary" id="envSugerir" type="button"><span aria-hidden="true">🎲</span> Sugerir</button>
+        <button class="secondary" id="envSugerir" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#dices"/></svg> Sugerir</button>
       </div>
       <p class="env-ideia" id="envIdeia" hidden aria-live="polite"></p>
-      <button class="linkbtn ia-botao" id="envIaBotao" type="button" hidden><span aria-hidden="true">✨</span> Ideias da IA</button>
+      <button class="linkbtn ia-botao" id="envIaBotao" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#sparkles"/></svg> Ideias da IA</button>
       <div class="ia-painel" id="envIaPainel" hidden>
         <label class="field">Tema (opcional)
           <input type="text" id="envIaTema" maxlength="60" placeholder="Ex.: praia, cozinha, nosso primeiro encontro">
@@ -1424,7 +1424,7 @@
 
   <dialog id="dlgPoses" class="dlg-posicoes" aria-labelledby="dlgPoseTitulo">
     <div class="pos-topo">
-      <h2 id="dlgPoseTitulo"><span aria-hidden="true">📸</span> Ideias de pose</h2>
+      <h2 id="dlgPoseTitulo">Ideias de pose</h2>
       <button class="linkbtn" id="fecharPoses" type="button">Fechar</button>
     </div>
     <details class="pose-cuidados" id="poseCuidados">
@@ -1463,8 +1463,8 @@
       </label>
     </div>
     <div class="pose-botoes">
-      <button class="primary" id="sortearPose" type="button"><span aria-hidden="true">🎲</span> Sortear pose</button>
-      <button class="secondary" id="poseIaBotao" type="button" hidden><span aria-hidden="true">✨</span> Ideias da IA</button>
+      <button class="primary" id="sortearPose" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#dices"/></svg> Sortear pose</button>
+      <button class="secondary" id="poseIaBotao" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#sparkles"/></svg> Ideias da IA</button>
     </div>
     <div class="ia-painel" id="poseIaPainel" hidden>
       <label class="field">Tema (opcional)
@@ -1485,7 +1485,7 @@
 
   <dialog id="dlgPosicoes" class="dlg-posicoes" aria-labelledby="dlgPosTitulo">
     <div class="pos-topo">
-      <h2 id="dlgPosTitulo"><span aria-hidden="true">📖</span> Posições</h2>
+      <h2 id="dlgPosTitulo">Posições</h2>
       <button class="linkbtn" id="fecharPosicoes" type="button">Fechar</button>
     </div>
     <div class="pos-filtros">
@@ -1514,7 +1514,7 @@
         </select>
       </label>
     </div>
-    <button class="primary" id="sortearPosicao" type="button"><span aria-hidden="true">🎲</span> Sortear posição</button>
+    <button class="primary" id="sortearPosicao" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#dices"/></svg> Sortear posição</button>
     <p class="pos-escolhida" id="posResultado" hidden aria-live="polite"></p>
     <p class="pos-cardapio-barra" id="posCardapioBarra" hidden><span id="posCardapioConta"></span> · marque até 5 posições</p>
     <p class="erro" id="erroPosicoes" role="alert"></p>
@@ -1603,7 +1603,7 @@
 
   <dialog id="dlgMomento" aria-labelledby="dlgMomentoTitulo">
     <form id="formMomento" method="dialog">
-      <h2 id="dlgMomentoTitulo"><span aria-hidden="true">📸</span> Guardar no álbum</h2>
+      <h2 id="dlgMomentoTitulo">Guardar no álbum</h2>
       <p class="momento-carta" id="momentoCarta"></p>
       <label class="field">Uma frase sobre esse momento (opcional)
         <textarea id="momentoFrase" maxlength="200" rows="2"></textarea>
@@ -1641,7 +1641,7 @@
   </dialog>
 
   <dialog id="dlgCodigoDono" aria-labelledby="dlgCodigoDonoTitulo">
-    <h2 id="dlgCodigoDonoTitulo">Código de dono <span aria-hidden="true">👑</span></h2>
+    <h2 id="dlgCodigoDonoTitulo">Código de dono</h2>
     <p class="codigo-dono" id="codigoDono"></p>
     <p>Guarde este código. Sem ele, se você trocar de celular ou limpar o navegador, perde o controle das configurações.</p>
     <p class="extras-sub" id="codigoDonoCopiado" aria-live="polite"></p>
@@ -1653,7 +1653,7 @@
 
   <dialog id="dlgEntrarDono" aria-labelledby="dlgEntrarDonoTitulo">
     <form id="formEntrarDono" method="dialog">
-      <h2 id="dlgEntrarDonoTitulo"><span aria-hidden="true">👑</span> Entrar como dono</h2>
+      <h2 id="dlgEntrarDonoTitulo">Entrar como dono</h2>
       <label class="field">Código de dono
         <input type="text" id="entrarDonoCodigo" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX">
       </label>
@@ -1681,18 +1681,18 @@
       <p class="noite-esperando" id="noiteEsperando" hidden></p>
       <ul class="noite-frases" id="noiteFrases" hidden></ul>
       <div class="noite-boa" id="noiteBoa" hidden>
-        <p class="noite-lua" aria-hidden="true">🌙</p>
+        <p class="noite-lua" aria-hidden="true"><svg class="icone icone-32" aria-hidden="true"><use href="icones.svg#moon"/></svg></p>
         <p class="noite-boa-frase" id="noiteBoaFrase"></p>
         <p class="noite-info" id="noiteReencontro"></p>
         <p class="noite-info" id="noiteMaos"></p>
-        <button class="primary" id="noiteDormir" type="button">Boa noite <span aria-hidden="true">💤</span></button>
+        <button class="primary" id="noiteDormir" type="button">Boa noite</button>
       </div>
     </div>
   </div>
 
   <div class="juntos-anim" id="juntosAnim" hidden aria-live="polite">
-    <div class="juntos-par" aria-hidden="true"><span class="c1">💗</span><span class="c2">💗</span></div>
-    <p>Vocês estão juntos agora <span aria-hidden="true">💞</span></p>
+    <div class="juntos-par" aria-hidden="true"><svg class="icone icone-32" aria-hidden="true"><use href="icones.svg#marca"/></svg></div>
+    <p>Vocês estão juntos agora</p>
   </div>
   <div class="carinho-anim" id="carinhoAnim" hidden aria-live="polite">
     <span class="carinho-emoji" id="carinhoEmoji" aria-hidden="true"></span>
@@ -1767,7 +1767,7 @@
           <option value="pesado">Pesado +18</option>
         </select>
       </label>
-      <button class="linkbtn ia-botao" id="cartaIaBotao" type="button" hidden><span aria-hidden="true">✨</span> Ideias da IA</button>
+      <button class="linkbtn ia-botao" id="cartaIaBotao" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#sparkles"/></svg> Ideias da IA</button>
       <div class="ia-painel" id="cartaIaPainel" hidden>
         <label class="field">Tema (opcional)
           <input type="text" id="cartaIaTema" maxlength="60" placeholder="Ex.: praia, cozinha, nosso primeiro encontro">
@@ -1852,7 +1852,7 @@
 <div class="descongelar" id="descongelar" role="dialog" aria-modal="true" aria-labelledby="dcTitulo" hidden>
   <div class="dc-caixa">
     <div id="dcOferta">
-      <h2 id="dcTituloOferta"><span aria-hidden="true">💞</span> Descongelar primeiro?</h2>
+      <h2 id="dcTituloOferta">Descongelar primeiro?</h2>
       <p>Uns minutos só de vocês, antes de qualquer jogo: abraço, olhar, mãos e respiração. Sem pontos.</p>
       <div class="row">
         <button class="primary" id="dcComecar" type="button">Começar</button>
@@ -1868,7 +1868,7 @@
       <button class="primary" id="dcProximo" type="button">Próximo</button>
     </div>
     <div id="dcFim" hidden>
-      <h2>Pronto. Agora sim <span aria-hidden="true">💞</span></h2>
+      <h2>Pronto. Agora sim</h2>
       <button class="primary" id="dcJogar" type="button">Bora</button>
     </div>
   </div>
