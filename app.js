@@ -96,7 +96,51 @@
   function iconeHtml(nome, tamanho = 20, classeExtra = "") {
     let id = (nome || "").trim();
     if (!id || !ICONES_CONHECIDOS.has(id)) {
-      if (id) console.warn(`[icone] Ícone não encontrado: "${nome}". Usando ponto neutro.`);
+      if (id) console.warn(`[icone] Ícone não encontrado: "${nome}
+
+  // Mapeamento e compatibilidade reversa de ícones/emojis (Fase 4)
+  const ICONE_DE_EMOJI = {
+    "☕": "coffee", "⚡": "zap", "✈": "plane", "✈️": "plane",
+    "✨": "sparkles", "🌄": "sunrise", "🌅": "sunset", "🌙": "moon",
+    "🍝": "utensils", "🍦": "ice-cream-cone", "🍸": "martini", "🍹": "wine",
+    "🍽": "utensils-crossed", "🍿": "popcorn", "🎀": "ribbon", "🎁": "gift",
+    "🎟": "ticket", "🎟️": "ticket", "🎤": "mic", "🎬": "clapperboard",
+    "🎞": "film", "🎞️": "film", "🎲": "dices", "🎶": "music",
+    "🎵": "music", "🎸": "guitar", "🏖": "tree-palm", "👀": "eye",
+    "👑": "crown", "👗": "shirt", "👙": "shirt", "💃": "music-2",
+    "💆": "hand-heart", "💋": "heart", "💌": "mail", "💐": "flower-2",
+    "💼": "briefcase", "📖": "book-open", "📲": "smartphone", "📱": "smartphone",
+    "📸": "camera", "📺": "tv", "🔥": "flame", "🌶": "flame", "🌶️": "flame",
+    "🕯": "lamp", "🕯️": "lamp", "🗺": "map", "🗺️": "map", "😴": "bed",
+    "🙈": "eye-off", "🚪": "door-open", "🚿": "shower-head", "🛁": "bath",
+    "🛋": "sofa", "🧊": "snowflake", "🧺": "shopping-basket", "🧽": "droplets",
+    "🪞": "frame", "🫂": "heart-handshake", "🫧": "droplets", "🎨": "palette",
+    "💗": "heart", "💞": "heart", "😂": "laugh", "📞": "phone", "🎙": "mic",
+    "🍔": "sandwich", "🫶": "hand-heart", "🗣": "message-circle", "🧘": "leaf",
+    "🎂": "cake", "💍": "gem", "🏠": "house", "🎓": "graduation-cap",
+    "🎉": "party-popper", "⭐": "star", "🏆": "trophy", "📅": "calendar",
+    "🕵": "search", "🧪": "flask-conical", "💘": "heart", "🤍": "heart",
+    "❤️": "heart", "💛": "heart", "💚": "heart", "🐾": "paw-print",
+    "👶": "baby", "🔑": "key-round"
+  };
+  const EMOJI_DE_ICONE = {
+    "calendar-heart": "📅", "plane": "✈️", "house": "🏠", "gem": "💍",
+    "cake": "🎂", "graduation-cap": "🎓", "party-popper": "🎉", "star": "⭐",
+    "map-pin": "📍", "camera": "📸", "music": "🎵", "gift": "🎁",
+    "heart": "💗", "key-round": "🔑", "baby": "👶", "paw-print": "🐾",
+    "clapperboard": "🎬", "film": "🎞️", "drama": "🎭", "ticket": "🎟️",
+    "receipt": "🧾", "hand-heart": "🫶", "sparkles": "✨", "phone": "📞",
+    "coffee": "☕", "moon": "🌙", "sun": "☀️", "bed": "😴", "utensils": "🍽️"
+  };
+  function iconeDeEmoji(e, padrao = "sparkles") {
+    if (!e) return padrao;
+    const limpo = String(e).replace(/\uFE0F/g, "").trim();
+    return ICONE_DE_EMOJI[limpo] || ICONE_DE_EMOJI[e] || padrao;
+  }
+  const ROTULO_PLAYLIST = { "🤍": "Calma", "HOT playlist 🔥": "Quente", "🔥": "Quente", "🍀": "Sorte" };
+  const rotuloPlaylist = p => (p && ROTULO_PLAYLIST[p]) || p || "";
+  const DENGO_ICONES = ["hand-heart", "heart", "phone", "message-circle", "bed", "coffee", "utensils", "film", "moon", "sparkles", "gift", "music", "sun", "flame", "eye-off"];
+". Usando ponto neutro.`);
       id = "ponto-neutro";
     }
     const cls = `icone icone-${tamanho}` + (classeExtra ? " " + classeExtra : "");
@@ -608,10 +652,12 @@
         if (cred === null) {   // sem credor (promessas antigas, posições, desejos): qualquer um marca
           const lab = el("label", "check"), cb = el("input"); cb.type = "checkbox"; cb.checked = x.feito;
           cb.addEventListener("change", () => marcarPromessa(x, cb.checked));
-          lab.append(cb, document.createTextNode(` ${x.ic} ${x.texto}`));
+          lab.append(cb, icone(x.ic || "heart", 16), document.createTextNode(` ${x.texto}`));
           li.appendChild(lab);
         } else {
-          li.appendChild(el("span", "fatura-item", `${x.ic} ${x.texto}`));
+          const spanItem = el("span", "fatura-item");
+          spanItem.append(icone(x.ic || "heart", 16), document.createTextNode(` ${x.texto}`));
+          li.appendChild(spanItem);
           if (x.feito) li.appendChild(el("span", "fatura-quitado", x.cofre.quitado_em ? `Quitado em ${dataBR(hojeISO(new Date(x.cofre.quitado_em)))} ✓` : "Quitado ✓"));
           else if (souCredor(cred)) {
             const ac = el("div", "acoes");
@@ -632,7 +678,7 @@
     $("cumprirFechados").textContent = partes.length ? "Ainda fechados: " + partes.join(" · ") : "";
   }
   // ---------- v9: cardápio secreto (votos só pelos RPCs desejos_*; antes de enviar, só neste aparelho) ----------
-  const CAT_DESEJO = { sair: ["🚶 Sair", "leve"], casa: ["🏠 Em casa", "leve"], romantico: ["💞 Romântico", "romantico"], picante: ["🌶️ Picante", "picante"], pesado: ["🔥 Pesado", "pesado"] };
+  const CAT_DESEJO = { sair: ["Sair", "leve"], casa: ["Em casa", "leve"], romantico: ["Romântico", "romantico"], picante: ["Picante", "picante"], pesado: ["Pesado", "pesado"] };
   let desejos = [], cardapioEnviaram = [], cardapioMatch = null, cardapioPingVisto = null;
   const rodadaCardapio = e => (e && typeof e.reencontro === "string" && e.reencontro.slice(0, 10)) || null;
   const chaveVotos = () => `lp-desejos:${codigo}:${rodadaCardapio(estado)}:${eu}`;
@@ -674,8 +720,8 @@
     $("casaCardapio").hidden = !ativo || !r || dias < 0 || dias > 3 || juntos(e) || cardapioEnviaram.includes(eu);
     const outro = cardapioEnviaram.filter(j => j !== eu);
     $("cardCardapioSub").textContent = !r ? "Desejos para o reencontro"
-      : cardapioEnviaram.length >= 2 ? "✨ Os dois enviaram"
-      : outro.length ? `${nomeDe(outro[0])} já enviou 🤫` : cardapioEnviaram.includes(eu) ? "Você já enviou ✓" : "Marque o que você quer";
+      : cardapioEnviaram.length >= 2 ? "Os dois enviaram"
+      : outro.length ? `${nomeDe(outro[0])} já enviou` : cardapioEnviaram.includes(eu) ? "Você já enviou" : "Marque o que você quer";
   }
   function desenharCardapio() {
     if ($("vCardapio").hidden || !estado) return;
@@ -687,8 +733,8 @@
     if (r) [0, 1].forEach(j => {
       if (!estado.jogadores[j]) return;
       const foi = cardapioEnviaram.includes(j);
-      st.appendChild(el("li", foi ? "ok" : "", j === eu && !umCelularAqui(estado) ? (foi ? "Você já enviou o seu ✓" : "Você ainda não enviou")
-        : foi ? `${nomeDe(j)} já enviou o cardápio 🤫` : `${nomeDe(j)} ainda não enviou`));
+      st.appendChild(el("li", foi ? "ok" : "", j === eu && !umCelularAqui(estado) ? (foi ? "Você já enviou o seu" : "Você ainda não enviou")
+        : foi ? `${nomeDe(j)} já enviou o cardápio` : `${nomeDe(j)} ainda não enviou`));
     });
     $("cardapioEscolha").hidden = !r || enviei;
     $("cardapioRevelar").hidden = !r || !ambos || !!cardapioMatch;
@@ -703,9 +749,13 @@
       const ul = el("ul", "cardapio-lista");
       itens.forEach(i => {
         const li = el("li", votos[i.id] === true ? "quero" : votos[i.id] === false ? "passo" : "");
-        li.appendChild(el("span", "t", `${i.emoji || "✨"} ${i.texto}`));
+        const icSpan = el("span", "ic");
+        icSpan.appendChild(icone(i.icone || iconeDeEmoji(i.emoji, "sparkles"), 18));
+        const tSpan = el("span", "t");
+        tSpan.textContent = " " + i.texto;
+        li.append(icSpan, tSpan);
         const ac = el("div", "acoes");
-        [[true, "Quero 💚"], [false, "Passo"]].forEach(([v, rot]) => {
+        [[true, "Quero"], [false, "Passo"]].forEach(([v, rot]) => {
           const b = el("button", "chip-btn", rot); b.type = "button";
           b.setAttribute("aria-pressed", String(votos[i.id] === v));
           b.addEventListener("click", () => votarDesejo(i.id, v));
@@ -765,7 +815,11 @@
     cardapioMatch = Array.isArray(data.itens) ? data.itens.filter(i => i && typeof i.texto === "string") : [];
     const ul = $("cardapioMatch"); ul.textContent = "";
     cardapioMatch.forEach((i, k) => {
-      const li = el("li", "virar", `${i.emoji || "✨"} ${i.texto}`);
+      const li = el("li", "virar");
+      li.appendChild(icone(i.icone || iconeDeEmoji(i.emoji, "sparkles"), 18));
+      const tSpan = el("span", "t");
+      tSpan.textContent = " " + i.texto;
+      li.appendChild(tSpan);
       li.style.animationDelay = (k * 0.15) + "s";
       ul.appendChild(li);
     });
@@ -777,7 +831,7 @@
     if (!itens.length || (estado.cardapioNoCofre || []).includes(r)) return;
     gravarFresco(n => { n.cardapioNoCofre = [...(n.cardapioNoCofre || []), r].slice(-20); });
     for (const i of itens) {
-      const carta = `${i.emoji || "✨"} ${i.texto}`.slice(0, 280);
+      const carta = i.texto.slice(0, 280);
       if (cofre.some(x => x.carta === carta && x.nota === "Cardápio secreto")) continue;
       const { data, error } = await sb.from("cofre").insert({ sala: codigo, carta, nota: "Cardápio secreto", autor: "Cardápio", tipo: "promessa" }).select("*").single();
       if (!error && data) juntarCofre(data);
@@ -2009,7 +2063,7 @@
     const visivel = !!(m && c && !$("card").hidden && permitido("trilha"));
     box.hidden = !visivel;
     if (!visivel) return;
-    $("trilhaTitulo").textContent = /m[úu]sica que eu escolher/i.test(c.texto || "") ? "Sugestão para este desafio" : "Trilha da rodada";
+    $("trilhaTitulo").textContent = /m[úu]sica que eu escolher/i.test(c.texto || "") ? "Sugestão para este desafio" : (m && m.playlist ? `Trilha (${rotuloPlaylist(m.playlist)})` : "Trilha da rodada");
     $("trilhaNome").textContent = m.titulo;
     $("trilhaArtista").textContent = m.artista;
     $("trilhaAbrir").href = m.url;
@@ -2401,7 +2455,9 @@
   }
   function itemLi(x) {
     const li = el("li");
-    li.append(el("span", "ic", x.emoji || "💗"), el("b", "", x.titulo || ""));
+    const ic = el("span", "ic");
+    ic.appendChild(icone(x.icone || iconeDeEmoji(x.emoji, "hand-heart"), 18));
+    li.append(ic, el("b", "", x.titulo || ""));
     if (x.detalhe) li.append(el("span", "det", " — " + x.detalhe));
     return li;
   }
@@ -2415,7 +2471,7 @@
     box.hidden = !p;
     if (p) {
       const sozinho = temChave(p, "sozinho");
-      $("drTitulo").textContent = sozinho ? `${outro} precisa de um tempo sozinho(a). Não precisa fazer nada agora 🤍` : `${outro} pediu dengo!`;
+      $("drTitulo").textContent = sozinho ? `${outro} precisa de um tempo sozinho(a). Não precisa fazer nada agora.` : `${outro} pediu dengo!`;
       const ul = $("drItens"); ul.textContent = "";
       if (!sozinho) itensDe(p).forEach(x => ul.appendChild(itemLi(x)));
       ul.hidden = sozinho;
@@ -2443,7 +2499,7 @@
     $("dengoResposta").hidden = !r;
     if (r) {
       const indo = r.status === "indo", tempo = temChave(r, "sozinho");
-      $("dengoRespTitulo").textContent = tempo ? `${outro}: ${r.resposta || "Tô aqui quando precisar 🤍"}` : indo ? `${outro} está indo! 💨` : `${outro} não consegue agora`;
+      $("dengoRespTitulo").textContent = tempo ? `${outro}: ${r.resposta || "Tô aqui quando precisar"}` : indo ? `${outro} está a caminho!` : `${outro} não consegue agora`;
       $("dengoResposta").classList.toggle("indo", indo);
       const txt = tempo ? "" : r.resposta || "";
       $("dengoRespTexto").hidden = !txt; $("dengoRespTexto").textContent = txt;
@@ -2452,14 +2508,14 @@
 
     // meu pedido pendente
     const meu = meuPendente();
-    $("dengoPedir").textContent = meu ? "Ver meu pedido" : "PEDIR DENGO 💗";
+    $("dengoPedir").textContent = meu ? "Ver meu pedido" : "Pedir dengo";
     $("dengoPedir").setAttribute("aria-expanded", String(!!meu && !$("dengoMeu").hidden));
     if (!meu) $("dengoMeu").hidden = true;
     else {
-      $("dengoEsperando").textContent = `Pedido enviado 💗, esperando ${outro}…`;
+      $("dengoEsperando").textContent = `Pedido enviado, esperando ${outro}…`;
       const ul = $("dengoMeuItens"); ul.textContent = "";
       itensDe(meu).forEach(x => ul.appendChild(itemLi(x)));
-      $("dengoAvisar").href = "https://wa.me/?text=" + encodeURIComponent("Te pedi dengo no Longe & Perto 💗");
+      $("dengoAvisar").href = "https://wa.me/?text=" + encodeURIComponent("Te pedi dengo no Longe & Perto");
     }
 
     // grade de pedidos rápidos
@@ -2470,7 +2526,9 @@
     lista.forEach(m => {
       const b = el("button", "dengo-op"); b.type = "button";
       b.setAttribute("aria-pressed", String(dengoSel.includes(m.id)));
-      b.append(el("span", "ic", m.emoji), el("b", "", m.titulo));
+      const ic = el("span", "ic");
+      ic.appendChild(icone(m.icone || iconeDeEmoji(m.emoji, "hand-heart"), 20));
+      b.append(ic, el("b", "", m.titulo));
       b.addEventListener("click", () => marcarPedido(m));
       g.appendChild(b);
     });
@@ -2498,12 +2556,14 @@
     const lista = minhaLista();
     const escolhidos = dengoSel.map(id => lista.find(m => m.id === id)).filter(Boolean);
     dengoRascunho = escolhidos.length
-      ? escolhidos.map(m => ({ emoji: m.emoji, titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
-      : [{ emoji: "💗", titulo: "Dengo", detalhe: "", chave: null }];
+      ? escolhidos.map(m => ({ icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "💗", titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
+      : [{ icone: "hand-heart", emoji: "💗", titulo: "Dengo", detalhe: "", chave: null }];
     const ul = $("dengoResumo"); ul.textContent = "";
     dengoRascunho.forEach((x, i) => {
       const li = el("li");
-      li.append(el("span", "ic", x.emoji), el("b", "", x.titulo));
+      const ic = el("span", "ic");
+      ic.appendChild(icone(x.icone || iconeDeEmoji(x.emoji, "hand-heart"), 18));
+      li.append(ic, el("b", "", x.titulo));
       if (x.chave !== "sozinho" && !(dengoRascunho.length === 1 && x.titulo === "Dengo" && !x.chave)) {
         const inp = el("input"); inp.type = "text"; inp.maxLength = 80; inp.value = x.detalhe.slice(0, 80);
         inp.placeholder = "Detalhe (opcional)"; inp.setAttribute("aria-label", "Detalhe de " + x.titulo); inp.dataset.i = i;
@@ -2523,7 +2583,7 @@
     // o detalhe sugerido sem nada depois ("O que eu quero: ") não vai
     const itens = dengoRascunho.map(x => {
       const d = (x.detalhe || "").trim(), sug = (minhaLista().find(m => m.titulo === x.titulo) || {}).detalhe || "";
-      const o = { emoji: x.emoji, titulo: x.titulo };
+      const o = { icone: x.icone || iconeDeEmoji(x.emoji, "hand-heart"), emoji: x.emoji || "💗", titulo: x.titulo };
       if (d && d !== sug.trim()) o.detalhe = d.slice(0, 80);
       if (x.chave) o.chave = x.chave;
       return o;
@@ -2578,7 +2638,7 @@
   function abrirPedidos() {
     const minhas = meusModelos();
     pedidosRascunho = (minhas.length ? minhas : padroes()).map(m => ({
-      id: minhas.length ? m.id : null, chave: m.chave || null, emoji: m.emoji, titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false }));
+      id: minhas.length ? m.id : null, chave: m.chave || null, icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "💗", titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false }));
     erro("erroPedidos", "");
     desenharPedidosEdit();
     $("dlgPedidos").showModal();
@@ -2587,8 +2647,19 @@
     const ul = $("pedidosEdit"); ul.textContent = "";
     pedidosRascunho.forEach((p, i) => {
       const li = el("li", "pedido-edit" + (p.ativo ? "" : " inativo"));
-      const emo = el("input"); emo.type = "text"; emo.value = p.emoji; emo.maxLength = 8; emo.className = "pe-emoji"; emo.setAttribute("aria-label", "Emoji");
-      emo.addEventListener("input", () => { p.emoji = emo.value; });
+      const btnIc = el("button", "pe-icone-btn");
+      btnIc.type = "button";
+      btnIc.title = "Toque para alternar o ícone";
+      btnIc.setAttribute("aria-label", "Alternar ícone");
+      btnIc.appendChild(icone(p.icone || "hand-heart", 20));
+      btnIc.addEventListener("click", () => {
+        const idx = DENGO_ICONES.indexOf(p.icone || "hand-heart");
+        p.icone = DENGO_ICONES[(idx + 1) % DENGO_ICONES.length];
+        p.emoji = EMOJI_DE_ICONE[p.icone] || "💗";
+        btnIc.textContent = "";
+        btnIc.appendChild(icone(p.icone, 20));
+      });
+      li.appendChild(btnIc);
       const tit = el("input"); tit.type = "text"; tit.value = p.titulo; tit.maxLength = 40; tit.className = "pe-titulo"; tit.setAttribute("aria-label", "Pedido");
       tit.addEventListener("input", () => { p.titulo = tit.value; });
       const det = el("input"); det.type = "text"; det.value = p.detalhe; det.maxLength = 120; det.className = "pe-detalhe"; det.placeholder = "Detalhe sugerido (opcional)";
@@ -2616,9 +2687,8 @@
   }
   async function salvarPedidos() {
     if (!codigo || !pedidosRascunho) return;
-    const linhas = pedidosRascunho.map((p, i) => ({ id: p.id, sala: codigo, jogador: eu, chave: p.chave, emoji: p.emoji.trim(), titulo: p.titulo.trim(),
+    const linhas = pedidosRascunho.map((p, i) => ({ id: p.id, sala: codigo, jogador: eu, chave: p.chave, icone: p.icone || iconeDeEmoji(p.emoji, "hand-heart"), emoji: (p.emoji || EMOJI_DE_ICONE[p.icone] || "💗").trim(), titulo: p.titulo.trim(),
       detalhe: p.detalhe.trim() ? p.detalhe.slice(0, 120) : null, ordem: i + 1, ativo: p.ativo }));
-    if (linhas.some(l => [...l.emoji].length < 1 || l.emoji.length > 8)) return erro("erroPedidos", "Cada pedido precisa de um emoji.");
     if (linhas.some(l => l.titulo.length < 2)) return erro("erroPedidos", "Cada pedido precisa de um nome (2 letras ou mais).");
     if (!linhas.some(l => l.ativo)) return erro("erroPedidos", "Deixe pelo menos um pedido ativo.");
     $("pedidosSalvar").disabled = true;
@@ -4933,7 +5003,11 @@
     $("marcoData").value = m ? m.data : "";
     $("marcoData").max = hojeISO();
     $("marcoDescricao").value = m && m.descricao ? m.descricao : "";
-    $("marcoEmoji").value = m && m.emoji ? m.emoji : "";
+    const icSel = m && m.icone ? m.icone : (m && m.emoji ? iconeDeEmoji(m.emoji, "calendar-heart") : "calendar-heart");
+    $("marcoIcone").value = icSel;
+    document.querySelectorAll("#marcoIcones .btn-icone-opcao").forEach(b => {
+      b.classList.toggle("selecionado", b.dataset.icone === icSel);
+    });
     $("marcoPrincipal").checked = !!(m && m.principal);
     $("dlgMarco").showModal();
   }
@@ -4942,7 +5016,8 @@
     const titulo = $("marcoTitulo").value.replace(/\s+/g, " ").trim().slice(0, 80);
     const data = $("marcoData").value;
     const descricao = $("marcoDescricao").value.trim().slice(0, 300) || null;
-    const emoji = [...$("marcoEmoji").value.trim()].slice(0, 4).join("").slice(0, 8) || null;
+    const iconeNome = $("marcoIcone").value || "calendar-heart";
+    const emoji = EMOJI_DE_ICONE[iconeNome] || "✨";
     const ehPrincipal = $("marcoPrincipal").checked;
     if (!titulo) return erro("erroMarco", "Dê um título ao marco.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("erroMarco", "Escolha a data.");
@@ -4953,7 +5028,7 @@
       const r = await sb.from("marcos").update({ principal: false }).eq("id", antigo.id);
       if (!r.error) linhaV5("marcos", "UPDATE", { ...antigo, principal: false });
     }
-    const campos = { titulo, data, descricao, emoji, principal: ehPrincipal };
+    const campos = { titulo, data, descricao, icone: iconeNome, emoji, principal: ehPrincipal };
     const { data: linha, error } = marcoEditando
       ? await sb.from("marcos").update(campos).eq("id", marcoEditando.id).select("*").single()
       : await sb.from("marcos").insert({ sala: codigo, autor: nomeDe(eu), ...campos }).select("*").single();
@@ -4976,7 +5051,9 @@
     $("marcosVazio").hidden = !!lista.length;
     lista.forEach(m => {
       const li = el("li", "marco" + (m.principal ? " principal" : ""));
-      li.appendChild(el("span", "marco-emoji", m.emoji || "•"));
+      const icSpan = el("span", "marco-emoji");
+      icSpan.appendChild(icone(m.icone || iconeDeEmoji(m.emoji, "calendar-heart"), 20));
+      li.appendChild(icSpan);
       const info = el("div", "info");
       info.append(el("span", "tag", dataBR(m.data) + (m.principal ? " · início do namoro" : "")), el("span", "t", m.titulo));
       if (m.descricao) info.appendChild(el("span", "marco-desc", m.descricao));
@@ -5430,13 +5507,14 @@
     const b = $("trilhaNossa");
     b.hidden = !estado.fixa || !id;
     const marcada = !!id && ehNossa(id);
-    b.textContent = marcada ? "❤️ Nossa" : "🤍 Nossa";
+    b.textContent = "";
+    b.append(icone("heart", 16, marcada ? "icone-cheio" : ""), document.createTextNode(" Nossa"));
     b.setAttribute("aria-pressed", String(marcada));
     $("soNossasLinha").hidden = !estado.fixa || !permitido("trilha");
     $("cardPlaylist").hidden = !permitido("trilha");
     $("soNossas").checked = !!estado.playlistSoNossas;
     $("soNossasAviso").hidden = !(estado.fixa && estado.playlistSoNossas && nossas.length < 5);
-    $("cardPlaylistSub").textContent = nossas.length ? `${nossas.length} ${nossas.length === 1 ? "música" : "músicas"}` : "Marque com 🤍 na trilha";
+    $("cardPlaylistSub").textContent = nossas.length ? `${nossas.length} ${nossas.length === 1 ? "música" : "músicas"}` : "Marque suas favoritas na trilha";
     if (!$("listaNossas")) return;
     const porId = new Map(musicas.map(x => [x.id, x]));
     const lista = nossas.filter(x => porId.has(x.musica_id)).sort((a, b) => (a.criada_em < b.criada_em ? 1 : -1));
@@ -7377,10 +7455,10 @@
     gravar(n => {
       if (!placarZerado(n) || n.roteiro || n.carta || n.vencedor !== null) return;
       const et = r.etapas[0];
-      n.roteiro = { id: r.id, nome: r.nome, emoji: r.emoji, etapas: r.etapas, etapa: 0, rodadaNaEtapa: 0, vezes: 0, inicio: Date.now().toString(36) };
+      n.roteiro = { id: r.id, nome: r.nome, icone: r.icone || iconeDeEmoji(r.emoji, "clapperboard"), emoji: r.emoji, etapas: r.etapas, etapa: 0, rodadaNaEtapa: 0, vezes: 0, inicio: Date.now().toString(36) };
       n.roteiroEscolhendo = null;
       n.niveis = niveisEtapa(et);
-      n.aviso = novoAviso(`🎬 ${r.nome} · Etapa 1: ${et.nome}`);
+      n.aviso = novoAviso(`${r.nome} · Etapa 1: ${et.nome}`);
       if (!et.rodadas) proximaEtapa(n, true);
     });
   }
@@ -7403,13 +7481,13 @@
       // fim, ou etapa de fechamento (rodadas: 0)
       r.concluido = true;
       r.fechamento = et ? et.tipos.find(t => FECHAMENTOS.includes(t)) || null : null;
-      n.aviso = novoAviso(`${r.emoji} ${r.nome}: roteiro concluído 🎬`);
+      n.aviso = novoAviso(`${r.nome}: roteiro concluído`);
       if (r.fechamento === "encerrar" && n.jogadores[1] && n.vencedor === null) comecarEncerrando(n);
       if (r.campanha) concluirNoite(n);
       return;
     }
     n.niveis = niveisEtapa(et);
-    n.aviso = novoAviso(`🎬 Etapa ${r.etapa + 1}: ${et.nome}`);
+    n.aviso = novoAviso(`Etapa ${r.etapa + 1}: ${et.nome}`);
   }
   async function sairRoteiro() {
     if (!estado || !estado.roteiro || !podeChipsAqui()) return;
@@ -7421,7 +7499,9 @@
     const ul = $("roteirosLista"); ul.textContent = "";
     roteiros.filter(roteiroPermitido).forEach(r => {
       const li = el("li"), b = el("button", "roteiro-op"); b.type = "button";
-      b.append(el("span", "ro-nome", `${r.emoji} ${r.nome}`), el("span", "ro-desc", r.descricao || ""),
+      const spanNome = el("span", "ro-nome");
+      spanNome.append(icone(r.icone || iconeDeEmoji(r.emoji, "clapperboard"), 18), document.createTextNode(" " + r.nome));
+      b.append(spanNome, el("span", "ro-desc", r.descricao || ""),
         el("span", "ro-etapas", r.etapas.map(et => et.nome).join(" → ")));
       b.addEventListener("click", () => escolherRoteiro(r));
       li.appendChild(b); ul.appendChild(li);
@@ -7448,10 +7528,11 @@
     let txt;
     if (r.concluido) {
       const pts = e.placar.map(p => p.pontos);
-      txt = `Roteiro concluído 🎬 · ${r.emoji} ${r.nome} · ${e.jogadores[0]} ${pts[0]} × ${pts[1]} ${e.jogadores[1] || ""}`;
-    } else if (e.emMorteSubita) txt = `🎬 ${r.nome} · pausado pela morte súbita`;
-    else txt = `🎬 ${r.nome} · Etapa ${r.etapa + 1} de ${r.etapas.length}: ${et.nome} · rodada ${Math.min(r.rodadaNaEtapa + 1, et.rodadas)} de ${et.rodadas}`;
-    $("faixaRoteiroTexto").textContent = txt;
+      txt = `Roteiro concluído · ${r.nome} · ${e.jogadores[0]} ${pts[0]} × ${pts[1]} ${e.jogadores[1] || ""}`;
+    } else if (e.emMorteSubita) txt = `${r.nome} · pausado pela morte súbita`;
+    else txt = `${r.nome} · Etapa ${r.etapa + 1} de ${r.etapas.length}: ${et.nome} · rodada ${Math.min(r.rodadaNaEtapa + 1, et.rodadas)} de ${et.rodadas}`;
+    $("faixaRoteiroTexto").textContent = "";
+    $("faixaRoteiroTexto").append(icone(r.icone || iconeDeEmoji(r.emoji, "clapperboard"), 16), document.createTextNode(" " + txt));
     f.classList.toggle("concluido", !!r.concluido);
     $("roteiroContinuar").hidden = !r.concluido;
     $("roteiroCofre").hidden = !(r.concluido && r.fechamento === "cofre" && r.ultima);
@@ -7494,7 +7575,9 @@
     const ul = $("campanhasLista"); ul.textContent = "";
     campanhas.filter(campanhaPermitida).forEach(x => {
       const li = el("li"), b = el("button", "roteiro-op"); b.type = "button";
-      b.append(el("span", "ro-nome", `${x.emoji} ${x.nome}`), el("span", "ro-desc", x.descricao || ""),
+      const spanNome = el("span", "ro-nome");
+      spanNome.append(icone(x.icone || iconeDeEmoji(x.emoji, "film"), 18), document.createTextNode(" " + x.nome));
+      b.append(spanNome, el("span", "ro-desc", x.descricao || ""),
         el("span", "ro-etapas", x.noites.map((nt, i) => `Noite ${i + 1}: ${nt.titulo}`).join(" → ")));
       b.addEventListener("click", () => comecarCampanha(x));
       li.appendChild(b); ul.appendChild(li);
@@ -7507,7 +7590,7 @@
     $("dlgCampanhas").close();
     gravar(n => {
       if (n.campanha || n.roteiro || !placarZerado(n) || n.carta || n.vencedor !== null) return;
-      n.campanha = { id: x.id, nome: x.nome, emoji: x.emoji, noites: x.noites.map(nt => ({ titulo: nt.titulo, roteiro: nt.roteiro, regra: nt.regra || "" })),
+      n.campanha = { id: x.id, nome: x.nome, icone: x.icone || iconeDeEmoji(x.emoji, "film"), emoji: x.emoji, noites: x.noites.map(nt => ({ titulo: nt.titulo, roteiro: nt.roteiro, regra: nt.regra || "" })),
         noite: 0, comecou: hojeISO(), bonus: [0, 0], quebrou: [false, false], jogando: false, ultima: null, placares: [], concluida: false, nivelProx: null };
       iniciarNoite(n);
     });
@@ -7516,13 +7599,13 @@
     const c = n.campanha, nt = c && c.noites[c.noite], r = nt && roteirosCampanha[nt.roteiro];
     if (!r || n.roteiro || !placarZerado(n) || n.carta || n.vencedor !== null) return;
     const et = r.etapas[0];
-    n.roteiro = { id: r.id, nome: r.nome, emoji: r.emoji, etapas: r.etapas, etapa: 0, rodadaNaEtapa: 0, vezes: 0, inicio: Date.now().toString(36), campanha: true };
+    n.roteiro = { id: r.id, nome: r.nome, icone: r.icone || iconeDeEmoji(r.emoji, "clapperboard"), emoji: r.emoji, etapas: r.etapas, etapa: 0, rodadaNaEtapa: 0, vezes: 0, inicio: Date.now().toString(36), campanha: true };
     n.roteiroEscolhendo = null;
     n.niveis = niveisEtapa(et);
     c.jogando = true;
     c.nivelProx = null;
     if (c.noite === 0) c.comecou = hojeISO();
-    n.aviso = novoAviso(`🎞️ Noite ${c.noite + 1} de ${c.noites.length} · ${nt.titulo}`);
+    n.aviso = novoAviso(`Noite ${c.noite + 1} de ${c.noites.length} · ${nt.titulo}`);
     if (!et.rodadas) proximaEtapa(n, true);
   }
   // fim do roteiro da noite: placar da noite, fichas (cada 3 pontos nas noites antes da última) e próxima noite amanhã
@@ -7535,8 +7618,8 @@
     c.jogando = false;
     c.nivelProx = null;
     c.ultima = hojeISO();
-    if (ultima) { c.concluida = true; n.campanhasFeitas = (n.campanhasFeitas || 0) + 1; n.aviso = novoAviso(`${c.emoji} Campanha concluída 🎞️`); }
-    else { c.noite = k + 1; n.aviso = novoAviso(`🎞️ Noite ${k + 1} concluída · fichas: ${n.jogadores[0]} ${c.bonus[0]} · ${n.jogadores[1]} ${c.bonus[1]}`); }
+    if (ultima) { c.concluida = true; n.campanhasFeitas = (n.campanhasFeitas || 0) + 1; n.aviso = novoAviso(`${c.nome}: campanha concluída`); }
+    else { c.noite = k + 1; n.aviso = novoAviso(`Noite ${k + 1} concluída · fichas: ${n.jogadores[0]} ${c.bonus[0]} · ${n.jogadores[1]} ${c.bonus[1]}`); }
   }
   async function jogarNoite() {
     const e = estado;
@@ -7666,7 +7749,9 @@
     const ul = $("enredosLista"); ul.textContent = "";
     enredos.filter(x => enredoPermitido(x)).forEach(x => {
       const li = el("li"), b = el("button", "roteiro-op"); b.type = "button";
-      b.append(el("span", "ro-nome", `${x.emoji} ${x.nome}`), el("span", "ro-desc", x.descricao || ""), el("span", "ro-etapas", `${x.papeis[0]} × ${x.papeis[1]}`));
+      const spanNome = el("span", "ro-nome");
+      spanNome.append(icone(x.icone || iconeDeEmoji(x.emoji, "drama"), 18), document.createTextNode(" " + x.nome));
+      b.append(spanNome, el("span", "ro-desc", x.descricao || ""), el("span", "ro-etapas", `${x.papeis[0]} × ${x.papeis[1]}`));
       b.addEventListener("click", () => escolherPapeis(x));
       li.appendChild(b); ul.appendChild(li);
     });
@@ -7676,7 +7761,8 @@
   function escolherPapeis(x) {
     enredoEscolhido = x;
     $("enredosEscolher").hidden = true; $("enredosPapeis").hidden = false;
-    $("enredoPapeisNome").textContent = `${x.emoji} ${x.nome}`;
+    $("enredoPapeisNome").textContent = "";
+    $("enredoPapeisNome").append(icone(x.icone || iconeDeEmoji(x.emoji, "drama"), 18), document.createTextNode(" " + x.nome));
     $("enredoPapeisDesc").textContent = x.descricao || "";
     $("enredoPapel0").textContent = `Quem fica com "${x.papeis[0]}"?`;
     $("enredoPapelJ0").textContent = nomeDe(0); $("enredoPapelJ1").textContent = nomeDe(1);
@@ -7693,8 +7779,8 @@
     gravar(n => {
       if (n.enredo || n.carta || n.roteiro || n.vencedor !== null || !n.jogadores[1]) return;
       const nos = x.nos.map(no => ({ id: no.id, quem: no.quem || "ambos", tipo: no.tipo, texto: no.texto.slice(0, 600), opcoes: (no.opcoes || []).map(o => ({ rotulo: String(o.rotulo).slice(0, 80), vai: o.vai })), fim: !!no.fim }));
-      n.enredo = { id: x.id, nome: x.nome, emoji: x.emoji, nivel: x.nivel_max, papeisNomes: x.papeis.slice(0, 2), papeis: [p0, 1 - p0], nos, no: nos[0].id, caminho: [nos[0].id], escolhas: [], cumpriu: false, ultima: null };
-      n.aviso = novoAviso(`🎭 ${x.nome}: ${n.jogadores[p0]} é "${x.papeis[0]}", ${n.jogadores[1 - p0]} é "${x.papeis[1]}"`);
+      n.enredo = { id: x.id, nome: x.nome, icone: x.icone || iconeDeEmoji(x.emoji, "drama"), emoji: x.emoji, nivel: x.nivel_max, papeisNomes: x.papeis.slice(0, 2), papeis: [p0, 1 - p0], nos, no: nos[0].id, caminho: [nos[0].id], escolhas: [], cumpriu: false, ultima: null };
+      n.aviso = novoAviso(`${x.nome}: ${n.jogadores[p0]} é "${x.papeis[0]}", ${n.jogadores[1 - p0]} é "${x.papeis[1]}"`);
     });
   }
   function cumpriTrecho() {
@@ -7746,15 +7832,20 @@
     if (!en) return;
     const no = noDoEnredo(en);
     if (!no) return;
-    $("enredoTopo").textContent = `${en.emoji} ${en.nome} · ${e.jogadores[en.papeis[0]]} é "${en.papeisNomes[0]}", ${e.jogadores[en.papeis[1]]} é "${en.papeisNomes[1]}"`;
+    $("enredoTopo").textContent = "";
+    $("enredoTopo").append(icone(en.icone || iconeDeEmoji(en.emoji, "drama"), 16), document.createTextNode(` ${en.nome} · ${e.jogadores[en.papeis[0]]} é "${en.papeisNomes[0]}", ${e.jogadores[en.papeis[1]]} é "${en.papeisNomes[1]}"`));
     $("enredoEscolha").hidden = !en.ultima;
     $("enredoEscolha").textContent = en.ultima ? `${e.jogadores[en.ultima.quem]} escolheu: ${en.ultima.rotulo}` : "";
     const acabou = enredoAcabou(en, no);
     $("enredoFim").hidden = !acabou;
     $("enredoSair").hidden = acabou;
     const fez = fazDoNo(en, no);
-    $("enredoQuem").textContent = no.tipo === "narracao" ? "📖 Narração (alguém lê em voz alta)"
-      : `${no.tipo === "verdade" ? "Verdade" : "Desafio"} para ${fez.length === 2 ? "os dois" : e.jogadores[fez[0]]}`;
+    $("enredoQuem").textContent = "";
+    if (no.tipo === "narracao") {
+      $("enredoQuem").append(icone("book-open", 16), document.createTextNode(" Narração (alguém lê em voz alta)"));
+    } else {
+      $("enredoQuem").textContent = `${no.tipo === "verdade" ? "Verdade" : "Desafio"} para ${fez.length === 2 ? "os dois" : e.jogadores[fez[0]]}`;
+    }
     $("enredoTexto").textContent = no.texto;
     $("enredoTexto").classList.toggle("narracao", no.tipo === "narracao");
     const pendente = no.tipo !== "narracao" && !en.cumpriu;
@@ -9000,9 +9091,11 @@
     $("fecharAbraLer").addEventListener("click", () => $("dlgAbraLer").close());
     $("formMarco").addEventListener("submit", salvarMarco);
     $("cancelarMarco").addEventListener("click", () => $("dlgMarco").close());
-    document.querySelectorAll("#marcoSugestoes [data-emoji]").forEach(b => b.addEventListener("click", () => {
-      $("marcoEmoji").value = b.dataset.emoji;
-      if (!$("marcoTitulo").value.trim()) $("marcoTitulo").value = b.dataset.titulo;
+    document.querySelectorAll("#marcoIcones [data-icone]").forEach(b => b.addEventListener("click", () => {
+      $("marcoIcone").value = b.dataset.icone;
+      document.querySelectorAll("#marcoIcones .btn-icone-opcao").forEach(x => x.classList.remove("selecionado"));
+      b.classList.add("selecionado");
+      if (!$("marcoTitulo").value.trim() && b.dataset.titulo) $("marcoTitulo").value = b.dataset.titulo;
     }));
     document.querySelectorAll("#carinhoBotoes [data-carinho]").forEach(b => b.addEventListener("click", () => mandarCarinho(b.dataset.carinho)));
     $("carinhoResumoFechar").addEventListener("click", () => { resumoCarinhos = ""; desenharCarinhos(); });

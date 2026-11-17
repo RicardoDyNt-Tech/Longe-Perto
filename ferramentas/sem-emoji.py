@@ -20,10 +20,13 @@ EMOJI_PATTERN = re.compile(
     r'|[✓✕✗←→↗↑↓⭐★☆]'
 )
 
-# Lista de exceções justificadas (arquivo, número da linha aproximado ou trecho de código / motivo)
+# Lista de exceções justificadas (arquivo, trecho de código / motivo)
 # Por exemplo, mapeamentos no JS para compatibilidade reversa com dados já gravados no banco
 EXCECOES = [
-    # Exemplo: 'app.js: MAPEAMENTO_PLAYLISTS_COMPATIBILIDADE'
+    # Mapeamentos de compatibilidade com versões antigas do banco
+    {'arquivo': 'app.js', 'prefixo': 'ICONE_DE_EMOJI'},
+    {'arquivo': 'app.js', 'prefixo': 'EMOJI_DE_ICONE'},
+    {'arquivo': 'app.js', 'prefixo': 'ROTULO_PLAYLIST'},
 ]
 
 def verificar_arquivos(diretorio_base="."):
@@ -53,22 +56,25 @@ def verificar_arquivos(diretorio_base="."):
                 continue
 
             ocorrencias_arquivo = []
+            em_bloco_excecao = False
+
             for num_linha, linha in enumerate(linhas, start=1):
+                # Checa início e fim de bloco de exceção
+                if "const ICONE_DE_EMOJI" in linha or "const EMOJI_DE_ICONE" in linha or "const ROTULO_PLAYLIST" in linha:
+                    em_bloco_excecao = True
+                
                 matches = EMOJI_PATTERN.findall(linha)
-                # Remove variação de seletores como fe0f
                 matches = [m for m in matches if m != '\ufe0f']
+                
+                if em_bloco_excecao:
+                    if "};" in linha:
+                        em_bloco_excecao = False
+                    continue
+
                 if not matches:
                     continue
                 
-                # Checa se linha está em exceções
-                linha_ignorada = False
-                for exc in EXCECOES:
-                    if exc.get('arquivo') == caminho and exc.get('trecho') in linha:
-                        linha_ignorada = True
-                        break
-                
-                if not linha_ignorada:
-                    ocorrencias_arquivo.append((num_linha, matches, linha.strip()))
+                ocorrencias_arquivo.append((num_linha, matches, linha.strip()))
             
             if ocorrencias_arquivo:
                 arquivos_com_emoji += 1

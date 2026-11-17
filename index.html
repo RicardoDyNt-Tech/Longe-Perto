@@ -747,7 +747,7 @@
       <p class="fr-texto" id="faixaRoteiroTexto"></p>
       <div class="fr-acoes">
         <button class="secondary" id="roteiroContinuar" type="button" hidden>Continuar jogando</button>
-        <button class="secondary" id="roteiroCofre" type="button" hidden><span aria-hidden="true">💞</span> Guardar a última carta</button>
+        <button class="secondary" id="roteiroCofre" type="button" hidden><svg class="icone icone-16"><use href="icones.svg#heart"/></svg> Guardar a última carta</button>
         <button class="linkbtn" id="roteiroSair" type="button" hidden>Sair do roteiro</button>
       </div>
     </div>
@@ -1048,7 +1048,7 @@
         <a class="spotify" id="trilhaAbrir" target="_blank" rel="noopener">Abrir no Spotify</a>
         <button class="secondary" id="trilhaTocar" type="button">Tocar aqui</button>
         <button class="secondary" id="trilhaOutra" type="button">Outra música</button>
-        <button class="secondary" id="trilhaNossa" type="button" aria-pressed="false" hidden><span aria-hidden="true">🤍</span> Nossa</button>
+        <button class="secondary" id="trilhaNossa" type="button" aria-pressed="false" hidden><svg class="icone icone-16"><use href="icones.svg#heart"/></svg> Nossa</button>
       </div>
       <div class="trilha-player" id="trilhaPlayer" hidden></div>
     </section>
@@ -1277,7 +1277,7 @@
 
   <dialog id="dlgRoteiros" class="dlg-posicoes" aria-labelledby="dlgRoteirosTitulo">
     <div class="pos-topo">
-      <h2 id="dlgRoteirosTitulo"><span aria-hidden="true">🎬</span> Jogar com roteiro</h2>
+      <h2 id="dlgRoteirosTitulo">Jogar com roteiro</h2>
       <button class="linkbtn" id="fecharRoteiros" type="button">Fechar</button>
     </div>
     <p class="config-dica">Uma partida com começo, meio e fim. Os níveis de cada etapa seguem as configurações da sala.</p>
@@ -1299,7 +1299,7 @@
 
   <dialog id="dlgEnredos" class="dlg-posicoes" aria-labelledby="dlgEnredosTitulo">
     <div class="pos-topo">
-      <h2 id="dlgEnredosTitulo"><span aria-hidden="true">🎭</span> Enredos</h2>
+      <h2 id="dlgEnredosTitulo">Enredos</h2>
       <button class="linkbtn" id="fecharEnredos" type="button">Fechar</button>
     </div>
     <div id="enredosEscolher">
@@ -1324,7 +1324,7 @@
 
   <dialog id="dlgCampanhas" class="dlg-posicoes" aria-labelledby="dlgCampanhasTitulo">
     <div class="pos-topo">
-      <h2 id="dlgCampanhasTitulo"><span aria-hidden="true">🎞️</span> Campanha de 3 noites</h2>
+      <h2 id="dlgCampanhasTitulo">Campanha de 3 noites</h2>
       <button class="linkbtn" id="fecharCampanhas" type="button">Fechar</button>
     </div>
     <p class="config-dica">Uma noite por dia, cada uma com um roteiro e uma regra. Nas duas primeiras, cada 3 pontos viram uma ficha para gastar na última.</p>
@@ -1350,14 +1350,14 @@
 
   <dialog id="dlgDengo" aria-labelledby="dlgDengoTitulo">
     <form id="formDengo" method="dialog">
-      <h2 id="dlgDengoTitulo">Pedir dengo <span aria-hidden="true">💗</span></h2>
+      <h2 id="dlgDengoTitulo">Pedir dengo</h2>
       <ul class="dengo-resumo" id="dengoResumo"></ul>
       <label class="field">Quer dizer mais alguma coisa?
         <textarea id="dengoMensagem" maxlength="200" rows="2"></textarea>
       </label>
       <p class="erro" id="erroDlgDengo" role="alert"></p>
       <div class="row">
-        <button class="primary" id="dengoEnviar" type="submit">Enviar pedido <span aria-hidden="true">💗</span></button>
+        <button class="primary" id="dengoEnviar" type="submit">Enviar pedido</button>
         <button class="secondary" id="dengoVoltar" type="button">Voltar</button>
       </div>
     </form>
@@ -1365,7 +1365,7 @@
 
   <dialog id="dlgPedidos" class="dlg-posicoes" aria-labelledby="dlgPedidosTitulo">
     <div class="pos-topo">
-      <h2 id="dlgPedidosTitulo"><span aria-hidden="true">✏️</span> Meus pedidos</h2>
+      <h2 id="dlgPedidosTitulo">Meus pedidos</h2>
       <button class="linkbtn" id="fecharPedidos" type="button">Fechar</button>
     </div>
     <p class="config-dica">Só a sua lista muda; a de quem você ama continua a mesma.</p>
@@ -1563,22 +1563,31 @@
   <dialog id="dlgMarco" aria-labelledby="dlgMarcoTitulo">
     <form id="formMarco" method="dialog">
       <h2 id="dlgMarcoTitulo">Novo marco</h2>
-      <div class="marco-sugestoes" id="marcoSugestoes">
-        <button type="button" data-emoji="💘" data-titulo="Primeiro encontro"><span aria-hidden="true">💘</span> primeiro encontro</button>
-        <button type="button" data-emoji="💋" data-titulo="Primeiro beijo"><span aria-hidden="true">💋</span> primeiro beijo</button>
-        <button type="button" data-emoji="💍" data-titulo="Pedido"><span aria-hidden="true">💍</span> pedido</button>
-        <button type="button" data-emoji="✈️" data-titulo="Viagem"><span aria-hidden="true">✈️</span> viagem</button>
-        <button type="button" data-emoji="🎂" data-titulo="Aniversário"><span aria-hidden="true">🎂</span> aniversário</button>
-        <button type="button" data-emoji="🏠" data-titulo="Visita"><span aria-hidden="true">🏠</span> visita</button>
+      <p class="rotulo-campo">Ícone do marco</p>
+      <div class="marco-icones-grid" id="marcoIcones" role="radiogroup" aria-label="Ícone do marco">
+        <button type="button" class="btn-icone-opcao selecionado" data-icone="calendar-heart" data-titulo="Data especial" aria-label="Data especial" title="Data especial"><svg class="icone icone-20"><use href="icones.svg#calendar-heart"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="heart" data-titulo="Primeiro encontro" aria-label="Primeiro encontro" title="Primeiro encontro"><svg class="icone icone-20"><use href="icones.svg#heart"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="gem" data-titulo="Pedido" aria-label="Pedido" title="Pedido"><svg class="icone icone-20"><use href="icones.svg#gem"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="plane" data-titulo="Viagem" aria-label="Viagem" title="Viagem"><svg class="icone icone-20"><use href="icones.svg#plane"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="house" data-titulo="Visita" aria-label="Visita" title="Visita"><svg class="icone icone-20"><use href="icones.svg#house"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="cake" data-titulo="Aniversário" aria-label="Aniversário" title="Aniversário"><svg class="icone icone-20"><use href="icones.svg#cake"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="graduation-cap" data-titulo="Conquista" aria-label="Conquista" title="Conquista"><svg class="icone icone-20"><use href="icones.svg#graduation-cap"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="party-popper" data-titulo="Comemoração" aria-label="Comemoração" title="Comemoração"><svg class="icone icone-20"><use href="icones.svg#party-popper"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="star" data-titulo="Momento marcante" aria-label="Momento marcante" title="Momento marcante"><svg class="icone icone-20"><use href="icones.svg#star"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="map-pin" data-titulo="Lugar especial" aria-label="Lugar especial" title="Lugar especial"><svg class="icone icone-20"><use href="icones.svg#map-pin"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="camera" data-titulo="Foto guardada" aria-label="Foto guardada" title="Foto guardada"><svg class="icone icone-20"><use href="icones.svg#camera"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="music" data-titulo="Nossa música" aria-label="Nossa música" title="Nossa música"><svg class="icone icone-20"><use href="icones.svg#music"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="gift" data-titulo="Presente" aria-label="Presente" title="Presente"><svg class="icone icone-20"><use href="icones.svg#gift"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="key-round" data-titulo="Nova fase" aria-label="Nova fase" title="Nova fase"><svg class="icone icone-20"><use href="icones.svg#key-round"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="baby" data-titulo="Novidade" aria-label="Novidade" title="Novidade"><svg class="icone icone-20"><use href="icones.svg#baby"/></svg></button>
+        <button type="button" class="btn-icone-opcao" data-icone="paw-print" data-titulo="Pet" aria-label="Pet" title="Pet"><svg class="icone icone-20"><use href="icones.svg#paw-print"/></svg></button>
       </div>
+      <input type="hidden" id="marcoIcone" value="calendar-heart">
       <label class="field">Título
         <input type="text" id="marcoTitulo" maxlength="80">
       </label>
       <label class="field">Data
         <input type="date" id="marcoData">
-      </label>
-      <label class="field">Emoji
-        <input type="text" id="marcoEmoji" maxlength="8" class="marco-emoji-campo">
       </label>
       <label class="field">Descrição (opcional)
         <textarea id="marcoDescricao" maxlength="300" rows="3"></textarea>

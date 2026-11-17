@@ -1241,3 +1241,10 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 #wheel .rotulo{font-size:13px}
 #erroJogo:empty{display:none}
 .turn{margin-bottom:18px}
+
+/* Ícones do Marco e Pedidos (Fase 4) */
+.rotulo-campo{font-size:.85rem; font-weight:600; color:var(--muted); margin:0 0 6px}
+.marco-icones-grid{display:grid; grid-template-columns:repeat(8, 1fr); gap:6px; margin:4px 0 14px}
+.marco-icones-grid .btn-icone-opcao{min-height:42px; height:42px; width:100%; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; border:1.5px solid var(--line); background:var(--surface); color:inherit; cursor:pointer}
+.marco-icones-grid .btn-icone-opcao.selecionado{border-color:var(--amor); background:var(--surface-2); color:var(--amor)}
+.pe-icone-btn{min-height:40px; height:40px; display:inline-flex; align-items:center; justify-content:center; border:1.5px solid var(--line); border-radius:10px; background:var(--bg); color:inherit; cursor:pointer}
