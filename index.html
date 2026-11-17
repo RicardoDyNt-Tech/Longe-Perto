@@ -249,8 +249,8 @@
           <p class="cumprir-titulo" id="cuidadoTitulo"></p>
           <ul class="cuidado-lista" id="cuidadoItens"></ul>
           <div class="row">
-            <button class="secondary" id="cuidadoRecado" type="button"><span aria-hidden="true">💛</span> Deixar um recado</button>
-            <button class="secondary" id="cuidadoPensei" type="button"><span aria-hidden="true">💭</span> Pensei em você</button>
+            <button class="secondary" id="cuidadoRecado" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#mail"/></svg> Deixar um recado</button>
+            <button class="secondary" id="cuidadoPensei" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#message-circle-heart"/></svg> Pensei em você</button>
           </div>
         </div>
         <div class="casa-bloco dengo" id="casaDengo">
@@ -278,11 +278,11 @@
         <div class="casa-bloco humor" id="casaHumor">
           <p class="humor-titulo">Como você se sente hoje?</p>
           <div class="humor-caras" id="humorCaras" role="group" aria-label="Seu humor hoje">
-            <button type="button" data-v="1" aria-label="Muito mal" aria-pressed="false"><span aria-hidden="true">😣</span></button>
-            <button type="button" data-v="2" aria-label="Mal" aria-pressed="false"><span aria-hidden="true">😢</span></button>
-            <button type="button" data-v="3" aria-label="Mais ou menos" aria-pressed="false"><span aria-hidden="true">😐</span></button>
-            <button type="button" data-v="4" aria-label="Bem" aria-pressed="false"><span aria-hidden="true">🙂</span></button>
-            <button type="button" data-v="5" aria-label="Muito bem" aria-pressed="false"><span aria-hidden="true">😄</span></button>
+            <button type="button" data-v="1" aria-label="Péssimo" aria-pressed="false" class="humor-btn humor-1"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#angry"/></svg><span class="rotulo-humor">Péssimo</span></button>
+            <button type="button" data-v="2" aria-label="Mal" aria-pressed="false" class="humor-btn humor-2"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#frown"/></svg><span class="rotulo-humor">Mal</span></button>
+            <button type="button" data-v="3" aria-label="Mais ou menos" aria-pressed="false" class="humor-btn humor-3"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#meh"/></svg><span class="rotulo-humor">Mais ou menos</span></button>
+            <button type="button" data-v="4" aria-label="Bem" aria-pressed="false" class="humor-btn humor-4"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#smile"/></svg><span class="rotulo-humor">Bem</span></button>
+            <button type="button" data-v="5" aria-label="Ótimo" aria-pressed="false" class="humor-btn humor-5"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#laugh"/></svg><span class="rotulo-humor">Ótimo</span></button>
           </div>
           <div class="humor-nota" id="humorNotaBox" hidden>
             <input type="text" id="humorNota" maxlength="140" placeholder="Quer contar por quê?" aria-label="Quer contar por quê? (opcional)">
@@ -291,7 +291,7 @@
           <p class="humor-salvo" id="humorSalvo" aria-live="polite"></p>
           <div class="humor-outro" id="humorOutro">
             <p class="humor-titulo" id="humorOutroTitulo"></p>
-            <div class="humor-caras outro" id="humorOutroCaras" hidden><span data-v="1">😣</span><span data-v="2">😢</span><span data-v="3">😐</span><span data-v="4">🙂</span><span data-v="5">😄</span></div>
+            <div class="humor-caras outro" id="humorOutroCaras" hidden><span data-v="1" class="humor-op humor-1" title="Péssimo"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#angry"/></svg></span><span data-v="2" class="humor-op humor-2" title="Mal"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#frown"/></svg></span><span data-v="3" class="humor-op humor-3" title="Mais ou menos"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#meh"/></svg></span><span data-v="4" class="humor-op humor-4" title="Bem"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#smile"/></svg></span><span data-v="5" class="humor-op humor-5" title="Ótimo"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#laugh"/></svg></span></div>
             <p class="humor-outro-nota" id="humorOutroNota" hidden></p>
             <p class="extras-sub" id="humorOutroVazio" hidden></p>
             <div class="humor-dicas" id="humorDicas"></div>
@@ -325,10 +325,10 @@
         <div class="casa-bloco carinhos" id="casaCarinhos">
           <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#x"/></svg></button></p>
           <div class="carinho-botoes" id="carinhoBotoes">
-            <button type="button" data-carinho="pensei"><span class="ic"><span aria-hidden="true">💭</span></span>Pensei em você</button>
-            <button type="button" data-carinho="beijo"><span class="ic"><span aria-hidden="true">😘</span></span>Beijo</button>
-            <button type="button" data-carinho="abraco"><span class="ic"><span aria-hidden="true">🤗</span></span>Abraço</button>
-            <button type="button" data-carinho="saudade"><span class="ic"><span aria-hidden="true">🥺</span></span>Saudade</button>
+            <button type="button" data-carinho="pensei"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#message-circle-heart"/></svg></span>Pensei em você</button>
+            <button type="button" data-carinho="beijo"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart"/></svg></span>Beijo</button>
+            <button type="button" data-carinho="abraco"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart-handshake"/></svg></span>Abraço</button>
+            <button type="button" data-carinho="saudade"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#cloud-moon"/></svg></span>Saudade</button>
           </div>
           <p class="carinho-hoje"><span id="carinhoHoje"></span> <span class="carinho-enviado" id="carinhoEnviado" aria-live="polite"></span></p>
           <div class="maos">
@@ -719,7 +719,7 @@
           <div class="cor-grade" id="corGrade" role="group" aria-label="Cor do avatar"></div>
         </details>
         <section class="perfil-bloco" id="meuManual" aria-labelledby="meuManualTitulo">
-          <h3 class="casa-h3" id="meuManualTitulo"><span aria-hidden="true">📘</span> Meu Manual <span class="manual-salvo" id="manualSalvo" aria-live="polite"></span></h3>
+          <h3 class="casa-h3" id="meuManualTitulo">Meu Manual <span class="manual-salvo" id="manualSalvo" aria-live="polite"></span></h3>
           <p class="config-dica">O Manual fica visível para os dois e, como todo o resto, pode ser lido por quem tiver o código da sala. Não coloque dados de saúde.</p>
           <div class="manual-form" id="manualForm"></div>
         </section>
@@ -1808,10 +1808,10 @@
 <div class="call-card" id="callCard" role="group" aria-labelledby="callCardTitulo" hidden>
   <b id="callCardTitulo">Como foi a call?</b>
   <div class="call-card-ops">
-    <button type="button" data-h="romantica"><span><span aria-hidden="true">🥰</span></span>Romântica</button>
-    <button type="button" data-h="intensa"><span><span aria-hidden="true">🥵</span></span>Intensa</button>
-    <button type="button" data-h="risadas"><span><span aria-hidden="true">😂</span></span>Risadas</button>
-    <button type="button" data-h="sono"><span><span aria-hidden="true">😴</span></span>Caímos no sono</button>
+    <button type="button" data-h="romantica"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart"/></svg>Romântica</button>
+    <button type="button" data-h="intensa"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#flame"/></svg>Intensa</button>
+    <button type="button" data-h="risadas"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#laugh"/></svg>Risadas</button>
+    <button type="button" data-h="sono"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#moon"/></svg>Caímos no sono</button>
   </div>
 </div>
 

@@ -1168,7 +1168,7 @@
     const { error } = await sb.rpc("chamada_apagar", { p_sala: codigo, p_id: x.id });
     if (error) erro("erroChamadas", "Não consegui apagar. Confira a internet.");
   }
-  const HUMOR_CH = { romantica: "🥰", intensa: "🥵", risadas: "😂", sono: "😴" };
+  const HUMOR_CH = { romantica: "heart", intensa: "flame", risadas: "laugh", sono: "moon" };
   function desenharChamadas() {
     if ($("vChamadas").hidden) return;
     const fechadas = chamadas.filter(r => r.fim);
@@ -1176,8 +1176,12 @@
     const ul = $("chamadasLista"); ul.textContent = "";
     fechadas.slice(0, paginasChamadas * 20).forEach(x => {
       const li = el("li"), info = el("div", "info");
-      info.append(el("span", "t", `${ORIGEM_IC[x.origem] || "📞"} ${quandoChamada(x.inicio)} · ${fmtDur(x.duracao_minutos || 0)}` + (x.humor_final ? ` ${HUMOR_CH[x.humor_final] || ""}` : "")),
-        el("span", "autor", ORIGEM_NOME[x.origem] || "") );
+      const spanT = el("span", "t");
+      spanT.append(icone(ORIGEM_IC[x.origem] || "phone", 16), document.createTextNode(` ${quandoChamada(x.inicio)} · ${fmtDur(x.duracao_minutos || 0)}`));
+      if (x.humor_final && HUMOR_CH[x.humor_final]) {
+        spanT.append(document.createTextNode(" · "), icone(HUMOR_CH[x.humor_final], 16), document.createTextNode(` ${HUMOR_NOME[x.humor_final] || ""}`));
+      }
+      info.append(spanT, el("span", "autor", ORIGEM_NOME[x.origem] || ""));
       const ac = el("div", "acoes");
       const aj = el("button", "linkbtn", "Ajustar"); aj.type = "button"; aj.addEventListener("click", () => abrirAjuste(x, false));
       const ap = el("button", "linkbtn", "Apagar"); ap.type = "button"; ap.addEventListener("click", () => apagarChamada(x));
@@ -1190,7 +1194,7 @@
   // ---------- estatísticas (chamadas_resumo, recarregado ao abrir e a cada mudança) ----------
   let resumoCh = null, timerResumoCh = null, fraseCh = Math.floor(Math.random() * 4);
   const resumoChamadasFns = [];   // marcos (fase 4)
-  const PERIODO_CH = { madrugada: "madrugada 🌙", manha: "manhã ☀️", tarde: "tarde 🌤️", noite: "noite 🌃" };
+  const PERIODO_CH = { madrugada: "Madrugada", manha: "Manhã", tarde: "Tarde", noite: "Noite" };
   const HUMOR_NOME = { romantica: "Romântica", intensa: "Intensa", risadas: "Risadas", sono: "Caímos no sono" };
   const numBR = n => n.toLocaleString("pt-BR");
   const horasTxt = min => { min = Math.round(min || 0); const h = Math.floor(min / 60); return h ? `${numBR(h)} ${h === 1 ? "hora" : "horas"}` : `${min} ${min === 1 ? "minuto" : "minutos"}`; };
@@ -1256,8 +1260,8 @@
     if (r.recorde) item("Chamada mais longa", `Recorde: ${fmtDur(r.recorde.minutos)} · ${quandoRecorde(r.recorde.inicio)}`);
     item("Esta semana", r.semana_minutos ? `Média de ${fmtDur(r.semana_minutos / 7)} por dia` : "Nenhuma chamada nos últimos 7 dias");
     if (r.periodo_favorito && PERIODO_CH[r.periodo_favorito]) item("Horário favorito", PERIODO_CH[r.periodo_favorito]);
-    if (r.humor_favorito && HUMOR_CH[r.humor_favorito]) item("Vibe mais comum", `${HUMOR_CH[r.humor_favorito]} ${HUMOR_NOME[r.humor_favorito]}`);
-    if (r.sequencia_dias >= 2) item("Dias seguidos com chamada", `🔥 ${r.sequencia_dias} dias seguidos`);
+    if (r.humor_favorito && HUMOR_NOME[r.humor_favorito]) item("Vibe mais comum", HUMOR_NOME[r.humor_favorito]);
+    if (r.sequencia_dias >= 2) item("Dias seguidos com chamada", `${r.sequencia_dias} dias seguidos`);
     box.append(ul);
     // gráfico dos últimos 14 dias, em CSS
     const d14 = ultimos14(), max = Math.max(1, ...d14.map(x => x.m));
@@ -2338,18 +2342,9 @@
     desenharManualOutro();
   }
   function desenharEscolhaAvatar() {
-    const a = avatarDe(eu), g = $("emojiGrade"), c = $("corGrade");
-    g.textContent = ""; c.textContent = "";
-    const sem = el("button", "emoji-op", "Aa"); sem.type = "button";
-    sem.setAttribute("aria-label", "Sem emoji (iniciais)"); sem.setAttribute("aria-pressed", String(!a.emoji));
-    sem.addEventListener("click", () => { mudarManual(m => { delete m.avatar; }); manualMudou(false); });
-    g.appendChild(sem);
-    EMOJIS_AVATAR.forEach(e => {
-      const b = el("button", "emoji-op", e); b.type = "button";
-      b.setAttribute("aria-pressed", String(a.emoji === e));
-      b.addEventListener("click", () => { mudarManual(m => { m.avatar = e; }); manualMudou(false); });
-      g.appendChild(b);
-    });
+    const a = avatarDe(eu), c = $("corGrade");
+    if ($("emojiGrade")) $("emojiGrade").hidden = true;
+    c.textContent = "";
     PALETA_AVATAR.forEach(cor => {
       const b = el("button", "cor-op"); b.type = "button"; b.style.background = cor;
       b.setAttribute("aria-label", "Cor " + cor); b.setAttribute("aria-pressed", String(a.cor === cor));
@@ -2725,7 +2720,9 @@
   let humores = [];          // { dia, jogador, valor, nota, atualizado_em } (mais novos primeiro)
   let sugestoes = [];        // sugestoes_cuidado (só leitura)
   let faixaHumorFechada = false;
-  const CARAS = { 1: "😣", 2: "😢", 3: "😐", 4: "🙂", 5: "😄" };
+  const HUMOR_ICONES = { 1: "angry", 2: "frown", 3: "meh", 4: "smile", 5: "laugh" };
+  const HUMOR_ROTULOS = { 1: "Péssimo", 2: "Mal", 3: "Mais ou menos", 4: "Bem", 5: "Ótimo" };
+  const CARAS = HUMOR_ROTULOS;
   const LIMITE_HUMORES = 800;
   const humorDe = (j, dia = hojeISO()) => humores.find(h => h.jogador === j && h.dia === dia) || null;
   async function carregarHumores(c) {
@@ -2800,7 +2797,7 @@
     $("humorOutroTitulo").textContent = `Humor ${nome ? "de " + nome : ""} hoje`;
     $("humorOutroCaras").hidden = !h;
     document.querySelectorAll("#humorOutroCaras span").forEach(s => s.classList.toggle("destaque", !!h && h.valor === Number(s.dataset.v)));
-    $("humorOutroCaras").setAttribute("aria-label", h ? `${nome}: ${CARAS[h.valor]}` : "");
+    $("humorOutroCaras").setAttribute("aria-label", h ? `${nome}: ${HUMOR_ROTULOS[h.valor] || ""}` : "");
     $("humorOutroNota").hidden = !(h && h.nota); $("humorOutroNota").textContent = h && h.nota ? `“${h.nota}”` : "";
     $("humorOutroVazio").hidden = !!h; $("humorOutroVazio").textContent = `${nome} ainda não disse como está hoje`;
     // dicas do Manual no humor baixo
@@ -3246,7 +3243,9 @@
         : x.status === "nao_consigo" ? `${outro} não conseguiu${tempo}` : x.status === "cancelado" ? "Cancelado" : "Esperando resposta";
       corpo.appendChild(el("p", "hist-sub", r + (x.resposta && !soSozinho(x) ? `: “${x.resposta}”` : "")));
     } else if (e.tipo === "humor") {
-      corpo.appendChild(el("p", "hist-t", `${CARAS[x.valor] || ""} ${nomeDe(x.jogador)} se sentiu ${["", "muito mal", "mal", "mais ou menos", "bem", "muito bem"][x.valor] || ""}`));
+      const pHist = el("p", "hist-t");
+      pHist.append(icone(HUMOR_ICONES[x.valor] || "meh", 16), document.createTextNode(` ${nomeDe(x.jogador)} se sentiu ${HUMOR_ROTULOS[x.valor] ? HUMOR_ROTULOS[x.valor].toLowerCase() : ""}`));
+      corpo.appendChild(pHist);
       if (x.nota) corpo.appendChild(el("p", "hist-sub", `“${x.nota}”`));
     } else if (e.tipo === "mural") {
       const b = el("button", "hist-mural"); b.type = "button";
@@ -3301,7 +3300,14 @@
     const X = i => 30 + i * 46, Y = v => 125 - (v - 1) * 27;
     [1, 2, 3, 4, 5].forEach(v => {
       svg.appendChild(svgEl("line", { x1: 22, x2: 312, y1: Y(v), y2: Y(v), class: "hs-grade" }));
-      svg.appendChild(svgEl("text", { x: 2, y: Y(v) + 5, class: "hs-cara" }, CARAS[v]));
+      const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      use.setAttribute("href", `icones.svg#${HUMOR_ICONES[v] || "meh"}`);
+      use.setAttribute("x", "2");
+      use.setAttribute("y", String(Y(v) - 8));
+      use.setAttribute("width", "16");
+      use.setAttribute("height", "16");
+      use.setAttribute("class", `hs-icone humor-${v}`);
+      svg.appendChild(use);
     });
     dias.forEach((d, i) => {
       const [a, m, dd] = d.split("-").map(Number);
@@ -3339,20 +3345,18 @@
   // avatar: emoji do Manual (v7) ou as iniciais num círculo colorido
   const CORES_AVATAR = ["#5B4BDB", "#E0405F"];
   const PALETA_AVATAR = ["#5B4BDB", "#E0405F", "#FF8A3D", "#1FA37A", "#2E86DE", "#B04BDB", "#C98A00", "#4A4A68"];
-  const EMOJIS_AVATAR = ["😀", "😎", "🥰", "😍", "🤓", "😇", "🥳", "😺", "🐶", "🐱", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐸", "🐵", "🐧", "🦄",
-    "🐝", "🦋", "🐢", "🐙", "🌸", "🌻", "🌈", "⭐", "🌙", "☀️", "🔥", "💧", "🍓", "🍑", "🍕", "🍩", "☕", "🎸", "🎮", "⚽"];
+  const EMOJIS_AVATAR = [];
   function avatarDe(i) {
     const m = manuais[i] || {};
-    return { emoji: EMOJIS_AVATAR.includes(m.avatar) ? m.avatar : "", cor: PALETA_AVATAR.includes(m.avatarCor) ? m.avatarCor : CORES_AVATAR[i] };
+    return { cor: PALETA_AVATAR.includes(m.avatarCor) ? m.avatarCor : CORES_AVATAR[i] };
   }
   function iniciais(nome) {
     const p = (nome || "").trim().split(/\s+/).filter(Boolean);
     return ((p[0] || "?")[0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
   }
   function avatarEl(i, classe) {
-    const a = avatarDe(i), x = el("span", "avatar" + (classe ? " " + classe : ""), a.emoji || iniciais(nomeDe(i)));
+    const a = avatarDe(i), x = el("span", "avatar" + (classe ? " " + classe : ""), iniciais(nomeDe(i)));
     x.style.background = a.cor;
-    if (a.emoji) x.classList.add("emoji");
     return x;
   }
   function desenharCabecalho(e) {
@@ -3360,7 +3364,11 @@
     const box = $("avatares");
     box.textContent = "";
     box.append(avatarEl(eu));
-    if (e.jogadores[1 - eu]) box.append(el("span", "coracao", "❤️"), avatarEl(1 - eu));
+    if (e.jogadores[1 - eu]) {
+      const coracao = el("span", "coracao");
+      coracao.appendChild(icone("heart", 16));
+      box.append(coracao, avatarEl(1 - eu));
+    }
   }
   // as fases seguintes acrescentam cartões (envelopes, semana, cápsulas…)
   const extrasDaCasa = [];
@@ -4767,7 +4775,18 @@
   }
 
   // carinhos: tocar grava em `carinhos`; quem recebe com o app aberto vê o emoji flutuando
-  const CARINHOS = { pensei: ["💭", "pensou em você"], beijo: ["😘", "mandou um beijo"], abraco: ["🤗", "mandou um abraço"], saudade: ["🥺", "está com saudade"] };
+  const CARINHOS = {
+    pensei: ["message-circle-heart", "pensou em você"],
+    beijo: ["heart", "mandou um beijo"],
+    abraco: ["heart-handshake", "mandou um abraço"],
+    saudade: ["cloud-moon", "está com saudade"]
+  };
+  const CARINHOS_ROTULOS = {
+    pensei: "Pensei em você",
+    beijo: "Beijo",
+    abraco: "Abraço",
+    saudade: "Saudade"
+  };
   let ultimoCarinho = 0, timerCarinho = null, resumoCarinhos = "";
   const vistoCarinhos = () => "lp-carinho-visto-" + codigo;
   function marcarCarinhoVisto(iso) {
@@ -4789,7 +4808,8 @@
   function mostrarCarinho(row) {
     const c = CARINHOS[row.tipo];
     if (!c) return;
-    $("carinhoEmoji").textContent = c[0];
+    $("carinhoEmoji").textContent = "";
+    $("carinhoEmoji").appendChild(icone(c[0], 48));
     $("carinhoTexto").textContent = `${nomeDe(row.de)} ${c[1]}`;
     const a = $("carinhoAnim");
     a.classList.remove("anima"); a.hidden = false; void a.offsetWidth; a.classList.add("anima");
@@ -4808,7 +4828,7 @@
     const novos = dados.carinhos.filter(x => x.de !== eu && (!visto || x.criada_em > visto));
     const conta = {};
     novos.forEach(x => { conta[x.tipo] = (conta[x.tipo] || 0) + 1; });
-    resumoCarinhos = Object.keys(CARINHOS).filter(t => conta[t]).map(t => `${CARINHOS[t][0]} × ${conta[t]}`).join(", ");
+    resumoCarinhos = Object.keys(CARINHOS).filter(t => conta[t]).map(t => `${CARINHOS_ROTULOS[t]} × ${conta[t]}`).join(", ");
     if (novos.length) marcarCarinhoVisto(novos[novos.length - 1].criada_em);
     desenharCarinhos();
   };
