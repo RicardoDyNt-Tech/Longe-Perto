@@ -9600,9 +9600,18 @@
     ["folclore", "Folclore"],
     ["futuro", "Futuro"]
   ];
-  const INV_FORMATOS = [["todos", "Todas"], ["curto", "Curto"], ["medio", "Médio"], ["longo", "Longo"]];
-  const INV_DIFS = [["todas", "Qualquer"], ["1", "Fácil"], ["2", "Média"], ["3", "Difícil"]];
-  const INV_SELOS = { lenda: "Lenda", criaturas: "Criaturas", mundo: "Mundo" };
+  const INV_TEMA_NOME = {
+    policial: "Policial", misterio: "Mistério", sombrio: "Sombrio",
+    fantasia: "Fantasia", folclore: "Folclore", futuro: "Futuro"
+  };
+  const INV_FILTRO_SELOS = [
+    ["todos", "Lenda e criaturas"],
+    ["lenda", "Só lenda"],
+    ["criaturas", "Só criaturas"]
+  ];
+  const INV_FORMATOS = [["todos", "Qualquer"], ["curto", "Curto"], ["medio", "Médio"], ["longo", "Longo"]];
+  const INV_DIFS = [["todas", "Qualquer", 0], ["1", "Fácil", 1], ["2", "Média", 2], ["3", "Difícil", 3]];
+  const INV_SELOS = { lenda: "Lenda", criaturas: "Criaturas", mundo: "Pelo mundo" };
   const INV_DOC_IC = {
     briefing: "file-text", depoimento: "file-text", laudo: "scroll-text",
     chat: "message-circle", email: "mail", registro: "file-text",
@@ -9621,8 +9630,28 @@
   let invCasos = [];
   let invPartidas = [];
   let invFiltroTema = "todos";
+  let invFiltroSelo = "todos";
   let invFiltroFmt = "todos";
   let invFiltroDif = "todas";
+  (function invLerFiltrosSalvos() {
+    try {
+      const f = JSON.parse(localStorage.getItem("lp-inv-filtros") || "{}");
+      if (f && INV_TEMAS.some(x => x[0] === f.tema)) invFiltroTema = f.tema;
+      if (invFiltroTema === "folclore" && f && INV_FILTRO_SELOS.some(x => x[0] === f.selo)) invFiltroSelo = f.selo;
+      if (f && INV_FORMATOS.some(x => x[0] === f.fmt)) invFiltroFmt = f.fmt;
+      if (f && INV_DIFS.some(x => x[0] === f.dif)) invFiltroDif = f.dif;
+    } catch (e) {}
+  })();
+  function invSalvarFiltros() {
+    try {
+      localStorage.setItem("lp-inv-filtros", JSON.stringify({
+        tema: invFiltroTema,
+        selo: invFiltroSelo,
+        fmt: invFiltroFmt,
+        dif: invFiltroDif
+      }));
+    } catch (e) {}
+  }
   let invCasoAtual = null;
   let invPartidaAtual = null;
   let invDossie = null;
@@ -9863,44 +9892,125 @@
 
     // Filtros
     const filtros = el("div", "inv-filtros");
+
+    // 1. Tipo (+ Selo quando Folclore)
+    const bTipo = el("div", "inv-filtro-bloco");
+    bTipo.appendChild(el("p", "inv-filtro-rotulo", "Tipo"));
     const abasTema = el("div", "inv-tema-abas");
-    abasTema.setAttribute("role", "tablist");
+    abasTema.setAttribute("role", "group");
+    abasTema.setAttribute("aria-label", "Tipo");
     INV_TEMAS.forEach(([val, rot]) => {
       const b = el("button", "inv-tab-btn", rot);
       b.type = "button";
-      b.setAttribute("role", "tab");
-      b.setAttribute("aria-selected", invFiltroTema === val ? "true" : "false");
-      b.addEventListener("click", () => { invFiltroTema = val; invRender(); });
+      b.setAttribute("aria-pressed", invFiltroTema === val ? "true" : "false");
+      b.addEventListener("click", () => {
+        invFiltroTema = val;
+        if (val !== "folclore") invFiltroSelo = "todos";
+        invSalvarFiltros();
+        invRender();
+      });
       abasTema.appendChild(b);
     });
-    filtros.appendChild(abasTema);
+    bTipo.appendChild(abasTema);
 
-    const linhaChips = el("div", "inv-chips-linha");
+    if (invFiltroTema === "folclore") {
+      const abasSelo = el("div", "inv-tema-abas");
+      abasSelo.setAttribute("role", "group");
+      abasSelo.setAttribute("aria-label", "Selo de Folclore");
+      INV_FILTRO_SELOS.forEach(([val, rot]) => {
+        const b = el("button", "inv-tab-btn", rot);
+        b.type = "button";
+        b.setAttribute("aria-pressed", invFiltroSelo === val ? "true" : "false");
+        b.addEventListener("click", () => {
+          invFiltroSelo = val;
+          invSalvarFiltros();
+          invRender();
+        });
+        abasSelo.appendChild(b);
+      });
+      bTipo.appendChild(abasSelo);
+    }
+    filtros.appendChild(bTipo);
+
+    // 2. Duração (controle segmentado)
+    const bDur = el("div", "inv-filtro-bloco");
+    bDur.appendChild(el("p", "inv-filtro-rotulo", "Duração"));
+    const segDur = el("div", "inv-seg");
+    segDur.setAttribute("role", "group");
+    segDur.setAttribute("aria-label", "Duração");
     INV_FORMATOS.forEach(([val, rot]) => {
-      const b = el("button", "inv-chip", rot);
+      const b = el("button", "inv-seg-btn", rot);
       b.type = "button";
       b.setAttribute("aria-pressed", invFiltroFmt === val ? "true" : "false");
-      b.addEventListener("click", () => { invFiltroFmt = val; invRender(); });
-      linhaChips.appendChild(b);
+      b.addEventListener("click", () => {
+        invFiltroFmt = val;
+        invSalvarFiltros();
+        invRender();
+      });
+      segDur.appendChild(b);
     });
-    INV_DIFS.forEach(([val, rot]) => {
-      const b = el("button", "inv-chip", val === "todas" ? "Dif: todas" : rot);
+    bDur.appendChild(segDur);
+    filtros.appendChild(bDur);
+
+    // 3. Dificuldade (controle segmentado com 3 barrinhas)
+    const bDif = el("div", "inv-filtro-bloco");
+    bDif.appendChild(el("p", "inv-filtro-rotulo", "Dificuldade"));
+    const segDif = el("div", "inv-seg");
+    segDif.setAttribute("role", "group");
+    segDif.setAttribute("aria-label", "Dificuldade");
+    INV_DIFS.forEach(([val, rot, nBarras]) => {
+      const b = el("button", "inv-seg-btn");
       b.type = "button";
       b.setAttribute("aria-pressed", invFiltroDif === val ? "true" : "false");
-      b.addEventListener("click", () => { invFiltroDif = val; invRender(); });
-      linhaChips.appendChild(b);
+      if (nBarras > 0) {
+        const bw = el("span", "inv-seg-barras");
+        bw.setAttribute("aria-hidden", "true");
+        for (let i = 1; i <= 3; i++) {
+          bw.appendChild(el("span", "inv-seg-barra" + (i <= nBarras ? " ativo" : "")));
+        }
+        b.appendChild(bw);
+      }
+      b.appendChild(el("span", "", rot));
+      b.addEventListener("click", () => {
+        invFiltroDif = val;
+        invSalvarFiltros();
+        invRender();
+      });
+      segDif.appendChild(b);
     });
-    filtros.appendChild(linhaChips);
-    raiz.appendChild(filtros);
+    bDif.appendChild(segDif);
+    filtros.appendChild(bDif);
 
-    // Lista de casos
-    const lista = el("div", "inv-casos-lista");
+    // Lista filtrada e linha de Resultado
     const filtrados = invCasos.filter(c => {
       if (invFiltroTema !== "todos" && c.tema !== invFiltroTema) return false;
+      if (invFiltroTema === "folclore" && invFiltroSelo !== "todos" && c.selo !== invFiltroSelo) return false;
       if (invFiltroFmt !== "todos" && c.formato !== invFiltroFmt) return false;
       if (invFiltroDif !== "todas" && String(c.dificuldade) !== invFiltroDif) return false;
       return true;
     });
+
+    const temFiltro = invFiltroTema !== "todos" || invFiltroSelo !== "todos" || invFiltroFmt !== "todos" || invFiltroDif !== "todas";
+    const resLinha = el("div", "inv-resultado-linha");
+    resLinha.appendChild(el("span", "", `${filtrados.length} ${filtrados.length === 1 ? "caso" : "casos"}`));
+    if (temFiltro) {
+      const btnLimpar = el("button", "linkbtn", "Limpar filtros");
+      btnLimpar.type = "button";
+      btnLimpar.addEventListener("click", () => {
+        invFiltroTema = "todos";
+        invFiltroSelo = "todos";
+        invFiltroFmt = "todos";
+        invFiltroDif = "todas";
+        invSalvarFiltros();
+        invRender();
+      });
+      resLinha.appendChild(btnLimpar);
+    }
+    filtros.appendChild(resLinha);
+    raiz.appendChild(filtros);
+
+    // Lista de casos
+    const lista = el("div", "inv-casos-lista");
 
     if (!filtrados.length) {
       lista.appendChild(el("p", "inv-sub", "Nenhum caso encontrado com esses filtros."));
@@ -9932,6 +10042,7 @@
 
       const rodape = el("div", "inv-caso-rodape");
       const info = el("div", "inv-caso-info");
+      if (INV_TEMA_NOME[c.tema]) info.appendChild(el("span", "", INV_TEMA_NOME[c.tema]));
       info.appendChild(el("span", "", `~${c.minutos} min`));
       const difWrap = el("span", "inv-dif-tracos");
       difWrap.setAttribute("aria-label", `Dificuldade ${c.dificuldade} de 3`);
