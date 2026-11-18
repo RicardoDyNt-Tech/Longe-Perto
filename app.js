@@ -783,7 +783,7 @@
     if (texto.length < 3) return erro("erroCardapio", "Escreva o desejo (pelo menos 3 letras).");
     if (!CAT_DESEJO[cat]) return;
     $("desejoSalvar").disabled = true;
-    const { data, error } = await sb.rpc("desejos_item_criar", { p_sala: codigo, p_categoria: cat, p_nivel: CAT_DESEJO[cat][1], p_texto: texto.slice(0, 140), p_emoji: "\u2728" });
+    const { data, error } = await sb.rpc("desejos_item_criar", { p_sala: codigo, p_categoria: cat, p_nivel: CAT_DESEJO[cat][1], p_texto: texto.slice(0, 140), p_emoji: "✨" });
     $("desejoSalvar").disabled = false;
     if (error) return erro("erroCardapio", /limite/.test(error.message || "") ? "A sala já tem 100 desejos próprios." : "Não consegui adicionar. Confira a internet.");
     erro("erroCardapio", "");
@@ -2338,8 +2338,35 @@
     pa.textContent = ""; pa.appendChild(avatarEl(eu, "grande"));
     $("perfilNome").textContent = estado.jogadores[eu] || "";
     desenharEscolhaAvatar();
+    atualizarBotoesTema();
     if (refazForm || !$("manualForm").childElementCount) desenharManualForm();
     desenharManualOutro();
+  }
+  function temaAtual() {
+    try { const t = localStorage.getItem("lp-tema"); return (t === "noite" || t === "papel") ? t : "auto"; } catch (e) { return "auto"; }
+  }
+  function aplicarTema(val) {
+    if (val === "noite" || val === "papel") {
+      document.documentElement.setAttribute("data-tema", val);
+      try { localStorage.setItem("lp-tema", val); } catch (e) {}
+    } else {
+      document.documentElement.removeAttribute("data-tema");
+      try { localStorage.removeItem("lp-tema"); } catch (e) {}
+    }
+    atualizarBotoesTema();
+  }
+  function atualizarBotoesTema() {
+    const t = temaAtual();
+    document.querySelectorAll("#temaOpcoes [data-tema-val]").forEach(b => {
+      b.setAttribute("aria-pressed", String(b.dataset.temaVal === t));
+    });
+  }
+  if ($("temaOpcoes")) {
+    $("temaOpcoes").addEventListener("click", ev => {
+      const b = ev.target.closest("[data-tema-val]");
+      if (b) aplicarTema(b.dataset.temaVal);
+    });
+    atualizarBotoesTema();
   }
   function desenharEscolhaAvatar() {
     const a = avatarDe(eu), c = $("corGrade");
@@ -2551,8 +2578,8 @@
     const lista = minhaLista();
     const escolhidos = dengoSel.map(id => lista.find(m => m.id === id)).filter(Boolean);
     dengoRascunho = escolhidos.length
-      ? escolhidos.map(m => ({ icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "\u{1F497}", titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
-      : [{ icone: "hand-heart", emoji: "\u{1F497}", titulo: "Dengo", detalhe: "", chave: null }];
+      ? escolhidos.map(m => ({ icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "💗", titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
+      : [{ icone: "hand-heart", emoji: "💗", titulo: "Dengo", detalhe: "", chave: null }];
     const ul = $("dengoResumo"); ul.textContent = "";
     dengoRascunho.forEach((x, i) => {
       const li = el("li");
@@ -2578,7 +2605,7 @@
     // o detalhe sugerido sem nada depois ("O que eu quero: ") não vai
     const itens = dengoRascunho.map(x => {
       const d = (x.detalhe || "").trim(), sug = (minhaLista().find(m => m.titulo === x.titulo) || {}).detalhe || "";
-      const o = { icone: x.icone || iconeDeEmoji(x.emoji, "hand-heart"), emoji: x.emoji || "\u{1F497}", titulo: x.titulo };
+      const o = { icone: x.icone || iconeDeEmoji(x.emoji, "hand-heart"), emoji: x.emoji || "💗", titulo: x.titulo };
       if (d && d !== sug.trim()) o.detalhe = d.slice(0, 80);
       if (x.chave) o.chave = x.chave;
       return o;
@@ -2633,7 +2660,7 @@
   function abrirPedidos() {
     const minhas = meusModelos();
     pedidosRascunho = (minhas.length ? minhas : padroes()).map(m => ({
-      id: minhas.length ? m.id : null, chave: m.chave || null, icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "\u{1F497}", titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false }));
+      id: minhas.length ? m.id : null, chave: m.chave || null, icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "💗", titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false }));
     erro("erroPedidos", "");
     desenharPedidosEdit();
     $("dlgPedidos").showModal();
@@ -2650,7 +2677,7 @@
       btnIc.addEventListener("click", () => {
         const idx = DENGO_ICONES.indexOf(p.icone || "hand-heart");
         p.icone = DENGO_ICONES[(idx + 1) % DENGO_ICONES.length];
-        p.emoji = EMOJI_DE_ICONE[p.icone] || "\u{1F497}";
+        p.emoji = EMOJI_DE_ICONE[p.icone] || "💗";
         btnIc.textContent = "";
         btnIc.appendChild(icone(p.icone, 20));
       });
@@ -2682,7 +2709,7 @@
   }
   async function salvarPedidos() {
     if (!codigo || !pedidosRascunho) return;
-    const linhas = pedidosRascunho.map((p, i) => ({ id: p.id, sala: codigo, jogador: eu, chave: p.chave, icone: p.icone || iconeDeEmoji(p.emoji, "hand-heart"), emoji: (p.emoji || EMOJI_DE_ICONE[p.icone] || "\u{1F497}").trim(), titulo: p.titulo.trim(),
+    const linhas = pedidosRascunho.map((p, i) => ({ id: p.id, sala: codigo, jogador: eu, chave: p.chave, icone: p.icone || iconeDeEmoji(p.emoji, "hand-heart"), emoji: (p.emoji || EMOJI_DE_ICONE[p.icone] || "💗").trim(), titulo: p.titulo.trim(),
       detalhe: p.detalhe.trim() ? p.detalhe.slice(0, 120) : null, ordem: i + 1, ativo: p.ativo }));
     if (linhas.some(l => l.titulo.length < 2)) return erro("erroPedidos", "Cada pedido precisa de um nome (2 letras ou mais).");
     if (!linhas.some(l => l.ativo)) return erro("erroPedidos", "Deixe pelo menos um pedido ativo.");
@@ -2710,7 +2737,7 @@
   }
   function novoPedido() {
     if (pedidosRascunho.length >= 30) return erro("erroPedidos", "Dá para ter até 30 pedidos.");
-    pedidosRascunho.push({ id: null, chave: null, emoji: "\u{1F497}", titulo: "", detalhe: "", ativo: true });
+    pedidosRascunho.push({ id: null, chave: null, emoji: "💗", titulo: "", detalhe: "", ativo: true });
     desenharPedidosEdit();
     const ts = $("pedidosEdit").querySelectorAll(".pe-titulo");
     ts[ts.length - 1].focus();
@@ -5037,7 +5064,7 @@
     const data = $("marcoData").value;
     const descricao = $("marcoDescricao").value.trim().slice(0, 300) || null;
     const iconeNome = $("marcoIcone").value || "calendar-heart";
-    const emoji = EMOJI_DE_ICONE[iconeNome] || "\u2728";
+    const emoji = EMOJI_DE_ICONE[iconeNome] || "✨";
     const ehPrincipal = $("marcoPrincipal").checked;
     if (!titulo) return erro("erroMarco", "Dê um título ao marco.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("erroMarco", "Escolha a data.");
@@ -9271,7 +9298,7 @@
     if (!configurado() || !window.supabase) {
       erro("erroLobby", !configurado()
         ? "Falta configurar o Supabase no arquivo config.js."
-        : "Não foi possível carregar o Supabase. Confira a internet ou desative bloqueadores e recarregue a página.");
+        : "Sem conexão. Tentando de novo…");
       $("criar").disabled = $("entrar").disabled = true;
       return;
     }
@@ -9318,6 +9345,7 @@
     };
     const obs = new MutationObserver(corDaBarra);
     obs.observe(document.body, { attributes: true, attributeFilter: ["data-modo"] });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-tema"] });
     ["noite", "companhia"].forEach(id => { if ($(id)) obs.observe($(id), { attributes: true, attributeFilter: ["hidden"] }); });
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", corDaBarra);
     corDaBarra();

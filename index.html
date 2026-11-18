@@ -5,14 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Longe &amp; Perto — verdade ou desafio a distância</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#F6EBF0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17132A" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F5F2ED" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/marca.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=61">
+<link rel="stylesheet" href="style.css?v=62">
+<script>(function(){try{var t=localStorage.getItem("lp-tema");if(t==="noite"||t==="papel")document.documentElement.setAttribute("data-tema",t);}catch(e){}})();</script>
 </head>
 <body>
 <!-- ícones dos controles: traço único, cor do texto -->
@@ -718,6 +716,14 @@
           <div class="emoji-grade" id="emojiGrade" role="group" aria-label="Emoji do avatar"></div>
           <div class="cor-grade" id="corGrade" role="group" aria-label="Cor do avatar"></div>
         </details>
+        <section class="perfil-bloco" id="perfilAparencia" aria-labelledby="perfilAparenciaTitulo">
+          <h3 class="casa-h3" id="perfilAparenciaTitulo">Aparência</h3>
+          <div class="tema-opcoes" id="temaOpcoes" role="group" aria-label="Escolha de tema">
+            <button type="button" class="tema-btn" data-tema-val="auto" aria-pressed="true">Automático</button>
+            <button type="button" class="tema-btn" data-tema-val="noite" aria-pressed="false">Noite</button>
+            <button type="button" class="tema-btn" data-tema-val="papel" aria-pressed="false">Papel</button>
+          </div>
+        </section>
         <section class="perfil-bloco" id="meuManual" aria-labelledby="meuManualTitulo">
           <h3 class="casa-h3" id="meuManualTitulo">Meu Manual <span class="manual-salvo" id="manualSalvo" aria-live="polite"></span></h3>
           <p class="config-dica">O Manual fica visível para os dois e, como todo o resto, pode ser lido por quem tiver o código da sala. Não coloque dados de saúde.</p>
