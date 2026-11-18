@@ -787,7 +787,7 @@
     if (texto.length < 3) return erro("erroCardapio", "Escreva o desejo (pelo menos 3 letras).");
     if (!CAT_DESEJO[cat]) return;
     $("desejoSalvar").disabled = true;
-    const { data, error } = await sb.rpc("desejos_item_criar", { p_sala: codigo, p_categoria: cat, p_nivel: CAT_DESEJO[cat][1], p_texto: texto.slice(0, 140), p_emoji: "✨" });
+    const { data, error } = await sb.rpc("desejos_item_criar", { p_sala: codigo, p_categoria: cat, p_nivel: CAT_DESEJO[cat][1], p_texto: texto.slice(0, 140), p_emoji: "\u2728" });
     $("desejoSalvar").disabled = false;
     if (error) return erro("erroCardapio", /limite/.test(error.message || "") ? "A sala já tem 100 desejos próprios." : "Não consegui adicionar. Confira a internet.");
     erro("erroCardapio", "");
@@ -2555,8 +2555,8 @@
     const lista = minhaLista();
     const escolhidos = dengoSel.map(id => lista.find(m => m.id === id)).filter(Boolean);
     dengoRascunho = escolhidos.length
-      ? escolhidos.map(m => ({ icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "💗", titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
-      : [{ icone: "hand-heart", emoji: "💗", titulo: "Dengo", detalhe: "", chave: null }];
+      ? escolhidos.map(m => ({ icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "\u{1F497}", titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
+      : [{ icone: "hand-heart", emoji: "\u{1F497}", titulo: "Dengo", detalhe: "", chave: null }];
     const ul = $("dengoResumo"); ul.textContent = "";
     dengoRascunho.forEach((x, i) => {
       const li = el("li");
@@ -2582,7 +2582,7 @@
     // o detalhe sugerido sem nada depois ("O que eu quero: ") não vai
     const itens = dengoRascunho.map(x => {
       const d = (x.detalhe || "").trim(), sug = (minhaLista().find(m => m.titulo === x.titulo) || {}).detalhe || "";
-      const o = { icone: x.icone || iconeDeEmoji(x.emoji, "hand-heart"), emoji: x.emoji || "💗", titulo: x.titulo };
+      const o = { icone: x.icone || iconeDeEmoji(x.emoji, "hand-heart"), emoji: x.emoji || "\u{1F497}", titulo: x.titulo };
       if (d && d !== sug.trim()) o.detalhe = d.slice(0, 80);
       if (x.chave) o.chave = x.chave;
       return o;
@@ -2637,7 +2637,7 @@
   function abrirPedidos() {
     const minhas = meusModelos();
     pedidosRascunho = (minhas.length ? minhas : padroes()).map(m => ({
-      id: minhas.length ? m.id : null, chave: m.chave || null, icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "💗", titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false
+      id: minhas.length ? m.id : null, chave: m.chave || null, icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "\u{1F497}", titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false
     }));
     erro("erroPedidos", "");
     desenharPedidosEdit();
@@ -2655,7 +2655,7 @@
       btnIc.addEventListener("click", () => {
         const idx = DENGO_ICONES.indexOf(p.icone || "hand-heart");
         p.icone = DENGO_ICONES[(idx + 1) % DENGO_ICONES.length];
-        p.emoji = EMOJI_DE_ICONE[p.icone] || "💗";
+        p.emoji = EMOJI_DE_ICONE[p.icone] || "\u{1F497}";
         btnIc.textContent = "";
         btnIc.appendChild(icone(p.icone, 20));
       });
@@ -2681,14 +2681,14 @@
         x.addEventListener("click", () => { pedidosRascunho.splice(i, 1); desenharPedidosEdit(); });
         ac.appendChild(x);
       }
-      li.append(emo, tit, det, ac);
+      li.append(tit, det, ac);
       ul.appendChild(li);
     });
   }
   async function salvarPedidos() {
     if (!codigo || !pedidosRascunho) return;
     const linhas = pedidosRascunho.map((p, i) => ({
-      id: p.id, sala: codigo, jogador: eu, chave: p.chave, icone: p.icone || iconeDeEmoji(p.emoji, "hand-heart"), emoji: (p.emoji || EMOJI_DE_ICONE[p.icone] || "💗").trim(), titulo: p.titulo.trim(),
+      id: p.id, sala: codigo, jogador: eu, chave: p.chave, icone: p.icone || iconeDeEmoji(p.emoji, "hand-heart"), emoji: (p.emoji || EMOJI_DE_ICONE[p.icone] || "\u{1F497}").trim(), titulo: p.titulo.trim(),
       detalhe: p.detalhe.trim() ? p.detalhe.slice(0, 120) : null, ordem: i + 1, ativo: p.ativo
     }));
     if (linhas.some(l => l.titulo.length < 2)) return erro("erroPedidos", "Cada pedido precisa de um nome (2 letras ou mais).");
@@ -2717,7 +2717,7 @@
   }
   function novoPedido() {
     if (pedidosRascunho.length >= 30) return erro("erroPedidos", "Dá para ter até 30 pedidos.");
-    pedidosRascunho.push({ id: null, chave: null, emoji: "💗", titulo: "", detalhe: "", ativo: true });
+    pedidosRascunho.push({ id: null, chave: null, emoji: "\u{1F497}", titulo: "", detalhe: "", ativo: true });
     desenharPedidosEdit();
     const ts = $("pedidosEdit").querySelectorAll(".pe-titulo");
     ts[ts.length - 1].focus();
