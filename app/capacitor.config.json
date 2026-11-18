@@ -9,7 +9,7 @@
     "errorPath": "index.html"
   },
   "android": {
-    "backgroundColor": "#17132A",
+    "backgroundColor": "#141210",
     "appendUserAgent": "LongePertoApp"
   },
   "plugins": {
