@@ -9814,11 +9814,63 @@
     return icone(id, tam, cls);
   }
 
+  let invWake = null;
+
+  async function invManterTelaAcesa(ligar) {
+    try {
+      if (ligar && !invWake && navigator.wakeLock) {
+        invWake = await navigator.wakeLock.request("screen");
+        invWake.addEventListener("release", () => { invWake = null; });
+      } else if (!ligar && invWake) {
+        await invWake.release();
+        invWake = null;
+      }
+    } catch (e) { }
+  }
+
+  function invNotificarParceiro(texto) {
+    aviso(texto);
+    try {
+      const C = window.Capacitor;
+      const LN = C && C.Plugins && C.Plugins.LocalNotifications;
+      if (LN && typeof LN.schedule === "function") {
+        LN.schedule({ notifications: [{ id: Math.floor(Date.now() % 100000), title: "Investigação", body: texto }] }).catch(() => { });
+        return;
+      }
+      if ("Notification" in window && document.hidden && Notification.permission === "granted") {
+        new Notification("Longe & Perto — Investigação", { body: texto });
+      }
+    } catch (e) { }
+  }
+
+  async function invGanharVales3Estrelas(row) {
+    if (!row || row.estado !== "concluido" || row.estrelas !== 3 || row.caso === "teste-biscoito") return;
+    if (!config || !config.fatura || !config.fatura.vales || !codigo) return;
+    const pool = (valesModelos || []).filter(v => config.niveis[v.nivel]);
+    if (!pool.length) return;
+    const credores = row.um_celular ? [0, 1] : [eu];
+    for (const c of credores) {
+      if (!nomeDe(c)) continue;
+      const chave = `inv-vale:${row.id}:${c}`;
+      if (valesDados.has(chave)) continue;
+      valesDados.add(chave);
+      const v = pool[Math.floor(Math.random() * pool.length)];
+      const { data, error } = await sb.from("cofre")
+        .insert({ sala: codigo, carta: v.texto.slice(0, 280), nota: "Caso resolvido com 3 estrelas", autor: nomeDe(c).slice(0, 20), tipo: "vale", credor: c, minutos: v.minutos || null })
+        .select("*").single();
+      if (!error && data) juntarCofre(data);
+    }
+  }
+
   function invAplicarVisibilidade() {
-    const ativo = !(config && config.investigacao && config.investigacao.ativo === false);
+    const semBateria = typeof bateriaAlguem === "function" && estado && bateriaAlguem(estado);
+    const ativo = !(config && config.investigacao && config.investigacao.ativo === false) && !semBateria;
     if ($("atalhoInvestigacao")) $("atalhoInvestigacao").hidden = !ativo;
     if ($("jogoBtnInvWrap")) $("jogoBtnInvWrap").hidden = !ativo;
-    if (!ativo && vista === "vInvestigacao") mostrarVista(estado && estado.fixa ? "casa" : "jogo");
+    if (!ativo && vista === "vInvestigacao") {
+      invManterTelaAcesa(false);
+      mostrarVista(estado && estado.fixa ? "casa" : "jogo");
+    }
   }
 
   function invTrack(lendo) {
@@ -9952,11 +10004,16 @@
     } else if (invPartidaAtual.estado === "concluido" || invPartidaAtual.estado === "revelado") {
       const { data: rData, error: rErr } = await sb.rpc("inv_relatorio", { p_sala: codigo, p_inv: invId });
       if (!rErr && rData) invRelatorio = rData;
+      if (invPartidaAtual.estado === "concluido") {
+        verificarConquistas();
+        invGanharVales3Estrelas(invPartidaAtual);
+      }
     }
   }
 
   async function invReceberPartida(tipo, row) {
     if (!row) return;
+    const antes = invPartidas.find(p => p.id === row.id) || null;
     if (tipo === "DELETE") {
       invPartidas = invPartidas.filter(p => p.id !== row.id);
       if (invPartidaAtual && invPartidaAtual.id === row.id) {
@@ -9973,6 +10030,21 @@
     }
     invPartidas = invPartidas.filter(p => p.id !== row.id).concat(row);
     invAtualizarResumoInicio();
+
+    if (!row.um_celular) {
+      if (row.estado === "envelope" && row.abriu && row.abriu[1 - eu] && !row.abriu[eu] && (!antes || !antes.abriu || !antes.abriu[1 - eu])) {
+        invNotificarParceiro(`${nomeDe(1 - eu)} abriu um caso. Seu envelope está esperando.`);
+      } else if (row.estado === "acusacao" && row.proposta && row.proposta.por !== eu && (!antes || antes.estado !== "acusacao")) {
+        invNotificarParceiro(`${nomeDe(1 - eu)} fez uma acusação e precisa da sua assinatura.`);
+      } else if (antes && Array.isArray(row.travas_abertas) && Array.isArray(antes.travas_abertas) && row.travas_abertas.length > antes.travas_abertas.length) {
+        invNotificarParceiro("Uma prova foi destrancada.");
+      }
+    }
+    if (row.estado === "concluido" && (!antes || antes.estado !== "concluido")) {
+      verificarConquistas();
+      invGanharVales3Estrelas(row);
+    }
+
     if (invPartidaAtual && invPartidaAtual.id === row.id) {
       invPartidaAtual = row;
       await invCarregarEstadoCaso();
@@ -9998,6 +10070,7 @@
 
   function invRender() {
     invPararContagem();
+    invManterTelaAcesa(vista === "vInvestigacao" && !!invCasoAtual);
     const raiz = $("invRaiz");
     if (!raiz) return;
     raiz.textContent = "";
