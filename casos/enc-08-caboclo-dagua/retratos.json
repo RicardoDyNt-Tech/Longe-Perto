@@ -1,0 +1,32 @@
+{
+  "estilo": "Painterly realistic portrait of a fictional adult character from Brazilian folklore, head and shoulders, centered, facing the camera, deep Atlantic forest at night behind, moonlight and firefly glow, rich greens and warm skin tones, detailed face, storybook realism. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "gaudencio",
+      "semente": 1020,
+      "prompt": "Brazilian merchant, 54 years old, timeless rural Brazil folklore, light skin, wrinkled linen suit, panama hat, partner ring, smooth worried face, riverside light, painterly."
+    },
+    {
+      "id": "caboclo",
+      "semente": 1027,
+      "prompt": "Brazilian folklore river spirit Caboclo-d'Água, ageless short muscular man with mud-colored skin, red eyes, paddle-like hands, rising from murky river, fierce, painterly."
+    },
+    {
+      "id": "abel",
+      "semente": 1034,
+      "prompt": "Brazilian boat carpenter, 66 years old, timeless rural Brazil, dark skin, white hair with sawdust, carpenter apron, hand plane, proud careful face, workshop lamp, painterly."
+    },
+    {
+      "id": "bia",
+      "semente": 1041,
+      "prompt": "Brazilian woman, 50 years old, timeless rural Brazil, olive skin, black mourning dress, veil, handkerchief, grieving face, painterly."
+    },
+    {
+      "id": "ozorio",
+      "semente": 1048,
+      "prompt": "Brazilian elderly fisherman, 72 years old, timeless rural Brazil, weathered dark skin, old leather hat, pipe, fishing net, wise watchful eyes, river dawn, painterly."
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult from the Brazilian countryside today, head and shoulders, centered, facing the camera, warm lantern and dusk light, dark rural background out of focus, natural skin texture, earthy warm colors, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "ronaldo",
+      "semente": 1018,
+      "prompt": "Brazilian gold miner, 45 years old, contemporary Amazon, tan skin, wide-brimmed hat, torn t-shirt, gold tooth, mud-caked arms, sly grin, jungle mining camp at night."
+    },
+    {
+      "id": "zefa",
+      "semente": 1025,
+      "prompt": "Brazilian woman, 60 years old, contemporary, dark skin, headscarf, printed apron, wooden spoon in hand, motherly tired face, camp kitchen light."
+    },
+    {
+      "id": "gringo",
+      "semente": 1032,
+      "prompt": "Brazilian man, 52 years old, contemporary, pale sunburned skin, blond gray hair, sunglasses on head, vest with precision scale, thick watch, calculating smile, shop light."
+    },
+    {
+      "id": "mineirinho",
+      "semente": 1039,
+      "prompt": "Brazilian man, 38 years old, contemporary, pale feverish light brown skin, sweaty shirt, blanket over shoulders, hollow eyes, clinic light."
+    },
+    {
+      "id": "sandra",
+      "semente": 1046,
+      "prompt": "Brazilian woman, 33 years old, contemporary, medium brown skin, hair tied up, travel backpack, phone in hand, grieving determined face, riverboat at dawn."
+    }
+  ]
+}

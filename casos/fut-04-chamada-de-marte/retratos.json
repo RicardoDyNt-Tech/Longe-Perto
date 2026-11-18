@@ -1,0 +1,27 @@
+{
+  "estilo": "Cinematic science fiction portrait of a fictional adult in the future, head and shoulders, centered, facing the camera, soft cool rim light with a warm key light, blurred futuristic interior behind, subtle reflections, realistic skin texture, 85mm lens, sharp focus. No text, no letters, no watermark, no logos.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "gael",
+      "semente": 1023,
+      "prompt": "Futuristic Mars colonist, 44 years old, year 2141, tan weathered skin with faint radiation marks, rust-colored colonist jumpsuit, colony badge, hard defensive gaze, red Martian dome behind."
+    },
+    {
+      "id": "beatriz",
+      "semente": 1030,
+      "prompt": "Futuristic woman, 39 years old, year 2141 Lisbon, light olive skin, hair pinned with tiny lights, shimmering evening gown, crystal earrings, elegant tense face, opera house light."
+    },
+    {
+      "id": "kai",
+      "semente": 1037,
+      "prompt": "Futuristic android assistant, smooth featureless face with green light eyes, slim gray body, standing in a repair bay, cinematic cool light."
+    },
+    {
+      "id": "yara",
+      "semente": 1044,
+      "prompt": "Futuristic investor, 50 years old, year 2141, light skin, sleek silver hair, thin glasses, long white coat, cool calculating face, spaceport lounge."
+    }
+  ]
+}

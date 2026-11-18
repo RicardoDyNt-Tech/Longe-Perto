@@ -1,0 +1,22 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult from the Brazilian countryside today, head and shoulders, centered, facing the camera, warm lantern and dusk light, dark rural background out of focus, natural skin texture, earthy warm colors, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "juninho",
+      "semente": 1022,
+      "prompt": "Brazilian young man, 24 years old, contemporary rural, light brown skin, backwards cap, amateur football jersey, phone in hand, restless smile, farmyard at dusk with lantern light."
+    },
+    {
+      "id": "benedita",
+      "semente": 1029,
+      "prompt": "Brazilian elderly woman, 71 years old, dark skin, white headscarf, sprig of rue behind ear, rosary necklace, knowing calm eyes, rural chapel at dusk."
+    },
+    {
+      "id": "tiao",
+      "semente": 1036,
+      "prompt": "Brazilian man, 58 years old, weathered tan skin, straw hat, worn boots, strong calloused hands, worried face, stable lantern light."
+    }
+  ]
+}

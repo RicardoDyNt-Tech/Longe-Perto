@@ -1,0 +1,32 @@
+{
+  "estilo": "Cinematic science fiction portrait of a fictional adult in the future, head and shoulders, centered, facing the camera, soft cool rim light with a warm key light, blurred futuristic interior behind, subtle reflections, realistic skin texture, 85mm lens, sharp focus. No text, no letters, no watermark, no logos.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "brandon",
+      "semente": 1020,
+      "prompt": "Futuristic Mars mining chief, 50 years old, year 2150, weathered light skin, scar through eyebrow, red-dust-covered mining jumpsuit, helmet under arm, hard calculating face, Martian dome at night."
+    },
+    {
+      "id": "leif",
+      "semente": 1027,
+      "prompt": "Futuristic Mars colony doctor, 47 years old, year 2150, fair skin, blond hair tied back, white coat, surgical gloves, tired grieving face, dome medical bay."
+    },
+    {
+      "id": "mira",
+      "semente": 1034,
+      "prompt": "Futuristic Mars botanist, 34 years old, year 2150, light skin, black bob hair, green jumpsuit with flowers in pocket, soil under nails, defensive gentle face, greenhouse dome with plants."
+    },
+    {
+      "id": "rafa",
+      "semente": 1041,
+      "prompt": "Futuristic Brazilian rover pilot, 31 years old, year 2150, medium brown skin, curly hair, rover pilot suit with Brazilian flag patch, wide easygoing smile, Martian landscape."
+    },
+    {
+      "id": "argus",
+      "semente": 1048,
+      "prompt": "Futuristic colony artificial intelligence, represented as a red circular camera eye glowing in a white Martian dome corridor, calm and watchful, cinematic."
+    }
+  ]
+}

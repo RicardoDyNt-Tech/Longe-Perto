@@ -1,0 +1,32 @@
+{
+  "estilo": "Painterly realistic portrait of a fictional adult character from Brazilian folklore, head and shoulders, centered, facing the camera, deep Atlantic forest at night behind, moonlight and firefly glow, rich greens and warm skin tones, detailed face, storybook realism. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "romao",
+      "semente": 1019,
+      "prompt": "Brazilian shopkeeper, 57 years old, timeless rural Brazil folklore, light skin, round belly, shop apron, pencil behind ear, jovial mask over nervousness, lamp-lit store, painterly."
+    },
+    {
+      "id": "cuca",
+      "semente": 1026,
+      "prompt": "Brazilian folklore witch Cuca, ancient woman with an alligator head, feather shawl, bone rings, cauldron steam, cave apothecary shelves with bottles, eerie and wise, painterly."
+    },
+    {
+      "id": "lia",
+      "semente": 1033,
+      "prompt": "Brazilian woman, 44 years old, timeless rural Brazil, medium brown skin, yellow party dress, flower in hair, shoes in hand, lively defiant face, festival lights, painterly."
+    },
+    {
+      "id": "neco",
+      "semente": 1040,
+      "prompt": "Brazilian boatman, 39 years old, timeless rural Brazil, dark skin, torn straw hat, oar on shoulder, barefoot, calm humble face, river at night with lanterns, painterly."
+    },
+    {
+      "id": "iara",
+      "semente": 1047,
+      "prompt": "Brazilian folklore water spirit Iara, ageless adult woman with waist-long black hair and river-green eyes, half in dark water, defiant gaze, painterly."
+    }
+  ]
+}

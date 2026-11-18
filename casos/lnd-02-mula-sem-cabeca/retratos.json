@@ -1,0 +1,22 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult from the Brazilian countryside today, head and shoulders, centered, facing the camera, warm lantern and dusk light, dark rural background out of focus, natural skin texture, earthy warm colors, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "lindomar",
+      "semente": 1022,
+      "prompt": "Brazilian man, 52 years old, contemporary small town, light brown skin, thick mustache, bar apron, dish towel on shoulder, tired forced smile, bar lights at night."
+    },
+    {
+      "id": "zuleide",
+      "semente": 1029,
+      "prompt": "Brazilian elderly woman, 67 years old, light skin, lace head veil, thick glasses, crochet bag, frightened devout face, dim church light."
+    },
+    {
+      "id": "cicero",
+      "semente": 1036,
+      "prompt": "Brazilian cowboy, 39 years old, sunburned brown skin, leather vaqueiro hat and leather jacket, spurs, proud weathered face, rodeo lights at night."
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "estilo": "Cinematic science fiction portrait of a fictional adult in the future, head and shoulders, centered, facing the camera, soft cool rim light with a warm key light, blurred futuristic interior behind, subtle reflections, realistic skin texture, 85mm lens, sharp focus. No text, no letters, no watermark, no logos.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "nadia",
+      "semente": 1024,
+      "prompt": "Futuristic security chief, 43 years old, year 2160 orbital station, light brown skin, dark hair in a low bun, black security uniform, radiation badge on chest, stern controlled face, monitor-lit security room."
+    },
+    {
+      "id": "teo",
+      "semente": 1031,
+      "prompt": "Futuristic cargo operator, 30 years old, year 2160, light skin, freckles, yellow cargo jumpsuit, magnetic gloves, earpiece, nervous honest face, control room screens."
+    },
+    {
+      "id": "ines",
+      "semente": 1038,
+      "prompt": "Futuristic Korean-Brazilian scientist, 39 years old, year 2160, light skin, black hair, blue lab coat, goggles on forehead, tablet with graphs, focused curious face, lab with Earth in window."
+    },
+    {
+      "id": "obi",
+      "semente": 1045,
+      "prompt": "Futuristic station commander, 58 years old, year 2160, dark skin, short gray beard, white commander uniform, tired authoritative eyes, simulator cockpit light."
+    },
+    {
+      "id": "carga2",
+      "semente": 1052,
+      "prompt": "Futuristic four-armed cargo robot, yellow industrial body, no face, handling a metal container in a station cargo bay, cinematic."
+    }
+  ]
+}

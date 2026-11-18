@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult from the Brazilian countryside today, head and shoulders, centered, facing the camera, warm lantern and dusk light, dark rural background out of focus, natural skin texture, earthy warm colors, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "valdir",
+      "semente": 1018,
+      "prompt": "Brazilian fisherman, 49 years old, contemporary, tan weathered skin, gray stubble, wet button shirt, fishing colony cap, wide frightened eyes, riverbank at dusk."
+    },
+    {
+      "id": "rosa",
+      "semente": 1025,
+      "prompt": "Brazilian woman, 56 years old, contemporary, medium brown skin, short curly gray hair, glasses on head, fishing colony t-shirt, document folder, firm face, warm evening light."
+    },
+    {
+      "id": "biu",
+      "semente": 1032,
+      "prompt": "Brazilian fisherman, 44 years old, contemporary, dark sunburned skin, shorts, fishing net over shoulder, strong arms, suspicious stare, riverside dusk."
+    },
+    {
+      "id": "iara",
+      "semente": 1039,
+      "prompt": "Brazilian woman, 28 years old, contemporary, light brown skin, very long black hair, green sequined dress, microphone in hand, bright stage smile, riverside bar lights."
+    }
+  ]
+}

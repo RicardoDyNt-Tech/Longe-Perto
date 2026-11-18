@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult from the Brazilian countryside today, head and shoulders, centered, facing the camera, warm lantern and dusk light, dark rural background out of focus, natural skin texture, earthy warm colors, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "edvaldo",
+      "semente": 1026,
+      "prompt": "Brazilian man, 46 years old, contemporary rural, light skin, felt hat, cooperative polo shirt, gold watch, smooth confident smile, sugarcane field at dusk with smoke."
+    },
+    {
+      "id": "lucia",
+      "semente": 1033,
+      "prompt": "Brazilian elderly woman, 70 years old, tan skin, white hair in a bun, printed cotton dress, walking cane, stern sad face, warm dusk light."
+    },
+    {
+      "id": "pedrinho",
+      "semente": 1040,
+      "prompt": "Brazilian man, 31 years old, contemporary, dark skin, sweaty t-shirt, torn straw hat, machete at belt, angry tired eyes, rural night."
+    },
+    {
+      "id": "neusa",
+      "semente": 1047,
+      "prompt": "Brazilian woman, 54 years old, contemporary, medium brown skin, red lipstick, radio headphones around neck, community radio t-shirt, theatrical expression, studio light."
+    }
+  ]
+}

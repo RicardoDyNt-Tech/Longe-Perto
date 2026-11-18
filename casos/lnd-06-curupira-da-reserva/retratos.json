@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult from the Brazilian countryside today, head and shoulders, centered, facing the camera, warm lantern and dusk light, dark rural background out of focus, natural skin texture, earthy warm colors, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "wesley",
+      "semente": 1026,
+      "prompt": "Brazilian park ranger, 34 years old, contemporary, light brown skin, short hair, green ranger uniform, radio on chest, red-mud boots, evasive eyes, rainforest edge at dusk."
+    },
+    {
+      "id": "odilon",
+      "semente": 1033,
+      "prompt": "Brazilian man, 63 years old, contemporary, tan skin, leather hat, plaid shirt, thick gold ring, hard calculating face, sawmill light."
+    },
+    {
+      "id": "katia",
+      "semente": 1040,
+      "prompt": "Brazilian woman, 45 years old, contemporary, light skin, field vest, binoculars, wide-brim hat, sharp focused face, misty forest."
+    },
+    {
+      "id": "raul",
+      "semente": 1047,
+      "prompt": "Brazilian man, 29 years old, contemporary, brown skin, hair tied back, hiking shorts, backpack, whistle necklace, cheerful nervous smile, waterfall mist."
+    }
+  ]
+}

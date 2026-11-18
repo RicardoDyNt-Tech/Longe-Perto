@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic police booking photo of a fictional adult, head and shoulders, centered, facing the camera, neutral expression, plain warm gray wall with faint horizontal height-chart lines behind, soft even flash lighting, 85mm lens, sharp focus, natural skin texture, muted warm colors, slightly desaturated, subtle film grain. No text, no letters, no numbers, no watermark, no placard.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "bianca",
+      "semente": 1015,
+      "prompt": "Italian woman, 31 years old, contemporary, olive skin, long wavy dark hair, oversized sunglasses, straw hat, phone on selfie stick, glossy smile hiding nerves, cruise ship deck in Mediterranean sun."
+    },
+    {
+      "id": "ernesto",
+      "semente": 1022,
+      "prompt": "Filipino man, 39 years old, contemporary, light brown skin, neat short hair, white cruise steward uniform, gloves, name badge, polite anxious face, ship corridor."
+    },
+    {
+      "id": "klaus",
+      "semente": 1029,
+      "prompt": "German man, 58 years old, contemporary, sunburned fair skin, thinning gray hair, Hawaiian shirt, casino chips in pocket, sweaty uneasy smile, tour bus."
+    },
+    {
+      "id": "marta",
+      "semente": 1036,
+      "prompt": "Brazilian woman, 50 years old, contemporary, medium brown skin, short graying hair, private nurse uniform, medicine bag, calm attentive face, ship spa light."
+    }
+  ]
+}

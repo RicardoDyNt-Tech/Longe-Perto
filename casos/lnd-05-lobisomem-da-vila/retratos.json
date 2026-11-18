@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult from the Brazilian countryside today, head and shoulders, centered, facing the camera, warm lantern and dusk light, dark rural background out of focus, natural skin texture, earthy warm colors, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "caique",
+      "semente": 1024,
+      "prompt": "Brazilian man, 30 years old, contemporary, light brown skin, trucker t-shirt, gas station cap, tattooed forearm, defensive look, night highway lights."
+    },
+    {
+      "id": "toninho",
+      "semente": 1031,
+      "prompt": "Brazilian man, 35 years old, contemporary rural, tan skin, long hair, thick beard, school notebook under arm, gentle shy eyes, small town street at night."
+    },
+    {
+      "id": "fausto",
+      "semente": 1038,
+      "prompt": "Brazilian man, 48 years old, contemporary, light skin, slicked hair, dress shirt with mining company logo, phone at ear, slick impatient face, hotel lobby light."
+    },
+    {
+      "id": "leninha",
+      "semente": 1045,
+      "prompt": "Brazilian woman, 41 years old, contemporary, dark skin, caregiver smock, rosary bracelet, worried kind face, dim clinic light."
+    }
+  ]
+}

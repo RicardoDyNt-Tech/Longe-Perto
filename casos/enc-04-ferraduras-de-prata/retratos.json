@@ -1,0 +1,27 @@
+{
+  "estilo": "Painterly realistic portrait of a fictional adult character from Brazilian folklore, head and shoulders, centered, facing the camera, deep Atlantic forest at night behind, moonlight and firefly glow, rich greens and warm skin tones, detailed face, storybook realism. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "tonico",
+      "semente": 1026,
+      "prompt": "Brazilian young blacksmith apprentice, 22 years old, timeless rural Brazil folklore, light brown skin, curly hair, scorched leather apron, spark-marked arms, nervous eager face, forge glow, painterly."
+    },
+    {
+      "id": "rosalba",
+      "semente": 1033,
+      "prompt": "Brazilian woman, 45 years old, timeless rural Brazil folklore, olive skin, dark hair under a black shawl, tired sorrowful eyes, moonlit doorway, painterly."
+    },
+    {
+      "id": "juvenal",
+      "semente": 1040,
+      "prompt": "Brazilian man, 50 years old, timeless rural Brazil folklore, tan skin, thick beard, long nails, viola guitar on back, wolfish but kind eyes, tavern lamp light, painterly."
+    },
+    {
+      "id": "firmo",
+      "semente": 1047,
+      "prompt": "Brazilian muleteer, 58 years old, timeless rural Brazil, weathered tan skin, drover hat, leather money belt, tall boots, sour face, campfire light, painterly."
+    }
+  ]
+}

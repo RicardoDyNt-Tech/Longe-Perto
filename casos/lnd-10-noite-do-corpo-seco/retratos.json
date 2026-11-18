@@ -1,0 +1,37 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult from the Brazilian countryside today, head and shoulders, centered, facing the camera, warm lantern and dusk light, dark rural background out of focus, natural skin texture, earthy warm colors, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "mendes",
+      "semente": 1026,
+      "prompt": "Brazilian doctor, 63 years old, contemporary small town Minas Gerais, light skin, gray hair, half-moon glasses, white coat over dress shirt, leather bag, composed but strained face, church lamp light."
+    },
+    {
+      "id": "rosangela",
+      "semente": 1033,
+      "prompt": "Brazilian woman, 48 years old, contemporary, light skin, blow-dried hair, black mourning dress, pearl necklace, guarded grief, club hall light."
+    },
+    {
+      "id": "marcia",
+      "semente": 1040,
+      "prompt": "Brazilian woman, 40 years old, contemporary, medium brown skin, denim jacket, travel suitcase, sunken determined eyes, bus station light."
+    },
+    {
+      "id": "bastiao",
+      "semente": 1047,
+      "prompt": "Brazilian man, 66 years old, contemporary, dark weathered skin, denim coveralls, old hat, hoe on shoulder, solemn tired face, cemetery dusk."
+    },
+    {
+      "id": "juca",
+      "semente": 1054,
+      "prompt": "Brazilian man, 52 years old, contemporary rural, tan skin, felt hat, rubber boots, mustache, wary face, milking barn light."
+    },
+    {
+      "id": "filomena",
+      "semente": 1061,
+      "prompt": "Brazilian elderly woman, 80 years old, dark skin, knit shawl, big-bead rosary, frail mystical face, candlelit chapel."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "callum",
+      "semente": 1013,
+      "prompt": "Scottish man, 47 years old, contemporary Orkney, pale freckled skin, ginger beard, green waterproof jacket, camera with telephoto lens, guarded intense eyes, windswept coastal dusk."
+    },
+    {
+      "id": "angus",
+      "semente": 1020,
+      "prompt": "Scottish man, 60 years old, contemporary Orkney, ruddy skin, white beard, wool fisherman sweater, dish towel on shoulder, gruff wary face, cozy pub lamplight."
+    },
+    {
+      "id": "ingrid",
+      "semente": 1027,
+      "prompt": "Norwegian woman, 35 years old, contemporary, fair skin, blonde braid, Norwegian wool jacket, beanie, yoga mat on back, calm defensive look, northern summer dusk."
+    },
+    {
+      "id": "malcolm",
+      "semente": 1034,
+      "prompt": "Scottish elderly minister, 68 years old, pale skin, thin white hair, clerical collar, black coat, walking cane, stern sorrowful face, small stone church interior."
+    }
+  ]
+}

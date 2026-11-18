@@ -1,0 +1,27 @@
+{
+  "estilo": "Painterly realistic portrait of a fictional adult character from Brazilian folklore, head and shoulders, centered, facing the camera, deep Atlantic forest at night behind, moonlight and firefly glow, rich greens and warm skin tones, detailed face, storybook realism. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "nonato",
+      "semente": 1020,
+      "prompt": "Brazilian farmer, 59 years old, timeless rural Brazil folklore, light tan skin, new leather hat, pocket watch chain, polished boots, greedy calm smile, painterly dusk."
+    },
+    {
+      "id": "boitata",
+      "semente": 1027,
+      "prompt": "Brazilian folklore fire serpent Boitatá, giant snake made of cold blue fire with ember-bright eyes, coiled in a dark forest at night, majestic and eerie, painterly."
+    },
+    {
+      "id": "cotinha",
+      "semente": 1034,
+      "prompt": "Brazilian elderly woman, 68 years old, timeless rural Brazil, dark skin, calico dress, headscarf, flour-dusted hands, stubborn face, cassava mill firelight, painterly."
+    },
+    {
+      "id": "badu",
+      "semente": 1041,
+      "prompt": "Brazilian man, 35 years old, timeless rural Brazil, dark skin, charcoal-stained t-shirt, straw hat, downcast eyes, charcoal kiln smoke, painterly."
+    }
+  ]
+}

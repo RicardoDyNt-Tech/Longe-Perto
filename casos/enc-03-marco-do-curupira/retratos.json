@@ -1,0 +1,27 @@
+{
+  "estilo": "Painterly realistic portrait of a fictional adult character from Brazilian folklore, head and shoulders, centered, facing the camera, deep Atlantic forest at night behind, moonlight and firefly glow, rich greens and warm skin tones, detailed face, storybook realism. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "bras",
+      "semente": 1024,
+      "prompt": "Brazilian rancher, 64 years old, timeless rural Brazil folklore, light weathered skin, felt hat, leather vest, silver-topped cane, arrogant gaze, painterly dusty light."
+    },
+    {
+      "id": "curupira",
+      "semente": 1031,
+      "prompt": "Brazilian folklore forest guardian Curupira, appearing as an ageless small adult man with flaming red hair, strong wiry body, feet turned backwards, fierce green eyes, dense forest, painterly."
+    },
+    {
+      "id": "talita",
+      "semente": 1038,
+      "prompt": "Brazilian woman surveyor, 33 years old, timeless rural Brazil, medium brown skin, wide-brim hat, field vest, surveying instrument on shoulder, focused face, painterly."
+    },
+    {
+      "id": "jonas",
+      "semente": 1045,
+      "prompt": "Brazilian ranch hand, 41 years old, timeless rural Brazil, dark skin, lasso on shoulder, rawhide boots, loyal tired face, painterly."
+    }
+  ]
+}

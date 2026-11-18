@@ -1,0 +1,22 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "julien",
+      "semente": 1012,
+      "prompt": "French man, 44 years old, contemporary Paris, fair skin, trimmed dark beard, black overcoat, wedding ring, calm concerned expression masking coldness, dim Parisian stairwell."
+    },
+    {
+      "id": "odette",
+      "semente": 1019,
+      "prompt": "French elderly woman, 79 years old, contemporary Paris, pale wrinkled skin, silver hair, silk robe, cat on lap, unlit cigarette, theatrical knowing eyes, dim apartment lamp."
+    },
+    {
+      "id": "lucas",
+      "semente": 1026,
+      "prompt": "Brazilian young man, 31 years old, contemporary Paris, medium brown skin, hoodie, headphones, delivery bike backpack, tired friendly face, dark attic corridor."
+    }
+  ]
+}

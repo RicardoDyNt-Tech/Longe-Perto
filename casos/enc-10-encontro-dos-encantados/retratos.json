@@ -1,0 +1,37 @@
+{
+  "estilo": "Painterly realistic portrait of a fictional adult character from Brazilian folklore, head and shoulders, centered, facing the camera, deep Atlantic forest at night behind, moonlight and firefly glow, rich greens and warm skin tones, detailed face, storybook realism. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "veloso",
+      "semente": 1030,
+      "prompt": "Brazilian official, 49 years old, timeless rural Brazil folklore, light skin, slicked hair, gray city suit, thin tie, patent shoes with wet soles, smooth ambitious face, lamp-lit square, painterly."
+    },
+    {
+      "id": "curupira",
+      "semente": 1037,
+      "prompt": "Brazilian folklore forest guardian Curupira, ageless small strong man with flaming red hair, feet turned backwards, root staff, guarding a stone cave door, painterly."
+    },
+    {
+      "id": "cuca",
+      "semente": 1044,
+      "prompt": "Brazilian folklore witch Cuca, ancient alligator-headed woman, feather shawl, bone rings, cave apothecary, scheming eyes, painterly."
+    },
+    {
+      "id": "iara",
+      "semente": 1051,
+      "prompt": "Brazilian folklore water spirit Iara, ageless adult woman with waist-long black hair, river-green eyes, in a dark pool at a cave mouth, stern gaze, painterly."
+    },
+    {
+      "id": "iaia",
+      "semente": 1058,
+      "prompt": "Brazilian elderly healer woman, 76 years old, dark skin, calico headscarf, sprig of rue, worried wise eyes, candlelit hut, painterly."
+    },
+    {
+      "id": "doca",
+      "semente": 1065,
+      "prompt": "Brazilian small-town mayor, 60 years old, timeless rural Brazil, tan skin, mayor sash, bowler hat, campaign smile, crowd and lanterns, painterly."
+    }
+  ]
+}

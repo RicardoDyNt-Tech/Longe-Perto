@@ -1,0 +1,32 @@
+{
+  "estilo": "Cinematic science fiction portrait of a fictional adult in the future, head and shoulders, centered, facing the camera, soft cool rim light with a warm key light, blurred futuristic interior behind, subtle reflections, realistic skin texture, 85mm lens, sharp focus. No text, no letters, no watermark, no logos.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "kaio",
+      "semente": 1013,
+      "prompt": "Futuristic diver, 36 years old, year 2124 underwater city off Brazil, medium brown skin, wet hair, mask marks on face, black diving suit with glowing stripes, guarded tense eyes, blue underwater lab light."
+    },
+    {
+      "id": "iris",
+      "semente": 1020,
+      "prompt": "Futuristic botanist, 48 years old, year 2124, light skin, gray-streaked hair tied up, green hydroponics jumpsuit, gloves, protective glasses, stern focused face, glowing green algae farm."
+    },
+    {
+      "id": "ferraz",
+      "semente": 1027,
+      "prompt": "Futuristic underwater city governor, 60 years old, year 2124, tan skin, white hair, white uniform with anchor insignia, composed political smile, broadcast studio with ocean window."
+    },
+    {
+      "id": "ot4",
+      "semente": 1034,
+      "prompt": "Futuristic octopus-shaped maintenance robot, eight metal arms, orange light eyes, cleaning a large underwater glass dome from outside, deep blue ocean, cinematic."
+    },
+    {
+      "id": "zara",
+      "semente": 1041,
+      "prompt": "Futuristic young scientist, 25 years old, year 2124, dark skin, short natural hair, travel jacket, backpack, intern badge, nervous eager face, submarine cabin."
+    }
+  ]
+}

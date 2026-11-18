@@ -1,0 +1,37 @@
+{
+  "estilo": "Cinematic science fiction portrait of a fictional adult in the future, head and shoulders, centered, facing the camera, soft cool rim light with a warm key light, blurred futuristic interior behind, subtle reflections, realistic skin texture, 85mm lens, sharp focus. No text, no letters, no watermark, no logos.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "celina",
+      "semente": 1014,
+      "prompt": "Futuristic tech cofounder, 55 years old, year 2133 Recife, light olive skin, sleek short white hair, long silver gown, stiletto heels, poised cold elegance, gala hall lights."
+    },
+    {
+      "id": "gabriel",
+      "semente": 1021,
+      "prompt": "Futuristic pro gamer, 26 years old, year 2133, medium brown skin, bleached hair, pro team jacket, large headphones, glowing neck tattoo, cocky but anxious face, esports arena lights."
+    },
+    {
+      "id": "olga",
+      "semente": 1028,
+      "prompt": "Futuristic woman, 60 years old, year 2133, tan skin, auburn bob, wine-colored travel coat, sunglasses, small suitcase, bitter elegant face, maglev train interior."
+    },
+    {
+      "id": "sunmei",
+      "semente": 1035,
+      "prompt": "Futuristic doctor, 44 years old, year 2133, light skin, black hair tied up, white coat with gold trim, thin gloves, careful worried face, high-tech clinic."
+    },
+    {
+      "id": "hector",
+      "semente": 1042,
+      "prompt": "Futuristic investor, 63 years old, year 2133, pale skin, slicked gray hair, old-fashioned tuxedo, crystal cane, raspy shrewd face, gala table."
+    },
+    {
+      "id": "indigo",
+      "semente": 1049,
+      "prompt": "Futuristic home artificial intelligence, represented as soft blue light lines glowing across the walls of a luxury penthouse at night, serene, cinematic."
+    }
+  ]
+}
