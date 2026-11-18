@@ -2972,9 +2972,9 @@
   }
 
   // ---------- v7: mural de desenho ----------
-  // traços: [{ cor, esp, pts: [[x, y], …] }], x e y de 0 a 1000 (proporção 3:4, igual em qualquer tela)
+  // traços: [{ v: 2, cor, esp, pts: [[x, y], …] }], x, y e esp em milésimos da largura (proporção 3:4)
   const MURAL_CORES = ["#E0405F", "#FF7EB6", "#FF8A3D", "#2E86DE", "#1FA37A", "#1B1530"];
-  const MURAL_ESP = { 1: 6, 2: 14, 3: 30 };          // espessura em milésimos da largura
+  const MURAL_ESP = { 1: 6, 2: 12, 3: 24 };          // Fina = 6, Média = 12, Grossa = 24 (milésimos da largura)
   const MURAL_FUNDOS = ["papel", "quadriculado", "escuro", "rosa"];
   const MURAL_MAX = 290000;                          // o banco aceita até ~300 KB
   const MURAL_PASSOS = 30;
@@ -2983,11 +2983,21 @@
   let loteMural = [], timerLote = null, timerCursor = null, conviteMural = null, contTraco = 0;
   const remotos = new Map();   // id -> traço sendo desenhado pelo outro
 
-  const tracoValido = t => t && (MURAL_CORES.includes(t.cor) || t.cor === "apagar") && MURAL_ESP[t.esp] && Array.isArray(t.pts);
+  function muralEspMil(t) {
+    if (!t) return 12;
+    if (t.v === 2 && Number.isFinite(t.esp) && t.esp > 0 && t.esp <= 100) return t.esp;
+    if (MURAL_ESP[t.esp]) return MURAL_ESP[t.esp];
+    if (Number.isFinite(t.esp) && t.esp > 3) {
+      if (Number.isFinite(t.largura) && t.largura > 0) return Math.max(2, Math.min(80, t.esp / t.largura * 1000));
+      return 12;
+    }
+    return 12;
+  }
+  const tracoValido = t => t && (MURAL_CORES.includes(t.cor) || t.cor === "apagar") && (!!MURAL_ESP[t.esp] || (Number.isFinite(t.esp) && t.esp > 0 && t.esp <= 100)) && Array.isArray(t.pts);
   const tracosDe = m => Array.isArray(m && m.tracos) ? m.tracos.filter(tracoValido) : [];
   function tamanhoMural(ts) {
     // jsonb::text tem um espaço depois de ":" e ","
-    const s = JSON.stringify(ts.map(t => ({ cor: t.cor, esp: t.esp, pts: t.pts })));
+    const s = JSON.stringify(ts.map(t => ({ v: 2, cor: t.cor, esp: muralEspMil(t), pts: t.pts })));
     let extra = 0;
     for (let i = 0; i < s.length; i++) if (s[i] === "," || s[i] === ":") extra++;
     return new TextEncoder().encode(s).length + extra;
@@ -2998,17 +3008,35 @@
     ctx.save();
     ctx.globalCompositeOperation = t.cor === "apagar" ? "destination-out" : "source-over";
     ctx.strokeStyle = ctx.fillStyle = t.cor === "apagar" ? "#000" : t.cor;
-    ctx.lineWidth = MURAL_ESP[t.esp] * w / 1000;
+    ctx.lineWidth = muralEspMil(t) * w / 1000;
     ctx.lineCap = "round"; ctx.lineJoin = "round";
-    const i0 = Math.max(0, (de || 0) - 1);
-    const p0 = pts[i0];
+    const px = p => p[0] * w / 1000;
+    const py = p => p[1] * h / 1000;
     if (pts.length === 1) {
-      ctx.beginPath(); ctx.arc(p0[0] * w / 1000, p0[1] * h / 1000, ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fill();
-    } else {
-      ctx.beginPath(); ctx.moveTo(p0[0] * w / 1000, p0[1] * h / 1000);
-      for (let i = i0 + 1; i < pts.length; i++) ctx.lineTo(pts[i][0] * w / 1000, pts[i][1] * h / 1000);
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(px(pts[0]), py(pts[0]), ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      return;
     }
+    if (pts.length === 2) {
+      ctx.beginPath(); ctx.moveTo(px(pts[0]), py(pts[0])); ctx.lineTo(px(pts[1]), py(pts[1])); ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    const i0 = Math.max(1, (de || 0) - 1);
+    ctx.beginPath();
+    if (i0 <= 1) {
+      ctx.moveTo(px(pts[0]), py(pts[0]));
+    } else {
+      ctx.moveTo((px(pts[i0 - 1]) + px(pts[i0])) / 2, (py(pts[i0 - 1]) + py(pts[i0])) / 2);
+    }
+    for (let i = i0; i < pts.length - 1; i++) {
+      const mx = (px(pts[i]) + px(pts[i + 1])) / 2;
+      const my = (py(pts[i]) + py(pts[i + 1])) / 2;
+      ctx.quadraticCurveTo(px(pts[i]), py(pts[i]), mx, my);
+    }
+    const ult = pts[pts.length - 1];
+    ctx.lineTo(px(ult), py(ult));
+    ctx.stroke();
     ctx.restore();
   }
   // ajusta o canvas à largura disponível (3:4) e redesenha
@@ -3097,7 +3125,7 @@
     ev.preventDefault();
     try { $("muralCanvas").setPointerCapture(ev.pointerId); } catch (err) { }
     if (!muralJuntos) guardarPasso();
-    tracoAtual = { id: `${eu}-${Date.now().toString(36)}-${contTraco++}`, de: eu, cor: muralBorracha ? "apagar" : muralCor, esp: muralEsp, pts: [pontoDe(ev)] };
+    tracoAtual = { id: `${eu}-${Date.now().toString(36)}-${contTraco++}`, de: eu, v: 2, cor: muralBorracha ? "apagar" : muralCor, esp: MURAL_ESP[muralEsp], pts: [pontoDe(ev)] };
     tracos.push(tracoAtual);
     pintarTraco($("muralCanvas").getContext("2d"), tracoAtual, muralTam.w, muralTam.h);
     enviarLote(tracoAtual, [tracoAtual.pts[0]]);
@@ -3128,7 +3156,7 @@
     if (!muralJuntos) return;
     const ult = loteMural[loteMural.length - 1];
     if (ult && ult.id === t.id) { ult.pts.push(...pts); if (fim) ult.fim = true; }
-    else loteMural.push({ id: t.id, cor: t.cor, esp: t.esp, pts: pts.slice(), fim: !!fim });
+    else loteMural.push({ id: t.id, v: 2, cor: t.cor, esp: muralEspMil(t), pts: pts.slice(), fim: !!fim });
     if (fim) return soltarLote();
     if (!timerLote) timerLote = setTimeout(soltarLote, 50);
   }
@@ -3143,7 +3171,7 @@
     tracos.forEach(t => {
       const n = t.pts.length * 12 + 60;
       if (tam + n > 60000 && partes[partes.length - 1].length) { partes.push([]); tam = 0; }
-      partes[partes.length - 1].push({ id: t.id, de: t.de, cor: t.cor, esp: t.esp, pts: t.pts });
+      partes[partes.length - 1].push({ id: t.id, de: t.de, v: 2, cor: t.cor, esp: muralEspMil(t), pts: t.pts });
       tam += n;
     });
     partes.forEach((ts, i) => mandarMural({ t: "estado", parte: i, total: partes.length, tracos: ts, fundo: muralFundo }));
@@ -3210,8 +3238,8 @@
     if (p.t === "pts" && typeof p.id === "string" && Array.isArray(p.pts)) {
       let t = remotos.get(p.id);
       if (!t) {
-        if (!tracoValido({ cor: p.cor, esp: p.esp, pts: [] })) return;
-        t = { id: p.id, de: 1 - eu, cor: p.cor, esp: p.esp, pts: [] };
+        if (!tracoValido({ v: p.v, cor: p.cor, esp: p.esp, pts: [] })) return;
+        t = { id: p.id, de: 1 - eu, v: p.v || 2, cor: p.cor, esp: p.esp, pts: [] };
         remotos.set(p.id, t); tracos.push(t);
       }
       const antes = t.pts.length;
@@ -3253,7 +3281,7 @@
   }
   async function salvarMural(juntos) {
     if (!codigo || !estado) return;
-    const ts = tracos.filter(t => t.pts.length).map(t => ({ cor: t.cor, esp: t.esp, pts: t.pts }));
+    const ts = tracos.filter(t => t.pts.length).map(t => ({ v: 2, cor: t.cor, esp: muralEspMil(t), pts: t.pts }));
     if (!ts.some(t => t.cor !== "apagar")) return erro("erroMural", "Desenhe alguma coisa primeiro.");
     if (tamanhoMural(ts) > MURAL_MAX) return erro("erroMural", "Desenho muito grande, apague alguns traços");
     if (!juntos && !estado.jogadores[1 - eu]) return erro("erroMural", "Espere a outra pessoa entrar na sala.");

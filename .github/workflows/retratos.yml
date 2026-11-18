@@ -1,0 +1,77 @@
+# Gera os retratos dos suspeitos sozinho.
+# Dispara quando um casos/<caso>/retratos.json entra ou muda no repositório, ou pelo botão "Run workflow".
+# Só gera os que faltam (no máximo 120 por rodada) e faz commit das imagens na mesma branch,
+# mesmo que a rodada pare no meio (cota do dia, erro, tempo).
+# Secrets necessários (Settings → Secrets and variables → Actions):
+#   CF_ACCOUNT_ID e CF_API_TOKEN (Cloudflare, padrão)  ·  GEMINI_API_KEY (opcional, para usar o Gemini)
+name: Retratos
+
+on:
+  push:
+    paths: ["casos/**/retratos.json"]
+  workflow_dispatch:
+    inputs:
+      servico:
+        description: "Serviço de imagem"
+        type: choice
+        options: [cloudflare, gemini]
+        default: cloudflare
+      caso:
+        description: "Caso (vazio = todos)"
+        required: false
+      so:
+        description: "Só estes suspeitos, separados por espaço (refaz mesmo que existam)"
+        required: false
+      variar:
+        description: "Rosto novo (semente sorteada)"
+        type: boolean
+        default: false
+      limite:
+        description: "No máximo quantas imagens nesta rodada (0 = sem limite)"
+        required: false
+        default: "120"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: retratos-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pillow (recorte e redução das imagens)
+        run: pip install --quiet pillow
+      - name: Gerar
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SERVICO: ${{ inputs.servico || 'cloudflare' }}
+          CASO: ${{ inputs.caso }}
+          SO: ${{ inputs.so }}
+          VARIAR: ${{ inputs.variar }}
+          LIMITE: ${{ inputs.limite || '120' }}
+        run: |
+          args="--servico $SERVICO"
+          if [ -n "$CASO" ]; then args="$CASO $args"; else args="--todos $args"; fi
+          if [ -n "$SO" ]; then args="$args --so $SO"; fi
+          if [ "$VARIAR" = "true" ]; then args="$args --variar"; fi
+          args="$args --limite $LIMITE"
+          python gerar_retratos.py $args
+      - name: Commit das imagens
+        if: always()
+        run: |
+          git add casos/
+          if git diff --cached --quiet; then echo "Nada novo."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit -m "retratos: gerados pelo workflow"
+          git push
