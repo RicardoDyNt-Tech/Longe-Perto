@@ -1,0 +1,32 @@
+{
+  "estilo": "Realistic fantasy character portrait of a fictional adult, head and shoulders, centered, facing the camera, painterly realism, medieval-fantasy clothing, soft candlelight, dark neutral background, muted earthy colors, detailed face, no armor helmet covering the face. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "hask",
+      "semente": 1014,
+      "prompt": "Fantasy nobleman, 50 years old, pale skin, cropped silver hair, pale cold eyes, gray cloak with a covered crest, fine leather gloves, guarded expression, painterly castle wall at night."
+    },
+    {
+      "id": "tamara",
+      "semente": 1021,
+      "prompt": "Fantasy engineer apprentice, 31 years old, dark skin, hair wrapped in a scarf, foundry apron, burn-scarred hands, determined face, forge glow, painterly style."
+    },
+    {
+      "id": "ulric",
+      "semente": 1028,
+      "prompt": "Fantasy soldier captain, 45 years old, fair weathered skin, blond beard, dented plate armor, helmet under arm, tired stern face, painterly wall at night."
+    },
+    {
+      "id": "doran",
+      "semente": 1035,
+      "prompt": "Fantasy friar, 60 years old, light skin, bald with white fringe, brown habit with rope belt, wooden prayer beads, kind worried face, candlelit chapel, painterly style."
+    },
+    {
+      "id": "neri",
+      "semente": 1042,
+      "prompt": "Fantasy bard, 24 years old, olive skin, short wavy dark hair, colorful patched doublet, lute on back, feather earring, playful but wary smile, tavern light, painterly style."
+    }
+  ]
+}

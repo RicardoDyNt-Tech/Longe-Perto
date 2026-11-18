@@ -1,0 +1,22 @@
+{
+  "estilo": "Painterly realistic portrait of a fictional adult character from Brazilian folklore, head and shoulders, centered, facing the camera, deep Atlantic forest at night behind, moonlight and firefly glow, rich greens and warm skin tones, detailed face, storybook realism. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "dalila",
+      "semente": 1020,
+      "prompt": "Brazilian woman, 30 years old, timeless rural Brazil folklore, light brown skin, pink bridesmaid dress with wet hem, shoes in hand, wide innocent eyes, riverside lanterns, painterly."
+    },
+    {
+      "id": "iara",
+      "semente": 1027,
+      "prompt": "Brazilian folklore water spirit Iara, ageless adult woman with waist-long black hair, river-green eyes, moonlit pale skin, emerging from dark water, enchanting gaze, painterly."
+    },
+    {
+      "id": "davi",
+      "semente": 1034,
+      "prompt": "Brazilian young man, 26 years old, timeless rural Brazil, medium brown skin, soaked white shirt, crooked tie, dripping hair, dazed expression, river at night, painterly."
+    }
+  ]
+}

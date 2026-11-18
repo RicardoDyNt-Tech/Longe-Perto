@@ -1,0 +1,32 @@
+{
+  "estilo": "Photorealistic police booking photo of a fictional adult, head and shoulders, centered, facing the camera, neutral expression, plain warm gray wall with faint horizontal height-chart lines behind, soft even flash lighting, 85mm lens, sharp focus, natural skin texture, muted warm colors, slightly desaturated, subtle film grain. No text, no letters, no numbers, no watermark, no placard.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "lorenzo",
+      "semente": 1013,
+      "prompt": "Italian man, 52 years old, contemporary Venice Carnival, light olive skin, silver hair, golden Doge costume, white Venetian mask held in hand, satin shoes, refined calculating face, candlelit palazzo."
+    },
+    {
+      "id": "alvise",
+      "semente": 1020,
+      "prompt": "Italian aristocrat, 66 years old, contemporary Venice, pale skin, white powdered wig, red Doge costume, cane, tired proud face, ballroom chandeliers."
+    },
+    {
+      "id": "sophie",
+      "semente": 1027,
+      "prompt": "French woman, 41 years old, contemporary, fair skin, short dark hair, blue Doge costume, mask on head, intellectual sharp face, ballroom light."
+    },
+    {
+      "id": "giulia",
+      "semente": 1034,
+      "prompt": "Italian woman, 34 years old, contemporary, olive skin, dark hair in a bun, black maid uniform, lace apron, serving tray, tense loyal face, palazzo kitchen light."
+    },
+    {
+      "id": "marco",
+      "semente": 1041,
+      "prompt": "Italian gondolier, 29 years old, contemporary Venice, tan skin, striped shirt, straw boater hat with ribbon, easygoing face, canal at night with lanterns."
+    }
+  ]
+}

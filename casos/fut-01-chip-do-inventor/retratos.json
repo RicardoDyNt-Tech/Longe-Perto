@@ -1,0 +1,22 @@
+{
+  "estilo": "Cinematic science fiction portrait of a fictional adult in the future, head and shoulders, centered, facing the camera, soft cool rim light with a warm key light, blurred futuristic interior behind, subtle reflections, realistic skin texture, 85mm lens, sharp focus. No text, no letters, no watermark, no logos.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "davi",
+      "semente": 1023,
+      "prompt": "Futuristic young man, 27 years old, year 2079 São Paulo, light brown skin, undercut hair, color-shifting jacket, small glowing implant behind ear, VR headset hanging from neck, restless clever eyes, neon city at night."
+    },
+    {
+      "id": "unidade7",
+      "semente": 1030,
+      "prompt": "Futuristic domestic robot, sleek white body, round blue light eyes, three-fingered hands, standing in a clean lab, soft cool lighting, cinematic."
+    },
+    {
+      "id": "lena",
+      "semente": 1037,
+      "prompt": "Futuristic woman, 41 years old, year 2079, olive skin, asymmetric shaved haircut, silver lab coat, augmented reality glasses, sharp competitive gaze, holographic stage light."
+    }
+  ]
+}

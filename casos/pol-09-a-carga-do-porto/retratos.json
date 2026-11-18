@@ -1,0 +1,37 @@
+{
+  "estilo": "Photorealistic police booking photo of a fictional adult, head and shoulders, centered, facing the camera, neutral expression, plain warm gray wall with faint horizontal height-chart lines behind, soft even flash lighting, 85mm lens, sharp focus, natural skin texture, muted warm colors, slightly desaturated, subtle film grain. No text, no letters, no numbers, no watermark, no placard.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "aldo",
+      "semente": 1023,
+      "prompt": "Brazilian man, 49 years old, brown skin, short black hair, orange reflective safety vest, white hard hat under the arm, radio in hand, stern face."
+    },
+    {
+      "id": "gil",
+      "semente": 1030,
+      "prompt": "Brazilian man, 33 years old, dark skin, short twisted hair, gray work coverall, work gloves hanging from the pocket, honest face."
+    },
+    {
+      "id": "neusa",
+      "semente": 1037,
+      "prompt": "Brazilian woman, 52 years old, light brown skin, short dyed dark red hair, burgundy blazer, leather folder, customs broker badge, confident look."
+    },
+    {
+      "id": "tadeu",
+      "semente": 1044,
+      "prompt": "Brazilian man, 41 years old, tan skin, trucker cap, tattooed forearm, plaid shirt, toothpick in mouth, guarded expression."
+    },
+    {
+      "id": "wesley",
+      "semente": 1051,
+      "prompt": "Brazilian man, 26 years old, medium brown skin, short buzz cut, dark security guard uniform, flashlight on the belt, nervous look."
+    },
+    {
+      "id": "rui",
+      "semente": 1058,
+      "prompt": "Brazilian man, 58 years old, light skin, slicked gray hair, gray suit with burgundy tie, two phones, impatient expression."
+    }
+  ]
+}

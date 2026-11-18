@@ -1,0 +1,32 @@
+{
+  "estilo": "Realistic fantasy character portrait of a fictional adult, head and shoulders, centered, facing the camera, painterly realism, medieval-fantasy clothing, soft candlelight, dark neutral background, muted earthy colors, detailed face, no armor helmet covering the face. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "teodric",
+      "semente": 1024,
+      "prompt": "Fantasy young scholar, 26 years old, light skin, neat dark hair, academy student cloak, copper ring, slim hands with fresh blisters, arrogant clever look, painterly mountain village."
+    },
+    {
+      "id": "olga",
+      "semente": 1031,
+      "prompt": "Fantasy village chieftain, 55 years old, weathered tan skin, gray braids, bear fur cloak, necklace of dragon teeth, stern protective face, painterly style."
+    },
+    {
+      "id": "brannoc",
+      "semente": 1038,
+      "prompt": "Fantasy dwarf miner, 140 years old, stony gray skin, gray beard bound with iron rings, miner's helmet with candle, pickaxe, gruff wise face, painterly mine."
+    },
+    {
+      "id": "ilsa",
+      "semente": 1045,
+      "prompt": "Fantasy dragon priestess, 47 years old, olive skin, scale tattoos on arms, ember-colored robe, gold-painted eyes, solemn mystical face, painterly firelight."
+    },
+    {
+      "id": "corbin",
+      "semente": 1052,
+      "prompt": "Fantasy rogue, 34 years old, pale skin, crooked smile, patched hood, long nimble fingers, sly eyes behind bars, painterly style."
+    }
+  ]
+}

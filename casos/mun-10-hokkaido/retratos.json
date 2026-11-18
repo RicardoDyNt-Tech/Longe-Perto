@@ -1,0 +1,37 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "takeshi",
+      "semente": 1015,
+      "prompt": "Japanese man, 38 years old, contemporary Hokkaido, light skin, long hair tied back, gray ryokan yukata, expensive watch, composed polite face hiding tension, snowy wooden inn at night."
+    },
+    {
+      "id": "aiko",
+      "semente": 1022,
+      "prompt": "Japanese woman, 45 years old, contemporary, light skin, dark hair pinned up, blue work kimono, clipboard, tired dutiful face, small office lamp."
+    },
+    {
+      "id": "harris",
+      "semente": 1029,
+      "prompt": "Australian man, 33 years old, contemporary, tanned skin with goggle marks, messy blond hair, ski hoodie, easygoing defensive look, steamy sauna light."
+    },
+    {
+      "id": "rina",
+      "semente": 1036,
+      "prompt": "Japanese young woman, 29 years old, contemporary, light skin, white apron, head scarf, rice-dusted hands, shy nervous face, warm kitchen light."
+    },
+    {
+      "id": "sato",
+      "semente": 1043,
+      "prompt": "Japanese elderly man, 70 years old, contemporary Hokkaido, weathered skin, gray stubble, padded jacket, snow boots, shovel on shoulder, quiet loyal face, snowstorm."
+    },
+    {
+      "id": "mariana",
+      "semente": 1050,
+      "prompt": "Brazilian woman, 34 years old, contemporary, medium brown skin, curly hair, wool sweater, black notebook, pen behind ear, curious unsettled face, lobby lamp light."
+    }
+  ]
+}

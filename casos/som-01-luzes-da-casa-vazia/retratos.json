@@ -1,0 +1,22 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "celia",
+      "semente": 1026,
+      "prompt": "Brazilian woman, 57 years old, contemporary, light skin, short gray hair, wool cardigan, reading glasses on a cord, rosary on wrist, anxious watchful eyes, dim kitchen light."
+    },
+    {
+      "id": "rogerio",
+      "semente": 1033,
+      "prompt": "Brazilian man, 44 years old, contemporary, medium brown skin, tired eyes with dark circles, wrinkled dress shirt, company badge, dim light."
+    },
+    {
+      "id": "vitor",
+      "semente": 1040,
+      "prompt": "Brazilian man, 35 years old, contemporary, light skin, styled hair, navy blazer, two phones, salesman smile turning uneasy, dim light."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "estilo": "Realistic fantasy character portrait of a fictional adult, head and shoulders, centered, facing the camera, painterly realism, medieval-fantasy clothing, soft candlelight, dark neutral background, muted earthy colors, detailed face, no armor helmet covering the face. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "ravel",
+      "semente": 1019,
+      "prompt": "Fantasy count, 47 years old, pale skin, pointed black beard, black doublet embroidered with silver, signet ring, cunning smile, painterly candlelit chamber."
+    },
+    {
+      "id": "isolde",
+      "semente": 1026,
+      "prompt": "Fantasy chancellor, 55 years old, dark brown skin, gray close-cropped hair, gray official robe, heavy key on a chain, strict honest face, painterly style."
+    },
+    {
+      "id": "bastiao",
+      "semente": 1033,
+      "prompt": "Fantasy page boy, 17 years old, light brown freckled skin, curly brown hair, yellow livery, eager nervous face, painterly style."
+    },
+    {
+      "id": "mira",
+      "semente": 1040,
+      "prompt": "Fantasy village elder, 63 years old, weathered tan skin, long white braid, raw wool cloak, staff with seed pods, fierce dignified eyes, painterly style."
+    }
+  ]
+}

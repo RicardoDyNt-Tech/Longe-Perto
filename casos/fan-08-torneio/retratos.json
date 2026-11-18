@@ -1,0 +1,32 @@
+{
+  "estilo": "Realistic fantasy character portrait of a fictional adult, head and shoulders, centered, facing the camera, painterly realism, medieval-fantasy clothing, soft candlelight, dark neutral background, muted earthy colors, detailed face, no armor helmet covering the face. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "percival",
+      "semente": 1014,
+      "prompt": "Fantasy knight, 29 years old, fair skin, long brown hair, plate armor engraved with golden lions, bandaged right hand, haunted noble face, tournament tents, painterly style."
+    },
+    {
+      "id": "rowena",
+      "semente": 1021,
+      "prompt": "Fantasy lady-in-waiting, 35 years old, light brown skin, braided dark hair with ribbons, sky-blue gown, key at belt, anxious composed face, painterly style."
+    },
+    {
+      "id": "bors",
+      "semente": 1028,
+      "prompt": "Fantasy knight, 40 years old, swarthy skin, thick black beard, dented black armor, booming confident face, painterly jousting field."
+    },
+    {
+      "id": "fitch",
+      "semente": 1035,
+      "prompt": "Fantasy court jester, 33 years old, pale skin, red and yellow diamond costume, belled hat, painted grin, sad clever eyes, painterly style."
+    },
+    {
+      "id": "marta",
+      "semente": 1042,
+      "prompt": "Fantasy blacksmith farrier, 44 years old, dark skin, short cropped hair, burned leather apron, hammer at belt, strong arms, tired stubborn face, stable forge, painterly style."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "estilo": "Cinematic science fiction portrait of a fictional adult in the future, head and shoulders, centered, facing the camera, soft cool rim light with a warm key light, blurred futuristic interior behind, subtle reflections, realistic skin texture, 85mm lens, sharp focus. No text, no letters, no watermark, no logos.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "helio",
+      "semente": 1023,
+      "prompt": "Futuristic art dealer, 52 years old, year 2088 Rio de Janeiro, light tan skin, short gray hair, smart-fabric suit, ring projecting a small hologram clock, polished worried face, gallery lights."
+    },
+    {
+      "id": "ada",
+      "semente": 1030,
+      "prompt": "Futuristic android security guard, humanlike synthetic face, pale smooth skin, gray unblinking eyes, black uniform, standing in a dark gallery, cinematic cool light."
+    },
+    {
+      "id": "bruna",
+      "semente": 1037,
+      "prompt": "Futuristic artist, 30 years old, year 2088, dark skin, short blue hair, overalls splattered with glowing paint, paint-stained hands, defiant passionate face, beach light show."
+    }
+  ]
+}

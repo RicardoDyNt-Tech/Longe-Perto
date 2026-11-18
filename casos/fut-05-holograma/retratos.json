@@ -1,0 +1,32 @@
+{
+  "estilo": "Cinematic science fiction portrait of a fictional adult in the future, head and shoulders, centered, facing the camera, soft cool rim light with a warm key light, blurred futuristic interior behind, subtle reflections, realistic skin texture, 85mm lens, sharp focus. No text, no letters, no watermark, no logos.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "hugo",
+      "semente": 1016,
+      "prompt": "Futuristic executive, 51 years old, year 2096 Salvador, light skin, slicked dark hair with gray, sharp dark suit, silk pocket square, wristwatch projecting holographic charts, confident cold smile, glass boardroom."
+    },
+    {
+      "id": "sofia",
+      "semente": 1023,
+      "prompt": "Futuristic board member, 58 years old, year 2096, dark skin, short gray hair, white linen dress, shell necklace, authoritative face, boardroom light."
+    },
+    {
+      "id": "igor",
+      "semente": 1030,
+      "prompt": "Futuristic drone pilot, 47 years old, year 2096, medium brown skin, stubble, pilot jacket, haptic drone gloves, bitter tired eyes, control tower screens."
+    },
+    {
+      "id": "paula",
+      "semente": 1037,
+      "prompt": "Futuristic young woman, 32 years old, year 2096, light brown skin, high ponytail, sensor-embedded gym clothes, earbuds, smart bottle, anxious face, gym light."
+    },
+    {
+      "id": "zel9",
+      "semente": 1044,
+      "prompt": "Futuristic janitor robot, short round body, cleaning arms, yellow light on top, in a sleek apartment building corridor, cinematic."
+    }
+  ]
+}

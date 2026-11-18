@@ -1,0 +1,37 @@
+{
+  "estilo": "Photorealistic police booking photo of a fictional adult, head and shoulders, centered, facing the camera, neutral expression, plain warm gray wall with faint horizontal height-chart lines behind, soft even flash lighting, 85mm lens, sharp focus, natural skin texture, muted warm colors, slightly desaturated, subtle film grain. No text, no letters, no numbers, no watermark, no placard.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "otto",
+      "semente": 1024,
+      "prompt": "Brazilian man, 62 years old, light skin, white hair combed back, gray linen suit with cufflinks, cold composed expression."
+    },
+    {
+      "id": "julia",
+      "semente": 1031,
+      "prompt": "Brazilian woman, 34 years old, dark brown skin, natural curly hair, denim jacket, reporter notepad, determined look."
+    },
+    {
+      "id": "caetano",
+      "semente": 1038,
+      "prompt": "Brazilian man, 55 years old, tan skin, dark dyed hair, navy suit with a lapel pin, practiced politician smile."
+    },
+    {
+      "id": "sueli",
+      "semente": 1045,
+      "prompt": "Brazilian woman, 48 years old, medium brown skin, short graying hair, reading glasses on a chain, beige cardigan, weary expression."
+    },
+    {
+      "id": "ramon",
+      "semente": 1052,
+      "prompt": "Brazilian man, 29 years old, light brown skin, short black hair, black t-shirt, tattooed forearm, headphones around the neck, defensive look."
+    },
+    {
+      "id": "gustavo",
+      "semente": 1059,
+      "prompt": "Brazilian man, 21 years old, light skin, wavy brown hair, camera strap around the neck, backpack, startled expression."
+    }
+  ]
+}

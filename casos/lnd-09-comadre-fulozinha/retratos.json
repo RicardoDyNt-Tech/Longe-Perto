@@ -1,0 +1,32 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult from the Brazilian countryside today, head and shoulders, centered, facing the camera, warm lantern and dusk light, dark rural background out of focus, natural skin texture, earthy warm colors, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "gilvan",
+      "semente": 1024,
+      "prompt": "Brazilian man, 47 years old, contemporary rural Pernambuco, tan skin, leather cowboy hat, cattle fair shirt, motorcycle helmet on arm, smooth persuasive smile, dusty market light."
+    },
+    {
+      "id": "amaro",
+      "semente": 1031,
+      "prompt": "Brazilian man, 39 years old, contemporary, dark skin, sugar mill uniform, white hard hat, tired eyes, industrial light."
+    },
+    {
+      "id": "mirela",
+      "semente": 1038,
+      "prompt": "Brazilian woman, 36 years old, contemporary, light skin, sleek hair, light blazer, conference badge, tablet, polished corporate face, conference hall light."
+    },
+    {
+      "id": "quiteria",
+      "semente": 1045,
+      "prompt": "Brazilian elderly woman, 74 years old, dark skin, purple headscarf, bead necklace, branch of purple physic nut in hand, sharp mystical gaze, doorway morning light."
+    },
+    {
+      "id": "zelucio",
+      "semente": 1052,
+      "prompt": "Brazilian man, 31 years old, contemporary, light brown skin, mototaxi vest, sticker-covered helmet, chewing gum, easygoing face, village square."
+    }
+  ]
+}

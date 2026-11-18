@@ -1,0 +1,32 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult from the Brazilian countryside today, head and shoulders, centered, facing the camera, warm lantern and dusk light, dark rural background out of focus, natural skin texture, earthy warm colors, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "ari",
+      "semente": 1020,
+      "prompt": "Brazilian man, 58 years old, contemporary Amazon riverside, tan skin, plaid festa junina shirt, straw hat with ribbons, whistle necklace, overly earnest face, string lights at night."
+    },
+    {
+      "id": "tadeu",
+      "semente": 1027,
+      "prompt": "Brazilian young man, 27 years old, contemporary, medium brown skin, white suit and white brim hat, charming wide smile, riverboat lights."
+    },
+    {
+      "id": "rosinha",
+      "semente": 1034,
+      "prompt": "Brazilian woman, 63 years old, contemporary, indigenous-descended brown skin, calico apron, gourd bowl of tacacá, seed necklace, warm sharp eyes, lamp light."
+    },
+    {
+      "id": "jefferson",
+      "semente": 1041,
+      "prompt": "Brazilian man, 35 years old, contemporary, dark skin, rival square-dance group shirt, neck scarf, leather hat, angry proud face, school court at night."
+    },
+    {
+      "id": "priscila",
+      "semente": 1048,
+      "prompt": "Brazilian young woman, 22 years old, contemporary, light brown skin, ruffled festa junina dress, beauty sash, bandaged knee, embarrassed smile, clinic light."
+    }
+  ]
+}

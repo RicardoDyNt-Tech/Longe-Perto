@@ -1,0 +1,32 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "andres",
+      "semente": 1013,
+      "prompt": "Mexican man, 46 years old, contemporary Oaxaca, light tan skin, trimmed mustache, white linen shirt, short-brim hat, expensive watch, tense polite smile, candlelit marigold altar."
+    },
+    {
+      "id": "lupita",
+      "semente": 1020,
+      "prompt": "Mexican woman, 29 years old, contemporary Oaxaca Day of the Dead, olive skin, sugar-skull face paint, embroidered dress, marigold crown, grieving fierce eyes, cemetery candles."
+    },
+    {
+      "id": "chucho",
+      "semente": 1027,
+      "prompt": "Mexican man, 52 years old, contemporary Oaxaca, brown skin, gray mustache, black and silver mariachi suit, sombrero, guitar, weary friendly face, plaza lights."
+    },
+    {
+      "id": "remedios",
+      "semente": 1034,
+      "prompt": "Mexican elderly woman, 70 years old, contemporary Oaxaca, indigenous brown skin, gray braids, red rebozo shawl, basket of marigolds, wise stern eyes, market stall lights."
+    },
+    {
+      "id": "tomas",
+      "semente": 1041,
+      "prompt": "Brazilian man, 36 years old, contemporary, light brown skin, short beard, photographer vest, camera around neck, tourist badge, curious uneasy face, night bus lights."
+    }
+  ]
+}

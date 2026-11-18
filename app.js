@@ -49,7 +49,7 @@
   let timerTick = null;
   let timerAcabou = null;   // id do timer que já deu "Tempo!" aqui
   const efeitosAbertos = new Set();   // efeitos com o texto completo aberto neste aparelho
-  let missaoAberta = false;           // "🤫 Minha missão" aberta neste aparelho
+  let missaoAberta = false;           // Minha missão aberta neste aparelho
   let vista = "jogo";                 // "casa", "jogo" ou uma vista da Casa (vEnvelopes, vCofre...)
   let presentes = new Set();          // jogadores com o app aberto agora (Presence do Realtime)
   let presencaPronta = false;
@@ -60,7 +60,98 @@
   let musicas = [];       // músicas padrão + músicas desta sala (tabela `musicas`)
 
   // ---------- util ----------
-  const salvarLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  function el(tag, classe, texto) { const x = document.createElement(tag); if (classe) x.className = classe; if (texto !== undefined) x.textContent = texto; return x; }
+
+  // Ícones do sistema (Lucide / Marca)
+  const ICONES_CONHECIDOS = new Set([
+    "marca", "ponto-neutro", "alarm-clock", "angry", "arrow-down", "arrow-up", "arrow-up-right", "baby", "ban", "bath",
+    "battery-low", "bed", "book-open", "bot", "briefcase", "cake", "calendar", "calendar-heart", "camera", "check",
+    "chevron-left", "chevron-right", "clapperboard", "cloud-moon", "cloud-sun", "coffee", "crown", "dices", "door-open",
+    "drama", "droplets", "eye", "eye-off", "feather", "film", "flame", "flask-conical", "flower-2", "frame", "frown",
+    "gem", "gift", "graduation-cap", "guitar", "hand-heart", "handshake", "heart", "heart-handshake", "history",
+    "hourglass", "house", "ice-cream-cone", "key-round", "lamp", "laugh", "leaf", "lightbulb", "link", "lock", "mail",
+    "map", "map-pin", "martini", "meh", "message-circle", "message-circle-heart", "mic", "moon", "moon-star", "music",
+    "music-2", "palette", "party-popper", "paw-print", "pencil", "phone", "plane", "popcorn", "receipt", "refresh-cw",
+    "ribbon", "sandwich", "scroll-text", "search", "settings", "shirt", "shopping-basket", "shower-head", "skip-forward",
+    "smartphone", "smile", "snowflake", "sofa", "sparkles", "square", "square-stack", "star", "sun", "sunrise", "sunset",
+    "target", "thermometer", "ticket", "timer", "tree-palm", "shield", "trophy", "tv", "user", "users", "utensils",
+    "utensils-crossed", "volume-2", "volume-x", "wine", "x", "zap",
+    "alert-circle", "anchor", "anvil", "award", "bike", "bird", "building", "bus", "castle", "clock",
+    "compass", "container", "copy", "cpu", "croissant", "cross", "door-closed", "egg", "file-text", "fish",
+    "flame-kindling", "flask-round", "flower", "folder", "footprints", "headphones", "help-circle", "hospital", "mountain", "newspaper",
+    "orbit", "phone-off", "pickaxe", "pin", "play", "plus", "radio", "rocket", "rotate-ccw", "sailboat",
+    "satellite", "scale", "scan-face", "scroll", "shield-alert", "ship", "spade", "stamp", "swords", "tornado",
+    "train-front", "trash-2", "trees", "unlock", "user-check", "user-x", "waves"
+  ]);
+
+  function icone(nome, tamanho = 20, classeExtra = "") {
+    let id = (nome || "").trim();
+    if (!id || !ICONES_CONHECIDOS.has(id)) {
+      if (id) console.warn(`[icone] Ícone não encontrado: "${nome}". Usando ponto neutro.`);
+      id = "ponto-neutro";
+    }
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", `icone icone-${tamanho}` + (classeExtra ? " " + classeExtra : ""));
+    svg.setAttribute("aria-hidden", "true");
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttribute("href", `icones.svg#${id}`);
+    svg.appendChild(use);
+    return svg;
+  }
+
+  function iconeHtml(nome, tamanho = 20, classeExtra = "") {
+    let id = (nome || "").trim();
+    if (!id || !ICONES_CONHECIDOS.has(id)) {
+      if (id) console.warn(`[icone] Ícone não encontrado: "${nome}". Usando ponto neutro.`);
+      id = "ponto-neutro";
+    }
+    const cls = `icone icone-${tamanho}` + (classeExtra ? " " + classeExtra : "");
+    return `<svg class="${cls}" aria-hidden="true"><use href="icones.svg#${id}"></use></svg>`;
+  }
+
+  // Mapeamento e compatibilidade reversa de ícones/emojis (Fase 4)
+  const ICONE_DE_EMOJI = {
+    "☕": "coffee", "⚡": "zap", "✈": "plane", "✈️": "plane",
+    "✨": "sparkles", "🌄": "sunrise", "🌅": "sunset", "🌙": "moon",
+    "🍝": "utensils", "🍦": "ice-cream-cone", "🍸": "martini", "🍹": "wine",
+    "🍽": "utensils-crossed", "🍿": "popcorn", "🎀": "ribbon", "🎁": "gift",
+    "🎟": "ticket", "🎟️": "ticket", "🎤": "mic", "🎬": "clapperboard",
+    "🎞": "film", "🎞️": "film", "🎲": "dices", "🎶": "music",
+    "🎵": "music", "🎸": "guitar", "🏖": "tree-palm", "👀": "eye",
+    "👑": "crown", "👗": "shirt", "👙": "shirt", "💃": "music-2",
+    "💆": "hand-heart", "💋": "heart", "💌": "mail", "💐": "flower-2",
+    "💼": "briefcase", "📖": "book-open", "📲": "smartphone", "📱": "smartphone",
+    "📸": "camera", "📺": "tv", "🔥": "flame", "🌶": "flame", "🌶️": "flame",
+    "🕯": "lamp", "🕯️": "lamp", "🗺": "map", "🗺️": "map", "😴": "bed",
+    "🙈": "eye-off", "🚪": "door-open", "🚿": "shower-head", "🛁": "bath",
+    "🛋": "sofa", "🧊": "snowflake", "🧺": "shopping-basket", "🧽": "droplets",
+    "🪞": "frame", "🫂": "heart-handshake", "🫧": "droplets", "🎨": "palette",
+    "💗": "heart", "💞": "heart", "😂": "laugh", "📞": "phone", "🎙": "mic",
+    "🍔": "sandwich", "🫶": "hand-heart", "🗣": "message-circle", "🧘": "leaf",
+    "🎂": "cake", "💍": "gem", "🏠": "house", "🎓": "graduation-cap",
+    "🎉": "party-popper", "⭐": "star", "🏆": "trophy", "📅": "calendar",
+    "🕵": "search", "🧪": "flask-conical", "💘": "heart", "🤍": "heart",
+    "❤️": "heart", "💛": "heart", "💚": "heart", "🐾": "paw-print",
+    "👶": "baby", "🔑": "key-round"
+  };
+  const EMOJI_DE_ICONE = {
+    "calendar-heart": "📅", "plane": "✈️", "house": "🏠", "gem": "💍",
+    "cake": "🎂", "graduation-cap": "🎓", "party-popper": "🎉", "star": "⭐",
+    "map-pin": "📍", "camera": "📸", "music": "🎵", "gift": "🎁",
+    "heart": "💗", "key-round": "🔑", "baby": "👶", "paw-print": "🐾",
+    "clapperboard": "🎬", "film": "🎞️", "drama": "🎭", "ticket": "🎟️",
+    "receipt": "🧾", "hand-heart": "🫶", "sparkles": "✨", "phone": "📞",
+    "coffee": "☕", "moon": "🌙", "sun": "☀️", "bed": "😴", "utensils": "🍽️"
+  };
+  function iconeDeEmoji(e, padrao = "sparkles") {
+    if (!e) return padrao;
+    const limpo = String(e).replace(/\uFE0F/g, "").trim();
+    return ICONE_DE_EMOJI[limpo] || ICONE_DE_EMOJI[e] || padrao;
+  }
+  const ROTULO_PLAYLIST = { "🤍": "Calma", "HOT playlist 🔥": "Quente", "🔥": "Quente", "🍀": "Sorte" };
+  const rotuloPlaylist = p => (p && ROTULO_PLAYLIST[p]) || p || "";
+  const DENGO_ICONES = ["hand-heart", "heart", "phone", "message-circle", "bed", "coffee", "utensils", "film", "moon", "sparkles", "gift", "music", "sun", "flame", "eye-off"];
+  const salvarLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
   const lerLocal = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
   const mesmoNome = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
   const gerarCodigo = () => Array.from({ length: 5 }, () => ALFABETO[Math.floor(Math.random() * ALFABETO.length)]).join("");
@@ -92,7 +183,7 @@
   };
 
   // ---------- perguntas na cara do app (no lugar de confirm/alert/prompt do navegador) ----------
-  // perguntar(texto) → true/false; com { campo: valor } → texto digitado ou null
+  // perguntar(texto): true/false; com { campo: valor }: texto digitado ou null
   const VERBOS_BOTAO = ["Apagar", "Limpar", "Tirar", "Trocar", "Enviar", "Gerar", "Mostrar", "Parar", "Começar", "Recomeçar", "Sair", "Encerrar", "Usar", "Voltar", "Desistir"];
   function perguntar(texto, opcoes = {}) {
     const d = $("dlgPergunta"), campo = opcoes.campo ?? null;
@@ -192,7 +283,7 @@
       n.modo = para;
       n.cegas = null;
       if (para === "presencial" && !n.juntosDesde) n.juntosDesde = hojeISO();
-      n.aviso = novoAviso(para === "presencial" ? "💞 Modo Juntos ligado" : "📍 De volta ao modo a distância");
+      n.aviso = novoAviso(para === "presencial" ? "Modo Juntos ligado" : "De volta ao modo a distância");
       if (typeof aoTrocarModo === "function") aoTrocarModo(n, para);
     });
   }
@@ -234,7 +325,7 @@
     if (ator === eu) { if (passeAberto) { passeAberto = null; $("passeCelular").hidden = true; } return; }
     const segredo = segredoAberto(e), nome = e.jogadores[ator] || "";
     passeAberto = { ator, segredo };
-    $("passeTitulo").textContent = segredo ? `Agora é a vez de ${nome}, não espie 🙈` : `Passe o celular para ${nome} 💞`;
+    $("passeTitulo").textContent = segredo ? `Agora é a vez de ${nome}, não espie` : `Passe o celular para ${nome}`;
     $("passeSub").textContent = segredo ? `Entregue o celular para ${nome} sem olhar a tela.` : "";
     $("passeOk").textContent = `Sou ${nome}, pode mostrar`;
     $("passeCelular").hidden = false;
@@ -254,7 +345,7 @@
       n.umCelular = v;
       n.umCelularDe = v ? euReal : null;
       if (v) n.secretas = [];                          // missão secreta não dá para esconder num celular só
-      n.aviso = novoAviso(v ? "📱 Jogando num celular só" : "📱 Cada um no seu celular de novo");
+      n.aviso = novoAviso(v ? "Jogando num celular só" : "Cada um no seu celular de novo");
     });
   }
   const trocaModoFns = [];
@@ -289,7 +380,7 @@
     const tick = () => {
       if (!p.s) { $("dcTimer").textContent = ""; return; }
       const s = Math.max(0, Math.ceil((d.inicio + p.s * 1000 - Date.now()) / 1000));
-      $("dcTimer").textContent = s ? relogioMs(s * 1000) : "Tempo! ✓";
+      $("dcTimer").textContent = s ? relogioMs(s * 1000) : "Tempo esgotado";
       if (!s && dcTocou !== d.passo + ":" + d.inicio) { dcTocou = d.passo + ":" + d.inicio; tom(660, 0.3); vibrar(150); }
     };
     tick();
@@ -344,8 +435,10 @@
     erro("erroDado", "");
     gravarFresco(n => {
       const quem = n.dado ? 1 - n.dado.quem : n.vez;   // quem faz alterna a cada rolagem
-      n.dado = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), quem, faces: { acao: faces.acao.texto, parte: faces.parte.texto, tempo: faces.tempo.texto },
-        niveis: [faces.acao.nivel, faces.parte.nivel, faces.tempo.nivel], timer: null };
+      n.dado = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), quem, faces: { acao: faces.acao.texto, parte: faces.parte.texto, tempo: faces.tempo.texto },
+        niveis: [faces.acao.nivel, faces.parte.nivel, faces.tempo.nivel], timer: null
+      };
     });
   }
   function iniciarTimerDado() {
@@ -355,7 +448,7 @@
   }
   const restaMs = t => (t ? t.inicio + t.segundos * 1000 - Date.now() : 0);
   const relogioMs = ms => relogio(Math.max(0, Math.ceil(ms / 1000)));
-  // massagem cronometrada: quem faz, quem recebe, tempo e região; no fim, quem recebeu dá de 1 a 5 ⭐
+  // massagem cronometrada: quem faz, quem recebe, tempo e região; no fim, quem recebeu avalia de 1 a 5 estrelas
   function comecarMassagem() {
     if (!estado || !juntos()) return;
     const seg = Number($("massagemTempo").value), regiao = $("massagemRegiao").value;
@@ -380,7 +473,7 @@
       const p = n.placar[x.quem];
       p.estrelas += v; p.pontos += v;                  // como a nota do adversário: cada estrela vale 1 ponto
       n.pontos = n.placar.map(q => q.pontos);
-      n.aviso = novoAviso(`${n.jogadores[x.quem]} ganhou ${"★".repeat(v)} pela massagem`);
+      n.aviso = novoAviso(`${n.jogadores[x.quem]} ganhou ${v} ${v === 1 ? "estrela" : "estrelas"} pela massagem`);
       n.massagem = { proximo: 1 - x.quem };            // troca de lugar
       conferirMeta(n);
     });
@@ -394,7 +487,7 @@
     const c = e.carta, v = !!(c && c.vendada), quem = e.jogadores[e.vez] || "";
     const leitor = v && (umCelularAqui(e) ? vendadaLida === c.chave : eu !== e.vez);
     $("vendadaAviso").hidden = !v;
-    $("vendadaAviso").textContent = !v ? "" : leitor ? `🙈 Leia para ${quem} em voz alta (+1 ponto)` : eu === e.vez && !umCelularAqui(e) ? `🙈 Você está de olhos vendados. ${e.jogadores[1 - e.vez]} vai ler a carta.` : `🙈 ${quem} está de olhos vendados`;
+    $("vendadaAviso").textContent = !v ? "" : leitor ? `Leia para ${quem} em voz alta (+1 ponto)` : eu === e.vez && !umCelularAqui(e) ? `Você está de olhos vendados. ${e.jogadores[1 - e.vez]} vai ler a carta.` : `${quem} está de olhos vendados`;
     $("vendadaLer").hidden = !(v && umCelularAqui(e) && vendadaLida !== c.chave);
     $("text").hidden = v && !leitor;
   }
@@ -421,9 +514,9 @@
       const w = x.tempos[0] === x.tempos[1] ? null : x.tempos[0] < x.tempos[1] ? 0 : 1;
       x.ultimos = x.tempos.slice();
       x.tempos = [null, null];
-      if (w === null) { n.aviso = novoAviso("🔥 Empate na rodada!"); return; }
+      if (w === null) { n.aviso = novoAviso("Empate na rodada!"); return; }
       x.vitorias[w]++;
-      n.aviso = novoAviso(`🔥 ${n.jogadores[w]} venceu a rodada (${x.vitorias[0]} × ${x.vitorias[1]})`);
+      n.aviso = novoAviso(`${n.jogadores[w]} venceu a rodada (${x.vitorias[0]} × ${x.vitorias[1]})`);
       if (x.vitorias[w] < 2) return;
       x.fim = true; x.vencedor = w;
       const prenda = sortearPrenda(nivelDaPrenda(n, "final"), n.usados || [], n);
@@ -449,7 +542,7 @@
     const segDado = d ? tempoDaCarta(d.faces.tempo) : 0;
     $("dadoTimer").hidden = !segDado || !!(d.timer && restaMs(d.timer) > 0);
     $("dadoTimer").textContent = segDado ? `Iniciar ${rotuloTempo(segDado)}` : "";
-    $("dadoRolar").textContent = d ? "🎲 Rolar de novo" : "🎲 Rolar o dado";
+    $("dadoRolar").innerHTML = iconeHtml("dices", 16) + (d ? " <span>Rolar de novo</span>" : " <span>Rolar o dado</span>");
     // massagem
     const m = e.massagem && e.massagem.id ? e.massagem : null;
     $("massagemForm").hidden = !!m; $("massagemVivo").hidden = !m;
@@ -464,16 +557,16 @@
       $("massagemNotaTexto").textContent = `${nome(1 - m.quem)}, que nota a massagem merece?`;
       $("massagemEspera").textContent = acabou && !daNota ? `Esperando a nota de ${nome(1 - m.quem)}…` : "";
       if (!$("massagemEstrelas").childElementCount) [1, 2, 3, 4, 5].forEach(v => {
-        const b = el("button", "", "★".repeat(v)); b.type = "button"; b.setAttribute("aria-label", `${v} ${v === 1 ? "estrela" : "estrelas"}`);
+        const b = el("button", "estrela-btn"); b.type = "button"; b.setAttribute("aria-label", `${v} ${v === 1 ? "estrela" : "estrelas"}`); for (let k = 0; k < v; k++) { b.appendChild(icone("star", 20, "icone-estrela-cheia")); }
         b.addEventListener("click", () => notaMassagem(v)); $("massagemEstrelas").appendChild(b);
       });
     }
     // vendado
     const vd = e.vendado;
-    $("vendadoTexto").textContent = vd ? `🙈 A próxima carta de ${nome(vd.jogador)} vai de olhos vendados: ${nome(1 - vd.jogador)} lê em voz alta. Vale +1 ponto.`
+    $("vendadoTexto").textContent = vd ? `A próxima carta de ${nome(vd.jogador)} vai de olhos vendados: ${nome(1 - vd.jogador)} lê em voz alta. Vale +1 ponto.`
       : `Na próxima carta, ${nome(e.vez)} cumpre de olhos vendados (lenço, travesseiro ou a mão) e ${nome(1 - e.vez)} lê a carta. Vale +1 ponto.`;
     $("vendadoLigar").hidden = !!vd;
-    $("vendadoLigar").textContent = `🙈 Vendar ${nome(e.vez)} na próxima carta`;
+    $("vendadoLigar").textContent = `Vendar ${nome(e.vez)} na próxima carta`;
     $("vendadoDesligar").hidden = !vd;
     // quente ou frio
     const q = e.noite;
@@ -481,9 +574,9 @@
     $("quenteRelogio").hidden = !(q && q.fase === "procurando" && !q.fim);
     $("quenteDesistir").hidden = $("quenteRelogio").hidden;
     if (!q) { $("quenteTexto").textContent = "Um esconde um objeto ou um bilhete pela casa; o outro procura com dicas de quente ou frio. Quem achar mais rápido vence a rodada."; $("quenteAcao").textContent = "Começar (melhor de 3)"; }
-    else if (q.fim) { $("quenteTexto").textContent = `🏆 ${nome(q.vencedor)} venceu o quente ou frio!` + (q.prenda ? ` ${nome(1 - q.vencedor)} paga: ${q.prenda}` : ""); $("quenteAcao").textContent = "Jogar de novo"; }
+    else if (q.fim) { $("quenteTexto").textContent = `${nome(q.vencedor)} venceu o quente ou frio!` + (q.prenda ? ` ${nome(1 - q.vencedor)} paga: ${q.prenda}` : ""); $("quenteAcao").textContent = "Jogar de novo"; }
     else if (q.fase === "esconder") { $("quenteTexto").textContent = `${nome(q.escondedor)} esconde; ${nome(1 - q.escondedor)} fecha os olhos.` + (q.ultimos ? ` Última rodada: ${nome(0)} ${fmtBusca(q.ultimos[0])}, ${nome(1)} ${fmtBusca(q.ultimos[1])}.` : ""); $("quenteAcao").textContent = "Escondi, valendo!"; }
-    else { $("quenteTexto").textContent = `${nome(1 - q.escondedor)} procurando… ${nome(q.escondedor)} dá as dicas: quente ou frio!`; $("quenteAcao").textContent = "Achei! 🎉"; }
+    else { $("quenteTexto").textContent = `${nome(1 - q.escondedor)} procurando… ${nome(q.escondedor)} dá as dicas: quente ou frio!`; $("quenteAcao").textContent = "Achei!"; }
     tickModos();
     if (!timerModos) timerModos = setInterval(tickModos, 500);
   }
@@ -497,13 +590,13 @@
     $("dadoRelogio").hidden = !t;
     if (t) {
       const r = restaMs(t);
-      $("dadoRelogio").textContent = r > 0 ? relogioMs(r) : "Tempo! ⏰";
+      $("dadoRelogio").textContent = r > 0 ? relogioMs(r) : "Tempo!";
       if (r <= 0 && !avisouFim.has("d" + d.id)) { avisouFim.add("d" + d.id); tom(880, 0.4); vibrar([200, 100, 200]); $("dadoTimer").hidden = false; }
     }
     const m = e.massagem && e.massagem.id ? e.massagem : null;
     if (m) {
       const r = restaMs(m);
-      $("massagemRelogio").textContent = m.terminou ? "Terminou" : r > 0 ? relogioMs(r) : "Tempo! ⏰";
+      $("massagemRelogio").textContent = m.terminou ? "Terminou" : r > 0 ? relogioMs(r) : "Tempo!";
       if ((r <= 0 || m.terminou) && !avisouFim.has("m" + m.id)) { avisouFim.add("m" + m.id); if (r <= 0) { tom(880, 0.4); vibrar([200, 100, 200]); } desenharModosHoje(e); }
     }
     const q = e.noite;
@@ -515,16 +608,18 @@
   // tudo o que está esperando os dois, com chave para o check da lista
   function promessas(e) {
     const l = [];
-    cofre.forEach(x => l.push({ chave: "cofre:" + x.id, texto: x.carta + (x.nota ? ` · ${x.nota}` : "") + (x.minutos ? ` (${x.minutos} min)` : ""), ic: TIPO_FATURA[x.tipo] || "💞",
-      feito: !!x.feito, cofre: x, tipo: TIPO_FATURA[x.tipo] ? x.tipo : "promessa", credor: x.credor === 0 || x.credor === 1 ? x.credor : null }));
+    cofre.forEach(x => l.push({
+      chave: "cofre:" + x.id, texto: x.carta + (x.nota ? ` · ${x.nota}` : "") + (x.minutos ? ` (${x.minutos} min)` : ""), ic: TIPO_FATURA[x.tipo] || "heart",
+      feito: !!x.feito, cofre: x, tipo: TIPO_FATURA[x.tipo] ? x.tipo : "promessa", credor: x.credor === 0 || x.credor === 1 ? x.credor : null
+    }));
     if (permitido("posicoes")) marcasPos.filter(m => m.marca === "testar").forEach(m => {
       const p = posicoes.find(x => x.id === m.posicao_id);
-      if (p) l.push({ chave: "pos:" + p.id, texto: `Posição: ${p.nome}`, ic: "📖", feito: !!e.lista["pos:" + p.id] });
+      if (p) l.push({ chave: "pos:" + p.id, texto: `Posição: ${p.nome}`, ic: "book-open", feito: !!e.lista["pos:" + p.id] });
     });
     [0, 1].forEach(j => {
       const sonhos = textoManual(j, "sonhos");
       if (sonhos) sonhos.split(/\n|;/).map(x => x.trim()).filter(Boolean).slice(0, 6).forEach((t, i) =>
-        l.push({ chave: `sonho:${j}:${i}`, texto: `Desejo de ${nomeDe(j)}: ${t}`, ic: "✨", feito: !!e.lista[`sonho:${j}:${i}`] }));
+        l.push({ chave: `sonho:${j}:${i}`, texto: `Desejo de ${nomeDe(j)}: ${t}`, ic: "sparkles", feito: !!e.lista[`sonho:${j}:${i}`] }));
     });
     return l;
   }
@@ -538,9 +633,9 @@
     if (e.juntosDesde) {
       const dia = 1 - diasAte(e.juntosDesde);
       const total = e.juntosAte ? diasAte(e.juntosAte) - diasAte(e.juntosDesde) + 1 : null;
-      dias = e.juntosAte && hoje === e.juntosAte ? `Último dia juntos 💞 · já cumpriram ${feitas} de ${l.length} promessas`
+      dias = e.juntosAte && hoje === e.juntosAte ? `Último dia juntos · já cumpriram ${feitas} de ${l.length} promessas`
         : total && total > 0 ? `Dia ${dia} de ${total} juntos · ${feitas} de ${l.length} promessas cumpridas`
-        : `Dia ${dia} juntos · ${feitas} de ${l.length} promessas cumpridas`;
+          : `Dia ${dia} juntos · ${feitas} de ${l.length} promessas cumpridas`;
     }
     $("cumprirDias").textContent = dias;
     $("cumprirAte").hidden = !!e.juntosAte;
@@ -549,7 +644,7 @@
     $("cumprirVazio").hidden = !!l.length;
     const s = e.sorteioCofre && cofre.find(x => x.id === e.sorteioCofre.id && !x.feito);
     $("cumprirSorteio").hidden = !s;
-    $("cumprirSorteado").textContent = s ? `🎁 ${s.carta}` + (s.nota ? ` · ${s.nota}` : "") : "";
+    $("cumprirSorteado").textContent = s ? s.carta + (s.nota ? ` · ${s.nota}` : "") : "";
     // placar: quanto cada um pode cobrar
     const deve = [0, 1].map(j => l.filter(x => x.credor === j && !x.feito).length);
     $("faturaPlacar").hidden = !deve[0] && !deve[1];
@@ -566,15 +661,17 @@
         if (cred === null) {   // sem credor (promessas antigas, posições, desejos): qualquer um marca
           const lab = el("label", "check"), cb = el("input"); cb.type = "checkbox"; cb.checked = x.feito;
           cb.addEventListener("change", () => marcarPromessa(x, cb.checked));
-          lab.append(cb, document.createTextNode(` ${x.ic} ${x.texto}`));
+          lab.append(cb, icone(x.ic || "heart", 16), document.createTextNode(` ${x.texto}`));
           li.appendChild(lab);
         } else {
-          li.appendChild(el("span", "fatura-item", `${x.ic} ${x.texto}`));
-          if (x.feito) li.appendChild(el("span", "fatura-quitado", x.cofre.quitado_em ? `Quitado em ${dataBR(hojeISO(new Date(x.cofre.quitado_em)))} ✓` : "Quitado ✓"));
+          const spanItem = el("span", "fatura-item");
+          spanItem.append(icone(x.ic || "heart", 16), document.createTextNode(` ${x.texto}`));
+          li.appendChild(spanItem);
+          if (x.feito) li.appendChild(el("span", "fatura-quitado", x.cofre.quitado_em ? `Quitado em ${dataBR(hojeISO(new Date(x.cofre.quitado_em)))}` : "Quitado"));
           else if (souCredor(cred)) {
             const ac = el("div", "acoes");
             const rb = el("button", "secondary", "Resgatar"); rb.type = "button"; rb.addEventListener("click", () => resgatar(x.cofre));
-            const qb = el("button", "done", "Quitado ✓"); qb.type = "button"; qb.addEventListener("click", () => quitar(x));
+            const qb = el("button", "done", "Quitado"); qb.type = "button"; qb.addEventListener("click", () => quitar(x));
             ac.append(rb, qb); li.appendChild(ac);
           } else li.appendChild(el("span", "fatura-quem", `Só ${nomeDe(cred)} cobra`));
         }
@@ -590,7 +687,7 @@
     $("cumprirFechados").textContent = partes.length ? "Ainda fechados: " + partes.join(" · ") : "";
   }
   // ---------- v9: cardápio secreto (votos só pelos RPCs desejos_*; antes de enviar, só neste aparelho) ----------
-  const CAT_DESEJO = { sair: ["🚶 Sair", "leve"], casa: ["🏠 Em casa", "leve"], romantico: ["💞 Romântico", "romantico"], picante: ["🌶️ Picante", "picante"], pesado: ["🔥 Pesado", "pesado"] };
+  const CAT_DESEJO = { sair: ["Sair", "leve"], casa: ["Em casa", "leve"], romantico: ["Romântico", "romantico"], picante: ["Picante", "picante"], pesado: ["Pesado", "pesado"] };
   let desejos = [], cardapioEnviaram = [], cardapioMatch = null, cardapioPingVisto = null;
   const rodadaCardapio = e => (e && typeof e.reencontro === "string" && e.reencontro.slice(0, 10)) || null;
   const chaveVotos = () => `lp-desejos:${codigo}:${rodadaCardapio(estado)}:${eu}`;
@@ -632,8 +729,8 @@
     $("casaCardapio").hidden = !ativo || !r || dias < 0 || dias > 3 || juntos(e) || cardapioEnviaram.includes(eu);
     const outro = cardapioEnviaram.filter(j => j !== eu);
     $("cardCardapioSub").textContent = !r ? "Desejos para o reencontro"
-      : cardapioEnviaram.length >= 2 ? "✨ Os dois enviaram"
-      : outro.length ? `${nomeDe(outro[0])} já enviou 🤫` : cardapioEnviaram.includes(eu) ? "Você já enviou ✓" : "Marque o que você quer";
+      : cardapioEnviaram.length >= 2 ? "Os dois enviaram"
+        : outro.length ? `${nomeDe(outro[0])} já enviou` : cardapioEnviaram.includes(eu) ? "Você já enviou" : "Marque o que você quer";
   }
   function desenharCardapio() {
     if ($("vCardapio").hidden || !estado) return;
@@ -645,8 +742,8 @@
     if (r) [0, 1].forEach(j => {
       if (!estado.jogadores[j]) return;
       const foi = cardapioEnviaram.includes(j);
-      st.appendChild(el("li", foi ? "ok" : "", j === eu && !umCelularAqui(estado) ? (foi ? "Você já enviou o seu ✓" : "Você ainda não enviou")
-        : foi ? `${nomeDe(j)} já enviou o cardápio 🤫` : `${nomeDe(j)} ainda não enviou`));
+      st.appendChild(el("li", foi ? "ok" : "", j === eu && !umCelularAqui(estado) ? (foi ? "Você já enviou o seu" : "Você ainda não enviou")
+        : foi ? `${nomeDe(j)} já enviou o cardápio` : `${nomeDe(j)} ainda não enviou`));
     });
     $("cardapioEscolha").hidden = !r || enviei;
     $("cardapioRevelar").hidden = !r || !ambos || !!cardapioMatch;
@@ -661,9 +758,13 @@
       const ul = el("ul", "cardapio-lista");
       itens.forEach(i => {
         const li = el("li", votos[i.id] === true ? "quero" : votos[i.id] === false ? "passo" : "");
-        li.appendChild(el("span", "t", `${i.emoji || "✨"} ${i.texto}`));
+        const icSpan = el("span", "ic");
+        icSpan.appendChild(icone(i.icone || iconeDeEmoji(i.emoji, "sparkles"), 18));
+        const tSpan = el("span", "t");
+        tSpan.textContent = " " + i.texto;
+        li.append(icSpan, tSpan);
         const ac = el("div", "acoes");
-        [[true, "Quero 💚"], [false, "Passo"]].forEach(([v, rot]) => {
+        [[true, "Quero"], [false, "Passo"]].forEach(([v, rot]) => {
           const b = el("button", "chip-btn", rot); b.type = "button";
           b.setAttribute("aria-pressed", String(votos[i.id] === v));
           b.addEventListener("click", () => votarDesejo(i.id, v));
@@ -691,7 +792,7 @@
     if (texto.length < 3) return erro("erroCardapio", "Escreva o desejo (pelo menos 3 letras).");
     if (!CAT_DESEJO[cat]) return;
     $("desejoSalvar").disabled = true;
-    const { data, error } = await sb.rpc("desejos_item_criar", { p_sala: codigo, p_categoria: cat, p_nivel: CAT_DESEJO[cat][1], p_texto: texto.slice(0, 140), p_emoji: "✨" });
+    const { data, error } = await sb.rpc("desejos_item_criar", { p_sala: codigo, p_categoria: cat, p_nivel: CAT_DESEJO[cat][1], p_texto: texto.slice(0, 140), p_emoji: "\u2728" });
     $("desejoSalvar").disabled = false;
     if (error) return erro("erroCardapio", /limite/.test(error.message || "") ? "A sala já tem 100 desejos próprios." : "Não consegui adicionar. Confira a internet.");
     erro("erroCardapio", "");
@@ -723,7 +824,11 @@
     cardapioMatch = Array.isArray(data.itens) ? data.itens.filter(i => i && typeof i.texto === "string") : [];
     const ul = $("cardapioMatch"); ul.textContent = "";
     cardapioMatch.forEach((i, k) => {
-      const li = el("li", "virar", `${i.emoji || "✨"} ${i.texto}`);
+      const li = el("li", "virar");
+      li.appendChild(icone(i.icone || iconeDeEmoji(i.emoji, "sparkles"), 18));
+      const tSpan = el("span", "t");
+      tSpan.textContent = " " + i.texto;
+      li.appendChild(tSpan);
       li.style.animationDelay = (k * 0.15) + "s";
       ul.appendChild(li);
     });
@@ -735,7 +840,7 @@
     if (!itens.length || (estado.cardapioNoCofre || []).includes(r)) return;
     gravarFresco(n => { n.cardapioNoCofre = [...(n.cardapioNoCofre || []), r].slice(-20); });
     for (const i of itens) {
-      const carta = `${i.emoji || "✨"} ${i.texto}`.slice(0, 280);
+      const carta = i.texto.slice(0, 280);
       if (cofre.some(x => x.carta === carta && x.nota === "Cardápio secreto")) continue;
       const { data, error } = await sb.from("cofre").insert({ sala: codigo, carta, nota: "Cardápio secreto", autor: "Cardápio", tipo: "promessa" }).select("*").single();
       if (!error && data) juntarCofre(data);
@@ -743,7 +848,7 @@
   }
 
   // ---------- v9: a fatura (vales, prendas e promessas com credor) ----------
-  const TIPO_FATURA = { vale: "🎟️", prenda: "🧾", promessa: "💞" };
+  const TIPO_FATURA = { vale: "ticket", prenda: "receipt", promessa: "heart" };
   let valesModelos = [], timerResgate = null, avisouResgate = null;
   // num celular só, quem segura o aparelho é os dois
   const souCredor = cred => eu === cred || umCelularAqui(estado);
@@ -755,7 +860,7 @@
   function avisarVale(x) {
     const quem = x.credor === eu && !umCelularAqui(estado) ? "Você ganhou" : `${nomeDe(x.credor)} ganhou`;
     // junto com as conquistas da mesma vitória, num aviso só
-    filaConquistas.push(`🎟️ ${quem}: ${x.carta}` + (x.minutos ? ` (${x.minutos} min)` : ""));
+    filaConquistas.push(`${quem}: ${x.carta}` + (x.minutos ? ` (${x.minutos} min)` : ""));
     clearTimeout(timerConquistas);
     timerConquistas = setTimeout(() => { mostrarAviso(novoAviso(filaConquistas.join(" · ")), false); filaConquistas = []; }, 300);
   }
@@ -790,7 +895,7 @@
     gravar(n => {
       if (!n.carta || n.carta.chave !== c.chave) return;
       const final = n.carta.motivo === "final", cc = n.carta;
-      n.aviso = novoAviso(`🧾 Prenda de ${n.jogadores[devedor]} guardada para o reencontro (${n.jogadores[credor]} cobra)`);
+      n.aviso = novoAviso(`Prenda de ${n.jogadores[devedor]} guardada para o reencontro (${n.jogadores[credor]} cobra)`);
       n.carta = null;
       if (!final) passarVez(n, cc);
     });
@@ -810,16 +915,16 @@
     const cred = x.credor === 0 || x.credor === 1 ? x.credor : null;
     const credor = cred === null || souCredor(cred);
     $("resgateQuem").textContent = `${nomeDe(r.por)} resgatou:`;
-    $("resgateTexto").textContent = `${TIPO_FATURA[x.tipo] || "💞"} ${x.carta}`;
+    $("resgateTexto").innerHTML = iconeHtml(TIPO_FATURA[x.tipo] || "heart", 20) + " " + el("span", "", x.carta).outerHTML;
     $("resgateIniciar").hidden = !x.minutos || !!r.ate;
-    $("resgateIniciar").textContent = `⏱️ Começar (${x.minutos} min)`;
+    $("resgateIniciar").innerHTML = iconeHtml("timer", 16) + ` <span>Começar (${x.minutos} min)</span>`;
     $("resgateQuitar").hidden = !credor;
     $("resgateFechar").hidden = !credor;
     $("resgateTimer").hidden = !r.ate;
     if (r.ate) {
       const tick = () => {
         const s = Math.max(0, Math.ceil((r.ate - Date.now()) / 1000));
-        $("resgateTimer").textContent = s ? relogioMs(s * 1000) : "Tempo! ⏰";
+        $("resgateTimer").textContent = s ? relogioMs(s * 1000) : "Tempo!";
         if (!s) {
           clearInterval(timerResgate); timerResgate = null;
           if (avisouResgate !== r.id + r.ate) { avisouResgate = r.id + r.ate; tom(880, 0.4); vibrar([200, 100, 200]); }
@@ -854,11 +959,11 @@
       if (feito && n.resgate && x.cofre && n.resgate.id === x.cofre.id) n.resgate = null;
     });
   }
-  // "Cumprimos ✓": vai para o álbum de momentos com a data
+  // Cumprimos: vai para o álbum de momentos com a data
   async function guardarMomentoCumprido(texto) {
     if (!MOMENTOS_OK()) return;
     const { data, error } = await sb.from("momentos")
-      .insert({ sala: codigo, carta_texto: texto.slice(0, 500), carta_tipo: "desafio", frase: `Cumprido no reencontro em ${dataBR(hojeISO())} 💞`, autor: nomeDe(eu) }).select("*").single();
+      .insert({ sala: codigo, carta_texto: texto.slice(0, 500), carta_tipo: "desafio", frase: `Cumprido no reencontro em ${dataBR(hojeISO())}`, autor: nomeDe(eu) }).select("*").single();
     if (!error && data) linhaV5("momentos", "INSERT", data);
   }
   function sortearPromessa() {
@@ -895,7 +1000,7 @@
     if (inicial) return;
     $("resumoJuntosPeriodo").textContent = `De ${dataBR(r.desde)} a ${dataBR(r.ate)}`;
     const ul = $("resumoJuntosLista"); ul.textContent = "";
-    (r.cumpridas || []).forEach(x => ul.appendChild(el("li", "feito", `✓ ${x.texto}`)));
+    (r.cumpridas || []).forEach(x => ul.appendChild(el("li", "feito", x.texto)));
     if (!ul.childElementCount) ul.appendChild(el("li", "", "Nenhuma promessa marcada como cumprida."));
     const mom = dados.momentos.filter(m => m.criada_em && hojeISO(new Date(m.criada_em)) >= r.desde).length;
     $("resumoJuntosMomentos").textContent = mom ? `${mom} ${mom === 1 ? "momento salvo" : "momentos salvos"} no álbum` : "";
@@ -913,7 +1018,7 @@
 
   // ---------- tempo em chamada (tabela chamadas; escrita só pelos RPCs) ----------
   let chamadas = [], timerSinalPres = null, ultimoToqueCh = 0, timerRelogioCh = null, paginasChamadas = 1;
-  const ORIGEM_IC = { presenca: "👥", botao: "📞", manual: "✍️", app: "📱", android: "🤖" };
+  const ORIGEM_IC = { presenca: "users", botao: "phone", manual: "pencil", app: "smartphone", android: "bot" };
   const ORIGEM_NOME = { presenca: "pela presença", botao: "pelo botão", manual: "registrada à mão", app: "chamada do app", android: "detectada no Android" };
   const chamadaAberta = () => chamadas.find(r => !r.fim) || null;
   const botaoLigado = () => { const a = chamadaAberta(); return !!(a && a.tolerancia_min >= 360); };
@@ -994,11 +1099,11 @@
     linha.hidden = !(estado && estado.jogadores[1]);
     const a = chamadaAberta(), lig = botaoLigado();
     $("chamadaBtn").setAttribute("aria-pressed", String(lig));
-    $("chamadaBtn").textContent = lig ? "⏹ Encerrar chamada" : "📞 Em chamada agora";
+    $("chamadaBtn").innerHTML = lig ? iconeHtml("square", 16) + " <span>Encerrar chamada</span>" : iconeHtml("phone", 16) + " <span>Em chamada agora</span>";
     $("chamadaRelogio").hidden = !a;
     clearInterval(timerRelogioCh); timerRelogioCh = null;
     if (!a) return;
-    const tick = () => { const x = chamadaAberta(); if (x) $("chamadaRelogio").textContent = (botaoLigado() ? "📞 " : "👥 ") + fmtCrono(Date.now() - new Date(x.inicio).getTime()); };
+    const tick = () => { const x = chamadaAberta(); if (x) $("chamadaRelogio").textContent = fmtCrono(Date.now() - new Date(x.inicio).getTime()); };
     tick();
     timerRelogioCh = setInterval(tick, 1000);   // sempre a partir de `inicio`: não acumula erro
   }
@@ -1072,7 +1177,7 @@
     const { error } = await sb.rpc("chamada_apagar", { p_sala: codigo, p_id: x.id });
     if (error) erro("erroChamadas", "Não consegui apagar. Confira a internet.");
   }
-  const HUMOR_CH = { romantica: "🥰", intensa: "🥵", risadas: "😂", sono: "😴" };
+  const HUMOR_CH = { romantica: "heart", intensa: "flame", risadas: "laugh", sono: "moon" };
   function desenharChamadas() {
     if ($("vChamadas").hidden) return;
     const fechadas = chamadas.filter(r => r.fim);
@@ -1080,8 +1185,12 @@
     const ul = $("chamadasLista"); ul.textContent = "";
     fechadas.slice(0, paginasChamadas * 20).forEach(x => {
       const li = el("li"), info = el("div", "info");
-      info.append(el("span", "t", `${ORIGEM_IC[x.origem] || "📞"} ${quandoChamada(x.inicio)} · ${fmtDur(x.duracao_minutos || 0)}` + (x.humor_final ? ` ${HUMOR_CH[x.humor_final] || ""}` : "")),
-        el("span", "autor", ORIGEM_NOME[x.origem] || "") );
+      const spanT = el("span", "t");
+      spanT.append(icone(ORIGEM_IC[x.origem] || "phone", 16), document.createTextNode(` ${quandoChamada(x.inicio)} · ${fmtDur(x.duracao_minutos || 0)}`));
+      if (x.humor_final && HUMOR_CH[x.humor_final]) {
+        spanT.append(document.createTextNode(" · "), icone(HUMOR_CH[x.humor_final], 16), document.createTextNode(` ${HUMOR_NOME[x.humor_final] || ""}`));
+      }
+      info.append(spanT, el("span", "autor", ORIGEM_NOME[x.origem] || ""));
       const ac = el("div", "acoes");
       const aj = el("button", "linkbtn", "Ajustar"); aj.type = "button"; aj.addEventListener("click", () => abrirAjuste(x, false));
       const ap = el("button", "linkbtn", "Apagar"); ap.type = "button"; ap.addEventListener("click", () => apagarChamada(x));
@@ -1094,7 +1203,7 @@
   // ---------- estatísticas (chamadas_resumo, recarregado ao abrir e a cada mudança) ----------
   let resumoCh = null, timerResumoCh = null, fraseCh = Math.floor(Math.random() * 4);
   const resumoChamadasFns = [];   // marcos (fase 4)
-  const PERIODO_CH = { madrugada: "madrugada 🌙", manha: "manhã ☀️", tarde: "tarde 🌤️", noite: "noite 🌃" };
+  const PERIODO_CH = { madrugada: "Madrugada", manha: "Manhã", tarde: "Tarde", noite: "Noite" };
   const HUMOR_NOME = { romantica: "Romântica", intensa: "Intensa", risadas: "Risadas", sono: "Caímos no sono" };
   const numBR = n => n.toLocaleString("pt-BR");
   const horasTxt = min => { min = Math.round(min || 0); const h = Math.floor(min / 60); return h ? `${numBR(h)} ${h === 1 ? "hora" : "horas"}` : `${min} ${min === 1 ? "minuto" : "minutos"}`; };
@@ -1160,8 +1269,8 @@
     if (r.recorde) item("Chamada mais longa", `Recorde: ${fmtDur(r.recorde.minutos)} · ${quandoRecorde(r.recorde.inicio)}`);
     item("Esta semana", r.semana_minutos ? `Média de ${fmtDur(r.semana_minutos / 7)} por dia` : "Nenhuma chamada nos últimos 7 dias");
     if (r.periodo_favorito && PERIODO_CH[r.periodo_favorito]) item("Horário favorito", PERIODO_CH[r.periodo_favorito]);
-    if (r.humor_favorito && HUMOR_CH[r.humor_favorito]) item("Vibe mais comum", `${HUMOR_CH[r.humor_favorito]} ${HUMOR_NOME[r.humor_favorito]}`);
-    if (r.sequencia_dias >= 2) item("Dias seguidos com chamada", `🔥 ${r.sequencia_dias} dias seguidos`);
+    if (r.humor_favorito && HUMOR_NOME[r.humor_favorito]) item("Vibe mais comum", HUMOR_NOME[r.humor_favorito]);
+    if (r.sequencia_dias >= 2) item("Dias seguidos com chamada", `${r.sequencia_dias} dias seguidos`);
     box.append(ul);
     // gráfico dos últimos 14 dias, em CSS
     const d14 = ultimos14(), max = Math.max(1, ...d14.map(x => x.m));
@@ -1179,7 +1288,14 @@
     const selos = CONQ().filter(c => c.codigo.startsWith("call_"));
     if (selos.length) {
       const s = el("div", "ch-selos");
-      selos.forEach(c => { const f = linhaConquista(c.codigo, null); const x = el("span", "ch-selo" + (f ? " ok" : ""), `${f ? c.selo : "🔒"} ${c.titulo}`); x.title = c.descricao; s.append(x); });
+      selos.forEach(c => {
+        const f = linhaConquista(c.codigo, null);
+        const x = el("span", "ch-selo" + (f ? " ok" : ""));
+        x.appendChild(icone(f ? (c.selo || "trophy") : "lock", 16));
+        x.append(" " + c.titulo);
+        x.title = c.descricao;
+        s.append(x);
+      });
       box.append(s);
     }
     const frases = frasesEquivalencia(r.total_minutos, tot);
@@ -1194,7 +1310,7 @@
   resumoChamadasFns.push((r, antes) => {
     verificarConquistas(c => c.codigo.startsWith("call_"));   // só os marcos de chamada: os outros esperam uma ação
     if (antes && antes.recorde && r.recorde && r.recorde.minutos > antes.recorde.minutos) {
-      mostrarAviso(novoAviso(`⏱️ Novo recorde: ${fmtDur(r.recorde.minutos)} numa chamada só`), false);
+      mostrarAviso(novoAviso(`Novo recorde: ${fmtDur(r.recorde.minutos)} numa chamada só`), false);
       vibrar(80);
     }
   });
@@ -1246,13 +1362,13 @@
     const b = $("modoBtn");
     b.hidden = !permitido("presencial") || !e.jogadores[1];
     b.disabled = !podeTrocarModo();
-    b.textContent = j ? "💞 Juntos" : "📍 A distância";
+    b.innerHTML = j ? iconeHtml("heart", 16) + " <span>Juntos</span>" : iconeHtml("map-pin", 16) + " <span>A distância</span>";
     b.setAttribute("aria-pressed", String(j));
     b.title = j ? "Tocar para voltar ao modo a distância" : "Tocar para ligar o modo Juntos";
     const dia = j && e.juntosDesde ? 1 - diasAte(e.juntosDesde) : null;
     const total = j && e.juntosDesde && e.juntosAte ? diasAte(e.juntosAte) - diasAte(e.juntosDesde) + 1 : null;
     $("juntosCab").hidden = !j;
-    $("juntosCab").textContent = !j ? "" : total && total > 0 && dia ? `💞 Juntos de novo · dia ${dia} de ${total}` : "💞 Juntos de novo" + (dia ? ` · dia ${dia} do reencontro` : "");
+    $("juntosCab").textContent = !j ? "" : total && total > 0 && dia ? `Juntos de novo · dia ${dia} de ${total}` : "Juntos de novo" + (dia ? ` · dia ${dia} do reencontro` : "");
     if (j && e.perguntarAte === euReal && !e.juntosAte && !$("dlgJuntosAte").open) { setTimeout(() => gravar(n => { n.perguntarAte = null; }), 0); abrirJuntosAte(); }
     talvezResumoJuntos(e, false);
     $("umCelularLinha").hidden = !j || !podeTrocarModo();
@@ -1358,7 +1474,7 @@
   // para uma não apagar a outra.
   async function gravarFresco(mudar) {
     if (!estado || !codigo) return;
-    try { const e = await buscarSala(codigo); if (e) estado = normalizar(e); } catch (err) {}
+    try { const e = await buscarSala(codigo); if (e) estado = normalizar(e); } catch (err) { }
     return gravar(mudar);
   }
 
@@ -1479,7 +1595,10 @@
     $("dicaFixa").hidden = !e.fixa;
     ultimoVencedor = e.vencedor === undefined ? null : e.vencedor;
     carregarHistorico(c);
-    history.replaceState(null, "", "?sala=" + c);
+    invCasoAtual = null; invPartidaAtual = null; invDossie = null; invRelatorio = null; invNotas = [];
+    invCarregarPrateleira();
+    invAplicarVisibilidade();
+    history.replaceState(null, "", "?sala=" + c + (invModoTeste ? "&teste=1" : ""));
     $("lobby").hidden = true;
     $("jogo").hidden = false;
     $("salaCodigo").textContent = c;
@@ -1540,10 +1659,23 @@
         if (c !== codigo || p.eventType === "DELETE" || !p.new) return;
         aplicarLinhaConfig(p.new);
         conferirDono(c);   // ex.: "Gerar novo código" em outro aparelho
+        invAplicarVisibilidade();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "investigacoes", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo) invReceberPartida(p.eventType, p.eventType === "DELETE" ? p.old : p.new);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "investigacoes" }, p => {
+        if (c === codigo) invReceberPartida("DELETE", p.old);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "investigacoes_notas", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo) invReceberNota(p.eventType, p.eventType === "DELETE" ? p.old : p.new);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "investigacoes_notas" }, p => {
+        if (c === codigo) invReceberNota("DELETE", p.old);
       })
       .subscribe(status => {
         if (status === "SUBSCRIBED" && canal) {
-          canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {}); marcarVisto(true);
+          canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => { }); marcarVisto(true);
           if (conexaoCaiu) { conexaoCaiu = false; $("conexao").hidden = true; if ($("erroJogo").textContent === MSG_CAIU) erro("erroJogo", ""); }
         }
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
@@ -1580,7 +1712,7 @@
     posicoes = []; marcasPos = []; carregarPosicoes(c);
     vistos = [null, null]; ultimoVistoGravado = 0; carregarVistos(c);
     nossas = []; if (fixa) carregarNossas(c);
-    manuais = [{}, {}]; clearTimeout(timerManual); timerManual = null; $("manualForm").textContent = ""; statusManual("");
+    manuais = [{}, {}]; avatarFotos = [null, null]; avatarModoAba = null; clearTimeout(timerManual); timerManual = null; $("manualForm").textContent = ""; statusManual("");
     if (fixa) carregarManuais(c);
     modelos = []; dengoSel = []; dengoRespondendo = null; $("dengoMeu").hidden = true;
     if (fixa) carregarModelos(c);
@@ -1612,7 +1744,7 @@
   const RE_REENCONTRO = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
   const alvoReencontro = r => new Date((r.length === 10 ? r + "T00:00" : r) + ":00-03:00").getTime();
   const JUNTOS_ATE = 14 * 86400000;        // "Vocês estão juntos há…" até 14 dias depois; depois, pede a próxima data
-  const AGORA_MS = 60000;                   // "É agora! 💞" no primeiro minuto
+  const AGORA_MS = 60000;                   // "É agora" no primeiro minuto
   let timerContador = null, faltavaAntes = null;
   const dois = n => String(n).padStart(2, "0");
   function partes(ms) {
@@ -1662,28 +1794,28 @@
     $("contadorQuando").hidden = !contando;
     if (contando) $("contadorQuando").textContent = quandoReencontro(st.r);
     $("contadorDica").hidden = !(contando && st.r.length === 10);
-    const txt = st.fase === "sem" ? "Quando é o reencontro? 💞"
-      : contando ? "Contagem para o reencontro 💞"
-      : st.fase === "agora" ? "É agora! 💞"
-      : st.fase === "juntos" ? `Vocês estão juntos há ${textoJuntos(-st.falta)} 💞`
-      : `O reencontro foi em ${dataBR(st.r)}. Marcar uma nova data?`;
+    const txt = st.fase === "sem" ? "Quando é o reencontro?"
+      : contando ? "Contagem para o reencontro"
+        : st.fase === "agora" ? "É agora"
+          : st.fase === "juntos" ? `Vocês estão juntos há ${textoJuntos(-st.falta)}`
+            : `O reencontro foi em ${dataBR(st.r)}. Marcar uma nova data?`;
     if ($("reencontroTxt").textContent !== txt) $("reencontroTxt").textContent = txt;
     // chegou a hora: oferece o modo Juntos (se a sala tiver e ele ainda não estiver ligado)
     $("contadorJuntos").hidden = !((st.fase === "agora" || st.fase === "juntos") && !juntos(e) && podeTrocarModo() && e.jogadores[1]);
     // mapa da saudade (v6), boa noite (v6) e cabeçalho do jogo
-    const curto = contando ? `Faltam ${textoFalta(st.falta)} para o reencontro` : st.fase === "agora" ? "É agora! 💞" : st.fase === "juntos" ? `Juntos há ${textoJuntos(-st.falta)} 💞` : "";
+    const curto = contando ? `Faltam ${textoFalta(st.falta)} para o reencontro` : st.fase === "agora" ? "É agora" : st.fase === "juntos" ? `Juntos há ${textoJuntos(-st.falta)}` : "";
     if ($("mapaReencontro")) $("mapaReencontro").textContent = curto;
     if ($("noiteReencontro")) $("noiteReencontro").textContent = curto;
     const mini = $("contadorMini");
     mini.hidden = !(contando && vista === "jogo");
-    if (!mini.hidden) mini.textContent = `💞 ${textoFalta(st.falta, true)}`;
+    if (!mini.hidden) mini.textContent = textoFalta(st.falta, true);
   }
   function festaReencontro() {
     vibrar([200, 100, 200, 100, 400]);
     const f = $("contadorFesta");
     f.textContent = "";
     for (let i = 0; i < 18; i++) {
-      const c = el("span", "", i % 3 ? "💞" : "❤️");
+      const c = el("span", "marca-chuva"); c.appendChild(icone("marca", 24));
       c.style.left = (5 + Math.random() * 90) + "%";
       c.style.animationDelay = (Math.random() * 0.6) + "s";
       f.appendChild(c);
@@ -1785,7 +1917,7 @@
       cb.type = "checkbox";
       cb.checked = !!x.feito;
       cb.addEventListener("change", () => marcarCofre(x, cb.checked));
-      lab.append(cb, document.createTextNode("Feito ✓"));
+      lab.append(cb, document.createTextNode(" Feito"));
       const apagar = document.createElement("button");
       apagar.type = "button";
       apagar.textContent = "Apagar";
@@ -1869,7 +2001,7 @@
     return n;
   }
 
-  const textoSeq = n => n ? `🔥 ${n} ${n === 1 ? "dia seguido" : "dias seguidos"}` : "Ainda sem sequência";
+  const textoSeq = n => n ? `${n} ${n === 1 ? "dia seguido" : "dias seguidos"}` : "Ainda sem sequência";
 
   function desenharDiario() {
     const box = $("diario");
@@ -1887,14 +2019,14 @@
     $("diarioMeuTexto").textContent = !cartasOk ? "Carregando…" : meu ? meu.texto : "Sem desafios neste nível.";
     $("diarioMeuSeq").textContent = textoSeq(sequencia(eu));
     const feito = cumpriuNoDia(hoje, eu);
-    $("diarioCumpri").textContent = feito ? "Cumprido hoje ✓" : "Cumpri hoje";
+    $("diarioCumpri").textContent = feito ? "Cumprido hoje" : "Cumpri hoje";
     $("diarioCumpri").disabled = feito || !meu;
     $("diarioWa").href = "https://wa.me/?text=" + encodeURIComponent(meu ? `Meu desafio do dia: ${meu.texto}` : "");
     const outro = 1 - eu;
     $("diarioOutro").hidden = !nomes[outro];
     if (nomes[outro]) {
       const dele = cartasOk ? desafioDoDia(hoje, outro) : null;
-      $("diarioOutroTitulo").textContent = `Desafio do dia de ${nomes[outro]}` + (cumpriuNoDia(hoje, outro) ? " · cumprido ✓" : "");
+      $("diarioOutroTitulo").textContent = `Desafio do dia de ${nomes[outro]}` + (cumpriuNoDia(hoje, outro) ? " · cumprido" : "");
       $("diarioOutroTexto").textContent = !cartasOk ? "Carregando…" : dele ? dele.texto : "Sem desafios neste nível.";
       $("diarioOutroSeq").textContent = textoSeq(sequencia(outro));
     }
@@ -1960,7 +2092,7 @@
     const visivel = !!(m && c && !$("card").hidden && permitido("trilha"));
     box.hidden = !visivel;
     if (!visivel) return;
-    $("trilhaTitulo").textContent = /m[úu]sica que eu escolher/i.test(c.texto || "") ? "Sugestão para este desafio" : "Trilha da rodada";
+    $("trilhaTitulo").textContent = /m[úu]sica que eu escolher/i.test(c.texto || "") ? "Sugestão para este desafio" : (m && m.playlist ? `Trilha (${rotuloPlaylist(m.playlist)})` : "Trilha da rodada");
     $("trilhaNome").textContent = m.titulo;
     $("trilhaArtista").textContent = m.artista;
     $("trilhaAbrir").href = m.url;
@@ -2071,11 +2203,11 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vChamadas", "vCardapio", "vRecados"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vChamadas", "vCardapio", "vRecados", "vInvestigacao"];
   const ABAS = { casa: "abaCasa", jogo: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
 
   function mostrarVista(nome) {
-    if (!(estado && estado.fixa)) nome = "jogo";   // sala comum: só o jogo
+    if (!(estado && estado.fixa) && nome !== "vInvestigacao") nome = "jogo";   // sala comum: só o jogo (e Investigação)
     vista = nome;
     if (estado) conferirCelular(estado);
     if (estado) setTimeout(() => estado && desenharModosHoje(estado), 0);
@@ -2106,8 +2238,10 @@
     if (nome === "vMural") entrarMural();
     if (nome === "vCardapio") abrirCardapio();
     if (nome === "vRecados") desenharRecados();
+    if (nome === "vInvestigacao") invAbrirTela();
     if (nome === "vHistorico") desenharHistCompanhia();
-    if (nome === "casa") setTimeout(desenharRecados, 0);
+    if (nome === "casa") { setTimeout(desenharRecados, 0); invAtualizarResumoInicio(); }
+    invAplicarVisibilidade();
     tickContador();
     window.scrollTo(0, 0);
   }
@@ -2116,7 +2250,7 @@
   function desenharCasa(e) {
     if (!e.fixa) return;
     const hoje = hojeISO();
-    $("cardDiarioSub").textContent = cumpriuNoDia(hoje, eu) ? "Cumprido hoje ✓" : "Seu desafio de hoje";
+    $("cardDiarioSub").textContent = cumpriuNoDia(hoje, eu) ? "Cumprido hoje" : "Seu desafio de hoje";
     const pend = cofre.filter(x => !x.feito).length;
     $("cardCofreSub").textContent = cofre.length ? `${pend} ${pend === 1 ? "pendente" : "pendentes"}` : "Guardem cartas para o reencontro";
     desenharCabecalho(e);
@@ -2142,7 +2276,10 @@
 
   // ---------- v7: Manual de mim (um por pessoa, tabela manuais) ----------
   let manuais = [{}, {}];            // campos de cada jogador
+  let avatarFotos = [null, null];    // foto do avatar (data URL) de cada jogador
+  let avatarModoAba = null;          // "inicial" | "foto"
   let timerManual = null, salvandoManual = 0;
+  const validarFotoAvatar = v => (typeof v === "string" && /^data:image\/(webp|jpeg|png);base64,/i.test(v) && v.length <= 60000) ? v : null;
   const LINGUAGENS = { palavras: "Palavras de afirmação", tempo: "Tempo de qualidade", presentes: "Presentes", servico: "Atos de serviço", toque: "Toque físico" };
   const TAMANHOS = [["camiseta", "Camiseta"], ["calca", "Calça"], ["calcado", "Calçado"], ["anel", "Anel"]];
   // [campo, rótulo, limite, tipo, dica]
@@ -2183,15 +2320,25 @@
     return out;
   }
   async function carregarManuais(c) {
-    const { data, error } = await sb.from("manuais").select("jogador, campos").eq("sala", c);
+    let { data, error } = await sb.from("manuais").select("jogador, campos, avatar_foto").eq("sala", c);
+    if (error) {
+      const fb = await sb.from("manuais").select("jogador, campos").eq("sala", c);
+      data = fb.data; error = fb.error;
+    }
     if (c !== codigo || error || !data) return;
-    data.forEach(r => { if (r.jogador === 0 || r.jogador === 1) manuais[r.jogador] = limparManual(r.campos); });
+    data.forEach(r => {
+      if (r.jogador === 0 || r.jogador === 1) {
+        manuais[r.jogador] = limparManual(r.campos);
+        if ("avatar_foto" in r) avatarFotos[r.jogador] = validarFotoAvatar(r.avatar_foto);
+      }
+    });
     manualMudou(true);
   }
   function receberManual(r) {
     if (!r || (r.jogador !== 0 && r.jogador !== 1) || r.sala !== codigo) return;
+    if ("avatar_foto" in r) avatarFotos[r.jogador] = validarFotoAvatar(r.avatar_foto);
     // o meu, enquanto estou editando, fica como está neste aparelho
-    if (r.jogador === eu && (timerManual || salvandoManual)) return;
+    if (r.jogador === eu && (timerManual || salvandoManual)) { manualMudou(false); return; }
     manuais[r.jogador] = limparManual(r.campos);
     manualMudou(r.jogador === eu && !editandoManual());
   }
@@ -2218,10 +2365,34 @@
     salvandoManual++;
     statusManual("Salvando…");
     const c = codigo;
-    const { error } = await sb.from("manuais").upsert({ sala: c, jogador: eu, campos: limparManual(manuais[eu]), atualizado_em: new Date().toISOString() }, { onConflict: "sala,jogador" });
+    const { error } = await sb.from("manuais").upsert({
+      sala: c,
+      jogador: eu,
+      campos: limparManual(manuais[eu]),
+      avatar_foto: avatarFotos[eu] || null,
+      atualizado_em: new Date().toISOString()
+    }, { onConflict: "sala,jogador" });
     salvandoManual--;
     if (c !== codigo) return;
-    statusManual(error ? "Não consegui salvar. Confira a internet." : "Salvo ✓");
+    statusManual(error ? "Não consegui salvar. Confira a internet." : "Salvo");
+  }
+  async function salvarFotoAvatar(novaFoto) {
+    if (!codigo || (eu !== 0 && eu !== 1)) return;
+    avatarFotos[eu] = validarFotoAvatar(novaFoto);
+    manualMudou(false);
+    salvandoManual++;
+    statusManual("Salvando…");
+    const c = codigo;
+    const { error } = await sb.from("manuais").upsert({
+      sala: c,
+      jogador: eu,
+      campos: limparManual(manuais[eu]),
+      avatar_foto: avatarFotos[eu],
+      atualizado_em: new Date().toISOString()
+    }, { onConflict: "sala,jogador" });
+    salvandoManual--;
+    if (c !== codigo) return;
+    statusManual(error ? "Não consegui salvar. Confira a internet." : "Salvo");
   }
   function statusManual(t) { $("manualSalvo").textContent = t; $("manualSalvo").classList.toggle("erro-txt", /Não consegui/.test(t)); }
 
@@ -2235,24 +2406,87 @@
     desenharManualOutro();
   }
   function desenharEscolhaAvatar() {
-    const a = avatarDe(eu), g = $("emojiGrade"), c = $("corGrade");
-    g.textContent = ""; c.textContent = "";
-    const sem = el("button", "emoji-op", "Aa"); sem.type = "button";
-    sem.setAttribute("aria-label", "Sem emoji (iniciais)"); sem.setAttribute("aria-pressed", String(!a.emoji));
-    sem.addEventListener("click", () => { mudarManual(m => { delete m.avatar; }); manualMudou(false); });
-    g.appendChild(sem);
-    EMOJIS_AVATAR.forEach(e => {
-      const b = el("button", "emoji-op", e); b.type = "button";
-      b.setAttribute("aria-pressed", String(a.emoji === e));
-      b.addEventListener("click", () => { mudarManual(m => { m.avatar = e; }); manualMudou(false); });
-      g.appendChild(b);
-    });
+    const a = avatarDe(eu), c = $("corGrade");
+    if ($("emojiGrade")) $("emojiGrade").hidden = true;
+    if (!avatarModoAba) avatarModoAba = a.foto ? "foto" : "inicial";
+    const emAjuste = $("avatarAjustePainel") && !$("avatarAjustePainel").hidden;
+    if ($("avatarModoSeg")) {
+      $("avatarModoSeg").querySelectorAll("[data-avatar-modo]").forEach(b => {
+        b.setAttribute("aria-pressed", b.dataset.avatarModo === avatarModoAba ? "true" : "false");
+      });
+    }
+    c.hidden = avatarModoAba !== "inicial" || emAjuste;
+    if ($("avatarFotoPainel")) $("avatarFotoPainel").hidden = avatarModoAba !== "foto" || emAjuste;
+    if ($("avatarFotoPrevia")) {
+      $("avatarFotoPrevia").textContent = "";
+      $("avatarFotoPrevia").appendChild(avatarEl(eu, "grande"));
+    }
+    if ($("avatarRemoverFoto")) $("avatarRemoverFoto").disabled = !a.foto;
+    c.textContent = "";
     PALETA_AVATAR.forEach(cor => {
       const b = el("button", "cor-op"); b.type = "button"; b.style.background = cor;
       b.setAttribute("aria-label", "Cor " + cor); b.setAttribute("aria-pressed", String(a.cor === cor));
       b.addEventListener("click", () => { mudarManual(m => { m.avatarCor = cor; }); manualMudou(false); });
       c.appendChild(b);
     });
+  }
+
+  // Ajuste e recorte de foto do avatar (256x256 WebP/JPEG <= 60KB)
+  let avImg = null, avZoom = 1, avDx = 0, avDy = 0, avArrastando = false, avIniX = 0, avIniY = 0;
+  function desenharCanvasAvatar() {
+    const cv = $("avatarAjusteCanvas");
+    if (!cv || !avImg) return;
+    const ctx = cv.getContext("2d");
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    const iw = avImg.naturalWidth || avImg.width || 1;
+    const ih = avImg.naturalHeight || avImg.height || 1;
+    const base = Math.max(W / iw, H / ih);
+    const esc = base * avZoom;
+    const dw = iw * esc, dh = ih * esc;
+    const maxDx = Math.max(0, (dw - W) / 2);
+    const maxDy = Math.max(0, (dh - H) / 2);
+    if (avDx > maxDx) avDx = maxDx;
+    if (avDx < -maxDx) avDx = -maxDx;
+    if (avDy > maxDy) avDy = maxDy;
+    if (avDy < -maxDy) avDy = -maxDy;
+    const x = (W - dw) / 2 + avDx;
+    const y = (H - dh) / 2 + avDy;
+    ctx.drawImage(avImg, x, y, dw, dh);
+  }
+  function abrirAjusteAvatar(arquivo) {
+    if (!arquivo) return;
+    const url = URL.createObjectURL(arquivo);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      avImg = img;
+      avZoom = 1; avDx = 0; avDy = 0;
+      if ($("avatarAjusteZoom")) $("avatarAjusteZoom").value = "1";
+      if ($("avatarAjustePainel")) $("avatarAjustePainel").hidden = false;
+      if ($("avatarFotoPainel")) $("avatarFotoPainel").hidden = true;
+      if ($("corGrade")) $("corGrade").hidden = true;
+      desenharCanvasAvatar();
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); };
+    img.src = url;
+  }
+  function fecharAjusteAvatar() {
+    avImg = null;
+    if ($("avatarAjustePainel")) $("avatarAjustePainel").hidden = true;
+    if ($("avatarInputFoto")) $("avatarInputFoto").value = "";
+    desenharEscolhaAvatar();
+  }
+  function exportarCanvasAvatar() {
+    const cv = $("avatarAjusteCanvas");
+    if (!cv || !avImg) return null;
+    desenharCanvasAvatar();
+    for (const q of [0.8, 0.65, 0.5]) {
+      let out = cv.toDataURL("image/webp", q);
+      if (!/^data:image\/webp/i.test(out)) out = cv.toDataURL("image/jpeg", q);
+      if (out.length <= 60000) return out;
+    }
+    return cv.toDataURL("image/jpeg", 0.4);
   }
   function desenharManualForm() {
     const f = $("manualForm"), m = manuais[eu] || {};
@@ -2291,7 +2525,7 @@
   function desenharManualOutro() {
     const o = 1 - eu, nome = nomeDe(o), m = manuais[o] || {}, dl = $("manualOutroLista");
     $("manualOutro").hidden = !nome;
-    $("manualOutroTitulo").textContent = `📗 Manual ${nome ? "de " + nome : ""}`;
+    $("manualOutroTitulo").textContent = `Manual ${nome ? "de " + nome : ""}`;
     dl.textContent = "";
     CAMPOS_MANUAL.forEach(([k, rotulo, , tipo]) => {
       let v = "";
@@ -2352,7 +2586,9 @@
   }
   function itemLi(x) {
     const li = el("li");
-    li.append(el("span", "ic", x.emoji || "💗"), el("b", "", x.titulo || ""));
+    const ic = el("span", "ic");
+    ic.appendChild(icone(x.icone || iconeDeEmoji(x.emoji, "hand-heart"), 18));
+    li.append(ic, el("b", "", x.titulo || ""));
     if (x.detalhe) li.append(el("span", "det", " — " + x.detalhe));
     return li;
   }
@@ -2366,14 +2602,14 @@
     box.hidden = !p;
     if (p) {
       const sozinho = temChave(p, "sozinho");
-      $("drTitulo").textContent = sozinho ? `${outro} precisa de um tempo sozinho(a). Não precisa fazer nada agora 🤍` : `${outro} pediu dengo!`;
+      $("drTitulo").textContent = sozinho ? `${outro} precisa de um tempo sozinho(a). Não precisa fazer nada agora.` : `${outro} pediu dengo!`;
       const ul = $("drItens"); ul.textContent = "";
       if (!sozinho) itensDe(p).forEach(x => ul.appendChild(itemLi(x)));
       ul.hidden = sozinho;
       $("drMsg").hidden = !p.mensagem; $("drMsg").textContent = p.mensagem || "";
       $("drQuando").textContent = `Pedido ${haQuanto(p.criada_em)}`;
       const lanche = temChave(p, "lanche") && textoManual(1 - eu, "delivery");
-      $("drDica").hidden = !lanche; $("drDica").textContent = lanche ? `💡 ${outro} costuma pedir: ${lanche}` : "";
+      $("drDica").hidden = !lanche; $("drDica").textContent = lanche ? `${outro} costuma pedir: ${lanche}` : "";
       const ex = $("drExtras"); ex.textContent = "";
       if (!sozinho && (temChave(p, "ligar") || temChave(p, "dormir"))) {
         const a = el("a", "wa", "Abrir o WhatsApp"); a.href = "https://wa.me/"; a.target = "_blank"; a.rel = "noopener"; ex.appendChild(a);
@@ -2394,7 +2630,7 @@
     $("dengoResposta").hidden = !r;
     if (r) {
       const indo = r.status === "indo", tempo = temChave(r, "sozinho");
-      $("dengoRespTitulo").textContent = tempo ? `${outro}: ${r.resposta || "Tô aqui quando precisar 🤍"}` : indo ? `${outro} está indo! 💨` : `${outro} não consegue agora`;
+      $("dengoRespTitulo").textContent = tempo ? `${outro}: ${r.resposta || "Tô aqui quando precisar"}` : indo ? `${outro} está a caminho!` : `${outro} não consegue agora`;
       $("dengoResposta").classList.toggle("indo", indo);
       const txt = tempo ? "" : r.resposta || "";
       $("dengoRespTexto").hidden = !txt; $("dengoRespTexto").textContent = txt;
@@ -2403,14 +2639,14 @@
 
     // meu pedido pendente
     const meu = meuPendente();
-    $("dengoPedir").textContent = meu ? "Ver meu pedido" : "PEDIR DENGO 💗";
+    $("dengoPedir").textContent = meu ? "Ver meu pedido" : "Pedir dengo";
     $("dengoPedir").setAttribute("aria-expanded", String(!!meu && !$("dengoMeu").hidden));
     if (!meu) $("dengoMeu").hidden = true;
     else {
-      $("dengoEsperando").textContent = `Pedido enviado 💗, esperando ${outro}…`;
+      $("dengoEsperando").textContent = `Pedido enviado, esperando ${outro}…`;
       const ul = $("dengoMeuItens"); ul.textContent = "";
       itensDe(meu).forEach(x => ul.appendChild(itemLi(x)));
-      $("dengoAvisar").href = "https://wa.me/?text=" + encodeURIComponent("Te pedi dengo no Longe & Perto 💗");
+      $("dengoAvisar").href = "https://wa.me/?text=" + encodeURIComponent("Te pedi dengo no Longe & Perto");
     }
 
     // grade de pedidos rápidos
@@ -2421,7 +2657,9 @@
     lista.forEach(m => {
       const b = el("button", "dengo-op"); b.type = "button";
       b.setAttribute("aria-pressed", String(dengoSel.includes(m.id)));
-      b.append(el("span", "ic", m.emoji), el("b", "", m.titulo));
+      const ic = el("span", "ic");
+      ic.appendChild(icone(m.icone || iconeDeEmoji(m.emoji, "hand-heart"), 20));
+      b.append(ic, el("b", "", m.titulo));
       b.addEventListener("click", () => marcarPedido(m));
       g.appendChild(b);
     });
@@ -2449,12 +2687,14 @@
     const lista = minhaLista();
     const escolhidos = dengoSel.map(id => lista.find(m => m.id === id)).filter(Boolean);
     dengoRascunho = escolhidos.length
-      ? escolhidos.map(m => ({ emoji: m.emoji, titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
-      : [{ emoji: "💗", titulo: "Dengo", detalhe: "", chave: null }];
+      ? escolhidos.map(m => ({ icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "\u{1F497}", titulo: m.titulo, detalhe: m.detalhe || "", chave: m.chave || null }))
+      : [{ icone: "hand-heart", emoji: "\u{1F497}", titulo: "Dengo", detalhe: "", chave: null }];
     const ul = $("dengoResumo"); ul.textContent = "";
     dengoRascunho.forEach((x, i) => {
       const li = el("li");
-      li.append(el("span", "ic", x.emoji), el("b", "", x.titulo));
+      const ic = el("span", "ic");
+      ic.appendChild(icone(x.icone || iconeDeEmoji(x.emoji, "hand-heart"), 18));
+      li.append(ic, el("b", "", x.titulo));
       if (x.chave !== "sozinho" && !(dengoRascunho.length === 1 && x.titulo === "Dengo" && !x.chave)) {
         const inp = el("input"); inp.type = "text"; inp.maxLength = 80; inp.value = x.detalhe.slice(0, 80);
         inp.placeholder = "Detalhe (opcional)"; inp.setAttribute("aria-label", "Detalhe de " + x.titulo); inp.dataset.i = i;
@@ -2474,7 +2714,7 @@
     // o detalhe sugerido sem nada depois ("O que eu quero: ") não vai
     const itens = dengoRascunho.map(x => {
       const d = (x.detalhe || "").trim(), sug = (minhaLista().find(m => m.titulo === x.titulo) || {}).detalhe || "";
-      const o = { emoji: x.emoji, titulo: x.titulo };
+      const o = { icone: x.icone || iconeDeEmoji(x.emoji, "hand-heart"), emoji: x.emoji || "\u{1F497}", titulo: x.titulo };
       if (d && d !== sug.trim()) o.detalhe = d.slice(0, 80);
       if (x.chave) o.chave = x.chave;
       return o;
@@ -2529,7 +2769,8 @@
   function abrirPedidos() {
     const minhas = meusModelos();
     pedidosRascunho = (minhas.length ? minhas : padroes()).map(m => ({
-      id: minhas.length ? m.id : null, chave: m.chave || null, emoji: m.emoji, titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false }));
+      id: minhas.length ? m.id : null, chave: m.chave || null, icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "\u{1F497}", titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false
+    }));
     erro("erroPedidos", "");
     desenharPedidosEdit();
     $("dlgPedidos").showModal();
@@ -2538,8 +2779,19 @@
     const ul = $("pedidosEdit"); ul.textContent = "";
     pedidosRascunho.forEach((p, i) => {
       const li = el("li", "pedido-edit" + (p.ativo ? "" : " inativo"));
-      const emo = el("input"); emo.type = "text"; emo.value = p.emoji; emo.maxLength = 8; emo.className = "pe-emoji"; emo.setAttribute("aria-label", "Emoji");
-      emo.addEventListener("input", () => { p.emoji = emo.value; });
+      const btnIc = el("button", "pe-icone-btn");
+      btnIc.type = "button";
+      btnIc.title = "Toque para alternar o ícone";
+      btnIc.setAttribute("aria-label", "Alternar ícone");
+      btnIc.appendChild(icone(p.icone || "hand-heart", 20));
+      btnIc.addEventListener("click", () => {
+        const idx = DENGO_ICONES.indexOf(p.icone || "hand-heart");
+        p.icone = DENGO_ICONES[(idx + 1) % DENGO_ICONES.length];
+        p.emoji = EMOJI_DE_ICONE[p.icone] || "\u{1F497}";
+        btnIc.textContent = "";
+        btnIc.appendChild(icone(p.icone, 20));
+      });
+      li.appendChild(btnIc);
       const tit = el("input"); tit.type = "text"; tit.value = p.titulo; tit.maxLength = 40; tit.className = "pe-titulo"; tit.setAttribute("aria-label", "Pedido");
       tit.addEventListener("input", () => { p.titulo = tit.value; });
       const det = el("input"); det.type = "text"; det.value = p.detalhe; det.maxLength = 120; det.className = "pe-detalhe"; det.placeholder = "Detalhe sugerido (opcional)";
@@ -2555,21 +2807,22 @@
       const at = el("label", "check"), cb = el("input"); cb.type = "checkbox"; cb.checked = p.ativo;
       cb.addEventListener("change", () => { p.ativo = cb.checked; li.classList.toggle("inativo", !p.ativo); });
       at.append(cb, document.createTextNode(" ativo"));
-      ac.append(mover(-1, "↑", "Subir"), mover(1, "↓", "Descer"), at);
+      ac.append(mover(-1, "Subir", "Subir"), mover(1, "Descer", "Descer"), at);
       if (!p.chave) {
         const x = el("button", "linkbtn", "Apagar"); x.type = "button";
         x.addEventListener("click", () => { pedidosRascunho.splice(i, 1); desenharPedidosEdit(); });
         ac.appendChild(x);
       }
-      li.append(emo, tit, det, ac);
+      li.append(tit, det, ac);
       ul.appendChild(li);
     });
   }
   async function salvarPedidos() {
     if (!codigo || !pedidosRascunho) return;
-    const linhas = pedidosRascunho.map((p, i) => ({ id: p.id, sala: codigo, jogador: eu, chave: p.chave, emoji: p.emoji.trim(), titulo: p.titulo.trim(),
-      detalhe: p.detalhe.trim() ? p.detalhe.slice(0, 120) : null, ordem: i + 1, ativo: p.ativo }));
-    if (linhas.some(l => [...l.emoji].length < 1 || l.emoji.length > 8)) return erro("erroPedidos", "Cada pedido precisa de um emoji.");
+    const linhas = pedidosRascunho.map((p, i) => ({
+      id: p.id, sala: codigo, jogador: eu, chave: p.chave, icone: p.icone || iconeDeEmoji(p.emoji, "hand-heart"), emoji: (p.emoji || EMOJI_DE_ICONE[p.icone] || "\u{1F497}").trim(), titulo: p.titulo.trim(),
+      detalhe: p.detalhe.trim() ? p.detalhe.slice(0, 120) : null, ordem: i + 1, ativo: p.ativo
+    }));
     if (linhas.some(l => l.titulo.length < 2)) return erro("erroPedidos", "Cada pedido precisa de um nome (2 letras ou mais).");
     if (!linhas.some(l => l.ativo)) return erro("erroPedidos", "Deixe pelo menos um pedido ativo.");
     $("pedidosSalvar").disabled = true;
@@ -2596,7 +2849,7 @@
   }
   function novoPedido() {
     if (pedidosRascunho.length >= 30) return erro("erroPedidos", "Dá para ter até 30 pedidos.");
-    pedidosRascunho.push({ id: null, chave: null, emoji: "💗", titulo: "", detalhe: "", ativo: true });
+    pedidosRascunho.push({ id: null, chave: null, emoji: "\u{1F497}", titulo: "", detalhe: "", ativo: true });
     desenharPedidosEdit();
     const ts = $("pedidosEdit").querySelectorAll(".pe-titulo");
     ts[ts.length - 1].focus();
@@ -2606,7 +2859,9 @@
   let humores = [];          // { dia, jogador, valor, nota, atualizado_em } (mais novos primeiro)
   let sugestoes = [];        // sugestoes_cuidado (só leitura)
   let faixaHumorFechada = false;
-  const CARAS = { 1: "😣", 2: "😢", 3: "😐", 4: "🙂", 5: "😄" };
+  const HUMOR_ICONES = { 1: "angry", 2: "frown", 3: "meh", 4: "smile", 5: "laugh" };
+  const HUMOR_ROTULOS = { 1: "Péssimo", 2: "Mal", 3: "Mais ou menos", 4: "Bem", 5: "Ótimo" };
+  const CARAS = HUMOR_ROTULOS;
   const LIMITE_HUMORES = 800;
   const humorDe = (j, dia = hojeISO()) => humores.find(h => h.jogador === j && h.dia === dia) || null;
   async function carregarHumores(c) {
@@ -2637,7 +2892,7 @@
     erro("erroHumor", "");
     const { error } = await sb.from("humores").upsert(row, { onConflict: "sala,dia,jogador" });
     if (error) return erro("erroHumor", "Não consegui salvar o humor. Confira a internet e tente de novo.");
-    $("humorSalvo").textContent = "Salvo ✓";
+    $("humorSalvo").textContent = "Salvo";
   }
   function escolherHumor(v) {
     gravarHumor(r => { r.valor = v; });
@@ -2656,10 +2911,10 @@
     ligar: () => wa("Abrir o WhatsApp"),
     desculpas: () => wa("Abrir o WhatsApp"),
     abra_quando: () => botaoAcao("Escrever uma carta", () => { mostrarVista("vAbra"); abrirNovaAbra(null); }),
-    pensei: () => botaoAcao("Mandar agora 💭", () => mandarCarinho("pensei")),
+    pensei: () => botaoAcao("Mandar agora", () => mandarCarinho("pensei")),
     dengo_lanche: () => {
       const d = textoManual(1 - eu, "delivery");
-      return el("span", "sug-info", d ? `💡 ${nomeDe(1 - eu)} costuma pedir: ${d}` : `O pedido favorito ainda não está no Manual de ${nomeDe(1 - eu)}.`);
+      return el("span", "sug-info", d ? `${nomeDe(1 - eu)} costuma pedir: ${d}` : `O pedido favorito ainda não está no Manual de ${nomeDe(1 - eu)}.`);
     },
     manual: () => botaoAcao("Ver o Manual", () => abrirManualOutro("acalma")),
     mural: () => botaoAcao("Abrir o mural", () => abrirMural(false)),
@@ -2681,15 +2936,15 @@
     $("humorOutroTitulo").textContent = `Humor ${nome ? "de " + nome : ""} hoje`;
     $("humorOutroCaras").hidden = !h;
     document.querySelectorAll("#humorOutroCaras span").forEach(s => s.classList.toggle("destaque", !!h && h.valor === Number(s.dataset.v)));
-    $("humorOutroCaras").setAttribute("aria-label", h ? `${nome}: ${CARAS[h.valor]}` : "");
+    $("humorOutroCaras").setAttribute("aria-label", h ? `${nome}: ${HUMOR_ROTULOS[h.valor] || ""}` : "");
     $("humorOutroNota").hidden = !(h && h.nota); $("humorOutroNota").textContent = h && h.nota ? `“${h.nota}”` : "";
     $("humorOutroVazio").hidden = !!h; $("humorOutroVazio").textContent = `${nome} ainda não disse como está hoje`;
     // dicas do Manual no humor baixo
     const dicas = $("humorDicas"); dicas.textContent = "";
     if (h && h.valor <= 2) {
       const acalma = textoManual(o, "acalma"), evitar = textoManual(o, "naoFazer");
-      if (acalma) dicas.appendChild(el("p", "humor-dica", `💡 O que acalma ${nome}: ${acalma}`));
-      if (evitar) dicas.appendChild(el("p", "humor-dica", `🚫 Evite: ${evitar}`));
+      if (acalma) dicas.appendChild(el("p", "humor-dica", `O que acalma ${nome}: ${acalma}`));
+      if (evitar) dicas.appendChild(el("p", "humor-dica", `Evite: ${evitar}`));
     }
     // sugestões de cuidado pela faixa do humor
     const ul = $("humorSug"); ul.textContent = "";
@@ -2788,7 +3043,7 @@
     return box;
   }
   function entrarMural() {
-    $("muralEnviar").textContent = `Enviar para ${nomeDe(1 - eu) || "o outro"} 💌`;
+    $("muralEnviar").textContent = `Enviar para ${nomeDe(1 - eu) || "o outro"}`;
     desenharFerramentas();
     requestAnimationFrame(() => { redesenharMural(); document.querySelector(".mural-ferramentas").scrollIntoView({ block: "start" }); });
     desenharMuralEstado();
@@ -2825,7 +3080,7 @@
     $("muralGuardar").hidden = !muralJuntos;
     $("muralEnviar").hidden = muralJuntos;
     $("muralJuntosStatus").hidden = !muralJuntos;
-    $("muralJuntosStatus").textContent = !muralJuntos ? "" : muralOutroNoJuntos ? `🤝 Desenhando junto com ${outro}` : `Esperando ${outro} entrar no desenho…`;
+    $("muralJuntosStatus").textContent = !muralJuntos ? "" : muralOutroNoJuntos ? `Desenhando junto com ${outro}` : `Esperando ${outro} entrar no desenho…`;
     $("muralCursor").style.background = avatarDe(1 - eu).cor;
   }
   function guardarPasso() {
@@ -2840,7 +3095,7 @@
   function comecarTraco(ev) {
     if (ev.button !== undefined && ev.button > 0) return;
     ev.preventDefault();
-    try { $("muralCanvas").setPointerCapture(ev.pointerId); } catch (err) {}
+    try { $("muralCanvas").setPointerCapture(ev.pointerId); } catch (err) { }
     if (!muralJuntos) guardarPasso();
     tracoAtual = { id: `${eu}-${Date.now().toString(36)}-${contTraco++}`, de: eu, cor: muralBorracha ? "apagar" : muralCor, esp: muralEsp, pts: [pontoDe(ev)] };
     tracos.push(tracoAtual);
@@ -2895,7 +3150,7 @@
   }
   let recebendoEstado = false;
   function mandarMural(p) {
-    try { canal && canal.send({ type: "broadcast", event: "mural", payload: { ...p, jogador: eu } }); } catch (err) {}
+    try { canal && canal.send({ type: "broadcast", event: "mural", payload: { ...p, jogador: eu } }); } catch (err) { }
   }
   function comecarJuntos() {
     muralJuntos = true; muralOutroNoJuntos = false;
@@ -2926,7 +3181,7 @@
     if (p.t === "convite") {
       if (muralJuntos) { muralOutroNoJuntos = true; mandarMural({ t: "entrou" }); mandarEstadoMural(); return desenharMuralEstado(); }
       conviteMural = Date.now();
-      $("muralConviteTxt").textContent = `${outro} quer desenhar junto com você ✏️`;
+      $("muralConviteTxt").textContent = `${outro} quer desenhar junto com você`;
       $("muralConvite").hidden = false;
       vibrar([60, 40, 60]);
       return;
@@ -3011,7 +3266,7 @@
     linhaV5("murais", "INSERT", data);
     if (juntos) { mandarMural({ t: "guardado" }); muralJuntos = false; muralOutroNoJuntos = false; remotos.clear(); }
     tracos = []; pilhaMural = []; $("muralLegenda").value = "";
-    erro("erroMural", juntos ? "Guardado ✓" : `Enviado para ${nomeDe(1 - eu)} 💌`);
+    erro("erroMural", juntos ? "Guardado" : `Enviado para ${nomeDe(1 - eu)}`);
     redesenharMural(); desenharMuralEstado(); desenharFerramentas();
   }
   const quemMural = m => m.para === null || m.para === undefined ? "Feito juntos" : m.de === eu ? `Para ${nomeDe(m.para)}` : `De ${nomeDe(m.de)}`;
@@ -3045,7 +3300,7 @@
     if (m.para === eu && !m.visto_em) {
       const agora = new Date().toISOString();
       linhaV5("murais", "UPDATE", { ...m, visto_em: agora });
-      sb.from("murais").update({ visto_em: agora }).eq("id", m.id).then(() => {}, () => {});
+      sb.from("murais").update({ visto_em: agora }).eq("id", m.id).then(() => { }, () => { });
     }
   }
   async function apagarMural() {
@@ -3067,7 +3322,7 @@
     const outro = nomeDe(1 - eu) || "o outro";
     const recebidos = dados.murais.filter(m => m.para === eu).sort((a, b) => a.criada_em < b.criada_em ? 1 : -1);
     const novo = recebidos.find(m => !m.visto_em), m = novo || recebidos[0];
-    $("muralInicioTxt").textContent = novo ? `— ${nomeDe(novo.de)} deixou algo para você ❤️` : m ? `— de ${nomeDe(m.de)}` : `— desenhe algo para ${outro}`;
+    $("muralInicioTxt").textContent = novo ? `— ${nomeDe(novo.de)} deixou algo para você` : m ? `— de ${nomeDe(m.de)}` : `— desenhe algo para ${outro}`;
     $("casaMural").classList.toggle("tem-novo", !!novo);
     const v = $("muralInicioVer");
     v.hidden = !m; v.textContent = "";
@@ -3111,6 +3366,11 @@
     humores.forEach(h => ev.push({ tipo: "humor", quando: h.atualizado_em || h.dia + "T15:00:00Z", dia: h.dia, x: h }));
     dados.murais.forEach(m => { if (m.criada_em) ev.push({ tipo: "mural", quando: m.criada_em, dia: diaDe(m.criada_em), x: m }); });
     partidasSala.forEach(p => { if (p.finalizada_em) ev.push({ tipo: "partida", quando: p.finalizada_em, dia: diaDe(p.finalizada_em), x: p }); });
+    (invPartidas || []).forEach(p => {
+      if ((p.estado === "concluido" || p.estado === "revelado") && p.concluida_em && p.caso !== "teste-biscoito") {
+        ev.push({ tipo: "partida", sub: "investigacao", quando: p.concluida_em, dia: diaDe(p.concluida_em), x: p });
+      }
+    });
     return ev.sort((a, b) => a.quando < b.quando ? 1 : a.quando > b.quando ? -1 : 0);
   }
   function itemHist(e) {
@@ -3119,15 +3379,17 @@
     const corpo = el("div", "hist-corpo");
     if (e.tipo === "dengo") {
       const quem = nomeDe(x.de), outro = nomeDe(1 - x.de);
-      corpo.appendChild(el("p", "hist-t", `💗 ${quem} pediu dengo`));
+      corpo.appendChild(el("p", "hist-t", `${quem} pediu dengo`));
       corpo.appendChild(el("p", "hist-itens", itensDe(x).map(i => `${i.emoji || ""} ${i.titulo || ""}${i.detalhe ? " (" + i.detalhe + ")" : ""}`.trim()).join(" · ")));
       if (x.mensagem) corpo.appendChild(el("p", "hist-sub", `“${x.mensagem}”`));
       const tempo = x.respondido_em ? " em " + duracao(new Date(x.respondido_em) - new Date(x.criada_em)) : "";
-      const r = x.status === "indo" ? (soSozinho(x) ? `${outro}: ${x.resposta || "Tô aqui quando precisar 🤍"}` : `${outro} respondeu “Tô indo 💨”${tempo}`)
+      const r = x.status === "indo" ? (soSozinho(x) ? `${outro}: ${x.resposta || "Tô aqui quando precisar"}` : `${outro} respondeu “Tô indo”${tempo}`)
         : x.status === "nao_consigo" ? `${outro} não conseguiu${tempo}` : x.status === "cancelado" ? "Cancelado" : "Esperando resposta";
       corpo.appendChild(el("p", "hist-sub", r + (x.resposta && !soSozinho(x) ? `: “${x.resposta}”` : "")));
     } else if (e.tipo === "humor") {
-      corpo.appendChild(el("p", "hist-t", `${CARAS[x.valor] || ""} ${nomeDe(x.jogador)} se sentiu ${["", "muito mal", "mal", "mais ou menos", "bem", "muito bem"][x.valor] || ""}`));
+      const pHist = el("p", "hist-t");
+      pHist.append(icone(HUMOR_ICONES[x.valor] || "meh", 16), document.createTextNode(` ${nomeDe(x.jogador)} se sentiu ${HUMOR_ROTULOS[x.valor] ? HUMOR_ROTULOS[x.valor].toLowerCase() : ""}`));
+      corpo.appendChild(pHist);
       if (x.nota) corpo.appendChild(el("p", "hist-sub", `“${x.nota}”`));
     } else if (e.tipo === "mural") {
       const b = el("button", "hist-mural"); b.type = "button";
@@ -3135,11 +3397,17 @@
       b.setAttribute("aria-label", "Ver o desenho");
       b.addEventListener("click", () => verMural(x));
       li.insertBefore(b, null);
-      corpo.appendChild(el("p", "hist-t", x.para == null ? "✏️ Desenho feito juntos" : `✏️ ${nomeDe(x.de)} desenhou para ${nomeDe(x.para)}`));
+      corpo.appendChild(el("p", "hist-t", x.para == null ? "Desenho feito juntos" : `${nomeDe(x.de)} desenhou para ${nomeDe(x.para)}`));
       if (x.legenda) corpo.appendChild(el("p", "hist-sub", x.legenda));
+    } else if (e.sub === "investigacao") {
+      const c = (invCasos || []).find(k => k.id === x.caso);
+      const t = c ? c.titulo : x.caso;
+      const est = x.estado === "concluido" ? `${x.estrelas || 0} ${(x.estrelas || 0) === 1 ? "estrela" : "estrelas"}` : "Solução revelada";
+      corpo.appendChild(el("p", "hist-t", `Investigação: ${t}`));
+      corpo.appendChild(el("p", "hist-sub", est));
     } else {
       const j = x.jogadores || [], pts = (x.placar || []).map(p => p && p.pontos);
-      corpo.appendChild(el("p", "hist-t", `🎲 Partida: ${j[0] || ""} ${pts[0] ?? ""} × ${pts[1] ?? ""} ${j[1] || ""}`));
+      corpo.appendChild(el("p", "hist-t", `Partida: ${j[0] || ""} ${pts[0] ?? ""} × ${pts[1] ?? ""} ${j[1] || ""}`));
       if (j[x.vencedor]) corpo.appendChild(el("p", "hist-sub", `Venceu ${j[x.vencedor]}`));
     }
     li.insertBefore(corpo, li.children[1] || null);
@@ -3173,7 +3441,9 @@
     const indo = dg.filter(d => d.status === "indo").length;
     $("histMesDengos").textContent = `Dengos pedidos: ${dg.length} · atendidos com “Tô indo”: ${indo}`;
     $("histMesMural").textContent = `Desenhos trocados: ${dados.murais.filter(x => doMes(x.criada_em)).length}`;
-    $("histMesPartidas").textContent = `Partidas: ${partidasSala.filter(p => doMes(p.finalizada_em)).length}`;
+    const nPart = partidasSala.filter(p => doMes(p.finalizada_em)).length;
+    const nCasos = (invPartidas || []).filter(p => p.estado === "concluido" && p.caso !== "teste-biscoito" && doMes(p.concluida_em)).length;
+    $("histMesPartidas").textContent = `Partidas: ${nPart}` + (nCasos ? ` · Casos resolvidos: ${nCasos}` : "");
   }
   // gráfico: últimos 7 dias, uma linha por pessoa na cor do avatar; dia sem registro fica em branco
   function desenharHumorSemana() {
@@ -3182,7 +3452,14 @@
     const X = i => 30 + i * 46, Y = v => 125 - (v - 1) * 27;
     [1, 2, 3, 4, 5].forEach(v => {
       svg.appendChild(svgEl("line", { x1: 22, x2: 312, y1: Y(v), y2: Y(v), class: "hs-grade" }));
-      svg.appendChild(svgEl("text", { x: 2, y: Y(v) + 5, class: "hs-cara" }, CARAS[v]));
+      const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      use.setAttribute("href", `icones.svg#${HUMOR_ICONES[v] || "meh"}`);
+      use.setAttribute("x", "2");
+      use.setAttribute("y", String(Y(v) - 8));
+      use.setAttribute("width", "16");
+      use.setAttribute("height", "16");
+      use.setAttribute("class", `icone hs-icone humor-${v}`);
+      svg.appendChild(use);
     });
     dias.forEach((d, i) => {
       const [a, m, dd] = d.split("-").map(Number);
@@ -3220,32 +3497,130 @@
   // avatar: emoji do Manual (v7) ou as iniciais num círculo colorido
   const CORES_AVATAR = ["#5B4BDB", "#E0405F"];
   const PALETA_AVATAR = ["#5B4BDB", "#E0405F", "#FF8A3D", "#1FA37A", "#2E86DE", "#B04BDB", "#C98A00", "#4A4A68"];
-  const EMOJIS_AVATAR = ["😀", "😎", "🥰", "😍", "🤓", "😇", "🥳", "😺", "🐶", "🐱", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐸", "🐵", "🐧", "🦄",
-    "🐝", "🦋", "🐢", "🐙", "🌸", "🌻", "🌈", "⭐", "🌙", "☀️", "🔥", "💧", "🍓", "🍑", "🍕", "🍩", "☕", "🎸", "🎮", "⚽"];
+  const EMOJIS_AVATAR = [];
   function avatarDe(i) {
     const m = manuais[i] || {};
-    return { emoji: EMOJIS_AVATAR.includes(m.avatar) ? m.avatar : "", cor: PALETA_AVATAR.includes(m.avatarCor) ? m.avatarCor : CORES_AVATAR[i] };
+    return {
+      cor: PALETA_AVATAR.includes(m.avatarCor) ? m.avatarCor : CORES_AVATAR[i],
+      foto: avatarFotos[i] || null
+    };
   }
   function iniciais(nome) {
     const p = (nome || "").trim().split(/\s+/).filter(Boolean);
     return ((p[0] || "?")[0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
   }
   function avatarEl(i, classe) {
-    const a = avatarDe(i), x = el("span", "avatar" + (classe ? " " + classe : ""), a.emoji || iniciais(nomeDe(i)));
+    const a = avatarDe(i), ini = iniciais(nomeDe(i));
+    const x = el("span", "avatar" + (classe ? " " + classe : ""));
     x.style.background = a.cor;
-    if (a.emoji) x.classList.add("emoji");
+    if (a.foto) {
+      const img = document.createElement("img");
+      img.className = "avatar-img";
+      img.alt = "";
+      img.src = a.foto;
+      img.addEventListener("error", () => { x.textContent = ini; });
+      x.appendChild(img);
+    } else {
+      x.textContent = ini;
+    }
     return x;
   }
+  function saudacaoHora() {
+    const h = new Date().getHours();
+    return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+  }
   function desenharCabecalho(e) {
-    $("ola").textContent = `Olá, ${e.jogadores[eu] || ""}`;
+    if ($("inicioData")) {
+      const fmt = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+      $("inicioData").textContent = fmt.format(new Date());
+    }
+    $("ola").textContent = `${saudacaoHora()}, ${e.jogadores[eu] || ""}`;
+    const outroNome = e.jogadores[1 - eu] || "";
+    if ($("inicioPresenca")) {
+      if (outroNome) {
+        $("inicioPresenca").hidden = false;
+        const online = presentes && presentes.has(1 - eu);
+        $("inicioPresenca").classList.toggle("on", !!online);
+        $("inicioPresenca").textContent = online ? `${outroNome} está no app agora` : outroNome;
+      } else {
+        $("inicioPresenca").hidden = true;
+      }
+    }
+    if ($("paraOutroTitulo")) {
+      $("paraOutroTitulo").textContent = outroNome ? `Para ${outroNome}` : "Para você";
+    }
+    if ($("inicioJogoInfo")) {
+      const p0 = (e.pontos && e.pontos[0]) || 0, p1 = (e.pontos && e.pontos[1]) || 0;
+      $("inicioJogoInfo").textContent = e.jogadores[1] ? `Placar ${p0} × ${p1} · rodada ${e.rodada || 1}` : "Abrir partida";
+    }
+    if ($("atalhoCampanha") && $("campanhaAbrir")) {
+      $("atalhoCampanha").hidden = $("campanhaAbrir").hidden;
+      if ($("inicioCampInfo")) $("inicioCampInfo").textContent = $("campanhaCapa") && $("campanhaCapa").textContent ? $("campanhaCapa").textContent : "Em andamento";
+    }
     const box = $("avatares");
     box.textContent = "";
     box.append(avatarEl(eu));
-    if (e.jogadores[1 - eu]) box.append(el("span", "coracao", "❤️"), avatarEl(1 - eu));
+    if (e.jogadores[1 - eu]) {
+      const coracao = el("span", "coracao");
+      coracao.appendChild(icone("heart", 16));
+      box.append(coracao, avatarEl(1 - eu));
+    }
+    atualizarCartaoAgora();
   }
+  function atualizarCartaoAgora() {
+    const agoraBox = $("casaAgora");
+    if (!agoraBox) return;
+    if ($("pdForm") && $("pdPergunta") && $("casaPerguntaAgora")) {
+      const temPerg = !$("pdForm").hidden && $("pdPergunta").textContent.trim().length > 0;
+      $("casaPerguntaAgora").hidden = !temPerg;
+      if (temPerg && $("pdPerguntaResumo")) $("pdPerguntaResumo").textContent = $("pdPergunta").textContent;
+    }
+    const prioridade = ["dengoRecebido", "casaCuidado", "casaClausulas", "casaEspelho", "casaRecado", "casaPerguntaAgora"];
+    let vencedor = null;
+    for (const id of prioridade) {
+      const elSlot = $(id);
+      if (elSlot && !elSlot.hidden) {
+        if (!vencedor) vencedor = elSlot;
+      }
+    }
+    for (const id of prioridade) {
+      const elSlot = $(id);
+      if (elSlot) elSlot.classList.toggle("agora-vencedor", elSlot === vencedor);
+    }
+    agoraBox.hidden = !vencedor;
+  }
+  (function iniciarAtalhosInicio() {
+    if ($("atalhoPensei")) $("atalhoPensei").addEventListener("click", () => {
+      const b = document.querySelector('#carinhoBotoes [data-carinho="pensei"]');
+      if (b) b.click();
+    });
+    if ($("atalhoMaos")) $("atalhoMaos").addEventListener("click", () => {
+      if ($("tudoBox")) $("tudoBox").open = true;
+      if ($("casaCarinhos")) $("casaCarinhos").scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    if ($("atalhoHumor")) $("atalhoHumor").addEventListener("click", () => {
+      if ($("tudoBox")) $("tudoBox").open = true;
+      if ($("casaHumor")) $("casaHumor").scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    if ($("pdAgoraAbrir")) $("pdAgoraAbrir").addEventListener("click", () => {
+      if ($("tudoBox")) $("tudoBox").open = true;
+      if ($("casaPergunta")) $("casaPergunta").scrollIntoView({ behavior: "smooth", block: "center" });
+      if ($("pdResposta")) $("pdResposta").focus();
+    });
+    if ($("atalhoJogo")) $("atalhoJogo").addEventListener("click", () => {
+      if ($("abaJogo")) $("abaJogo").click();
+    });
+    if ($("atalhoCampanha")) $("atalhoCampanha").addEventListener("click", () => {
+      if ($("campanhaAbrir")) $("campanhaAbrir").click();
+    });
+    const obsAgora = new MutationObserver(() => atualizarCartaoAgora());
+    ["dengoRecebido", "casaCuidado", "casaClausulas", "casaEspelho", "casaRecado", "pdForm"].forEach(id => {
+      if ($(id)) obsAgora.observe($(id), { attributes: true, attributeFilter: ["hidden"] });
+    });
+  })();
   // as fases seguintes acrescentam cartões (envelopes, semana, cápsulas…)
   const extrasDaCasa = [];
-  function desenharCasaExtras(e) { extrasDaCasa.forEach(f => f(e)); }
+  function desenharCasaExtras(e) { extrasDaCasa.forEach(f => f(e)); atualizarCartaoAgora(); }
 
   // Presence: cada aparelho anuncia { jogador, online_em } no canal da sala
   function sincronizarPresenca(c) {
@@ -3275,14 +3650,16 @@
     if (!nome) return;
     const on = presentes.has(1 - eu);
     const visto = !on && vistos[1 - eu] ? quandoVisto(vistos[1 - eu]) : null;
-    el.textContent = on ? `💚 ${nome} está aqui agora` : `${nome} está fora` + (visto ? ` · visto por último ${visto}` : "");
+    el.textContent = on ? `${nome} está aqui agora` : `${nome} está fora` + (visto ? ` · visto por último ${visto}` : "");
     el.classList.toggle("on", on);
   }
 
   // ---------- tabelas da v5 (só em sala fixa): carga, Realtime e redesenho ----------
-  const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
+  const TABELAS_V5 = {
+    envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
     carinhos: "criada_em", marcos: "data", motivos: "criada_em", abra_quando: "criada_em", respostas_dia: "dia",
-    dengos: "criada_em", murais: "criada_em" };
+    dengos: "criada_em", murais: "criada_em"
+  };
   const LIMITE_TABELA = { carinhos: 500, respostas_dia: 1000, dengos: 500, murais: 200 };   // tabelas que crescem sem parar: só as linhas mais novas
   const aoCarregar = {};                     // tabela -> fn() depois da primeira carga
   const dados = {};
@@ -3313,7 +3690,7 @@
   let posModo = null;   // null (guia) | "cardapio"
   const POS_DIF = { facil: "Fácil", media: "Média", dificil: "Difícil" };
   const POS_CLIMA = { romantica: "Romântica", intensa: "Intensa", aventura: "Aventura" };
-  const POS_MARCAS = [["favorita", "⭐ Favorita"], ["testar", "🎯 Queremos testar"], ["feita", "✅ Já fizemos"]];
+  const POS_MARCAS = [["favorita", "Favorita"], ["testar", "Queremos testar"], ["feita", "Já fizemos"]];
   const MAX_CARDAPIO = 5;
   const RE_POSICAO = /posi[çc](ão|ao|ões|oes)/i;
   const RE_CARDAPIO = /card[áa]pio|posi[çc](ões|oes)/i;
@@ -3424,7 +3801,7 @@
     $("posGuardar").disabled = false;
     if (error) return erro("erroJogo", /limite/.test(error.message || "") ? "O cofre desta sala chegou a 300 itens." : "Não consegui guardar. Confira a internet e tente de novo.");
     juntarCofre(data);
-    gravarFresco(n => { if (n.cardapio && n.cardapio.chave === c.chave) n.cardapio.guardado = true; n.aviso = novoAviso(`${n.jogadores[eu]} guardou o cardápio no cofre 💞`); });
+    gravarFresco(n => { if (n.cardapio && n.cardapio.chave === c.chave) n.cardapio.guardado = true; n.aviso = novoAviso(`${n.jogadores[eu]} guardou o cardápio no cofre`); });
   }
 
   function abrirGuia(modo) {
@@ -3475,19 +3852,19 @@
       acoes.appendChild(esc);
       if (posModo === "cardapio") {
         const no = !!(cardapio && cardapio.itens.some(x => x.id === p.id));
-        const b = el("button", "secondary", no ? "✓ No cardápio" : "＋ Cardápio"); b.type = "button";
+        const b = el("button", "secondary", no ? "No cardápio" : "＋ Cardápio"); b.type = "button";
         b.setAttribute("aria-pressed", String(no));
         b.disabled = !no && !!cardapio && cardapio.itens.length >= MAX_CARDAPIO;
         b.addEventListener("click", () => alternarCardapio(p));
         acoes.appendChild(b);
       }
       if (marcasPos.some(x => x.posicao_id === p.id)) {
-        const ref = el("button", "linkbtn", "🔗 Referência"); ref.type = "button";
+        const ref = el("button", "linkbtn", "Referência"); ref.type = "button";
         ref.addEventListener("click", () => referenciaPosicao(p));
         acoes.appendChild(ref);
         const link = linkPos(p.id);
         if (link) {
-          const a = el("a", "pos-link", "Abrir referência ↗");
+          const a = el("a", "pos-link", "Abrir referência");
           a.href = link; a.target = "_blank"; a.rel = "noopener noreferrer";
           acoes.appendChild(a);
         }
@@ -3513,7 +3890,7 @@
     ul.textContent = "";
     if (cardapio) cardapio.itens.forEach(x => ul.appendChild(el("li", "", x.nome)));
     $("posGuardar").disabled = !!(cardapio && cardapio.guardado);
-    $("posGuardar").textContent = cardapio && cardapio.guardado ? "Guardado no cofre ✓" : "Guardar para o reencontro";
+    $("posGuardar").textContent = cardapio && cardapio.guardado ? "Guardado no cofre" : "Guardar para o reencontro";
   }
 
   // ---------- guia de poses para fotos e vídeos (só texto; ícones opcionais em icones/poses/) ----------
@@ -3588,7 +3965,7 @@
     li.appendChild(topo);
     li.appendChild(el("p", "pos-desc", p.como));
     const selos = el("div", "pos-selos");
-    if (ia) selos.appendChild(el("span", "selo-pos ia", "✨ IA"));
+    if (ia) selos.appendChild(el("span", "selo-pos ia", "IA"));
     selos.appendChild(el("span", "selo-pos", POSE_ENQ[p.enquadramento] || p.enquadramento));
     if (p.tipo) selos.appendChild(el("span", "selo-pos", p.tipo === "video" ? "Vídeo" : "Foto"));
     if (p.nivel) selos.appendChild(el("span", "selo-pos nivel", LEVEL_NAMES[p.nivel] || p.nivel));
@@ -3627,7 +4004,7 @@
     $("poseComo").hidden = !r;
     $("poseComo").textContent = r ? r.como : "";
   }
-  // ✨ Ideias da IA no guia de poses: sugestões só na tela (somem ao fechar), "Usar esta" grava em estado.pose
+  // Ideias da IA no guia de poses: sugestões só na tela (somem ao fechar), "Usar esta" grava em estado.pose
   let iaPose = null;
   function painelIAPose() {
     let pedido = 0;
@@ -3732,10 +4109,10 @@
       const meu = x.de === eu;
       const nivel = x.nivel ? ` · ${LEVEL_NAMES[x.nivel]}` : "";
       if (meu) {
-        info.append(el("span", "tag", x.tipo === "mensagem" ? `💌 Mensagem para ${nOutro}` : `🎲 Desafio surpresa para ${nOutro}${nivel}`),
+        info.append(el("span", "tag", x.tipo === "mensagem" ? `Mensagem para ${nOutro}` : `Desafio surpresa para ${nOutro}${nivel}`),
           el("span", "t", x.texto), el("span", "autor", `escrito em ${dataCurta(x.criada_em)} · só você vê o texto`));
       } else {
-        info.append(el("span", "tag", x.tipo === "mensagem" ? `💌 1 envelope de ${nomeDe(x.de)}` : `🎲 1 desafio surpresa de ${nomeDe(x.de)}`),
+        info.append(el("span", "tag", x.tipo === "mensagem" ? `1 envelope de ${nomeDe(x.de)}` : `1 desafio surpresa de ${nomeDe(x.de)}`),
           el("span", "autor", x.tipo === "mensagem" ? `chegou em ${dataCurta(x.criada_em)}`
             : "Vai aparecer como a sua primeira carta na próxima partida com vocês dois aqui."));
       }
@@ -3763,7 +4140,7 @@
     abertos.forEach(x => {
       const li = el("li");
       const info = el("div", "info");
-      info.append(el("span", "tag", (x.tipo === "mensagem" ? `💌 De ${nomeDe(x.de)}` : `🎲 Desafio surpresa de ${nomeDe(x.de)}`) + ` · aberto em ${dataCurta(x.aberto_em)}`),
+      info.append(el("span", "tag", (x.tipo === "mensagem" ? `De ${nomeDe(x.de)}` : `Desafio surpresa de ${nomeDe(x.de)}`) + ` · aberto em ${dataCurta(x.aberto_em)}`),
         el("span", "t", x.texto));
       li.appendChild(info);
       ua.appendChild(li);
@@ -3780,7 +4157,7 @@
     $("dlgEnvelope").showModal();
   }
 
-  // "🎲 Sugerir": desafio do banco (com o peso do baralho) no campo; na mensagem, só uma ideia acima do campo
+  // Sugerir: desafio do banco (com o peso do baralho) no campo; na mensagem, só uma ideia acima do campo
   const sugeridas = { desafio: [], ideia_mensagem: [] };
   let iaCarta = null, iaEnvelope = null;   // últimas 5 de cada, para não repetir
   function tipoDoEnvelope() {
@@ -3806,7 +4183,7 @@
       $("envTexto").value = c.texto.slice(0, 500);
       $("envContador").textContent = `${$("envTexto").value.length}/500`;
     } else {
-      $("envIdeia").textContent = `💡 Ideia: ${c.texto}`;
+      $("envIdeia").textContent = `Ideia: ${c.texto}`;
       $("envIdeia").hidden = false;
     }
   }
@@ -3847,7 +4224,7 @@
   escutar("envelopes", (ev, row, antes) => {
     if (ev !== "UPDATE" || row.tipo !== "mensagem" || !row.aberto_em || (antes && antes.aberto_em) || envelopesAnimados.has(row.id)) return;
     envelopesAnimados.add(row.id);
-    $("envAbrindoDe").textContent = `💌 De ${nomeDe(row.de)} para ${nomeDe(1 - row.de)}`;
+    $("envAbrindoDe").textContent = `De ${nomeDe(row.de)} para ${nomeDe(1 - row.de)}`;
     $("envAbrindoTexto").textContent = row.texto;
     const ov = $("envAbrindo");
     ov.hidden = false;
@@ -3901,7 +4278,7 @@
     "Que promessa você me faz hoje para cobrar daqui a um ano?", "Em que você mudou desde que começou a namorar comigo?",
     "Qual é o seu lugar preferido para pensar em mim?", "O que você ainda não teve coragem de me pedir?",
     "Qual foi o momento deste ano em que você mais precisou de mim?", "Onde você quer que a gente more um dia?"]);
-  const ESPELHO = "🪞 ";
+  const ESPELHO = "[Espelho] ";
   const ehEspelho = x => typeof x.pergunta === "string" && x.pergunta.startsWith(ESPELHO);
   let capEspelho = false;
   function abrirNovaEspelho() {
@@ -3927,7 +4304,7 @@
     perguntaAtual = -1;
     outraPergunta();
     const hoje = hojeISO();
-    $("dlgCapTitulo").textContent = capEspelho ? "Nova cápsula de espelho 🪞" : "Nova cápsula do tempo";
+    $("dlgCapTitulo").textContent = capEspelho ? "Nova cápsula de espelho" : "Nova cápsula do tempo";
     $("capData").min = somarDias(hoje, 7);
     $("capData").max = somarDias(hoje, 730);
     $("capData").value = somarMeses(hoje, capEspelho ? 12 : 1);
@@ -4006,18 +4383,18 @@
         info.appendChild(el("span", "autor", `abre em ${dataBR(x.abre_em)} · as respostas ficam escondidas até lá`));
         const r = x.respostas || [null, null];
         if (r[eu] == null) info.appendChild(campoResposta(x, "respostas", "Sua resposta de hoje"));
-        else info.appendChild(el("span", "cap-status", "Você respondeu ✓"));
-        info.appendChild(el("span", "cap-status", r[outro] == null ? `Esperando ${nOutro} responder` : `${nOutro} respondeu ✓`));
+        else info.appendChild(el("span", "cap-status", "Você respondeu"));
+        info.appendChild(el("span", "cap-status", r[outro] == null ? `Esperando ${nOutro} responder` : `${nOutro} respondeu`));
       } else if (fase === "selada") {
-        info.appendChild(el("span", "cap-status", `🔒 Selada · abre em ${dias} ${dias === 1 ? "dia" : "dias"} (${dataBR(x.abre_em)})`));
+        info.appendChild(el("span", "cap-status", `Selada · abre em ${dias} ${dias === 1 ? "dia" : "dias"} (${dataBR(x.abre_em)})`));
       } else if ((fase === "pronta" || fase === "aberta") && ehEspelho(x)) {
         desenharEspelho(x, info);
       } else if (fase === "pronta") {
-        info.appendChild(el("span", "cap-status", "⏳ Cápsula pronta para abrir: respondam de novo, sem ver a antiga."));
+        info.appendChild(el("span", "cap-status", "Cápsula pronta para abrir: respondam de novo, sem ver a antiga."));
         const d = x.respostas_depois || [null, null];
         if (d[eu] == null) info.appendChild(campoResposta(x, "respostas_depois", "Sua resposta de agora"));
-        else info.appendChild(el("span", "cap-status", "Você respondeu de novo ✓"));
-        info.appendChild(el("span", "cap-status", d[outro] == null ? `Esperando ${nOutro} responder de novo` : `${nOutro} respondeu de novo ✓`));
+        else info.appendChild(el("span", "cap-status", "Você respondeu de novo"));
+        info.appendChild(el("span", "cap-status", d[outro] == null ? `Esperando ${nOutro} responder de novo` : `${nOutro} respondeu de novo`));
       } else {
         info.appendChild(el("span", "autor", `guardada em ${dataCurta(x.criada_em)} · aberta em ${dataBR(x.abre_em)}`));
         const q = el("div", "cap-quadros");
@@ -4041,9 +4418,9 @@
   function desenharEspelho(x, info) {
     const outro = 1 - eu, nOutro = nomeDe(outro), d = x.respostas_depois || [null, null];
     if (d[eu] == null) {
-      info.appendChild(el("span", "cap-status", "🪞 Responda como você se sente hoje, antes de ver o que disse há um ano."));
+      info.appendChild(el("span", "cap-status", "Responda como você se sente hoje, antes de ver o que disse há um ano."));
       info.appendChild(campoResposta(x, "respostas_depois", "Sua resposta de hoje"));
-      info.appendChild(el("span", "cap-status", d[outro] == null ? `${nOutro} ainda não respondeu de novo` : `${nOutro} já respondeu de novo ✓`));
+      info.appendChild(el("span", "cap-status", d[outro] == null ? `${nOutro} ainda não respondeu de novo` : `${nOutro} já respondeu de novo`));
       return;
     }
     const antes = dataCurta(x.criada_em), agora = dataBR(x.abre_em);
@@ -4062,7 +4439,7 @@
     const prontas = dados.capsulas.filter(x => faseCapsula(x) === "pronta").length;
     const seladas = dados.capsulas.filter(x => faseCapsula(x) === "selada").length;
     const resp = dados.capsulas.filter(x => faseCapsula(x) === "respondendo" && (x.respostas || [])[eu] == null).length;
-    $("cardCapSub").textContent = prontas ? `⏳ ${prontas} pronta${prontas > 1 ? "s" : ""} para abrir`
+    $("cardCapSub").textContent = prontas ? `${prontas} pronta${prontas > 1 ? "s" : ""} para abrir`
       : resp ? `${resp} esperando sua resposta` : seladas ? `${seladas} selada${seladas > 1 ? "s" : ""}` : "Perguntas para o futuro";
     $("cardCap").classList.toggle("destaque", prontas > 0 || resp > 0);
     const hoje = hojeISO();
@@ -4077,7 +4454,7 @@
     const dow = (new Date(hoje + "T12:00:00Z").getUTCDay() + 6) % 7;   // 0 = segunda … 6 = domingo
     return { semana: somarDias(hoje, -dow), dia: dow, podeApostar: dow <= 2, podeConferir: dow >= 5 };
   }
-  const RESULTADOS = { acertou: "✓ Acertou", quase: "≈ Quase", errou: "✗ Errou" };
+  const RESULTADOS = { acertou: "Acertou", quase: "Quase", errou: "Errou" };
   const trocaNome = (t, nome) => t.split("{nome}").join(nome);
 
   // sorteio determinístico (como o desafio do dia): mesma sala + semana + jogador = mesmas cartas nos dois aparelhos
@@ -4154,7 +4531,7 @@
     }
     gravar(n => {
       n.obsPedida[dono] = null;
-      n.aviso = novoAviso(confirma ? `${n.jogadores[eu]} confirmou: ${n.jogadores[dono]} cumpriu a missão da semana 👀`
+      n.aviso = novoAviso(confirma ? `${n.jogadores[eu]} confirmou: ${n.jogadores[dono]} cumpriu a missão da semana`
         : `${n.jogadores[eu]} disse que a missão de ${n.jogadores[dono]} ainda não foi mostrada.`);
     });
     if (confirma) depoisDeAcao();
@@ -4190,7 +4567,7 @@
       } else {
         info.appendChild(el("span", "cap-status", `Seu palpite: ${a.palpite}`));
         if (a.resultado) info.appendChild(el("span", "cap-status", `${nOutro} respondeu: ${a.resposta || "—"} · ${RESULTADOS[a.resultado]}`));
-        else info.appendChild(el("span", "autor", podeConferir ? `Esperando ${nOutro} conferir.` : `Aposta feita ✓ · ${nOutro} confere a partir de sábado.`));
+        else info.appendChild(el("span", "autor", podeConferir ? `Esperando ${nOutro} conferir.` : `Aposta feita · ${nOutro} confere a partir de sábado.`));
       }
       ul.appendChild(li);
     });
@@ -4229,9 +4606,9 @@
     const feita = i => dados.observacoes.find(x => x.semana === semana && x.jogador === i);
     const pedida = i => { const p = estado.obsPedida[i]; return p && p.semana === semana ? p : null; };
     const meu = el("div", "obs-minha");
-    meu.appendChild(el("p", "obs-titulo", "👀 Sua missão da semana"));
+    meu.appendChild(el("p", "obs-titulo", "Sua missão da semana"));
     meu.appendChild(el("p", "t", minha || "Carregando…"));
-    if (feita(eu)) meu.appendChild(el("p", "cap-status", `Mostrada ✓ · ${nOutro} confirmou`));
+    if (feita(eu)) meu.appendChild(el("p", "cap-status", `Mostrada · ${nOutro} confirmou`));
     else if (pedida(eu)) meu.appendChild(el("p", "cap-status", `Esperando ${nOutro} confirmar`));
     else if (minha) {
       const b = el("button", "secondary", "Mostrei!"); b.type = "button";
@@ -4240,7 +4617,7 @@
     }
     box.appendChild(meu);
     const dele = feita(outro), pd = pedida(outro);
-    if (dele) box.appendChild(el("p", "missao-outro", `${nOutro} mostrou: “${dele.missao}” ✓`));
+    if (dele) box.appendChild(el("p", "missao-outro", `${nOutro} mostrou: “${dele.missao}”`));
     else if (pd) {
       const c = el("div", "confirmar-missao");
       c.appendChild(el("p", "", `${nOutro} mostrou: “${pd.missao}”. Confirmar?`));
@@ -4266,7 +4643,7 @@
       });
       dados.observacoes.filter(o => o.semana === s).forEach(o => {
         const li = el("li"); const info = el("div", "info");
-        info.append(el("span", "tag", `👀 ${nomeDe(o.jogador)} mostrou`), el("span", "t", o.missao));
+        info.append(el("span", "tag", `${nomeDe(o.jogador)} mostrou`), el("span", "t", o.missao));
         li.appendChild(info); lu.appendChild(li);
       });
       bloco.appendChild(lu); sp.appendChild(bloco);
@@ -4303,7 +4680,7 @@
     const jogador = PARA_OS_DOIS.includes(c.tipo) || c.tipo === "sintonia" ? null : antes.vez;
     n.historico = [...(n.historico || []), { texto: c.texto, tipo: c.tipo, nivel: c.nivel, jogador, resultado: r }].slice(-50);
   }
-  const RESULTADO_HIST = { cumpriu: "✓ cumpriu", pulou: "⏭ pulou", liberado: "🕊 liberado", revertida: "🔄 revertida", "em jogo": "✨ efeito em jogo", passou: "" };
+  const RESULTADO_HIST = { cumpriu: "cumpriu", pulou: "pulou", liberado: "liberado", revertida: "revertida", "em jogo": "efeito em jogo", passou: "" };
 
   function desenharRodadas(e) {
     const lista = e && e.fixa ? (e.historico || []).slice().reverse() : [];
@@ -4318,7 +4695,7 @@
         info.append(el("span", "tag", [TIPO_NOMES[h.tipo] || h.tipo, LEVEL_NAMES[h.nivel] || h.nivel, quem, RESULTADO_HIST[h.resultado]].filter(Boolean).join(" · ")),
           el("span", "t", h.texto));
         const guardado = (dados.momentos || []).some(m => m.carta_texto === h.texto);
-        const b = el("button", "linkbtn", guardado ? "📸 No álbum ✓" : "📸 Guardar no álbum");
+        const b = el("button", "linkbtn", guardado ? "No álbum" : "Guardar no álbum");
         b.type = "button";
         b.disabled = guardado;
         b.addEventListener("click", () => abrirMomento(h));
@@ -4360,7 +4737,7 @@
     const todos = dados.momentos.slice().sort((a, b) => (a.criada_em < b.criada_em ? 1 : -1));
     const lista = filtroAlbum === "favoritos" ? todos.filter(m => m.favorito) : todos;
     $("albumVazio").textContent = todos.length ? (lista.length ? "" : "Nenhum favorito ainda. Toque na estrela de um momento.")
-      : "O álbum está vazio. No fim de uma partida, toque em \"📸 Guardar no álbum\" numa carta que marcou.";
+      : "O álbum está vazio. No fim de uma partida, toque em \"Guardar no álbum\" numa carta que marcou.";
     $("albumVazio").hidden = !!lista.length;
     const ul = $("listaAlbum");
     ul.textContent = "";
@@ -4371,7 +4748,7 @@
         el("span", "t", m.carta_texto));
       if (m.frase) info.appendChild(el("span", "frase", `“${m.frase}”`));
       const acoes = el("div", "acoes");
-      const fav = el("button", "estrela" + (m.favorito ? " on" : ""), m.favorito ? "★" : "☆");
+      const fav = el("button", "estrela" + (m.favorito ? " on" : "")); fav.appendChild(icone("star", 18, m.favorito ? "icone-estrela-cheia" : ""));
       fav.type = "button";
       fav.setAttribute("aria-label", m.favorito ? "Tirar dos favoritos" : "Favoritar");
       fav.setAttribute("aria-pressed", String(!!m.favorito));
@@ -4402,7 +4779,7 @@
   redesenhar("momentos", () => { desenharAlbum(); if (estado) desenharRodadas(estado); });
   extrasDaCasa.push(() => {
     const n = dados.momentos.length, f = dados.momentos.filter(m => m.favorito).length;
-    $("cardAlbumSub").textContent = n ? `${n} ${n === 1 ? "momento" : "momentos"}${f ? ` · ${f} ★` : ""}` : "Guarde as cartas que marcaram";
+    $("cardAlbumSub").textContent = n ? `${n} ${n === 1 ? "momento" : "momentos"}${f ? ` · ${f} favoritas` : ""}` : "Guarde as cartas que marcaram";
   });
 
   // ---------- baralho com memória (só sala fixa) ----------
@@ -4430,7 +4807,7 @@
   function contarVista(id, gravarNoBanco) {
     const vezes = (vistas.get(id) || 0) + 1;
     vistas.set(id, vezes);
-    if (gravarNoBanco) sb.from("cartas_vistas").upsert({ sala: codigo, carta_id: id, vezes, ultima_vez: new Date().toISOString() }, { onConflict: "sala,carta_id" }).then(() => {}, () => {});
+    if (gravarNoBanco) sb.from("cartas_vistas").upsert({ sala: codigo, carta_id: id, vezes, ultima_vez: new Date().toISOString() }, { onConflict: "sala,carta_id" }).then(() => { }, () => { });
   }
 
   // peso = max(0,2; 1/(1+vezes)), favorita × 3; aposentada fica fora; "jogar de novo" sai primeiro
@@ -4497,7 +4874,7 @@
     const fav = comMarca("favorita"), apos = comMarca("aposentada");
     $("baralhoFavQtd").textContent = fav.length ? `(${fav.length})` : "";
     $("baralhoAposQtd").textContent = apos.length ? `(${apos.length})` : "";
-    lista($("baralhoFavoritas"), fav.map(c => ({ c })), "Nenhuma favorita. Toque em ⭐ numa carta durante o jogo.", botao("Tirar ⭐", c => marcarCarta(c.id, "favorita")));
+    lista($("baralhoFavoritas"), fav.map(c => ({ c })), "Nenhuma favorita. Marque uma carta como favorita durante o jogo.", botao("Desmarcar favorita", c => marcarCarta(c.id, "favorita")));
     lista($("baralhoAposentadas"), apos.map(c => ({ c })), "Nenhuma carta aposentada.", botao("Restaurar", c => marcarCarta(c.id, "aposentada")));
     const top = [...vistas].filter(([id, n]) => n > 0 && porId.has(id)).sort((a, b) => b[1] - a[1]).slice(0, 20);
     lista($("baralhoVistas"), top.map(([id, n]) => ({ c: porId.get(id), extra: `${n}×` })), "Nenhuma carta sorteada ainda nesta sala.");
@@ -4527,7 +4904,8 @@
     return {
       partidas: partidasDoCasal(), autorais: cartas.filter(c => c.sala).length,
       envelopes: dados.envelopes, capsulas: dados.capsulas, apostas: dados.apostas, observacoes: dados.observacoes, momentos: dados.momentos,
-      cofre, seq: [sequencia(0), sequencia(1)], chamadas: resumoCh || {}, campanhas: (estado && estado.campanhasFeitas) || 0
+      cofre, seq: [sequencia(0), sequencia(1)], chamadas: resumoCh || {}, campanhas: (estado && estado.campanhasFeitas) || 0,
+      investigacoes: (invPartidas || []).filter(p => invModoTeste || p.caso !== "teste-biscoito")
     };
   }
   function progresso(c, d, j) { try { return Number(c.contar(d, j)) || 0; } catch (err) { return 0; } }
@@ -4560,7 +4938,7 @@
     const c = defConquista(row.codigo);
     if (!c || (c.categoria === "ousadia" && !permitido("conquistasOusadia"))) return;
     // várias de uma vez (fim de partida): um aviso só
-    filaConquistas.push(c.aviso || `🏆 ${c.titulo}` + (row.jogador === 0 || row.jogador === 1 ? ` (${nomeDe(row.jogador)})` : ""));
+    filaConquistas.push(c.aviso || c.titulo + (row.jogador === 0 || row.jogador === 1 ? ` (${nomeDe(row.jogador)})` : ""));
     if (c.aviso) { vibrar(80); setTimeout(desenharResumoChamadas, 0); }
     clearTimeout(timerConquistas);
     timerConquistas = setTimeout(() => { mostrarAviso(novoAviso(filaConquistas.join(" · ")), false); filaConquistas = []; }, 300);
@@ -4570,7 +4948,11 @@
     const quem = c.escopo === "casal" ? [null] : [0, 1];
     const feitas = quem.map(j => linhaConquista(c.codigo, j));
     const box = el("div", "conq" + (feitas.every(Boolean) ? " ok" : feitas.some(Boolean) ? " meio" : ""));
-    box.append(el("b", "", (feitas.some(Boolean) ? (c.selo || "🏆") + " " : "🔒 ") + c.titulo), el("span", "desc", c.descricao));
+    const tituloB = el("b", "");
+    const icNome = feitas.some(Boolean) ? (c.selo || "trophy") : "lock";
+    tituloB.appendChild(icone(icNome, 18));
+    tituloB.append(" " + c.titulo);
+    box.append(tituloB, el("span", "desc", c.descricao));
     quem.forEach((j, k) => {
       const linha = el("div", "conq-linha");
       if (j !== null) linha.appendChild(el("span", "quem", nomeDe(j)));
@@ -4644,7 +5026,18 @@
   }
 
   // carinhos: tocar grava em `carinhos`; quem recebe com o app aberto vê o emoji flutuando
-  const CARINHOS = { pensei: ["💭", "pensou em você"], beijo: ["😘", "mandou um beijo"], abraco: ["🤗", "mandou um abraço"], saudade: ["🥺", "está com saudade"] };
+  const CARINHOS = {
+    pensei: ["message-circle-heart", "pensou em você"],
+    beijo: ["heart", "mandou um beijo"],
+    abraco: ["heart-handshake", "mandou um abraço"],
+    saudade: ["cloud-moon", "está com saudade"]
+  };
+  const CARINHOS_ROTULOS = {
+    pensei: "Pensei em você",
+    beijo: "Beijo",
+    abraco: "Abraço",
+    saudade: "Saudade"
+  };
   let ultimoCarinho = 0, timerCarinho = null, resumoCarinhos = "";
   const vistoCarinhos = () => "lp-carinho-visto-" + codigo;
   function marcarCarinhoVisto(iso) {
@@ -4666,7 +5059,8 @@
   function mostrarCarinho(row) {
     const c = CARINHOS[row.tipo];
     if (!c) return;
-    $("carinhoEmoji").textContent = c[0];
+    $("carinhoEmoji").textContent = "";
+    $("carinhoEmoji").appendChild(icone(c[0], 48));
     $("carinhoTexto").textContent = `${nomeDe(row.de)} ${c[1]}`;
     const a = $("carinhoAnim");
     a.classList.remove("anima"); a.hidden = false; void a.offsetWidth; a.classList.add("anima");
@@ -4685,7 +5079,7 @@
     const novos = dados.carinhos.filter(x => x.de !== eu && (!visto || x.criada_em > visto));
     const conta = {};
     novos.forEach(x => { conta[x.tipo] = (conta[x.tipo] || 0) + 1; });
-    resumoCarinhos = Object.keys(CARINHOS).filter(t => conta[t]).map(t => `${CARINHOS[t][0]} × ${conta[t]}`).join(", ");
+    resumoCarinhos = Object.keys(CARINHOS).filter(t => conta[t]).map(t => `${CARINHOS_ROTULOS[t]} × ${conta[t]}`).join(", ");
     if (novos.length) marcarCarinhoVisto(novos[novos.length - 1].criada_em);
     desenharCarinhos();
   };
@@ -4721,7 +5115,7 @@
       // e manda um sinal a cada batida; o outro vibra quando o sinal chega
       if (eu === 0) batidaMaos = setInterval(() => {
         vibrar(BATIMENTO);
-        try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "batida", jogador: eu } }); } catch (err) {}
+        try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "batida", jogador: eu } }); } catch (err) { }
       }, 1040);
       clearInterval(timerMaos);
       timerMaos = setInterval(desenharMaos, 250);
@@ -4742,7 +5136,7 @@
   function segurar(v) {
     if (!estado || !estado.fixa || maos[eu] === v) return;
     mudarMaos(eu, v, true);
-    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "mao", jogador: eu, segurando: v } }); } catch (err) {}
+    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "mao", jogador: eu, segurando: v } }); } catch (err) { }
   }
   // [0, 120, 100, 120, 700] em loop (espera, vibra, pausa, vibra, pausa): no navegador, vibra 120, pausa 100, vibra 120, a cada 1,04 s
   const BATIMENTO = [120, 100, 120];
@@ -4843,13 +5237,13 @@
     const g0 = svgEl("g", { class: "mapa-ponto p0" }), g1 = svgEl("g", { class: "mapa-ponto p1" });
     g0.append(svgEl("circle", { cx: 50, cy: 60, r: 9 }), svgEl("text", { x: 50, y: 95, "text-anchor": "middle" }, nomes[0]));
     g1.append(svgEl("circle", { cx: 270, cy: 60, r: 9 }), svgEl("text", { x: 270, y: 95, "text-anchor": "middle" }, nomes[1]));
-    svg.append(g0, g1, svgEl("text", { x: 160, y: 68, "text-anchor": "middle", class: "mapa-coracao" }, "❤"));
-    $("mapaKm").textContent = hoje0 ? "Hoje é 0 km 💞" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Digam as cidades de vocês para ver a distância";
+    const mc = document.createElementNS("http://www.w3.org/2000/svg", "use"); mc.setAttribute("href", "icones.svg#marca"); mc.setAttribute("x", "148"); mc.setAttribute("y", "56"); mc.setAttribute("width", "24"); mc.setAttribute("height", "24"); svg.append(g0, g1, mc);
+    $("mapaKm").textContent = hoje0 ? "Hoje é 0 km" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Digam as cidades de vocês para ver a distância";
     tickContador();   // "Faltam 8 dias, 14 h…" ao vivo
     // configuração "Nossas cidades"
     [0, 1].forEach(i => {
       $("cidadeRotulo" + i).textContent = `Cidade de ${nomeDe(i)}`;
-      $("cidadeAtual" + i).textContent = cidadeValida(e.cidades[i]) ? `📍 ${e.cidades[i].nome}${temCoord(e.cidades[i]) ? "" : " (só o nome)"}` : "";
+      $("cidadeAtual" + i).textContent = cidadeValida(e.cidades[i]) ? `${e.cidades[i].nome}${temCoord(e.cidades[i]) ? "" : " (só o nome)"}` : "";
       const ul = $("cidadeOpcoes" + i);
       ul.textContent = "";
       resultadosCidade[i].forEach(c => {
@@ -4865,7 +5259,7 @@
   }
 
   // ---------- v6: linha do tempo do casal ----------
-  const SUGESTOES_MARCO = [["💘", "Primeiro encontro"], ["💋", "Primeiro beijo"], ["💍", "Pedido"], ["✈️", "Viagem"], ["🎂", "Aniversário"], ["🏠", "Visita"]];
+  const SUGESTOES_MARCO = [["heart", "Primeiro encontro"], ["heart", "Primeiro beijo"], ["gem", "Pedido"], ["plane", "Viagem"], ["cake", "Aniversário"], ["house", "Visita"]];
   const mesesEntre = (de, ate) => {
     const [a1, m1, d1] = de.split("-").map(Number), [a2, m2, d2] = ate.split("-").map(Number);
     return (a2 - a1) * 12 + (m2 - m1) - (d2 < d1 ? 1 : 0);
@@ -4880,7 +5274,11 @@
     $("marcoData").value = m ? m.data : "";
     $("marcoData").max = hojeISO();
     $("marcoDescricao").value = m && m.descricao ? m.descricao : "";
-    $("marcoEmoji").value = m && m.emoji ? m.emoji : "";
+    const icSel = m && m.icone ? m.icone : (m && m.emoji ? iconeDeEmoji(m.emoji, "calendar-heart") : "calendar-heart");
+    $("marcoIcone").value = icSel;
+    document.querySelectorAll("#marcoIcones .btn-icone-opcao").forEach(b => {
+      b.classList.toggle("selecionado", b.dataset.icone === icSel);
+    });
     $("marcoPrincipal").checked = !!(m && m.principal);
     $("dlgMarco").showModal();
   }
@@ -4889,7 +5287,8 @@
     const titulo = $("marcoTitulo").value.replace(/\s+/g, " ").trim().slice(0, 80);
     const data = $("marcoData").value;
     const descricao = $("marcoDescricao").value.trim().slice(0, 300) || null;
-    const emoji = [...$("marcoEmoji").value.trim()].slice(0, 4).join("").slice(0, 8) || null;
+    const iconeNome = $("marcoIcone").value || "calendar-heart";
+    const emoji = EMOJI_DE_ICONE[iconeNome] || "✨";
     const ehPrincipal = $("marcoPrincipal").checked;
     if (!titulo) return erro("erroMarco", "Dê um título ao marco.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("erroMarco", "Escolha a data.");
@@ -4900,7 +5299,7 @@
       const r = await sb.from("marcos").update({ principal: false }).eq("id", antigo.id);
       if (!r.error) linhaV5("marcos", "UPDATE", { ...antigo, principal: false });
     }
-    const campos = { titulo, data, descricao, emoji, principal: ehPrincipal };
+    const campos = { titulo, data, descricao, icone: iconeNome, emoji, principal: ehPrincipal };
     const { data: linha, error } = marcoEditando
       ? await sb.from("marcos").update(campos).eq("id", marcoEditando.id).select("*").single()
       : await sb.from("marcos").insert({ sala: codigo, autor: nomeDe(eu), ...campos }).select("*").single();
@@ -4923,7 +5322,9 @@
     $("marcosVazio").hidden = !!lista.length;
     lista.forEach(m => {
       const li = el("li", "marco" + (m.principal ? " principal" : ""));
-      li.appendChild(el("span", "marco-emoji", m.emoji || "•"));
+      const icSpan = el("span", "marco-emoji");
+      icSpan.appendChild(icone(m.icone || iconeDeEmoji(m.emoji, "calendar-heart"), 20));
+      li.appendChild(icSpan);
       const info = el("div", "info");
       info.append(el("span", "tag", dataBR(m.data) + (m.principal ? " · início do namoro" : "")), el("span", "t", m.titulo));
       if (m.descricao) info.appendChild(el("span", "marco-desc", m.descricao));
@@ -4958,10 +5359,10 @@
       if (m.data >= hoje) return;
       if (mm === hm && d === hd) {
         const anos = ha - a;
-        cartoes.push(m.principal ? `Feliz ${anos} ${anos === 1 ? "ano" : "anos"} de namoro! 💞` : `Há ${anos} ${anos === 1 ? "ano" : "anos"}: ${m.titulo}`);
+        cartoes.push(m.principal ? `Feliz ${anos} ${anos === 1 ? "ano" : "anos"} de namoro!` : `Há ${anos} ${anos === 1 ? "ano" : "anos"}: ${m.titulo}`);
       } else if (m.principal && d === hd) {
         const meses = mesesEntre(m.data, hoje);
-        cartoes.push(`Feliz mesversário! 🎉 ${meses} ${meses === 1 ? "mês" : "meses"} juntos`);
+        cartoes.push(`Feliz mesversário! ${meses} ${meses === 1 ? "mês" : "meses"} juntos`);
       }
     });
     const box = $("datasEspeciais");
@@ -4973,7 +5374,7 @@
   extrasDaCasa.push(e => {
     desenharJuntosHa();
     const km = distanciaKm(e);
-    $("cardMapaSub").textContent = e.reencontro && diasAte(e.reencontro) === 0 ? "Hoje é 0 km 💞" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Nossas cidades";
+    $("cardMapaSub").textContent = e.reencontro && diasAte(e.reencontro) === 0 ? "Hoje é 0 km" : km !== null ? `${km.toLocaleString("pt-BR")} km de saudade` : "Nossas cidades";
     $("distMapaTxt").textContent = "Mapa da saudade" + (km !== null ? ` · ${km.toLocaleString("pt-BR")} km` : "");
     $("cardHistoriaSub").textContent = dados.marcos.length ? `${dados.marcos.length} ${dados.marcos.length === 1 ? "marco" : "marcos"}` : "Nossa linha do tempo";
     if (vista === "vMapa") desenharMapa();
@@ -5020,7 +5421,7 @@
   // o autor fica sabendo (sem saber qual)
   escutar("motivos", (ev, row, antes) => {
     if (ev === "UPDATE" && antes && row.de === eu && (row.vezes || 0) > (antes.vezes || 0))
-      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} tirou um motivo seu do pote 🥰`), false);
+      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} tirou um motivo seu do pote`), false);
   });
   function desenharPote() {
     if (!estado || !estado.fixa || !$("poteSvg")) return;
@@ -5038,8 +5439,15 @@
     defs.appendChild(clip);
     svg.append(defs, svgEl("rect", { x: 20, y: 164 - alto, width: 120, height: alto, class: "pote-cheio", "clip-path": "url(#poteClip)" }),
       svgEl("path", { d: forma, class: "pote-vidro" }), svgEl("rect", { x: 36, y: 20, width: 88, height: 12, rx: 4, class: "pote-tampa" }));
-    for (let i = 0; i < Math.min(paraMim.length, 14); i++)
-      svg.appendChild(svgEl("text", { x: 44 + (i * 23) % 76, y: 156 - Math.floor(i / 4) * 16, class: "pote-coracao" }, "❤"));
+    for (let i = 0; i < Math.min(paraMim.length, 14); i++) {
+      const pc = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      pc.setAttribute("href", "icones.svg#heart");
+      pc.setAttribute("x", String(44 + (i * 23) % 76));
+      pc.setAttribute("y", String(146 - Math.floor(i / 4) * 16));
+      pc.setAttribute("width", "14");
+      pc.setAttribute("height", "14");
+      svg.appendChild(pc);
+    }
     $("motivoTirar").disabled = !paraMim.length;
     $("motivoRotulo").textContent = `Um motivo pelo qual eu te amo, ${nomeDe(outro)}`;
     const meus = dados.motivos.filter(m => m.de === eu).slice().reverse();
@@ -5111,7 +5519,7 @@
   }
   escutar("abra_quando", (ev, row, antes) => {
     if (ev === "UPDATE" && antes && !antes.aberto_em && row.aberto_em && row.de === eu)
-      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} abriu a carta "Abra quando… ${row.ocasiao}" 💌`), false);
+      mostrarAviso(novoAviso(`${nomeDe(1 - eu)} abriu a carta "Abra quando… ${row.ocasiao}"`), false);
   });
   function desenharAbra() {
     if (!estado || !estado.fixa || !$("abraFechadas")) return;
@@ -5200,7 +5608,7 @@
     if (ev !== "INSERT" || antes || row.dia !== hojeISO()) return;
     const hoje = hojeISO();
     if ([0, 1].every(i => dados.respostas_dia.some(r => r.dia === hoje && r.jogador === i)))
-      mostrarAviso(novoAviso("As respostas de hoje estão abertas 💬"), false);
+      mostrarAviso(novoAviso("As respostas de hoje estão abertas"), false);
   });
   function desenharPergunta() {
     if (!estado || !estado.fixa || !$("pdPergunta")) return;
@@ -5214,7 +5622,7 @@
     if (escrevendo && minha && document.activeElement !== $("pdResposta") && !$("pdResposta").value) $("pdResposta").value = minha.resposta;
     $("pdResponder").textContent = minha ? "Salvar" : "Responder";
     // a resposta do outro fica escondida até você responder
-    $("pdAviso").textContent = !minha && dele ? `${nomeDe(outro)} já respondeu! Responda para ver 👀` : minha && !dele ? `Esperando ${nomeDe(outro)} responder…` : "";
+    $("pdAviso").textContent = !minha && dele ? `${nomeDe(outro)} já respondeu! Responda para ver.` : minha && !dele ? `Esperando ${nomeDe(outro)} responder…` : "";
     const lado = $("pdLado");
     lado.textContent = "";
     lado.hidden = !(minha && dele) || editandoResposta;
@@ -5269,7 +5677,7 @@
     const pool = cartas.filter(c => c.tipo === "boa_noite");
     const f = pool.length ? pool[Math.floor(Math.random() * pool.length)].texto : "Boa noite, meu amor.";
     n.encerrando = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), por: eu, frases: [null, null], frase: f };
-    n.aviso = novoAviso(`${n.jogadores[eu]} quer encerrar a noite 🌙`);
+    n.aviso = novoAviso(`${n.jogadores[eu]} quer encerrar a noite`);
   }
   function enviarFraseNoite(pular) {
     const e = estado && estado.encerrando;
@@ -5284,7 +5692,7 @@
     // na sala fixa, a frase vira um momento do álbum
     if (txt && estado.fixa) {
       sb.from("momentos").insert({ sala: codigo, carta_texto: `Nossa noite em ${dataBR(hojeISO())}`, carta_tipo: "encerramento", frase: txt, autor: nomeDe(eu) })
-        .select("*").single().then(({ data }) => { if (data) linhaV5("momentos", "INSERT", data); }, () => {});
+        .select("*").single().then(({ data }) => { if (data) linhaV5("momentos", "INSERT", data); }, () => { });
     }
   }
   function gravarFraseNoite(txt, id) {
@@ -5377,13 +5785,14 @@
     const b = $("trilhaNossa");
     b.hidden = !estado.fixa || !id;
     const marcada = !!id && ehNossa(id);
-    b.textContent = marcada ? "❤️ Nossa" : "🤍 Nossa";
+    b.textContent = "";
+    b.append(icone("heart", 16, marcada ? "icone-cheio" : ""), document.createTextNode(" Nossa"));
     b.setAttribute("aria-pressed", String(marcada));
     $("soNossasLinha").hidden = !estado.fixa || !permitido("trilha");
     $("cardPlaylist").hidden = !permitido("trilha");
     $("soNossas").checked = !!estado.playlistSoNossas;
     $("soNossasAviso").hidden = !(estado.fixa && estado.playlistSoNossas && nossas.length < 5);
-    $("cardPlaylistSub").textContent = nossas.length ? `${nossas.length} ${nossas.length === 1 ? "música" : "músicas"}` : "Marque com 🤍 na trilha";
+    $("cardPlaylistSub").textContent = nossas.length ? `${nossas.length} ${nossas.length === 1 ? "música" : "músicas"}` : "Marque suas favoritas na trilha";
     if (!$("listaNossas")) return;
     const porId = new Map(musicas.map(x => [x.id, x]));
     const lista = nossas.filter(x => porId.has(x.musica_id)).sort((a, b) => (a.criada_em < b.criada_em ? 1 : -1));
@@ -5445,7 +5854,8 @@
     fatura: { vales: true },
     cardapio: { ativo: true },
     clausulas: { ativo: true },
-    silencio: { ativo: true }
+    silencio: { ativo: true },
+    investigacao: { ativo: true }
   };
   // merge profundo: o padrão preenche o que faltar (e o que vier com tipo errado)
   function mesclar(pad, x) {
@@ -5530,7 +5940,7 @@
   }
   const chaveToken = c => "lp-dono-" + c;
   const lerToken = c => { try { return localStorage.getItem(chaveToken(c)) || null; } catch (err) { return null; } };
-  const salvarToken = (c, t) => { try { localStorage.setItem(chaveToken(c), t); } catch (err) {} };
+  const salvarToken = (c, t) => { try { localStorage.setItem(chaveToken(c), t); } catch (err) { } };
   const formatarCodigo = t => (t.match(/.{1,4}/g) || []).join("-");
   const normalizarCodigo = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
@@ -5579,10 +5989,10 @@
     $("dlgCodigoDono").showModal();
   }
   async function copiarCodigoDono() {
-    try { await navigator.clipboard.writeText($("codigoDono").textContent); $("codigoDonoCopiado").textContent = "Copiado ✓"; }
+    try { await navigator.clipboard.writeText($("codigoDono").textContent); $("codigoDonoCopiado").textContent = "Copiado"; }
     catch (err) { $("codigoDonoCopiado").textContent = "Não consegui copiar. Anote o código."; }
   }
-  // "👑 Entrar como dono": só o campo do código; com o código certo, este aparelho vira dono
+  // Entrar como dono: só o campo do código; com o código certo, este aparelho vira dono
   function abrirEntrarDono() {
     $("entrarDonoCodigo").value = "";
     erro("erroEntrarDono", "");
@@ -5618,19 +6028,19 @@
 
   // ---------- tela de Configurações (só existe no DOM do aparelho do dono) ----------
   let timerSalvarCfg = null, salvandoCfg = 0, statusCfg = "", avisoNiveisCfg = "";
-  // entradas: "⚙️ Configurações" no menu da sala e um card na Casa, criados só para o dono
+  // entradas: Configurações no menu da sala e um card na Casa, criados só para o dono
   function desenharEntradaConfig() {
     const menu = document.querySelector(".ajustes");
     let bm = $("abrirConfigMenu"), bc = $("cardConfig");
     if (souDono) {
       if (!bm && menu) {
-        bm = el("button", "linkbtn", "⚙️ Configurações"); bm.id = "abrirConfigMenu"; bm.type = "button";
+        bm = el("button", "linkbtn", "Configurações"); bm.prepend(icone("settings", 16)); bm.id = "abrirConfigMenu"; bm.type = "button";
         bm.addEventListener("click", abrirConfig);
         menu.insertBefore(bm, $("som").nextSibling);
       }
       if (!bc) {
         bc = el("button", "casa-card"); bc.id = "cardConfig"; bc.type = "button";
-        bc.append(el("span", "ic", "⚙️"), el("b", "", "Configurações"), el("span", "sub", "Só você vê"));
+        const icCfg = el("span", "ic"); icCfg.appendChild(icone("settings", 20)); bc.append(icCfg, el("b", "", "Configurações"), el("span", "sub", "Só você vê"));
         bc.addEventListener("click", abrirConfig);
         $("perfilConfig").appendChild(bc);
       }
@@ -5685,7 +6095,7 @@
     const { error } = await sb.rpc("sala_config_salvar", { p_sala: c, p_token: t, p_config: config });
     salvandoCfg--;
     if (c !== codigo) return;
-    statusCfg = error ? "Não consegui salvar. Confira a internet e tente de novo." : "Salvo ✓";
+    statusCfg = error ? "Não consegui salvar. Confira a internet e tente de novo." : "Salvo";
     if (error && /dono/.test(error.message || "")) { statusCfg = "Este aparelho não é mais o dono."; conferirDono(c); }
     const s = $("cfgStatus");
     if (s) s.textContent = statusCfg;
@@ -5698,13 +6108,13 @@
     salvarToken(c, novo);
     mostrarCodigoDono(novo);
     // regrava a config para os outros aparelhos conferirem se ainda são donos
-    sb.rpc("sala_config_salvar", { p_sala: c, p_token: novo, p_config: config }).then(() => {}, () => {});
+    sb.rpc("sala_config_salvar", { p_sala: c, p_token: novo, p_config: config }).then(() => { }, () => { });
   }
   async function passarCoroa() {
     const outro = 1 - (donoIndice === null ? eu : donoIndice);
     if (!estado.jogadores[outro]) return;
     const { error } = await sb.rpc("sala_dono_indice", { p_sala: codigo, p_token: lerToken(codigo), p_jogador: outro });
-    statusCfg = error ? "Não consegui passar o 👑." : `O 👑 agora aparece para ${nomeDe(outro)}.`;
+    statusCfg = error ? "Não consegui passar o controle." : `O controle agora aparece para ${nomeDe(outro)}.`;
     if (!error) donoIndice = outro;
     desenharTelaConfig();
   }
@@ -5756,13 +6166,13 @@
     const rolagem = d.scrollTop;
     d.textContent = "";
     const topo = el("div", "pos-topo");
-    topo.appendChild(el("h2", "", "⚙️ Configurações"));
+    topo.appendChild(el("h2", "", "Configurações"));
     const fechar = el("button", "linkbtn", "Fechar"); fechar.type = "button"; fechar.addEventListener("click", () => d.close());
     topo.appendChild(fechar);
     d.appendChild(topo);
     const dono = el("div", "cfg-dono");
-    dono.appendChild(el("p", "cfg-dono-titulo", "Você é o dono desta sala 👑"));
-    if (donoIndice !== null && estado.jogadores[donoIndice]) dono.appendChild(el("p", "extras-sub", `O 👑 aparece para ${nomeDe(donoIndice)}.`));
+    dono.appendChild(el("p", "cfg-dono-titulo", "Você é o dono desta sala"));
+    if (donoIndice !== null && estado.jogadores[donoIndice]) dono.appendChild(el("p", "extras-sub", `O controle aparece para ${nomeDe(donoIndice)}.`));
     const botoes = el("div", "cfg-botoes");
     const mostrar = el("button", "secondary", "Mostrar código de dono"); mostrar.type = "button";
     mostrar.addEventListener("click", async () => { if (await perguntar("Mostrar o código de dono na tela?")) mostrarCodigoDono(lerToken(codigo)); });
@@ -5770,7 +6180,7 @@
     botoes.append(mostrar, gerar);
     const outro = 1 - (donoIndice === null ? eu : donoIndice);
     if (estado.jogadores[outro]) {
-      const passar = el("button", "secondary", `Passar o 👑 para ${nomeDe(outro)}`); passar.type = "button"; passar.addEventListener("click", passarCoroa);
+      const passar = el("button", "secondary", `Passar o controle para ${nomeDe(outro)}`); passar.type = "button"; passar.addEventListener("click", passarCoroa);
       botoes.appendChild(passar);
     }
     dono.appendChild(botoes);
@@ -5803,6 +6213,7 @@
     sm.appendChild(cfgModo("reverso", "Reverso"));
     sm.appendChild(cfgModo("presencial", "Modo Juntos (presencial)"));
     sm.appendChild(cfgModo("silencio", "Desafio do silêncio (microfone, no modo Juntos)"));
+    sm.appendChild(cfgModo("investigacao", "Investigação (mistério cooperativo)"));
     sm.appendChild(cfgInterruptor("Contar chamada pela presença (os dois com a sala aberta)", config.chamadas.presenca, v => mudarConfig(c => { c.chamadas.presenca = v; }), "chamadas.presenca"));
     d.appendChild(sm);
 
@@ -5862,7 +6273,7 @@
     ultimoVistoGravado = Date.now();
     const agora = new Date().toISOString();
     vistos[euReal] = agora;
-    sb.from("vistos").upsert({ sala: codigo, jogador: euReal, visto_em: agora }, { onConflict: "sala,jogador" }).then(() => {}, () => {});
+    sb.from("vistos").upsert({ sala: codigo, jogador: euReal, visto_em: agora }, { onConflict: "sala,jogador" }).then(() => { }, () => { });
   }
   // "há 5 min", "hoje às 21:43", "ontem às 23:10", "12/10 às 08:00"
   function quandoVisto(iso) {
@@ -5883,7 +6294,7 @@
 
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
-  function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
+  function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) { } }); }
   aposAcao.push(verificarConquistas);
 
   // ---------- salas recentes (só neste aparelho) ----------
@@ -5979,10 +6390,12 @@
 
   // ---------- placar ----------
   const placarVazio = (pontos, pulosMax) =>
-    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, duplas: 0, reverso: true, livresV: pulosMax, livresD: pulosMax,
-      // v5 (conquistas): por nível, eventos que saíram, pulos usados, efeitos Pesados até o fim, missões secretas Pesadas
-      porNivel: { leve: { v: 0, d: 0 }, criativo: { v: 0, d: 0 }, picante: { v: 0, d: 0 }, pesado: { v: 0, d: 0 } },
-      eventos: {}, pulosUsados: 0, efeitosPesados: 0, secretasPesadas: 0 });
+  ({
+    pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, duplas: 0, reverso: true, livresV: pulosMax, livresD: pulosMax,
+    // v5 (conquistas): por nível, eventos que saíram, pulos usados, efeitos Pesados até o fim, missões secretas Pesadas
+    porNivel: { leve: { v: 0, d: 0 }, criativo: { v: 0, d: 0 }, picante: { v: 0, d: 0 }, pesado: { v: 0, d: 0 } },
+    eventos: {}, pulosUsados: 0, efeitosPesados: 0, secretasPesadas: 0
+  });
 
   const novoAviso = texto => ({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto });
 
@@ -6428,9 +6841,9 @@
     ultimaVez = e.jogadores[1] ? e.vez : null;
   }
 
-  // som e vibração: um botão só (🔊/🔇), guardado neste aparelho
+  // som e vibração: guardado neste aparelho
   let somLigado = lerLocal("lp-som") !== false;
-  const vibrar = padrao => { if (!somLigado) return; try { navigator.vibrate?.(padrao); } catch (err) {} };
+  const vibrar = padrao => { if (!somLigado) return; try { navigator.vibrate?.(padrao); } catch (err) { } };
 
   // aviso curto nos dois aparelhos (ex.: "Ana liberou Bia da prenda.")
   function mostrarAviso(a, inicial) {
@@ -6492,8 +6905,8 @@
       const quem = estado.jogadores[estado.vez];
       ag.textContent = c && c.tipo === "prenda" ? `Aguardando ${quem} cumprir a prenda.`
         : evento && c.tipo === "efeito" ? `Aguardando ${quem} aceitar ou recusar o efeito.`
-        : evento ? `Aguardando ${quem} concluir o evento.`
-        : `Aguardando ${quem} cumprir ou pular.`;
+          : evento ? `Aguardando ${quem} concluir o evento.`
+            : `Aguardando ${quem} cumprir ou pular.`;
     }
   }
 
@@ -6508,21 +6921,21 @@
     desenharPosCarta(e);
     desenharPoseCarta(e);
     $("selo").hidden = !c.evento;
-    $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "⚡ Evento especial · 🤝 Missão em dupla" : c.tipo === "sequencia" ? "⚡ Evento especial · 🔗 Em etapas" : "⚡ Evento especial";
+    $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "Evento especial · Missão em dupla" : c.tipo === "sequencia" ? "Evento especial · Em etapas" : "Evento especial";
     $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
       : c.motivo === "duelo" ? "Prenda por perder o duelo"
-      : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
-      : ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
-      : c.motivo === "final" ? "Prenda final"
-      : c.motivo === "sequencia" ? "Prenda por parar a carta em etapas"
-      : c.surpresa ? `🎲 Desafio surpresa de ${e.jogadores[c.surpresaDe] || ""}`
-      : c.reversa ? `🔄 Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
-      : c.cega ? `🂠 Escolhida às cegas · ${TIPO_NOMES[c.tipo] || c.tipo}`
-      : TIPO_NOMES[c.tipo] || c.tipo;
+        : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
+          : ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
+            : c.motivo === "final" ? "Prenda final"
+              : c.motivo === "sequencia" ? "Prenda por parar a carta em etapas"
+                : c.surpresa ? `Desafio surpresa de ${e.jogadores[c.surpresaDe] || ""}`
+                  : c.reversa ? `Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
+                    : c.cega ? `Escolhida às cegas · ${TIPO_NOMES[c.tipo] || c.tipo}`
+                      : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
       + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome
       + (c.tipo === "efeito" && c.rodadas ? ` · dura ${c.rodadas} ${c.rodadas === 1 ? "rodada" : "rodadas"}` : "")
-      + (e.emMorteSubita && (c.tipo === "verdade" || c.tipo === "desafio") ? " · ⚡ vale o dobro" : "");
+      + (e.emMorteSubita && (c.tipo === "verdade" || c.tipo === "desafio") ? " · vale o dobro" : "");
     $("text").textContent = c.texto;
     desenharVendada(e);
     desenharEtapas(e);
@@ -6626,7 +7039,7 @@
     try {
       if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
       if (audio.state === "suspended") audio.resume();
-    } catch (err) {}
+    } catch (err) { }
   });
   function tom(freq, dur, depois = 0, tipo = "sine", vol = 0.15) {
     if (!audio || !somLigado) return;
@@ -6639,7 +7052,7 @@
       g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
       o.connect(g).connect(audio.destination);
       o.start(t0); o.stop(t0 + dur + 0.02);
-    } catch (err) {}
+    } catch (err) { }
   }
   const bipe = () => tom(880, 0.35, 0, "sine", 0.2);
   const somTique = () => tom(1400, 0.03, 0, "square", 0.05);
@@ -6684,7 +7097,7 @@
     document.body.classList.toggle("cam-esquerda", camera === "esquerda" && !juntos());
     $("camera").closest("label").hidden = juntos();
     $("camera").value = camera;
-    $("som").innerHTML = `<svg class="i" aria-hidden="true"><use href="#i-${somLigado ? "som" : "mudo"}"/></svg><span>${somLigado ? "Som e vibração ligados" : "Som e vibração desligados"}</span>`;
+    $("som").innerHTML = `<svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#${somLigado ? "volume-2" : "volume-x"}"/></svg><span>${somLigado ? "Som e vibração ligados" : "Som e vibração desligados"}</span>`;
     $("som").setAttribute("aria-pressed", String(somLigado));
     $("som").setAttribute("aria-label", somLigado ? "Som e vibração ligados" : "Som e vibração desligados");
   }
@@ -6704,7 +7117,7 @@
     const card = $("card");
     card.classList.remove("chegando"); void card.getBoundingClientRect(); card.classList.add("chegando");   // a carta chega virando
     const suave = !matchMedia("(prefers-reduced-motion: reduce)").matches;
-    try { card.scrollIntoView({ block: "start", behavior: suave ? "smooth" : "auto" }); } catch (err) {}
+    try { card.scrollIntoView({ block: "start", behavior: suave ? "smooth" : "auto" }); } catch (err) { }
     if (c.evento) { somEvento(); vibrar([100, 50, 100]); }
     else if (c.nivel === "pesado") vibrar([80, 60, 80, 60, 200]);
   }
@@ -6873,7 +7286,7 @@
       txt.className = "ef-texto";
       const aberto = efeitosAbertos.has(ef.id);
       const quem = document.createElement("b");
-      quem.textContent = `✨ ${e.jogadores[ef.dono]}: `;
+      quem.textContent = `${e.jogadores[ef.dono]}: `;
       const corpo = document.createTextNode(aberto ? ef.texto : resumo(ef.texto, 48));
       const rest = document.createElement("span");
       rest.className = "ef-rest";
@@ -6977,7 +7390,7 @@
     });
     $("dueloStatus").textContent = !iniciado ? "Qualquer um dos dois pode começar."
       : meu === null ? (dele === null ? "Quem ganhou? Os dois escolhem." : `${e.jogadores[1 - eu]} já escolheu. Sua vez de escolher.`)
-      : dele === null ? `Você escolheu "${rotulo(meu)}". Esperando ${e.jogadores[1 - eu]}…` : "";
+        : dele === null ? `Você escolheu "${rotulo(meu)}". Esperando ${e.jogadores[1 - eu]}…` : "";
   }
 
   // ---------- modo sintonia ----------
@@ -7052,8 +7465,8 @@
       $("sintoniaRespB").textContent = s.respostas[outro];
       $("sintoniaStatus").textContent = eu === alvo ? "Julgue o palpite:" : `Aguardando ${e.jogadores[alvo]} julgar.`;
     } else {
-      $("sintoniaStatus").textContent = minha !== null ? `Resposta enviada ✓ Esperando ${e.jogadores[1 - eu]}…`
-        : dele !== null ? `${e.jogadores[1 - eu]} já respondeu ✓` : "";
+      $("sintoniaStatus").textContent = minha !== null ? `Resposta enviada. Esperando ${e.jogadores[1 - eu]}…`
+        : dele !== null ? `${e.jogadores[1 - eu]} já respondeu` : "";
     }
   }
 
@@ -7139,7 +7552,7 @@
       const li = el("li", "seq-etapa" + (i < s.etapa ? " feita" : i === s.etapa ? " atual" : " oculta"));
       const q = quemFaz(girou, et);
       if (i > s.etapa) { li.appendChild(el("span", "seq-quem", `Etapa ${i + 1} · ???`)); ol.appendChild(li); return; }
-      li.appendChild(el("span", "seq-quem", `${i < s.etapa ? "✓ " : ""}Etapa ${i + 1} · ${rotuloQuem(e, q)}`));
+      li.appendChild(el("span", "seq-quem", `Etapa ${i + 1} · ${rotuloQuem(e, q)}`));
       li.appendChild(el("span", "seq-texto", et.texto));
       ol.appendChild(li);
     });
@@ -7224,7 +7637,7 @@
   }
 
   // ---------- v8: escolha às cegas ----------
-  const TEMAS = { camera: "📸 Câmera", provocacao: "🔥 Provocação", criatividade: "🎨 Criatividade", carinho: "💗 Carinho", conversa: "🗣️ Conversa", diversao: "😂 Diversão" };
+  const TEMAS = { camera: "Câmera", provocacao: "Provocação", criatividade: "Criatividade", carinho: "Carinho", conversa: "Conversa", diversao: "Diversão" };
   function temaDe(c) {
     const t = c.texto || "";
     if (c.midia || /c[âa]mera|mostre|foto|v[íi]deo/i.test(t)) return "camera";
@@ -7324,10 +7737,10 @@
     gravar(n => {
       if (!placarZerado(n) || n.roteiro || n.carta || n.vencedor !== null) return;
       const et = r.etapas[0];
-      n.roteiro = { id: r.id, nome: r.nome, emoji: r.emoji, etapas: r.etapas, etapa: 0, rodadaNaEtapa: 0, vezes: 0, inicio: Date.now().toString(36) };
+      n.roteiro = { id: r.id, nome: r.nome, icone: r.icone || iconeDeEmoji(r.emoji, "clapperboard"), emoji: r.emoji, etapas: r.etapas, etapa: 0, rodadaNaEtapa: 0, vezes: 0, inicio: Date.now().toString(36) };
       n.roteiroEscolhendo = null;
       n.niveis = niveisEtapa(et);
-      n.aviso = novoAviso(`🎬 ${r.nome} · Etapa 1: ${et.nome}`);
+      n.aviso = novoAviso(`${r.nome} · Etapa 1: ${et.nome}`);
       if (!et.rodadas) proximaEtapa(n, true);
     });
   }
@@ -7350,13 +7763,13 @@
       // fim, ou etapa de fechamento (rodadas: 0)
       r.concluido = true;
       r.fechamento = et ? et.tipos.find(t => FECHAMENTOS.includes(t)) || null : null;
-      n.aviso = novoAviso(`${r.emoji} ${r.nome}: roteiro concluído 🎬`);
+      n.aviso = novoAviso(`${r.nome}: roteiro concluído`);
       if (r.fechamento === "encerrar" && n.jogadores[1] && n.vencedor === null) comecarEncerrando(n);
       if (r.campanha) concluirNoite(n);
       return;
     }
     n.niveis = niveisEtapa(et);
-    n.aviso = novoAviso(`🎬 Etapa ${r.etapa + 1}: ${et.nome}`);
+    n.aviso = novoAviso(`Etapa ${r.etapa + 1}: ${et.nome}`);
   }
   async function sairRoteiro() {
     if (!estado || !estado.roteiro || !podeChipsAqui()) return;
@@ -7368,8 +7781,10 @@
     const ul = $("roteirosLista"); ul.textContent = "";
     roteiros.filter(roteiroPermitido).forEach(r => {
       const li = el("li"), b = el("button", "roteiro-op"); b.type = "button";
-      b.append(el("span", "ro-nome", `${r.emoji} ${r.nome}`), el("span", "ro-desc", r.descricao || ""),
-        el("span", "ro-etapas", r.etapas.map(et => et.nome).join(" → ")));
+      const spanNome = el("span", "ro-nome");
+      spanNome.append(icone(r.icone || iconeDeEmoji(r.emoji, "clapperboard"), 18), document.createTextNode(" " + r.nome));
+      b.append(spanNome, el("span", "ro-desc", r.descricao || ""),
+        el("span", "ro-etapas", r.etapas.map(et => et.nome).join(" · ")));
       b.addEventListener("click", () => escolherRoteiro(r));
       li.appendChild(b); ul.appendChild(li);
     });
@@ -7395,10 +7810,11 @@
     let txt;
     if (r.concluido) {
       const pts = e.placar.map(p => p.pontos);
-      txt = `Roteiro concluído 🎬 · ${r.emoji} ${r.nome} · ${e.jogadores[0]} ${pts[0]} × ${pts[1]} ${e.jogadores[1] || ""}`;
-    } else if (e.emMorteSubita) txt = `🎬 ${r.nome} · pausado pela morte súbita`;
-    else txt = `🎬 ${r.nome} · Etapa ${r.etapa + 1} de ${r.etapas.length}: ${et.nome} · rodada ${Math.min(r.rodadaNaEtapa + 1, et.rodadas)} de ${et.rodadas}`;
-    $("faixaRoteiroTexto").textContent = txt;
+      txt = `Roteiro concluído · ${r.nome} · ${e.jogadores[0]} ${pts[0]} × ${pts[1]} ${e.jogadores[1] || ""}`;
+    } else if (e.emMorteSubita) txt = `${r.nome} · pausado pela morte súbita`;
+    else txt = `${r.nome} · Etapa ${r.etapa + 1} de ${r.etapas.length}: ${et.nome} · rodada ${Math.min(r.rodadaNaEtapa + 1, et.rodadas)} de ${et.rodadas}`;
+    $("faixaRoteiroTexto").textContent = "";
+    $("faixaRoteiroTexto").append(icone(r.icone || iconeDeEmoji(r.emoji, "clapperboard"), 16), document.createTextNode(" " + txt));
     f.classList.toggle("concluido", !!r.concluido);
     $("roteiroContinuar").hidden = !r.concluido;
     $("roteiroCofre").hidden = !(r.concluido && r.fechamento === "cofre" && r.ultima);
@@ -7441,8 +7857,10 @@
     const ul = $("campanhasLista"); ul.textContent = "";
     campanhas.filter(campanhaPermitida).forEach(x => {
       const li = el("li"), b = el("button", "roteiro-op"); b.type = "button";
-      b.append(el("span", "ro-nome", `${x.emoji} ${x.nome}`), el("span", "ro-desc", x.descricao || ""),
-        el("span", "ro-etapas", x.noites.map((nt, i) => `Noite ${i + 1}: ${nt.titulo}`).join(" → ")));
+      const spanNome = el("span", "ro-nome");
+      spanNome.append(icone(x.icone || iconeDeEmoji(x.emoji, "film"), 18), document.createTextNode(" " + x.nome));
+      b.append(spanNome, el("span", "ro-desc", x.descricao || ""),
+        el("span", "ro-etapas", x.noites.map((nt, i) => `Noite ${i + 1}: ${nt.titulo}`).join(" · ")));
       b.addEventListener("click", () => comecarCampanha(x));
       li.appendChild(b); ul.appendChild(li);
     });
@@ -7454,8 +7872,10 @@
     $("dlgCampanhas").close();
     gravar(n => {
       if (n.campanha || n.roteiro || !placarZerado(n) || n.carta || n.vencedor !== null) return;
-      n.campanha = { id: x.id, nome: x.nome, emoji: x.emoji, noites: x.noites.map(nt => ({ titulo: nt.titulo, roteiro: nt.roteiro, regra: nt.regra || "" })),
-        noite: 0, comecou: hojeISO(), bonus: [0, 0], quebrou: [false, false], jogando: false, ultima: null, placares: [], concluida: false, nivelProx: null };
+      n.campanha = {
+        id: x.id, nome: x.nome, icone: x.icone || iconeDeEmoji(x.emoji, "film"), emoji: x.emoji, noites: x.noites.map(nt => ({ titulo: nt.titulo, roteiro: nt.roteiro, regra: nt.regra || "" })),
+        noite: 0, comecou: hojeISO(), bonus: [0, 0], quebrou: [false, false], jogando: false, ultima: null, placares: [], concluida: false, nivelProx: null
+      };
       iniciarNoite(n);
     });
   }
@@ -7463,13 +7883,13 @@
     const c = n.campanha, nt = c && c.noites[c.noite], r = nt && roteirosCampanha[nt.roteiro];
     if (!r || n.roteiro || !placarZerado(n) || n.carta || n.vencedor !== null) return;
     const et = r.etapas[0];
-    n.roteiro = { id: r.id, nome: r.nome, emoji: r.emoji, etapas: r.etapas, etapa: 0, rodadaNaEtapa: 0, vezes: 0, inicio: Date.now().toString(36), campanha: true };
+    n.roteiro = { id: r.id, nome: r.nome, icone: r.icone || iconeDeEmoji(r.emoji, "clapperboard"), emoji: r.emoji, etapas: r.etapas, etapa: 0, rodadaNaEtapa: 0, vezes: 0, inicio: Date.now().toString(36), campanha: true };
     n.roteiroEscolhendo = null;
     n.niveis = niveisEtapa(et);
     c.jogando = true;
     c.nivelProx = null;
     if (c.noite === 0) c.comecou = hojeISO();
-    n.aviso = novoAviso(`🎞️ Noite ${c.noite + 1} de ${c.noites.length} · ${nt.titulo}`);
+    n.aviso = novoAviso(`Noite ${c.noite + 1} de ${c.noites.length} · ${nt.titulo}`);
     if (!et.rodadas) proximaEtapa(n, true);
   }
   // fim do roteiro da noite: placar da noite, fichas (cada 3 pontos nas noites antes da última) e próxima noite amanhã
@@ -7482,8 +7902,8 @@
     c.jogando = false;
     c.nivelProx = null;
     c.ultima = hojeISO();
-    if (ultima) { c.concluida = true; n.campanhasFeitas = (n.campanhasFeitas || 0) + 1; n.aviso = novoAviso(`${c.emoji} Campanha concluída 🎞️`); }
-    else { c.noite = k + 1; n.aviso = novoAviso(`🎞️ Noite ${k + 1} concluída · fichas: ${n.jogadores[0]} ${c.bonus[0]} · ${n.jogadores[1]} ${c.bonus[1]}`); }
+    if (ultima) { c.concluida = true; n.campanhasFeitas = (n.campanhasFeitas || 0) + 1; n.aviso = novoAviso(`${c.nome}: campanha concluída`); }
+    else { c.noite = k + 1; n.aviso = novoAviso(`Noite ${k + 1} concluída · fichas: ${n.jogadores[0]} ${c.bonus[0]} · ${n.jogadores[1]} ${c.bonus[1]}`); }
   }
   async function jogarNoite() {
     const e = estado;
@@ -7515,7 +7935,7 @@
     const c = estado && estado.campanha;
     if (!c || c.noite !== 1 || !c.jogando || c.quebrou[eu]) return;
     if (!await perguntar("Quebrou a regra da noite? Palavra de honra: suas fichas zeram.", { ok: "Quebrei", perigo: true })) return;
-    gravar(n => { const x = n.campanha; if (!x) return; x.quebrou[eu] = true; x.bonus[eu] = 0; n.aviso = novoAviso(`🙈 ${n.jogadores[eu]} quebrou a regra e perdeu as fichas`); });
+    gravar(n => { const x = n.campanha; if (!x) return; x.quebrou[eu] = true; x.bonus[eu] = 0; n.aviso = novoAviso(`${n.jogadores[eu]} quebrou a regra e perdeu as fichas`); });
   }
   const naNoiteFinal = e => { const c = e && e.campanha; return !!(c && c.jogando && c.noite === c.noites.length - 1 && e.roteiro && e.roteiro.campanha && !e.roteiro.concluido); };
   function usarFicha(tipo) {
@@ -7529,17 +7949,17 @@
       if (tipo === "nivel") {
         if (n.carta || !permitido("nivel", nivel)) return;
         c.nivelProx = nivel;
-        n.aviso = novoAviso(`🎟️ ${quem} gastou uma ficha: a próxima carta é ${LEVEL_NAMES[nivel]}`);
+        n.aviso = novoAviso(`${quem} gastou uma ficha: a próxima carta é ${LEVEL_NAMES[nivel]}`);
       } else if (tipo === "quem") {
         if (!n.carta || !["verdade", "desafio"].includes(n.carta.tipo)) return;
         n.vez = 1 - n.vez;
-        n.aviso = novoAviso(`🎟️ ${quem} gastou uma ficha: quem cumpre esta carta é ${n.jogadores[n.vez]}`);
+        n.aviso = novoAviso(`${quem} gastou uma ficha: quem cumpre esta carta é ${n.jogadores[n.vez]}`);
       } else if (tipo === "pular") {
         if (!n.carta || n.vez !== eu || !["verdade", "desafio"].includes(n.carta.tipo)) return;
         const cc = n.carta;
         n.carta = null;
         passarVez(n, cc);
-        n.aviso = novoAviso(`🎟️ ${quem} gastou uma ficha e pulou sem prenda`);
+        n.aviso = novoAviso(`${quem} gastou uma ficha e pulou sem prenda`);
       } else return;
       c.bonus[eu]--;
     });
@@ -7556,12 +7976,12 @@
     const parado = c.ultima ? -diasAte(c.ultima) : 0;
     let info = "";
     if (c.concluida) {
-      $("campanhaCapa").textContent = `${c.emoji} ${c.nome} · Campanha concluída 🎞️`;
+      $("campanhaCapa").textContent = `${c.nome} · Campanha concluída`;
       info = c.placares.map((p, i) => `Noite ${i + 1}: ${e.jogadores[0]} ${p[0]} × ${p[1]} ${e.jogadores[1] || ""}`).join(" · ");
     } else {
       $("campanhaCapa").textContent = `${c.emoji} Noite ${k + 1} de ${N} · ${nt.titulo}`;
       if (c.jogando) info = k === N - 1 ? fichas + " (valem agora)" : fichas;
-      else if (!liberada) info = `A noite ${k + 1} fica liberada amanhã 🌙 · ${fichas}`;
+      else if (!liberada) info = `A noite ${k + 1} fica liberada amanhã · ${fichas}`;
       else info = fichas;
     }
     $("campanhaInfo").textContent = info;
@@ -7583,7 +8003,7 @@
     $("fichaNivelUsar").disabled = !semCarta || !!c.nivelProx;
     const vd = e.carta && ["verdade", "desafio"].includes(e.carta.tipo);
     $("fichaQuem").hidden = !vd;
-    $("fichaQuem").textContent = vd ? `🎟️ ${e.jogadores[1 - e.vez]} cumpre esta` : "";
+    $("fichaQuem").textContent = vd ? `${e.jogadores[1 - e.vez]} cumpre esta` : "";
     $("fichaPular").hidden = !(vd && e.vez === eu);
   }
 
@@ -7613,7 +8033,9 @@
     const ul = $("enredosLista"); ul.textContent = "";
     enredos.filter(x => enredoPermitido(x)).forEach(x => {
       const li = el("li"), b = el("button", "roteiro-op"); b.type = "button";
-      b.append(el("span", "ro-nome", `${x.emoji} ${x.nome}`), el("span", "ro-desc", x.descricao || ""), el("span", "ro-etapas", `${x.papeis[0]} × ${x.papeis[1]}`));
+      const spanNome = el("span", "ro-nome");
+      spanNome.append(icone(x.icone || iconeDeEmoji(x.emoji, "drama"), 18), document.createTextNode(" " + x.nome));
+      b.append(spanNome, el("span", "ro-desc", x.descricao || ""), el("span", "ro-etapas", `${x.papeis[0]} × ${x.papeis[1]}`));
       b.addEventListener("click", () => escolherPapeis(x));
       li.appendChild(b); ul.appendChild(li);
     });
@@ -7623,7 +8045,8 @@
   function escolherPapeis(x) {
     enredoEscolhido = x;
     $("enredosEscolher").hidden = true; $("enredosPapeis").hidden = false;
-    $("enredoPapeisNome").textContent = `${x.emoji} ${x.nome}`;
+    $("enredoPapeisNome").textContent = "";
+    $("enredoPapeisNome").append(icone(x.icone || iconeDeEmoji(x.emoji, "drama"), 18), document.createTextNode(" " + x.nome));
     $("enredoPapeisDesc").textContent = x.descricao || "";
     $("enredoPapel0").textContent = `Quem fica com "${x.papeis[0]}"?`;
     $("enredoPapelJ0").textContent = nomeDe(0); $("enredoPapelJ1").textContent = nomeDe(1);
@@ -7640,8 +8063,8 @@
     gravar(n => {
       if (n.enredo || n.carta || n.roteiro || n.vencedor !== null || !n.jogadores[1]) return;
       const nos = x.nos.map(no => ({ id: no.id, quem: no.quem || "ambos", tipo: no.tipo, texto: no.texto.slice(0, 600), opcoes: (no.opcoes || []).map(o => ({ rotulo: String(o.rotulo).slice(0, 80), vai: o.vai })), fim: !!no.fim }));
-      n.enredo = { id: x.id, nome: x.nome, emoji: x.emoji, nivel: x.nivel_max, papeisNomes: x.papeis.slice(0, 2), papeis: [p0, 1 - p0], nos, no: nos[0].id, caminho: [nos[0].id], escolhas: [], cumpriu: false, ultima: null };
-      n.aviso = novoAviso(`🎭 ${x.nome}: ${n.jogadores[p0]} é "${x.papeis[0]}", ${n.jogadores[1 - p0]} é "${x.papeis[1]}"`);
+      n.enredo = { id: x.id, nome: x.nome, icone: x.icone || iconeDeEmoji(x.emoji, "drama"), emoji: x.emoji, nivel: x.nivel_max, papeisNomes: x.papeis.slice(0, 2), papeis: [p0, 1 - p0], nos, no: nos[0].id, caminho: [nos[0].id], escolhas: [], cumpriu: false, ultima: null };
+      n.aviso = novoAviso(`${x.nome}: ${n.jogadores[p0]} é "${x.papeis[0]}", ${n.jogadores[1 - p0]} é "${x.papeis[1]}"`);
     });
   }
   function cumpriTrecho() {
@@ -7693,15 +8116,20 @@
     if (!en) return;
     const no = noDoEnredo(en);
     if (!no) return;
-    $("enredoTopo").textContent = `${en.emoji} ${en.nome} · ${e.jogadores[en.papeis[0]]} é "${en.papeisNomes[0]}", ${e.jogadores[en.papeis[1]]} é "${en.papeisNomes[1]}"`;
+    $("enredoTopo").textContent = "";
+    $("enredoTopo").append(icone(en.icone || iconeDeEmoji(en.emoji, "drama"), 16), document.createTextNode(` ${en.nome} · ${e.jogadores[en.papeis[0]]} é "${en.papeisNomes[0]}", ${e.jogadores[en.papeis[1]]} é "${en.papeisNomes[1]}"`));
     $("enredoEscolha").hidden = !en.ultima;
     $("enredoEscolha").textContent = en.ultima ? `${e.jogadores[en.ultima.quem]} escolheu: ${en.ultima.rotulo}` : "";
     const acabou = enredoAcabou(en, no);
     $("enredoFim").hidden = !acabou;
     $("enredoSair").hidden = acabou;
     const fez = fazDoNo(en, no);
-    $("enredoQuem").textContent = no.tipo === "narracao" ? "📖 Narração (alguém lê em voz alta)"
-      : `${no.tipo === "verdade" ? "Verdade" : "Desafio"} para ${fez.length === 2 ? "os dois" : e.jogadores[fez[0]]}`;
+    $("enredoQuem").textContent = "";
+    if (no.tipo === "narracao") {
+      $("enredoQuem").append(icone("book-open", 16), document.createTextNode(" Narração (alguém lê em voz alta)"));
+    } else {
+      $("enredoQuem").textContent = `${no.tipo === "verdade" ? "Verdade" : "Desafio"} para ${fez.length === 2 ? "os dois" : e.jogadores[fez[0]]}`;
+    }
     $("enredoTexto").textContent = no.texto;
     $("enredoTexto").classList.toggle("narracao", no.tipo === "narracao");
     const pendente = no.tipo !== "narracao" && !en.cumpriu;
@@ -7746,7 +8174,7 @@
     if (!estado || !estado.fixa) { $("casaNossoAno").hidden = true; return; }
     const hoje = hojeISO(), dez = hoje.slice(5, 7) === "12", aniv = diaNamoro() === hoje.slice(5);
     $("casaNossoAno").hidden = !(dez || aniv);
-    $("casaNossoAnoTitulo").textContent = aniv ? "✨ Hoje é aniversário de namoro: vejam o Nosso ano" : "✨ Nosso ano: a retrospectiva de vocês";
+    $("casaNossoAnoTitulo").textContent = aniv ? "Hoje é aniversário de namoro: vejam o Nosso ano" : "Nosso ano: a retrospectiva de vocês";
   }
   // partidas na ordem dos jogadores de agora, só do período
   function partidasDoPeriodo(ini) {
@@ -7762,7 +8190,7 @@
     const e = estado, c = codigo, ano = hojeISO().slice(0, 4), ini = periodo === "ano" ? `${ano}-01-01` : null;
     const noPeriodo = iso => !!iso && (!ini || diaBahia(iso) >= ini);
     const n0 = nomeDe(0), n1 = nomeDe(1), telas = [];
-    telas.push({ emoji: "✨", titulo: periodo === "ano" ? `Nosso ${ano}` : "Nossa história até aqui", linhas: [`${n0} & ${n1}`, "Toque para avançar"] });
+    telas.push({ icone: "sparkles", titulo: periodo === "ano" ? `Nosso ${ano}` : "Nossa história até aqui", linhas: [`${n0} & ${n1}`, "Toque para avançar"] });
     // 1. chamadas (se a tabela existir)
     try {
       const { data, error } = await sb.from("chamadas").select("inicio, fim, duracao_minutos").eq("sala", c).limit(5000);
@@ -7772,17 +8200,19 @@
         if (tot > 0) {
           const rec = l.slice().sort((a, b) => (b.duracao_minutos || 0) - (a.duracao_minutos || 0))[0];
           const h = Math.floor(tot / 60);
-          telas.push({ emoji: "📞", titulo: h ? `${h} ${h === 1 ? "hora" : "horas"} em chamada` : `${tot} minutos em chamada`,
-            linhas: [`${l.length} ${l.length === 1 ? "chamada" : "chamadas"}`, `Recorde: ${fmtDuracao(rec.duracao_minutos || 0)} em ${dataBR(diaBahia(rec.inicio))}`] });
+          telas.push({
+            icone: "phone", titulo: h ? `${h} ${h === 1 ? "hora" : "horas"} em chamada` : `${tot} minutos em chamada`,
+            linhas: [`${l.length} ${l.length === 1 ? "chamada" : "chamadas"}`, `Recorde: ${fmtDuracao(rec.duracao_minutos || 0)} em ${dataBR(diaBahia(rec.inicio))}`]
+          });
         }
       }
-    } catch (err) {}
+    } catch (err) { }
     if (c !== codigo) return null;
     // 2 e 3. partidas, placar geral e nível mais jogado por mês
     const ps = partidasDoPeriodo(ini);
     if (ps.length) {
       const v = [0, 1].map(j => ps.filter(p => p.vencedor === j).length);
-      telas.push({ emoji: "🎲", titulo: `${ps.length} ${ps.length === 1 ? "partida" : "partidas"}`, linhas: [`${n0} ${v[0]} × ${v[1]} ${n1}`, v[0] === v[1] ? "Empate técnico 💞" : `${v[0] > v[1] ? n0 : n1} venceu mais`] });
+      telas.push({ icone: "dices", titulo: `${ps.length} ${ps.length === 1 ? "partida" : "partidas"}`, linhas: [`${n0} ${v[0]} × ${v[1]} ${n1}`, v[0] === v[1] ? "Empate técnico" : `${v[0] > v[1] ? n0 : n1} venceu mais`] });
       const porMes = {};
       ps.forEach(p => {
         if (!p.quando) return;
@@ -7797,19 +8227,24 @@
         const top = Object.entries(porMes[m]).sort((a, b) => b[1] - a[1])[0];
         return top && top[1] > 0 ? `${MESES[Number(m.slice(5)) - 1]}/${m.slice(2, 4)} · ${LEVEL_NAMES[top[0]]}` : null;
       }).filter(Boolean).slice(-12);
-      if (linhas.length) telas.push({ emoji: "🌡️", titulo: "O nível mais jogado, mês a mês", linhas });
+      if (linhas.length) telas.push({ icone: "thermometer", titulo: "O nível mais jogado, mês a mês", linhas });
     }
     // 4. dengos
+    const invRes = (invPartidas || []).filter(p => p.estado === "concluido" && p.caso !== "teste-biscoito" && noPeriodo(p.concluida_em));
+    if (invRes.length) {
+      const estTot = invRes.reduce((s, p) => s + (p.estrelas || 0), 0);
+      telas.push({ icone: "search", titulo: `${invRes.length} ${invRes.length === 1 ? "caso resolvido" : "casos resolvidos"}`, linhas: [`${estTot} ${estTot === 1 ? "estrela conquistada" : "estrelas conquistadas"} na Investigação`] });
+    }
     const dg = (dados.dengos || []).filter(d => noPeriodo(d.criada_em));
     if (dg.length) {
       const indo = dg.filter(d => d.status === "indo").length;
-      telas.push({ emoji: "🫂", titulo: `${dg.length} ${dg.length === 1 ? "dengo pedido" : "dengos pedidos"}`, linhas: [`${indo} com "Tô indo" 🏃`] });
+      telas.push({ icone: "hand-heart", titulo: `${dg.length} ${dg.length === 1 ? "dengo pedido" : "dengos pedidos"}`, linhas: [`${indo} com "Tô indo"`] });
     }
-    // 5. a verdade favorita (marcada com ⭐; desempate: a mais vista)
+    // 5. a verdade favorita (favoritada; desempate: a mais vista)
     const favs = [...marcas.entries()].filter(([, s]) => s.has("favorita")).map(([id]) => cartas.find(x => x.id === id)).filter(x => x && x.tipo === "verdade");
     if (favs.length) {
       const f = favs.sort((a, b) => (vistas.get(b.id) || 0) - (vistas.get(a.id) || 0))[0];
-      telas.push({ emoji: "⭐", titulo: "A verdade favorita", linhas: [`“${f.texto}”`] });
+      telas.push({ icone: "star", titulo: "A verdade favorita", linhas: [`“${f.texto}”`] });
     }
     // 6. o dia de mais saudade: o dia com mais carinhos ("Pensei em você", saudade…)
     const porDia = {};
@@ -7817,7 +8252,7 @@
     const pico = Object.entries(porDia).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? 1 : -1))[0];
     if (pico) {
       const hum = humores.filter(h => h.dia === pico[0]).map(h => h.valor);
-      telas.push({ emoji: "🥺", titulo: "O dia de mais saudade", linhas: [`${dataBR(pico[0])}: ${pico[1]} ${pico[1] === 1 ? "carinho" : "carinhos"} pela tela`].concat(hum.length ? [`Humor mais baixo do dia: ${Math.min(...hum)} de 5`] : []) });
+      telas.push({ icone: "cloud-moon", titulo: "O dia de mais saudade", linhas: [`${dataBR(pico[0])}: ${pico[1]} ${pico[1] === 1 ? "carinho" : "carinhos"} pela tela`].concat(hum.length ? [`Humor mais baixo do dia: ${Math.min(...hum)} de 5`] : []) });
     }
     // 7. cofre quitado e reencontros
     const fe = cofre.filter(x => x.feito && noPeriodo(x.quitado_em || x.criada_em));
@@ -7828,14 +8263,14 @@
     }
     const reenc = (dados.momentos || []).filter(m => noPeriodo(m.criada_em) && /^Cumprido no reencontro/.test(m.frase || "")).map(m => diaBahia(m.criada_em));
     if (reenc.length) linhas7.push(`${new Set(reenc).size} ${new Set(reenc).size === 1 ? "dia juntos" : "dias juntos"} com promessa cumprida`);
-    if (linhas7.length) telas.push({ emoji: "🧾", titulo: "O que foi cumprido ao vivo", linhas: linhas7 });
+    if (linhas7.length) telas.push({ icone: "receipt", titulo: "O que foi cumprido ao vivo", linhas: linhas7 });
     // 8. conquistas
     const cq = (dados.conquistas || []).filter(x => noPeriodo(x.desbloqueada_em)).map(x => defConquista(x.codigo)).filter(Boolean);
-    if (cq.length) telas.push({ emoji: "🏆", titulo: `${cq.length} ${cq.length === 1 ? "conquista" : "conquistas"}`, linhas: [...new Set(cq.map(x => `${x.selo || "🏆"} ${x.titulo}`))].slice(0, 6) });
+    if (cq.length) telas.push({ icone: "trophy", titulo: `${cq.length} ${cq.length === 1 ? "conquista" : "conquistas"}`, linhas: [...new Set(cq.map(x => x.titulo))].slice(0, 6) });
     // 9. fechamento
     const st = situacaoReencontro(e), fim = ["Obrigado por mais um ano de nós dois."];
-    if (st.fase === "contando") { const d = Math.max(0, diasAte(st.r)); fim.push(d ? `Próximo reencontro em ${d} ${d === 1 ? "dia" : "dias"} 💞` : "O próximo reencontro é hoje 💞"); }
-    telas.push({ emoji: "💞", titulo: "Ano que vem tem mais 💞", linhas: fim });
+    if (st.fase === "contando") { const d = Math.max(0, diasAte(st.r)); fim.push(d ? `Próximo reencontro em ${d} ${d === 1 ? "dia" : "dias"}` : "O próximo reencontro é hoje"); }
+    telas.push({ icone: "marca", titulo: "Ano que vem tem mais", linhas: fim });
     return telas;
   }
   const fmtDuracao = min => { const h = Math.floor(min / 60), m = Math.round(min % 60); return h ? `${h}h${m ? ` ${String(m).padStart(2, "0")}min` : ""}` : `${m}min`; };
@@ -7843,7 +8278,7 @@
     if (!estado || !estado.fixa) return;
     const periodo = (document.querySelector('input[name="naPeriodo"]:checked') || {}).value || "ano";
     $("nossoAno").hidden = false;
-    $("naTitulo").textContent = "Calculando…"; $("naLinhas").textContent = ""; $("naEmoji").textContent = "✨";
+    $("naTitulo").textContent = "Calculando…"; $("naLinhas").textContent = ""; $("naEmoji").textContent = ""; $("naEmoji").appendChild(icone("sparkles", 32));
     const t = await montarNossoAno(periodo);
     if (!t) return;
     telasAno = t; telaAno = 0;
@@ -7852,7 +8287,7 @@
   function desenharTelaAno() {
     const t = telasAno[telaAno];
     if (!t) return;
-    $("naEmoji").textContent = t.emoji;
+    $("naEmoji").textContent = ""; $("naEmoji").appendChild(icone(t.icone || "sparkles", 32));
     $("naTitulo").textContent = t.titulo;
     const box = $("naLinhas"); box.textContent = "";
     t.linhas.forEach(l => box.appendChild(el("p", "", l)));
@@ -7867,15 +8302,15 @@
     desenharTelaAno();
   }
 
-  // ---------- v9: dias ruins — bateria social baixa 🪫 ----------
+  // ---------- v9: dias ruins — bateria social baixa ----------
   const bateriaDe = (j, e = estado) => { const v = e && e.bateria && e.bateria[j]; return !!v && Date.parse(v) > Date.now(); };
   const bateriaAlguem = e => !!(e && e.fixa) && (bateriaDe(0, e) || bateriaDe(1, e));
   function ligarBateria(op) {
     const ate = op === "2h" ? new Date(Date.now() + 2 * 3600000).toISOString()
       : op === "amanha" ? new Date(`${somarDias(hojeISO(), 1)}T06:00:00-03:00`).toISOString()
-      : new Date(Date.now() + 30 * 86400000).toISOString();
+        : new Date(Date.now() + 30 * 86400000).toISOString();
     $("bateriaOpcoes").hidden = true;
-    gravar(n => { n.bateria = { ...(n.bateria || {}), [eu]: ate }; n.aviso = novoAviso(`🪫 ${n.jogadores[eu]} está sem bateria social`); });
+    gravar(n => { n.bateria = { ...(n.bateria || {}), [eu]: ate }; n.aviso = novoAviso(`${n.jogadores[eu]} está sem bateria social`); });
   }
   function desligarBateria() {
     gravar(n => { const b = { ...(n.bateria || {}) }; delete b[eu]; n.bateria = b; });
@@ -7889,11 +8324,12 @@
     $("bateriaLigada").hidden = !minha;
     if (minha) {
       const ate = new Date(e.bateria[eu]), dias = (ate - Date.now()) / 86400000;
-      $("bateriaTexto").textContent = dias > 2 ? "🪫 Você está sem bateria social até desligar. Tudo calmo por aqui."
-        : `🪫 Você está sem bateria social até ${hojeISO(ate) === hojeISO() ? "" : "amanhã, "}${ate.toLocaleTimeString("pt-BR", { timeZone: "America/Bahia", hour: "2-digit", minute: "2-digit" })}. Tudo calmo por aqui.`;
+      $("bateriaTexto").textContent = dias > 2 ? "Você está sem bateria social até desligar. Tudo calmo por aqui."
+        : `Você está sem bateria social até ${hojeISO(ate) === hojeISO() ? "" : "amanhã, "}${ate.toLocaleTimeString("pt-BR", { timeZone: "America/Bahia", hour: "2-digit", minute: "2-digit" })}. Tudo calmo por aqui.`;
     }
     // sem jogo para os dois enquanto alguém está sem bateria
-    if ((minha || dele) && vista === "jogo") setTimeout(() => mostrarVista("casa"), 0);
+    if ((minha || dele) && (vista === "jogo" || vista === "vInvestigacao")) setTimeout(() => mostrarVista("casa"), 0);
+    invAplicarVisibilidade();
     desenharCuidado(e, dele);
     // expira sozinho
     clearTimeout(timerBateria);
@@ -7905,18 +8341,18 @@
     $("casaCuidado").hidden = !ativo;
     if (!ativo) return;
     const o = 1 - eu, nome = nomeDe(o), ul = $("cuidadoItens"); ul.textContent = "";
-    $("cuidadoTitulo").textContent = `🪫 ${nome} está sem bateria social. Protocolo de cuidado:`;
+    $("cuidadoTitulo").textContent = `${nome} está sem bateria social. Protocolo de cuidado:`;
     const item = (t, cls) => ul.appendChild(el("li", cls || "", t));
     const naoFazer = textoManual(o, "naoFazer"), naoPerg = textoManual(o, "naoPerguntar"), acalma = textoManual(o, "acalma");
     const delivery = textoManual(o, "delivery"), musica = textoManual(o, "musicaConforto");
-    if (naoFazer) item(`🚫 Hoje, não: ${naoFazer}`);
-    if (naoPerg) item(`🤐 Não pergunte: ${naoPerg}`);
-    if (acalma) item(`🌿 O que acalma: ${acalma}`);
-    if (!naoFazer && !naoPerg && !acalma) sugestoes.filter(s => s.humor_min <= 1 && 1 <= s.humor_max).sort((a, b) => a.ordem - b.ordem).slice(0, 4).forEach(s => item(`💡 ${s.texto}`));
-    item(delivery ? `🛵 Ação silenciosa: peça ${delivery} sem avisar` : musica ? `🎵 Ação silenciosa: mande "${musica}"` : "🌙 Ação silenciosa: mande só um boa noite, sem esperar resposta", "acao");
+    if (naoFazer) item(`Hoje, não: ${naoFazer}`);
+    if (naoPerg) item(`Não pergunte: ${naoPerg}`);
+    if (acalma) item(`O que acalma: ${acalma}`);
+    if (!naoFazer && !naoPerg && !acalma) sugestoes.filter(s => s.humor_min <= 1 && 1 <= s.humor_max).sort((a, b) => a.ordem - b.ordem).slice(0, 4).forEach(s => item(s.texto));
+    item(delivery ? `Ação silenciosa: peça ${delivery} sem avisar` : musica ? `Ação silenciosa: mande "${musica}"` : "Ação silenciosa: mande só um boa noite, sem esperar resposta", "acao");
   }
 
-  // ---------- v9: recados sem resposta 💛 ----------
+  // ---------- v9: recados sem resposta ----------
   let recados = [], marcandoLido = new Set();
   const chaveFechados = () => `lp-recados-fechados:${codigo}`;
   const lerFechados = () => { const v = lerLocal(chaveFechados()); return Array.isArray(v) ? v : []; };
@@ -7970,7 +8406,8 @@
     const r = recados.find(x => x.de === o && !fechados.includes(x.id));
     $("casaRecado").hidden = !r;
     if (r) {
-      $("recadoTitulo").textContent = `💛 Recado de ${nomeDe(o)}`;
+      $("recadoTitulo").textContent = "";
+      $("recadoTitulo").append(avatarEl(o, "mini"), document.createTextNode(` Recado de ${nomeDe(o)}`));
       $("recadoTexto").textContent = r.texto;
       if (!r.lido_em && !document.hidden && vista !== "jogo") marcarLido(r);
     }
@@ -7978,8 +8415,8 @@
     const meu = recados.find(x => x.de === eu);
     const recente = meu && Date.now() - Date.parse(meu.criado_em) < 3 * 86400000;
     $("casaRecadoLido").hidden = !recente;
-    if (recente) $("casaRecadoLido").textContent = meu.lido_em ? `✓ ${nomeDe(o)} leu e está só absorvendo o carinho, sem pressão para conversar`
-      : `💛 Recado deixado. ${nomeDe(o)} ainda não viu.`;
+    if (recente) $("casaRecadoLido").textContent = meu.lido_em ? `${nomeDe(o)} leu e está só absorvendo o carinho, sem pressão para conversar`
+      : `Recado deixado. ${nomeDe(o)} ainda não viu.`;
     const recebidos = recados.filter(x => x.de === o);
     $("cardRecadosSub").textContent = recebidos.length ? `${recebidos.length} ${recebidos.length === 1 ? "recebido" : "recebidos"}` : "Sem resposta, só carinho";
     if ($("vRecados").hidden) return;
@@ -7987,18 +8424,21 @@
     const ul = $("recadosLista"); ul.textContent = "";
     recebidos.forEach(x => {
       const li = el("li");
-      li.append(el("span", "t", x.texto), el("span", "autor", `${nomeDe(o)} · ${dataCurta(x.criado_em)}`));
+      const spAutor = el("span", "autor");
+      spAutor.append(avatarEl(o, "mini"), document.createTextNode(` ${nomeDe(o)} · ${dataCurta(x.criado_em)}`));
+      li.append(el("span", "t", x.texto), spAutor);
       ul.appendChild(li);
     });
   }
+  manualMudouFns.push(desenharRecados);
   addEventListener("visibilitychange", () => { if (!document.hidden) desenharRecados(); });
 
-  // ---------- v9: companhia silenciosa 🕯️ (pelo broadcast da sala; não grava nada além do tempo) ----------
+  // ---------- v9: companhia silenciosa (pelo broadcast da sala; não grava nada além do tempo) ----------
   let emCompanhia = false, compOutro = { ativo: false, visto: 0, saiu: false }, compJuntoDesde = null, compUltimoToque = 0;
   let compBatida = null, compWake = null, compVigia = null;
   const compOutroAqui = () => compOutro.ativo && Date.now() - compOutro.visto < 45000 && presentes.has(1 - eu);
   function avisarCompanhia(ativo) {
-    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "companhia", jogador: eu, ativo } }); } catch (err) {}
+    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "companhia", jogador: eu, ativo } }); } catch (err) { }
   }
   async function entrarCompanhia() {
     if (!estado || !estado.fixa) return;
@@ -8015,7 +8455,7 @@
     const m = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
     $("compMusica").hidden = !m;
     $("compPlayer").textContent = "";
-    if (m) { $("compMusicaTxt").textContent = `🎵 Sugestão: ${m.titulo}${m.artista ? " · " + m.artista : ""}`; $("compTocar").dataset.url = m.url; }
+    if (m) { $("compMusicaTxt").textContent = `Sugestão: ${m.titulo}${m.artista ? " · " + m.artista : ""}`; $("compTocar").dataset.url = m.url; }
     try { if (navigator.wakeLock) compWake = await navigator.wakeLock.request("screen"); } catch (err) { compWake = null; }
     desenharCompanhia();
   }
@@ -8029,7 +8469,7 @@
     $("compPlayer").textContent = "";
     avisarCompanhia(false);
     clearInterval(compBatida); clearInterval(compVigia); compBatida = compVigia = null;
-    try { compWake && compWake.release(); } catch (err) {}
+    try { compWake && compWake.release(); } catch (err) { }
     compWake = null;
   }
   // tempo com os dois na tela: grava quem saiu primeiro (para não somar duas vezes)
@@ -8055,8 +8495,8 @@
   function tocarLuz() {
     if (!emCompanhia || !compOutroAqui() || Date.now() - compUltimoToque < 30000) return;
     compUltimoToque = Date.now();
-    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "toqueComp", jogador: eu } }); } catch (err) {}
-    $("compDica").textContent = "💫 Toque enviado";
+    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "toqueComp", jogador: eu } }); } catch (err) { }
+    $("compDica").textContent = "Toque enviado";
     setTimeout(() => { if (emCompanhia) desenharCompanhia(); }, 2000);
   }
   function desenharCompanhia() {
@@ -8065,7 +8505,7 @@
     if (junto && !compJuntoDesde) compJuntoDesde = Date.now();
     if (!junto && compJuntoDesde) somarCompanhia(false);
     $("compLuz").classList.toggle("junto", junto);
-    $("compStatus").textContent = junto ? `${nome} está aqui com você 🕯️` : compOutro.saiu ? `${nome} saiu, mas volta logo` : `Esperando ${nome} abrir a companhia…`;
+    $("compStatus").textContent = junto ? `${nome} está aqui com você` : compOutro.saiu ? `${nome} saiu, mas volta logo` : `Esperando ${nome} abrir a companhia…`;
     const falta = Math.ceil((30000 - (Date.now() - compUltimoToque)) / 1000);
     $("compDica").textContent = junto ? (falta > 0 && compUltimoToque ? `Dá para tocar de novo em ${falta} s` : "Toque na luz para fazer brilhar do outro lado") : "";
   }
@@ -8082,7 +8522,7 @@
   function desenharHistCompanhia() {
     const t = Number(estado && estado.companhiaTotal) || 0;
     $("histCompanhia").hidden = !t;
-    if (t) { const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60); $("histCompanhia").textContent = `🕯️ Horas de companhia (sem contar como chamada): ${h ? `${h} h ` : ""}${m} min`; }
+    if (t) { const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60); $("histCompanhia").textContent = `Horas de companhia (sem contar como chamada): ${h ? `${h} h ` : ""}${m} min`; }
   }
 
   // ---------- v9: carta secreta (segure para ler; virou o celular, escondeu) ----------
@@ -8103,7 +8543,7 @@
     const pode = !c && e.vez === eu && e.vencedor === null && !!e.jogadores[1] && !e.enredo;
     $("secretaBtn").hidden = !pode;
     $("secretaBtn").setAttribute("aria-pressed", String(e.secretaProx === eu));
-    $("secretaBtn").textContent = e.secretaProx === eu ? "🔒 Carta secreta: ligada" : "🔒 Carta secreta";
+    $("secretaBtn").innerHTML = e.secretaProx === eu ? iconeHtml("lock", 16) + " <span>Carta secreta: ligada</span>" : iconeHtml("lock", 16) + " <span>Carta secreta</span>";
   }
   function segurarCarta(v) {
     segurandoCarta = v;
@@ -8125,8 +8565,8 @@
   function pararMic() {
     if (!mic) return;
     clearInterval(mic.timer);
-    try { mic.stream.getTracks().forEach(t => t.stop()); } catch (err) {}
-    try { mic.ctx.close(); } catch (err) {}
+    try { mic.stream.getTracks().forEach(t => t.stop()); } catch (err) { }
+    try { mic.ctx.close(); } catch (err) { }
     mic = null;
   }
   function volumeAgora() {
@@ -8191,7 +8631,7 @@
           n.silencio.fase = "passou";
           n.placar[n.vez].pontos += 2;
           n.pontos = n.placar.map(p => p.pontos);
-          n.aviso = novoAviso(`🤫 ${n.jogadores[n.vez]} aguentou em silêncio! +2`);
+          n.aviso = novoAviso(`${n.jogadores[n.vez]} aguentou em silêncio! +2`);
           conferirMeta(n);
         });
       }
@@ -8228,7 +8668,7 @@
       carta.motivo = "pulo"; carta.origem = c.tipo === "prenda" ? "desafio" : c.tipo;
       n.carta = carta;
       n.silencio = null;
-      n.aviso = novoAviso(`🤫 Falhou! ${n.jogadores[1 - n.vez]} escolheu a prenda`);
+      n.aviso = novoAviso(`Falhou! ${n.jogadores[1 - n.vez]} escolheu a prenda`);
     });
   }
   function desenharSilencio(e) {
@@ -8243,8 +8683,8 @@
     $("silencioTempo").hidden = s.fase !== "valendo";
     $("silencioStatus").textContent = s.fase === "preparando" ? (ouvinte ? "" : `O celular de ${e.jogadores[s.ouvinte] || "vocês"} vai ouvir.`)
       : s.fase === "calibrando" ? "Calibrando: 3 segundos em silêncio…"
-      : s.fase === "valendo" ? `${quem} não pode fazer nenhum som.`
-      : s.fase === "falhou" ? "Falhou! 🤫" : `${quem} aguentou em silêncio! +2`;
+        : s.fase === "valendo" ? `${quem} não pode fazer nenhum som.`
+          : s.fase === "falhou" ? "Falhou!" : `${quem} aguentou em silêncio! +2`;
     $("silencioBox").classList.toggle("falhou", s.fase === "falhou");
     // falhou: tela vermelha piscando e vibração, uma vez em cada aparelho
     if (s.fase === "falhou" && falhouVisto !== s.chave) {
@@ -8289,7 +8729,7 @@
     const i = clausulasSala.findIndex(x => x.id === row.id);
     if (ev === "DELETE") { if (i >= 0) clausulasSala.splice(i, 1); }
     else if (row.sala === codigo) {
-      if (i < 0 && ev === "INSERT") mostrarAviso(novoAviso(`📜 Cláusula para amanhã (${nomeDe(row.para)}): ${row.texto}`), false);
+      if (i < 0 && ev === "INSERT") mostrarAviso(novoAviso(`Cláusula para amanhã (${nomeDe(row.para)}): ${row.texto}`), false);
       if (i >= 0) clausulasSala[i] = { ...clausulasSala[i], ...row }; else clausulasSala.unshift(row);
     }
     desenharClausulas();
@@ -8327,7 +8767,7 @@
     const { error } = await sb.from("clausulas_sala").update({ texto: nova.texto }).eq("id", x.id);
     if (error) return erro("erroClausula", "Não consegui trocar. Confira a internet.");
     linhaClausula("UPDATE", { ...x, texto: nova.texto });
-    gravar(n => { n.vetos = { ...(n.vetos || {}), [x.para]: hojeISO() }; n.aviso = novoAviso(`📜 ${n.jogadores[x.para]} usou o veto da semana`); });
+    gravar(n => { n.vetos = { ...(n.vetos || {}), [x.para]: hojeISO() }; n.aviso = novoAviso(`${n.jogadores[x.para]} usou o veto da semana`); });
   }
   // não cumpriu até o fim do dia: vira prenda na fatura (o aparelho de quem cobra grava)
   let vencendoClausulas = false;
@@ -8351,11 +8791,11 @@
     const ul = $("clausulasLista"); ul.textContent = "";
     l.forEach(x => {
       const li = el("li", x.cumprida_em ? "feito" : "");
-      li.append(el("p", "cumprir-titulo", `📜 Cláusula de hoje para ${nomeDe(x.para)}`), el("p", "clausula-texto", x.texto));
-      if (x.cumprida_em) li.appendChild(el("p", "extras-sub", "Cumpriu ✓"));
+      li.append(el("p", "cumprir-titulo", `Cláusula de hoje para ${nomeDe(x.para)}`), el("p", "clausula-texto", x.texto));
+      if (x.cumprida_em) li.appendChild(el("p", "extras-sub", "Cumpriu"));
       else {
         const ac = el("div", "row");
-        if (eu === 1 - x.para || umCelularAqui(estado)) { const b = el("button", "done", "Cumpriu ✓"); b.type = "button"; b.addEventListener("click", () => cumpriuClausula(x)); ac.appendChild(b); }
+        if (eu === 1 - x.para || umCelularAqui(estado)) { const b = el("button", "done", "Cumpriu"); b.type = "button"; b.addEventListener("click", () => cumpriuClausula(x)); ac.appendChild(b); }
         if ((eu === x.para || umCelularAqui(estado)) && podeVetar(x.para)) { const v = el("button", "linkbtn", "Vetar (1 por semana)"); v.type = "button"; v.addEventListener("click", () => vetarClausula(x)); ac.appendChild(v); }
         if (eu === x.para && !umCelularAqui(estado)) ac.appendChild(el("span", "extras-sub", `Quem marca é ${nomeDe(1 - x.para)}.`));
         li.appendChild(ac);
@@ -8372,7 +8812,7 @@
     if (a !== b || n.meta - a > 3) return;
     n.emMorteSubita = true;
     n.ms = { res: [null, null] };
-    n.aviso = novoAviso("⚡ Morte súbita! Próxima carta decide");
+    n.aviso = novoAviso("Morte súbita! Próxima carta decide");
   }
   // um degrau acima do nível mais alto dos chips, sem passar do máximo da sala
   function nivelMorteSubita(n) {
@@ -8385,11 +8825,11 @@
     if (r[0] === null || r[1] === null) return;
     if (r[0] === r[1]) {
       n.ms.res = [null, null];
-      n.aviso = novoAviso("⚡ Empate de novo! Mais uma carta para cada um");
+      n.aviso = novoAviso("Empate de novo! Mais uma carta para cada um");
       return;
     }
     const w = r[0] > r[1] ? 0 : 1;
-    n.aviso = novoAviso(`⚡ ${n.jogadores[w]} venceu a morte súbita!`);
+    n.aviso = novoAviso(`${n.jogadores[w]} venceu a morte súbita!`);
     declararVencedor(n, w);
   }
   async function desistirMorteSubita() {
@@ -8475,7 +8915,7 @@
     $("minhaMissao").hidden = !missaoAberta;
     $("mmTexto").textContent = minha.texto;
     $("mmInfo").textContent = `Nível ${LEVEL_NAMES[minha.nivel] || minha.nivel} · vale ${PONTOS_MISSAO[minha.nivel] || 2} pontos · `
-      + (minha.status === "cumprida" ? "cumprida ✓" : minha.status === "pedida" ? `esperando ${outro} confirmar` : "ninguém mais vê");
+      + (minha.status === "cumprida" ? "cumprida" : minha.status === "pedida" ? `esperando ${outro} confirmar` : "ninguém mais vê");
     $("mmCumpri").hidden = minha.status !== "ativa" || acabou;
     $("missaoOutro").textContent = dele.status === "cumprida" ? `${outro} cumpriu a missão: ${dele.texto}` : `${outro} tem uma missão secreta`;
     const pedindo = dele.status === "pedida" && !acabou;
@@ -8554,7 +8994,7 @@
       const c = n.carta, quem = n.vez;
       n.carta = null;
       n.avaliacao = null;
-      n.aviso = novoAviso(`${n.jogadores[quem]} ganhou ${"★".repeat(estrelas)} de ${n.jogadores[1 - quem]}`);
+      n.aviso = novoAviso(`${n.jogadores[quem]} ganhou ${estrelas} ${estrelas === 1 ? "estrela" : "estrelas"} de ${n.jogadores[1 - quem]}`);
       pontuar(n, c, estrelas);
       n.pontos = n.placar.map(x => x.pontos);
     });
@@ -8842,7 +9282,7 @@
   async function instalar() {
     if (!pedidoInstalar) return;
     pedidoInstalar.prompt();
-    try { await pedidoInstalar.userChoice; } catch (err) {}
+    try { await pedidoInstalar.userChoice; } catch (err) { }
     pedidoInstalar = null;
     $("instalar").hidden = true;
   }
@@ -8911,7 +9351,7 @@
       const b = ev.target.closest && ev.target.closest("[data-abre]");
       if (b && $("jogo").contains(b)) mostrarVista(b.dataset.abre);
     });
-    addEventListener("pagehide", () => { segurar(false); try { if (canal) canal.untrack(); } catch (err) {} });
+    addEventListener("pagehide", () => { segurar(false); try { if (canal) canal.untrack(); } catch (err) { } });
     [0, 1].forEach(i => {
       $("cidadeBuscar" + i).addEventListener("click", () => buscarCidade(i));
       $("cidadeBusca" + i).addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); buscarCidade(i); } });
@@ -8947,14 +9387,16 @@
     $("fecharAbraLer").addEventListener("click", () => $("dlgAbraLer").close());
     $("formMarco").addEventListener("submit", salvarMarco);
     $("cancelarMarco").addEventListener("click", () => $("dlgMarco").close());
-    document.querySelectorAll("#marcoSugestoes [data-emoji]").forEach(b => b.addEventListener("click", () => {
-      $("marcoEmoji").value = b.dataset.emoji;
-      if (!$("marcoTitulo").value.trim()) $("marcoTitulo").value = b.dataset.titulo;
+    document.querySelectorAll("#marcoIcones [data-icone]").forEach(b => b.addEventListener("click", () => {
+      $("marcoIcone").value = b.dataset.icone;
+      document.querySelectorAll("#marcoIcones .btn-icone-opcao").forEach(x => x.classList.remove("selecionado"));
+      b.classList.add("selecionado");
+      if (!$("marcoTitulo").value.trim() && b.dataset.titulo) $("marcoTitulo").value = b.dataset.titulo;
     }));
     document.querySelectorAll("#carinhoBotoes [data-carinho]").forEach(b => b.addEventListener("click", () => mandarCarinho(b.dataset.carinho)));
     $("carinhoResumoFechar").addEventListener("click", () => { resumoCarinhos = ""; desenharCarinhos(); });
     const coracao = $("maosCoracao");
-    coracao.addEventListener("pointerdown", ev => { ev.preventDefault(); try { coracao.setPointerCapture(ev.pointerId); } catch (err) {} segurar(true); });
+    coracao.addEventListener("pointerdown", ev => { ev.preventDefault(); try { coracao.setPointerCapture(ev.pointerId); } catch (err) { } segurar(true); });
     ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => coracao.addEventListener(t, () => segurar(false)));
     coracao.addEventListener("contextmenu", ev => ev.preventDefault());
     document.addEventListener("visibilitychange", () => { if (document.hidden) segurar(false); });
@@ -9075,7 +9517,7 @@
       responderDengo("nao_consigo", t);
     });
     document.querySelectorAll("#drFrases button").forEach(b => b.addEventListener("click", () => responderDengo("nao_consigo", b.textContent)));
-    $("drAqui").addEventListener("click", () => responderDengo("indo", "Tô aqui quando precisar 🤍"));
+    $("drAqui").addEventListener("click", () => responderDengo("indo", "Tô aqui quando precisar"));
     $("dengoEditar").addEventListener("click", abrirPedidos);
     $("fecharPedidos").addEventListener("click", () => $("dlgPedidos").close());
     $("pedidosSalvar").addEventListener("click", salvarPedidos);
@@ -9084,21 +9526,53 @@
     setInterval(() => { if (vista === "casa" && !document.hidden) desenharDengo(); }, 60000);   // "há X min"
     $("navMostrar").addEventListener("click", () => recolherNav(false));
     try { new ResizeObserver(() => document.documentElement.style.setProperty("--nav", $("navBaixo").offsetHeight + "px")).observe($("navBaixo")); } catch (err) {}
-    // reserva o espaço da barra fixa no fim da página
-    try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) {}
+    if ($("temaOpcoes")) {
+      const aplicarTema = val => {
+        if (val === "noite" || val === "papel") {
+          document.documentElement.setAttribute("data-tema", val);
+          try { localStorage.setItem("lp-tema", val); } catch (e) {}
+        } else {
+          document.documentElement.removeAttribute("data-tema");
+          try { localStorage.removeItem("lp-tema"); } catch (e) {}
+        }
+        $("temaOpcoes").querySelectorAll("[data-tema-val]").forEach(b => {
+          b.setAttribute("aria-pressed", (b.dataset.temaVal === (val === "noite" || val === "papel" ? val : "auto")) ? "true" : "false");
+        });
+        desenharRoleta();
+      };
+      let temaSalvo = "auto";
+      try { const t = localStorage.getItem("lp-tema"); if (t === "noite" || t === "papel") temaSalvo = t; } catch (e) {}
+      aplicarTema(temaSalvo);
+      $("temaOpcoes").querySelectorAll("[data-tema-val]").forEach(b => {
+        b.addEventListener("click", () => aplicarTema(b.dataset.temaVal));
+      });
+    }
+    try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) { }
     desenharRoleta();
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenharRoleta);
 
     const nome = lerLocal("lp-nome");
     if (nome) $("nome").value = nome;
     const salaUrl = new URLSearchParams(location.search).get("sala");
-    if (salaUrl) $("codigo").value = lerCodigo(salaUrl) || salaUrl;
+    if ($("abrirCodigo") && $("codigoBox")) {
+      $("abrirCodigo").addEventListener("click", () => {
+        const aberto = !$("codigoBox").hidden;
+        $("codigoBox").hidden = aberto;
+        $("abrirCodigo").setAttribute("aria-expanded", String(!aberto));
+        if (!aberto) $("codigo").focus();
+      });
+    }
+    if (salaUrl) {
+      $("codigo").value = lerCodigo(salaUrl) || salaUrl;
+      if ($("codigoBox")) $("codigoBox").hidden = false;
+      if ($("abrirCodigo")) $("abrirCodigo").setAttribute("aria-expanded", "true");
+    }
     desenharRecentes();
 
     if (!configurado() || !window.supabase) {
       erro("erroLobby", !configurado()
         ? "Falta configurar o Supabase no arquivo config.js."
-        : "Não foi possível carregar o Supabase. Confira a internet ou desative bloqueadores e recarregue a página.");
+        : "Sem conexão. Tentando de novo…");
       $("criar").disabled = $("entrar").disabled = true;
       return;
     }
@@ -9145,6 +9619,7 @@
     };
     const obs = new MutationObserver(corDaBarra);
     obs.observe(document.body, { attributes: true, attributeFilter: ["data-modo"] });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-tema"] });
     ["noite", "companhia"].forEach(id => { if ($(id)) obs.observe($(id), { attributes: true, attributeFilter: ["hidden"] }); });
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", corDaBarra);
     corDaBarra();
@@ -9221,11 +9696,1630 @@
     // voltou para o app depois de um tempo? pega o estado mais novo
     document.addEventListener("visibilitychange", async () => {
       if (document.visibilityState !== "visible" || !codigo) return;
-      try { const e = await buscarSala(codigo); if (e) aplicar(e, false); } catch (e) {}
+      try { const e = await buscarSala(codigo); if (e) aplicar(e, false); } catch (e) { }
     });
 
     // link com ?sala= e nome já salvo: entra direto
     if (salaUrl && nome) entrarSala(salaUrl);
+  }
+
+  // ============================================================================
+  // Investigação — mistério cooperativo para dois
+  // ============================================================================
+  const invModoTeste = (() => {
+    try {
+      if (new URLSearchParams(location.search).get("teste") === "1") {
+        sessionStorage.setItem("lp-inv-teste", "1");
+        return true;
+      }
+      return sessionStorage.getItem("lp-inv-teste") === "1";
+    } catch (e) {
+      return new URLSearchParams(location.search).get("teste") === "1";
+    }
+  })();
+  const INV_TEMAS = [
+    ["todos", "Todos"],
+    ["policial", "Policial"],
+    ["misterio", "Mistério"],
+    ["sombrio", "Sombrio"],
+    ["fantasia", "Fantasia"],
+    ["folclore", "Folclore"],
+    ["futuro", "Futuro"]
+  ];
+  const INV_TEMA_NOME = {
+    policial: "Policial", misterio: "Mistério", sombrio: "Sombrio",
+    fantasia: "Fantasia", folclore: "Folclore", futuro: "Futuro"
+  };
+  const INV_FILTRO_SELOS = [
+    ["todos", "Lenda e criaturas"],
+    ["lenda", "Só lenda"],
+    ["criaturas", "Só criaturas"]
+  ];
+  const INV_FORMATOS = [["todos", "Qualquer"], ["curto", "Curto"], ["medio", "Médio"], ["longo", "Longo"]];
+  const INV_DIFS = [["todas", "Qualquer", 0], ["1", "Fácil", 1], ["2", "Média", 2], ["3", "Difícil", 3]];
+  const INV_SELOS = { lenda: "Lenda", criaturas: "Criaturas", mundo: "Pelo mundo" };
+  const INV_DOC_IC = {
+    briefing: "file-text", depoimento: "file-text", laudo: "scroll-text",
+    chat: "message-circle", email: "mail", registro: "file-text",
+    extrato: "receipt", recibo: "receipt", folheto: "newspaper",
+    aviso: "alert-circle", bilhete: "scroll", planta: "map",
+    audio: "mic", foto: "camera"
+  };
+  const INV_DOC_NOME = {
+    briefing: "Briefing", depoimento: "Depoimento", laudo: "Laudo",
+    chat: "Conversa", email: "E-mail", registro: "Registro",
+    extrato: "Extrato", recibo: "Recibo", folheto: "Folheto",
+    aviso: "Aviso", bilhete: "Bilhete", planta: "Planta",
+    audio: "Áudio", foto: "Foto"
+  };
+
+  let invCasos = [];
+  let invPartidas = [];
+  let invFiltroTema = "todos";
+  let invFiltroSelo = "todos";
+  let invFiltroFmt = "todos";
+  let invFiltroDif = "todas";
+  (function invLerFiltrosSalvos() {
+    try {
+      const f = JSON.parse(localStorage.getItem("lp-inv-filtros") || "{}");
+      if (f && INV_TEMAS.some(x => x[0] === f.tema)) invFiltroTema = f.tema;
+      if (invFiltroTema === "folclore" && f && INV_FILTRO_SELOS.some(x => x[0] === f.selo)) invFiltroSelo = f.selo;
+      if (f && INV_FORMATOS.some(x => x[0] === f.fmt)) invFiltroFmt = f.fmt;
+      if (f && INV_DIFS.some(x => x[0] === f.dif)) invFiltroDif = f.dif;
+    } catch (e) {}
+  })();
+  function invSalvarFiltros() {
+    try {
+      localStorage.setItem("lp-inv-filtros", JSON.stringify({
+        tema: invFiltroTema,
+        selo: invFiltroSelo,
+        fmt: invFiltroFmt,
+        dif: invFiltroDif
+      }));
+    } catch (e) {}
+  }
+  let invCasoAtual = null;
+  let invPartidaAtual = null;
+  let invDossie = null;
+  let invRelatorio = null;
+  let invNotas = [];
+  let invAba = "dossie";
+  let invFiltroNota = "todas";
+  let invTravasConhecidas = new Set();
+  let invTimerContagem = null;
+  let invTimerToast = null;
+  let invDocAberto = null;
+  let invCarregando = false;
+
+  function aviso(texto) {
+    if (!texto) return;
+    try { mostrarAviso({ id: "inv-" + Date.now() + "-" + Math.random(), texto }, false); } catch (e) { }
+    const v = $("vInvestigacao");
+    if (!v) return;
+    let bar = $("invToastBar");
+    if (!bar) {
+      bar = el("div", "inv-faixa-aviso");
+      bar.id = "invToastBar";
+      bar.setAttribute("role", "status");
+      v.insertBefore(bar, $("invRaiz"));
+    }
+    bar.textContent = texto;
+    bar.hidden = false;
+    clearTimeout(invTimerToast);
+    invTimerToast = setTimeout(() => { bar.hidden = true; }, 4000);
+  }
+
+  function invIcone(nome, tam = 20, cls = "") {
+    const id = ICONES_CONHECIDOS.has((nome || "").trim()) ? nome.trim() : "sparkles";
+    return icone(id, tam, cls);
+  }
+
+  let invWake = null;
+
+  async function invManterTelaAcesa(ligar) {
+    try {
+      if (ligar && !invWake && navigator.wakeLock) {
+        invWake = await navigator.wakeLock.request("screen");
+        invWake.addEventListener("release", () => { invWake = null; });
+      } else if (!ligar && invWake) {
+        await invWake.release();
+        invWake = null;
+      }
+    } catch (e) { }
+  }
+
+  function invNotificarParceiro(texto) {
+    aviso(texto);
+    try {
+      const C = window.Capacitor;
+      const LN = C && C.Plugins && C.Plugins.LocalNotifications;
+      if (LN && typeof LN.schedule === "function") {
+        LN.schedule({ notifications: [{ id: Math.floor(Date.now() % 100000), title: "Investigação", body: texto }] }).catch(() => { });
+        return;
+      }
+      if ("Notification" in window && document.hidden && Notification.permission === "granted") {
+        new Notification("Longe & Perto — Investigação", { body: texto });
+      }
+    } catch (e) { }
+  }
+
+  async function invGanharVales3Estrelas(row) {
+    if (!row || row.estado !== "concluido" || row.estrelas !== 3 || row.caso === "teste-biscoito") return;
+    if (!config || !config.fatura || !config.fatura.vales || !codigo) return;
+    const pool = (valesModelos || []).filter(v => config.niveis[v.nivel]);
+    if (!pool.length) return;
+    const credores = row.um_celular ? [0, 1] : [eu];
+    for (const c of credores) {
+      if (!nomeDe(c)) continue;
+      const chave = `inv-vale:${row.id}:${c}`;
+      if (valesDados.has(chave)) continue;
+      valesDados.add(chave);
+      const v = pool[Math.floor(Math.random() * pool.length)];
+      const { data, error } = await sb.from("cofre")
+        .insert({ sala: codigo, carta: v.texto.slice(0, 280), nota: "Caso resolvido com 3 estrelas", autor: nomeDe(c).slice(0, 20), tipo: "vale", credor: c, minutos: v.minutos || null })
+        .select("*").single();
+      if (!error && data) juntarCofre(data);
+    }
+  }
+
+  function invAplicarVisibilidade() {
+    const semBateria = typeof bateriaAlguem === "function" && estado && bateriaAlguem(estado);
+    const ativo = !(config && config.investigacao && config.investigacao.ativo === false) && !semBateria;
+    if ($("atalhoInvestigacao")) $("atalhoInvestigacao").hidden = !ativo;
+    if ($("jogoBtnInvWrap")) $("jogoBtnInvWrap").hidden = !ativo;
+    if (!ativo && vista === "vInvestigacao") {
+      invManterTelaAcesa(false);
+      mostrarVista(estado && estado.fixa ? "casa" : "jogo");
+    }
+  }
+
+  function invTrack(lendo) {
+    if (!canal) return;
+    try {
+      canal.track({ jogador: eu, online_em: new Date().toISOString(), inv_lendo: lendo || null }).catch(() => { });
+    } catch (e) { }
+  }
+
+  function invTextoPresenca() {
+    if (!canal || !invPartidaAtual || invPartidaAtual.um_celular) return "";
+    const st = canal.presenceState() || {};
+    const lista = st[String(1 - eu)] || [];
+    const lendo = lista.map(x => x && x.inv_lendo).find(x => x && x.inv === invPartidaAtual.id);
+    if (!lendo) return "";
+    return `${nomeDe(1 - eu)} está lendo: ${lendo.titulo}`;
+  }
+
+  function invPararContagem() {
+    if (invTimerContagem) { clearInterval(invTimerContagem); invTimerContagem = null; }
+  }
+
+  function invPararFala() {
+    try { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); } catch (e) { }
+  }
+
+  function invTemVozPt() {
+    try {
+      if (!("speechSynthesis" in window)) return false;
+      const vozes = window.speechSynthesis.getVoices() || [];
+      return vozes.some(v => (v.lang || "").toLowerCase().startsWith("pt"));
+    } catch (e) { return false; }
+  }
+
+  function invFormatarRestante(ateIso) {
+    const ms = new Date(ateIso).getTime() - Date.now();
+    if (ms <= 0) return "";
+    const s = Math.ceil(ms / 1000);
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return m > 0 ? `${m}m ${String(r).padStart(2, "0")}s` : `${r}s`;
+  }
+
+  async function invCarregarPrateleira() {
+    if (!codigo) return;
+    const [{ data: cData, error: cErr }, { data: pData, error: pErr }] = await Promise.all([
+      sb.from("casos").select("id,titulo,icone,tema,selo,formato,minutos,dificuldade,sinopse,serie,capitulo,versao,n_suspeitos,n_docs,teste,ativo").eq("ativo", true).order("tema").order("id"),
+      sb.from("investigacoes").select("*").eq("sala", codigo)
+    ]);
+    if (!cErr && cData) invCasos = cData.filter(c => invModoTeste || !c.teste);
+    if (!pErr && pData) invPartidas = pData;
+    invAtualizarResumoInicio();
+  }
+
+  function invAtualizarResumoInicio() {
+    const elInfo = $("inicioInvInfo");
+    if (!elInfo) return;
+    const emAndamento = invPartidas.filter(p => p.estado === "investigando" || p.estado === "acusacao");
+    const concluidos = invPartidas.filter(p => p.estado === "concluido");
+    if (emAndamento.length) {
+      const c = invCasos.find(x => x.id === emAndamento[0].caso);
+      elInfo.textContent = c ? `Em andamento: ${c.titulo}` : `${emAndamento.length} caso em andamento`;
+    } else if (concluidos.length) {
+      elInfo.textContent = `${concluidos.length} ${concluidos.length === 1 ? "caso resolvido" : "casos resolvidos"}`;
+    } else {
+      elInfo.textContent = "Mistério cooperativo para dois";
+    }
+  }
+
+  async function invAbrirTela() {
+    if ($("invVoltarTexto")) $("invVoltarTexto").textContent = invCasoAtual ? "Casos" : (estado && estado.fixa ? "Início" : "Jogo");
+    if (!invCasos.length && codigo) await invCarregarPrateleira();
+    invRender();
+  }
+
+  async function invAbrirCaso(caso) {
+    if (!codigo || invCarregando) return;
+    invCarregando = true;
+    try {
+      let partida = invPartidas.find(p => p.caso === caso.id) || null;
+      if (!partida) {
+        const umCelular = !!(estado && estado.juntos && invEscolheuUmCelular);
+        const { data: invId, error } = await sb.rpc("inv_iniciar", { p_sala: codigo, p_caso: caso.id, p_um_celular: umCelular });
+        if (error) { aviso(error.message || "Não deu para iniciar o caso."); return; }
+        const { data: pNova } = await sb.from("investigacoes").select("*").eq("id", invId).single();
+        partida = pNova;
+        if (partida) {
+          invPartidas = invPartidas.filter(x => x.id !== partida.id).concat(partida);
+        }
+      }
+      invCasoAtual = caso;
+      invPartidaAtual = partida;
+      invAba = "dossie";
+      invRelatorio = null;
+      invDossie = null;
+      invTravasConhecidas = new Set((partida && partida.travas_abertas) || []);
+      await invCarregarEstadoCaso();
+      invRender();
+    } finally {
+      invCarregando = false;
+      invEscolheuUmCelular = false;
+    }
+  }
+
+  let invEscolheuUmCelular = false;
+
+  async function invCarregarEstadoCaso() {
+    if (!invPartidaAtual || !codigo) return;
+    const invId = invPartidaAtual.id;
+    const [{ data: pRow }, { data: nRows }] = await Promise.all([
+      sb.from("investigacoes").select("*").eq("id", invId).single(),
+      sb.from("investigacoes_notas").select("*").eq("investigacao", invId).order("criada_em", { ascending: true })
+    ]);
+    if (pRow) {
+      invPartidaAtual = pRow;
+      invPartidas = invPartidas.filter(x => x.id !== pRow.id).concat(pRow);
+    }
+    if (nRows) invNotas = nRows;
+
+    if (invPartidaAtual.estado === "investigando" || invPartidaAtual.estado === "acusacao") {
+      const { data: dData, error: dErr } = await sb.rpc("inv_dossie", { p_sala: codigo, p_inv: invId, p_jogador: eu });
+      if (!dErr && dData) {
+        const abertas = (dData.travas || []).filter(t => t.aberta).map(t => t.id);
+        const novas = abertas.filter(id => !invTravasConhecidas.has(id));
+        if (invTravasConhecidas.size > 0 && novas.length > 0) {
+          aviso("Novas provas chegaram ao dossiê.");
+        }
+        abertas.forEach(id => invTravasConhecidas.add(id));
+        invDossie = dData;
+      }
+    } else if (invPartidaAtual.estado === "concluido" || invPartidaAtual.estado === "revelado") {
+      const { data: rData, error: rErr } = await sb.rpc("inv_relatorio", { p_sala: codigo, p_inv: invId });
+      if (!rErr && rData) invRelatorio = rData;
+      if (invPartidaAtual.estado === "concluido") {
+        verificarConquistas();
+        invGanharVales3Estrelas(invPartidaAtual);
+      }
+    }
+  }
+
+  async function invReceberPartida(tipo, row) {
+    if (!row) return;
+    const antes = invPartidas.find(p => p.id === row.id) || null;
+    if (tipo === "DELETE") {
+      invPartidas = invPartidas.filter(p => p.id !== row.id);
+      if (invPartidaAtual && invPartidaAtual.id === row.id) {
+        invPartidaAtual = null;
+        invDossie = null;
+        invRelatorio = null;
+        invNotas = [];
+        invCasoAtual = null;
+        aviso("A partida foi reiniciada.");
+        if (vista === "vInvestigacao") invRender();
+      }
+      invAtualizarResumoInicio();
+      return;
+    }
+    invPartidas = invPartidas.filter(p => p.id !== row.id).concat(row);
+    invAtualizarResumoInicio();
+
+    if (!row.um_celular) {
+      if (row.estado === "envelope" && row.abriu && row.abriu[1 - eu] && !row.abriu[eu] && (!antes || !antes.abriu || !antes.abriu[1 - eu])) {
+        invNotificarParceiro(`${nomeDe(1 - eu)} abriu um caso. Seu envelope está esperando.`);
+      } else if (row.estado === "acusacao" && row.proposta && row.proposta.por !== eu && (!antes || antes.estado !== "acusacao")) {
+        invNotificarParceiro(`${nomeDe(1 - eu)} fez uma acusação e precisa da sua assinatura.`);
+      } else if (antes && Array.isArray(row.travas_abertas) && Array.isArray(antes.travas_abertas) && row.travas_abertas.length > antes.travas_abertas.length) {
+        invNotificarParceiro("Uma prova foi destrancada.");
+      }
+    }
+    if (row.estado === "concluido" && (!antes || antes.estado !== "concluido")) {
+      verificarConquistas();
+      invGanharVales3Estrelas(row);
+    }
+
+    if (invPartidaAtual && invPartidaAtual.id === row.id) {
+      invPartidaAtual = row;
+      await invCarregarEstadoCaso();
+      if (vista === "vInvestigacao") invRender();
+    } else if (vista === "vInvestigacao" && !invCasoAtual) {
+      invRender();
+    }
+  }
+
+  function invReceberNota(tipo, row) {
+    if (!row || !invPartidaAtual) return;
+    if (tipo === "DELETE") {
+      invNotas = invNotas.filter(n => n.id !== row.id);
+      if (vista === "vInvestigacao" && invCasoAtual) invRender();
+      return;
+    }
+    if (row.investigacao !== invPartidaAtual.id) return;
+    const idx = invNotas.findIndex(n => n.id === row.id);
+    if (idx >= 0) invNotas[idx] = row;
+    else invNotas.push(row);
+    if (vista === "vInvestigacao" && invCasoAtual) invRender();
+  }
+
+  function invRender() {
+    invPararContagem();
+    invManterTelaAcesa(vista === "vInvestigacao" && !!invCasoAtual);
+    const raiz = $("invRaiz");
+    if (!raiz) return;
+    raiz.textContent = "";
+    if ($("invVoltarTexto")) $("invVoltarTexto").textContent = invCasoAtual ? "Casos" : (estado && estado.fixa ? "Início" : "Jogo");
+
+    if (!invCasoAtual || !invPartidaAtual) {
+      invRenderPrateleira(raiz);
+      return;
+    }
+    invRenderCaso(raiz);
+  }
+
+  function invRenderPrateleira(raiz) {
+    const cab = el("div", "inv-cab");
+    cab.appendChild(el("h2", "inv-titulo", "Investigação"));
+    cab.appendChild(el("p", "inv-sub", "Cada um abre seu envelope no celular e vocês cruzam as pistas pela conversa."));
+    raiz.appendChild(cab);
+
+    // Filtros
+    const filtros = el("div", "inv-filtros");
+
+    // 1. Tipo (+ Selo quando Folclore)
+    const bTipo = el("div", "inv-filtro-bloco");
+    bTipo.appendChild(el("p", "inv-filtro-rotulo", "Tipo"));
+    const abasTema = el("div", "inv-tema-abas");
+    abasTema.setAttribute("role", "group");
+    abasTema.setAttribute("aria-label", "Tipo");
+    INV_TEMAS.forEach(([val, rot]) => {
+      const b = el("button", "inv-tab-btn", rot);
+      b.type = "button";
+      b.setAttribute("aria-pressed", invFiltroTema === val ? "true" : "false");
+      b.addEventListener("click", () => {
+        invFiltroTema = val;
+        if (val !== "folclore") invFiltroSelo = "todos";
+        invSalvarFiltros();
+        invRender();
+      });
+      abasTema.appendChild(b);
+    });
+    bTipo.appendChild(abasTema);
+
+    if (invFiltroTema === "folclore") {
+      const abasSelo = el("div", "inv-tema-abas");
+      abasSelo.setAttribute("role", "group");
+      abasSelo.setAttribute("aria-label", "Selo de Folclore");
+      INV_FILTRO_SELOS.forEach(([val, rot]) => {
+        const b = el("button", "inv-tab-btn", rot);
+        b.type = "button";
+        b.setAttribute("aria-pressed", invFiltroSelo === val ? "true" : "false");
+        b.addEventListener("click", () => {
+          invFiltroSelo = val;
+          invSalvarFiltros();
+          invRender();
+        });
+        abasSelo.appendChild(b);
+      });
+      bTipo.appendChild(abasSelo);
+    }
+    filtros.appendChild(bTipo);
+
+    // 2. Duração (controle segmentado)
+    const bDur = el("div", "inv-filtro-bloco");
+    bDur.appendChild(el("p", "inv-filtro-rotulo", "Duração"));
+    const segDur = el("div", "inv-seg");
+    segDur.setAttribute("role", "group");
+    segDur.setAttribute("aria-label", "Duração");
+    INV_FORMATOS.forEach(([val, rot]) => {
+      const b = el("button", "inv-seg-btn", rot);
+      b.type = "button";
+      b.setAttribute("aria-pressed", invFiltroFmt === val ? "true" : "false");
+      b.addEventListener("click", () => {
+        invFiltroFmt = val;
+        invSalvarFiltros();
+        invRender();
+      });
+      segDur.appendChild(b);
+    });
+    bDur.appendChild(segDur);
+    filtros.appendChild(bDur);
+
+    // 3. Dificuldade (controle segmentado com 3 barrinhas)
+    const bDif = el("div", "inv-filtro-bloco");
+    bDif.appendChild(el("p", "inv-filtro-rotulo", "Dificuldade"));
+    const segDif = el("div", "inv-seg");
+    segDif.setAttribute("role", "group");
+    segDif.setAttribute("aria-label", "Dificuldade");
+    INV_DIFS.forEach(([val, rot, nBarras]) => {
+      const b = el("button", "inv-seg-btn");
+      b.type = "button";
+      b.setAttribute("aria-pressed", invFiltroDif === val ? "true" : "false");
+      if (nBarras > 0) {
+        const bw = el("span", "inv-seg-barras");
+        bw.setAttribute("aria-hidden", "true");
+        for (let i = 1; i <= 3; i++) {
+          bw.appendChild(el("span", "inv-seg-barra" + (i <= nBarras ? " ativo" : "")));
+        }
+        b.appendChild(bw);
+      }
+      b.appendChild(el("span", "", rot));
+      b.addEventListener("click", () => {
+        invFiltroDif = val;
+        invSalvarFiltros();
+        invRender();
+      });
+      segDif.appendChild(b);
+    });
+    bDif.appendChild(segDif);
+    filtros.appendChild(bDif);
+
+    // Lista filtrada e linha de Resultado
+    const filtrados = invCasos.filter(c => {
+      if (invFiltroTema !== "todos" && c.tema !== invFiltroTema) return false;
+      if (invFiltroTema === "folclore" && invFiltroSelo !== "todos" && c.selo !== invFiltroSelo) return false;
+      if (invFiltroFmt !== "todos" && c.formato !== invFiltroFmt) return false;
+      if (invFiltroDif !== "todas" && String(c.dificuldade) !== invFiltroDif) return false;
+      return true;
+    });
+
+    const temFiltro = invFiltroTema !== "todos" || invFiltroSelo !== "todos" || invFiltroFmt !== "todos" || invFiltroDif !== "todas";
+    const resLinha = el("div", "inv-resultado-linha");
+    resLinha.appendChild(el("span", "", `${filtrados.length} ${filtrados.length === 1 ? "caso" : "casos"}`));
+    if (temFiltro) {
+      const btnLimpar = el("button", "linkbtn", "Limpar filtros");
+      btnLimpar.type = "button";
+      btnLimpar.addEventListener("click", () => {
+        invFiltroTema = "todos";
+        invFiltroSelo = "todos";
+        invFiltroFmt = "todos";
+        invFiltroDif = "todas";
+        invSalvarFiltros();
+        invRender();
+      });
+      resLinha.appendChild(btnLimpar);
+    }
+    filtros.appendChild(resLinha);
+    raiz.appendChild(filtros);
+
+    // Lista de casos
+    const lista = el("div", "inv-casos-lista");
+
+    if (!filtrados.length) {
+      lista.appendChild(el("p", "inv-sub", "Nenhum caso encontrado com esses filtros."));
+      raiz.appendChild(lista);
+      return;
+    }
+
+    filtrados.forEach(c => {
+      const p = invPartidas.find(x => x.caso === c.id);
+      const card = el("div", "inv-caso-card");
+      card.setAttribute("role", "button");
+      card.tabIndex = 0;
+
+      const topo = el("div", "inv-caso-topo");
+      const icBox = el("div", "inv-caso-ic");
+      icBox.appendChild(invIcone(c.icone, 20));
+      topo.appendChild(icBox);
+
+      const meta = el("div", "inv-caso-meta");
+      const tLinha = el("div", "inv-caso-titulo-linha");
+      tLinha.appendChild(el("h3", "inv-caso-titulo", c.titulo));
+      if (c.selo && INV_SELOS[c.selo]) {
+        tLinha.appendChild(el("span", "inv-selo", INV_SELOS[c.selo]));
+      }
+      meta.appendChild(tLinha);
+      meta.appendChild(el("p", "inv-caso-sinopse", c.sinopse));
+      topo.appendChild(meta);
+      card.appendChild(topo);
+
+      const rodape = el("div", "inv-caso-rodape");
+      const info = el("div", "inv-caso-info");
+      if (INV_TEMA_NOME[c.tema]) info.appendChild(el("span", "", INV_TEMA_NOME[c.tema]));
+      info.appendChild(el("span", "", `~${c.minutos} min`));
+      const difWrap = el("span", "inv-dif-tracos");
+      difWrap.setAttribute("aria-label", `Dificuldade ${c.dificuldade} de 3`);
+      for (let i = 1; i <= 3; i++) {
+        difWrap.appendChild(el("span", "inv-dif-traco" + (i <= c.dificuldade ? " ativo" : "")));
+      }
+      info.appendChild(difWrap);
+      rodape.appendChild(info);
+
+      if (!p) {
+        rodape.appendChild(el("span", "inv-status-pill", "Novo"));
+      } else if (p.estado === "envelope") {
+        rodape.appendChild(el("span", "inv-status-pill", "Envelope fechado"));
+      } else if (p.estado === "investigando" || p.estado === "acusacao") {
+        const l0 = (p.lidos && p.lidos["0"]) || [];
+        const l1 = (p.lidos && p.lidos["1"]) || [];
+        const uniao = new Set([...l0, ...l1]).size;
+        rodape.appendChild(el("span", "inv-status-pill", `Vocês leram ${uniao} de ${c.n_docs}`));
+      } else if (p.estado === "concluido") {
+        const st = el("span", "inv-status-pill gold");
+        for (let i = 0; i < (p.estrelas || 0); i++) st.appendChild(invIcone("star", 14));
+        st.appendChild(el("span", "", "Concluído"));
+        rodape.appendChild(st);
+      } else if (p.estado === "revelado") {
+        rodape.appendChild(el("span", "inv-status-pill", "Revelado"));
+      }
+      card.appendChild(rodape);
+
+      // Modo um celular só no modo Juntos (quando o caso ainda não começou)
+      if (!p && estado && estado.juntos) {
+        const rowJ = el("div", "row");
+        const btnDois = el("button", "primary", "Dois celulares");
+        btnDois.type = "button";
+        btnDois.addEventListener("click", ev => { ev.stopPropagation(); invEscolheuUmCelular = false; invAbrirCaso(c); });
+        const btnUm = el("button", "secondary", "Jogar num celular só");
+        btnUm.type = "button";
+        btnUm.addEventListener("click", ev => { ev.stopPropagation(); invEscolheuUmCelular = true; invAbrirCaso(c); });
+        rowJ.append(btnDois, btnUm);
+        card.appendChild(rowJ);
+      } else {
+        card.addEventListener("click", () => { invEscolheuUmCelular = false; invAbrirCaso(c); });
+        card.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); invEscolheuUmCelular = false; invAbrirCaso(c); } });
+      }
+      lista.appendChild(card);
+    });
+    raiz.appendChild(lista);
+  }
+
+  function invRenderCaso(raiz) {
+    const c = invCasoAtual;
+    const p = invPartidaAtual;
+
+    const cab = el("div", "inv-cab");
+    const cabLinha = el("div", "inv-cab-linha");
+    cabLinha.appendChild(el("h2", "inv-titulo", c.titulo));
+    if (p.um_celular) cabLinha.appendChild(el("span", "inv-status-pill", "Um celular"));
+    cab.appendChild(cabLinha);
+    cab.appendChild(el("p", "inv-sub", c.sinopse));
+    raiz.appendChild(cab);
+
+    // Aviso de versão corrigida
+    if (p.versao !== c.versao) {
+      const av = el("div", "inv-faixa-aviso");
+      av.appendChild(el("span", "", "Este caso foi corrigido desde o início da partida."));
+      const btnRec = el("button", "secondary", "Recomeçar");
+      btnRec.type = "button";
+      btnRec.addEventListener("click", invPedirReinicio);
+      av.appendChild(btnRec);
+      raiz.appendChild(av);
+    }
+
+    // Estado: envelope
+    if (p.estado === "envelope") {
+      invRenderEnvelope(raiz, c, p);
+      return;
+    }
+
+    // Estado: concluido ou revelado
+    if (p.estado === "concluido" || p.estado === "revelado") {
+      invRenderRelatorio(raiz, c, p);
+      return;
+    }
+
+    // Presença do parceiro
+    const txtPres = invTextoPresenca();
+    if (txtPres) {
+      const faixa = el("div", "inv-faixa-presenca");
+      faixa.appendChild(avatarEl(1 - eu, "mini"));
+      faixa.appendChild(el("span", "inv-pres-txt", txtPres));
+      raiz.appendChild(faixa);
+    }
+
+    // Abas
+    const abas = el("div", "inv-abas");
+    abas.setAttribute("role", "tablist");
+    [
+      ["dossie", "folder", "Dossiê"],
+      ["suspeitos", "users", "Suspeitos"],
+      ["quadro", "pin", "Quadro"],
+      ["caso", "scale", "Caso"]
+    ].forEach(([id, ic, rot]) => {
+      const b = el("button", "inv-aba-btn");
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", invAba === id ? "true" : "false");
+      b.appendChild(invIcone(ic, 18));
+      b.appendChild(el("span", "", rot));
+      b.addEventListener("click", () => { invAba = id; invRender(); });
+      abas.appendChild(b);
+    });
+    raiz.appendChild(abas);
+
+    if (invAba === "dossie") invRenderAbaDossie(raiz, p);
+    else if (invAba === "suspeitos") invRenderAbaSuspeitos(raiz, p);
+    else if (invAba === "quadro") invRenderAbaQuadro(raiz, p);
+    else invRenderAbaCaso(raiz, p);
+  }
+
+  function invRenderEnvelope(raiz, c, p) {
+    const box = el("div", "inv-card inv-card-destaque");
+    const euAbri = !!(p.abriu && p.abriu[eu]);
+    const outroAbri = !!(p.abriu && p.abriu[1 - eu]);
+
+    if (!euAbri) {
+      box.appendChild(el("h3", "inv-caso-titulo", "Seu envelope está pronto"));
+      box.appendChild(el("p", "inv-sub", p.um_celular
+        ? "Todos os documentos serão abertos neste celular."
+        : "Cada um recebe pistas diferentes. A investigação começa quando os dois abrirem."));
+      const btn = el("button", "primary", "Abrir meu envelope");
+      btn.type = "button";
+      btn.addEventListener("click", async () => {
+        const { error } = await sb.rpc("inv_abrir", { p_sala: codigo, p_inv: p.id, p_jogador: eu });
+        if (error) { aviso(error.message || "Erro ao abrir envelope."); return; }
+        await invCarregarEstadoCaso();
+        invRender();
+      });
+      box.appendChild(btn);
+    } else {
+      box.appendChild(el("h3", "inv-caso-titulo", `Esperando ${nomeDe(1 - eu)} abrir o envelope`));
+      box.appendChild(el("p", "inv-sub", outroAbri ? "Carregando dossiê..." : "Assim que a outra pessoa abrir, os documentos aparecem."));
+      if (!estado || !estado.jogadores || !estado.jogadores[1]) {
+        const wa = el("a", "secondary", "Convidar no WhatsApp");
+        wa.href = "https://wa.me/?text=" + encodeURIComponent(`Bora investigar "${c.titulo}" no Longe & Perto? Entra na sala ${codigo}: ${linkSala(codigo)}`);
+        wa.target = "_blank";
+        wa.rel = "noopener";
+        box.appendChild(wa);
+      }
+    }
+    raiz.appendChild(box);
+  }
+
+  function invRenderAbaDossie(raiz, p) {
+    if (!invDossie) { raiz.appendChild(el("p", "inv-sub", "Carregando dossiê...")); return; }
+    const docs = invDossie.docs || [];
+    const lidosEu = new Set((p.lidos && p.lidos[String(eu)]) || []);
+
+    const briefing = docs.find(d => d.tipo === "briefing");
+    const meuPac = invDossie.meu_envelope;
+    const paraAmbos = docs.filter(d => d.id !== (briefing && briefing.id) && (!d.exclusivo || (meuPac && d.para !== meuPac)));
+    const meuEnv = docs.filter(d => d.exclusivo && (!meuPac || d.para === meuPac));
+    const travas = invDossie.travas || [];
+    const doParceiro = invDossie.do_parceiro || [];
+
+    if (briefing) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", "Briefing"));
+      grp.appendChild(invCriarItemDoc(briefing, lidosEu.has(briefing.id)));
+      raiz.appendChild(grp);
+    }
+
+    if (paraAmbos.length) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", p.um_celular ? "Documentos" : "Para os dois"));
+      paraAmbos.forEach(d => grp.appendChild(invCriarItemDoc(d, lidosEu.has(d.id))));
+      raiz.appendChild(grp);
+    }
+
+    if (meuEnv.length) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", "Meu envelope"));
+      meuEnv.forEach(d => grp.appendChild(invCriarItemDoc(d, lidosEu.has(d.id))));
+      raiz.appendChild(grp);
+    }
+
+    const travasPendentes = travas.filter(t => !t.aberta);
+    if (travasPendentes.length) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", "Provas trancadas e objetivos"));
+      travasPendentes.forEach(t => {
+        const item = el("button", "inv-doc-item");
+        item.type = "button";
+        const ic = el("span", "inv-doc-ic");
+        ic.appendChild(invIcone(t.formato === "escolha" ? "target" : "lock", 18));
+        item.appendChild(ic);
+        const txt = el("div", "inv-doc-txt");
+        txt.appendChild(el("span", "inv-doc-titulo", t.formato === "escolha" ? `Objetivo: ${t.titulo}` : t.titulo));
+        txt.appendChild(el("span", "inv-doc-meta", t.descricao || ""));
+        item.appendChild(txt);
+        const rest = t.bloqueada_ate ? invFormatarRestante(t.bloqueada_ate) : "";
+        item.appendChild(el("span", "inv-doc-badge", rest ? `Bloqueado (${rest})` : "Abrir"));
+        item.addEventListener("click", () => invAbrirTrava(t));
+        grp.appendChild(item);
+      });
+      raiz.appendChild(grp);
+    }
+
+    if (doParceiro.length && !p.um_celular) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", `Com ${nomeDe(1 - eu)}`));
+      doParceiro.forEach(d => {
+        const item = el("button", "inv-doc-item parceiro");
+        item.type = "button";
+        const ic = el("span", "inv-doc-ic");
+        ic.appendChild(invIcone(INV_DOC_IC[d.tipo] || "file-text", 18));
+        item.appendChild(ic);
+        const txt = el("div", "inv-doc-txt");
+        txt.appendChild(el("span", "inv-doc-titulo", d.titulo));
+        txt.appendChild(el("span", "inv-doc-meta", INV_DOC_NOME[d.tipo] || "Documento"));
+        item.appendChild(txt);
+        item.addEventListener("click", () => aviso(`Peça para ${nomeDe(1 - eu)} te contar o que diz aqui.`));
+        grp.appendChild(item);
+      });
+      raiz.appendChild(grp);
+    }
+  }
+
+  function invCriarItemDoc(d, lido) {
+    const item = el("button", "inv-doc-item");
+    item.type = "button";
+    const ic = el("span", "inv-doc-ic");
+    ic.appendChild(invIcone(INV_DOC_IC[d.tipo] || "file-text", 18));
+    item.appendChild(ic);
+
+    const txt = el("div", "inv-doc-txt");
+    txt.appendChild(el("span", "inv-doc-titulo", d.titulo));
+    const meta = [INV_DOC_NOME[d.tipo] || "Documento"];
+    const ehMeuOrig = !invDossie || !invDossie.meu_envelope || d.para === invDossie.meu_envelope;
+    if (d.mostrado) meta.push(ehMeuOrig ? `Mostrado a ${nomeDe(1 - eu)}` : `Mostrado por ${nomeDe(1 - eu)}`);
+    txt.appendChild(el("span", "inv-doc-meta", meta.join(" · ")));
+    item.appendChild(txt);
+
+    item.appendChild(el("span", "inv-doc-badge" + (lido ? " lido" : ""), lido ? "Lido" : "Novo"));
+    item.addEventListener("click", () => invAbrirDocumento(d));
+    return item;
+  }
+
+  async function invAbrirDocumento(doc) {
+    const dlg = $("dlgInvDoc");
+    if (!dlg) return;
+    invDocAberto = doc;
+    invTrack({ inv: invPartidaAtual.id, titulo: doc.titulo });
+
+    // Marca como lido no banco
+    if (invPartidaAtual.estado === "investigando" || invPartidaAtual.estado === "acusacao") {
+      sb.rpc("inv_ler", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_doc: doc.id }).then(({ data }) => {
+        if (data && invPartidaAtual) {
+          const l = invPartidaAtual.lidos || { "0": [], "1": [] };
+          const arr = l[String(eu)] || [];
+          if (!arr.includes(doc.id)) {
+            l[String(eu)] = arr.concat(doc.id);
+            invPartidaAtual.lidos = l;
+          }
+        }
+      });
+    }
+
+    dlg.textContent = "";
+    const topo = el("div", "inv-leitor-topo");
+    const tEl = el("h3", "inv-doc-box-titulo", doc.titulo);
+    tEl.id = "invDocTitulo";
+    topo.appendChild(tEl);
+    const fechar = el("button", "linkbtn", "Fechar");
+    fechar.type = "button";
+    fechar.addEventListener("click", () => dlg.close());
+    topo.appendChild(fechar);
+    dlg.appendChild(topo);
+
+    const corpo = el("div", "inv-leitor-corpo");
+    corpo.appendChild(invRenderConteudoDoc(doc));
+    dlg.appendChild(corpo);
+
+    const acoes = el("div", "inv-leitor-acoes");
+    if (doc.tipo === "audio" && invTemVozPt()) {
+      const btnOuvir = el("button", "secondary");
+      btnOuvir.type = "button";
+      btnOuvir.appendChild(invIcone("play", 16));
+      btnOuvir.appendChild(el("span", "", "Ouvir"));
+      btnOuvir.addEventListener("click", () => {
+        invPararFala();
+        const textoFala = doc.texto || (doc.mensagens || []).map(m => `${m.de}: ${m.texto}`).join(". ");
+        if (!textoFala) return;
+        const u = new SpeechSynthesisUtterance(textoFala);
+        u.lang = "pt-BR";
+        window.speechSynthesis.speak(u);
+      });
+      acoes.appendChild(btnOuvir);
+    }
+
+    if (invPartidaAtual && (invPartidaAtual.estado === "investigando" || invPartidaAtual.estado === "acusacao")) {
+      const btnAnotar = el("button", "secondary");
+      btnAnotar.type = "button";
+      btnAnotar.appendChild(invIcone("pin", 16));
+      btnAnotar.appendChild(el("span", "", "Anotar"));
+      btnAnotar.addEventListener("click", () => {
+        invAbrirModalNota(null, `[${doc.titulo}] `);
+      });
+      acoes.appendChild(btnAnotar);
+
+      const ehMeuOrig = doc.exclusivo && (!invDossie || !invDossie.meu_envelope || doc.para === invDossie.meu_envelope);
+      if (ehMeuOrig && !doc.mostrado && !invPartidaAtual.um_celular && invDossie && invDossie.limites) {
+        const restam = Math.max(0, invDossie.limites.mostrar - invDossie.limites.mostrei);
+        const btnMostrar = el("button", "primary");
+        btnMostrar.type = "button";
+        btnMostrar.disabled = restam <= 0;
+        btnMostrar.appendChild(invIcone("eye", 16));
+        btnMostrar.appendChild(el("span", "", restam > 0 ? `Mostrar a ${nomeDe(1 - eu)} (restam ${restam})` : "Limite de provas mostradas"));
+        btnMostrar.addEventListener("click", async () => {
+          const { data, error } = await sb.rpc("inv_mostrar", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_doc: doc.id });
+          if (error) { aviso(error.message || "Erro ao mostrar prova."); return; }
+          if (data && !data.ok && data.motivo === "limite") { aviso("Vocês já atingiram o limite de provas mostradas."); return; }
+          aviso(`Prova mostrada a ${nomeDe(1 - eu)}.`);
+          await invCarregarEstadoCaso();
+          dlg.close();
+          invRender();
+        });
+        acoes.appendChild(btnMostrar);
+      }
+    }
+
+    dlg.appendChild(acoes);
+    dlg.onclose = () => {
+      invDocAberto = null;
+      invPararFala();
+      invTrack(null);
+      if (vista === "vInvestigacao") invRender();
+    };
+    dlg.showModal();
+  }
+
+  function invRenderConteudoDoc(doc) {
+    const tipo = doc.tipo || "cartao";
+    const box = el("div", "inv-doc-box");
+    if (tipo === "briefing" || tipo === "depoimento") box.classList.add("inv-doc-papel");
+    else if (tipo === "laudo") {
+      box.classList.add("inv-doc-laudo");
+      box.appendChild(el("span", "inv-doc-laudo-selo", "PERÍCIA"));
+    } else if (tipo === "registro" || tipo === "extrato" || tipo === "recibo") {
+      box.classList.add("inv-doc-tabela");
+    }
+
+    if (tipo === "email" && doc.texto) {
+      const linhas = String(doc.texto).split("\n");
+      const cab = el("div", "inv-doc-email-cab");
+      let idxCorpo = 0;
+      while (idxCorpo < linhas.length && /^(de|para|assunto|data):/i.test(linhas[idxCorpo].trim())) {
+        cab.appendChild(el("div", "", linhas[idxCorpo]));
+        idxCorpo++;
+      }
+      if (cab.childNodes.length) {
+        box.appendChild(cab);
+        const resto = linhas.slice(idxCorpo).join("\n").trim();
+        if (resto) box.appendChild(el("p", "inv-doc-texto", resto));
+        return box;
+      }
+    }
+
+    if (Array.isArray(doc.mensagens) && doc.mensagens.length) {
+      const lista = el("div", "inv-chat-lista");
+      const primeiroRem = doc.mensagens[0].de;
+      doc.mensagens.forEach(m => {
+        const bolha = el("div", "inv-chat-msg" + (m.de !== primeiroRem ? " dir" : ""));
+        const cab = el("div", "inv-chat-cab");
+        cab.appendChild(el("strong", "", m.de || ""));
+        cab.appendChild(el("span", "", m.hora || ""));
+        bolha.appendChild(cab);
+        bolha.appendChild(el("p", "inv-chat-txt", m.texto || ""));
+        lista.appendChild(bolha);
+      });
+      box.appendChild(lista);
+    }
+
+    if (doc.texto) {
+      box.appendChild(el("p", "inv-doc-texto", doc.texto));
+    }
+    return box;
+  }
+
+  function invAbrirTrava(t) {
+    const dlg = $("dlgInvTrava");
+    if (!dlg) return;
+    dlg.textContent = "";
+    const topo = el("div", "pos-topo");
+    const h = el("h3", "", t.formato === "escolha" ? `Objetivo: ${t.titulo}` : t.titulo);
+    h.id = "invTravaTitulo";
+    topo.appendChild(h);
+    const f = el("button", "linkbtn", "Fechar"); f.type = "button"; f.addEventListener("click", () => dlg.close());
+    topo.appendChild(f);
+    dlg.appendChild(topo);
+
+    dlg.appendChild(el("p", "inv-sub", t.descricao || ""));
+    const msgErro = el("p", "erro");
+    const atualizarBloqueio = ate => {
+      const r = ate ? invFormatarRestante(ate) : "";
+      msgErro.textContent = r ? `Bloqueado temporariamente (${r})` : "";
+    };
+    if (t.bloqueada_ate) atualizarBloqueio(t.bloqueada_ate);
+
+    if (t.formato === "codigo") {
+      let valor = "";
+      const visor = el("div", "inv-codigo-visor", "----");
+      const teclado = el("div", "inv-teclado");
+      const atualizarVisor = () => { visor.textContent = valor || "----"; };
+      ["1", "2", "3", "4", "5", "6", "7", "8", "9", "Limpar", "0", "Apagar"].forEach(k => {
+        const b = el("button", "inv-tecla", k);
+        b.type = "button";
+        b.addEventListener("click", () => {
+          if (k === "Limpar") valor = "";
+          else if (k === "Apagar") valor = valor.slice(0, -1);
+          else if (valor.length < 12) valor += k;
+          atualizarVisor();
+        });
+        teclado.appendChild(b);
+      });
+      const btnOk = el("button", "primary", "Destravar");
+      btnOk.type = "button";
+      btnOk.addEventListener("click", async () => {
+        if (!valor) return;
+        const { data, error } = await sb.rpc("inv_destravar", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_trava: t.id, p_tentativa: valor });
+        if (error) { msgErro.textContent = error.message; return; }
+        if (data && data.ok) {
+          aviso("Prova destravada!");
+          dlg.close();
+          await invCarregarEstadoCaso();
+          invRender();
+        } else {
+          valor = "";
+          atualizarVisor();
+          if (data && data.bloqueada_ate) atualizarBloqueio(data.bloqueada_ate);
+          else msgErro.textContent = `Código incorreto. Restam ${data && data.restam !== undefined ? data.restam : "?"} tentativas.`;
+        }
+      });
+      dlg.append(visor, teclado, msgErro, btnOk);
+    } else if (t.formato === "escolha") {
+      let sel = "";
+      const ops = el("div", "inv-opcoes-lista");
+      (t.opcoes || []).forEach(o => {
+        const b = el("button", "inv-opcao-btn", o.texto);
+        b.type = "button";
+        b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", () => {
+          sel = o.id;
+          ops.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+        });
+        ops.appendChild(b);
+      });
+      const btnOk = el("button", "primary", "Confirmar resposta");
+      btnOk.type = "button";
+      btnOk.addEventListener("click", async () => {
+        if (!sel) { msgErro.textContent = "Escolha uma opção."; return; }
+        const { data, error } = await sb.rpc("inv_destravar", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_trava: t.id, p_tentativa: sel });
+        if (error) { msgErro.textContent = error.message; return; }
+        if (data && data.ok) {
+          aviso("Objetivo concluído! Novas provas chegaram.");
+          dlg.close();
+          await invCarregarEstadoCaso();
+          invRender();
+        } else if (data && data.bloqueada_ate) {
+          atualizarBloqueio(data.bloqueada_ate);
+        }
+      });
+      dlg.append(ops, msgErro, btnOk);
+    } else {
+      const form = el("form", "inv-form");
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.name = "tentativa";
+      inp.placeholder = "Digite a palavra-chave";
+      inp.required = true;
+      const btnOk = el("button", "primary", "Destravar");
+      btnOk.type = "submit";
+      form.addEventListener("submit", async ev => {
+        ev.preventDefault();
+        const { data, error } = await sb.rpc("inv_destravar", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_trava: t.id, p_tentativa: inp.value });
+        if (error) { msgErro.textContent = error.message; return; }
+        if (data && data.ok) {
+          aviso("Prova destravada!");
+          dlg.close();
+          await invCarregarEstadoCaso();
+          invRender();
+        } else {
+          if (data && data.bloqueada_ate) atualizarBloqueio(data.bloqueada_ate);
+          else msgErro.textContent = `Palavra incorreta. Restam ${data && data.restam !== undefined ? data.restam : "?"} tentativas.`;
+        }
+      });
+      form.append(inp, msgErro, btnOk);
+      dlg.appendChild(form);
+    }
+    dlg.showModal();
+  }
+
+  function invCriarRetrato(s) {
+    const wrap = el("div", "inv-retrato-wrap");
+    const inicial = ((s.nome || "?").trim()[0] || "?").toUpperCase();
+    if (!s.retrato) {
+      wrap.appendChild(el("span", "inv-retrato-inicial", inicial));
+      return wrap;
+    }
+    const base = String(s.retrato).replace(/\.(jpg|jpeg|png|svg|webp)$/i, "");
+    const exts = [".jpg", ".png", ".svg"];
+    let idx = 0;
+    const img = document.createElement("img");
+    img.className = "inv-retrato-img";
+    img.alt = s.nome || "Suspeito";
+    img.src = base + exts[idx];
+    img.addEventListener("error", () => {
+      idx++;
+      if (idx < exts.length) {
+        img.src = base + exts[idx];
+      } else {
+        wrap.textContent = "";
+        wrap.appendChild(el("span", "inv-retrato-inicial", inicial));
+      }
+    });
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  function invRenderAbaSuspeitos(raiz, p) {
+    if (!invDossie || !invDossie.suspeitos) return;
+    const lista = el("div", "inv-suspeitos-lista");
+    const marcas = p.marcacoes || {};
+
+    invDossie.suspeitos.forEach(s => {
+      const card = el("div", "inv-suspeito-card");
+      const cab = el("div", "inv-suspeito-cab");
+      cab.appendChild(invCriarRetrato(s));
+
+      const info = el("div", "inv-suspeito-info");
+      info.appendChild(el("h3", "inv-suspeito-nome", s.idade ? `${s.nome}, ${s.idade}` : s.nome));
+      if (s.aparencia) info.appendChild(el("p", "inv-suspeito-det", s.aparencia));
+      if (s.vinculo) info.appendChild(el("p", "inv-suspeito-det", `Vínculo: ${s.vinculo}`));
+      if (s.motivo) info.appendChild(el("p", "inv-suspeito-det", `Motivo: ${s.motivo}`));
+      if (s.alibi) info.appendChild(el("p", "inv-suspeito-det", `Álibi: ${s.alibi}`));
+      cab.appendChild(info);
+      card.appendChild(cab);
+
+      const atual = marcas[s.id] || "neutro";
+      const rowM = el("div", "inv-suspeito-marcas");
+      [
+        ["suspeito", "Suspeito", "m-suspeito"],
+        ["alibi", "Álibi confirmado", "m-alibi"],
+        ["descartado", "Descartado", "m-descartado"]
+      ].forEach(([est, rot, cls]) => {
+        const b = el("button", "inv-marca-btn " + cls, rot);
+        b.type = "button";
+        b.setAttribute("aria-pressed", atual === est ? "true" : "false");
+        b.addEventListener("click", async () => {
+          const prox = atual === est ? "neutro" : est;
+          const { error } = await sb.rpc("inv_marcar", { p_sala: codigo, p_inv: p.id, p_suspeito: s.id, p_estado: prox });
+          if (error) { aviso(error.message || "Não foi possível marcar."); return; }
+          if (prox === "neutro") delete marcas[s.id]; else marcas[s.id] = prox;
+          p.marcacoes = marcas;
+          invRender();
+        });
+        rowM.appendChild(b);
+      });
+      card.appendChild(rowM);
+
+      const notasSusp = invNotas.filter(n => n.suspeito === s.id);
+      if (notasSusp.length) {
+        const boxN = el("div", "inv-suspeito-notas");
+        notasSusp.forEach(n => {
+          boxN.appendChild(el("p", "inv-sub", `${n.hora ? n.hora + " · " : ""}${n.texto} (${nomeDe(n.autor)})`));
+        });
+        card.appendChild(boxN);
+      }
+      lista.appendChild(card);
+    });
+    raiz.appendChild(lista);
+  }
+
+  function invRenderAbaQuadro(raiz) {
+    const topo = el("div", "inv-cab-linha");
+    const filtros = el("div", "inv-chips-linha");
+    [["todas", "Todas"], ["fato", "Fatos"], ["duvida", "Dúvidas"], ["linha", "Linha do tempo"]].forEach(([v, rot]) => {
+      const b = el("button", "inv-chip", rot);
+      b.type = "button";
+      b.setAttribute("aria-pressed", invFiltroNota === v ? "true" : "false");
+      b.addEventListener("click", () => { invFiltroNota = v; invRender(); });
+      filtros.appendChild(b);
+    });
+    const btnNova = el("button", "primary");
+    btnNova.type = "button";
+    btnNova.appendChild(invIcone("plus", 16));
+    btnNova.appendChild(el("span", "", "Nova nota"));
+    btnNova.addEventListener("click", () => invAbrirModalNota(null, ""));
+    topo.append(filtros, btnNova);
+    raiz.appendChild(topo);
+
+    let notas = invNotas.slice();
+    if (invFiltroNota === "fato") notas = notas.filter(n => n.marca === "fato");
+    else if (invFiltroNota === "duvida") notas = notas.filter(n => n.marca === "duvida");
+    else if (invFiltroNota === "linha") notas = notas.filter(n => !!n.hora).sort((a, b) => a.hora.localeCompare(b.hora));
+
+    if (!notas.length) {
+      raiz.appendChild(el("p", "inv-sub", invFiltroNota === "linha"
+        ? "Nenhuma nota com horário ainda. Adicione um horário (HH:MM) para montar a linha do tempo."
+        : "Nenhuma nota no quadro ainda."));
+      return;
+    }
+
+    const lista = el("div", "inv-notas-lista");
+    const suspMap = new Map(((invDossie && invDossie.suspeitos) || []).map(s => [s.id, s.nome]));
+    notas.forEach(n => {
+      const card = el("div", "inv-nota-card");
+      const nTopo = el("div", "inv-nota-topo");
+      const tags = el("div", "inv-nota-tags");
+      const spAut = el("span", "");
+      spAut.append(avatarEl(n.autor, "mini"), document.createTextNode(nomeDe(n.autor)));
+      tags.appendChild(spAut);
+      if (n.hora) tags.appendChild(el("span", "inv-status-pill", n.hora));
+      if (n.suspeito && suspMap.has(n.suspeito)) tags.appendChild(el("span", "inv-status-pill", suspMap.get(n.suspeito)));
+      if (n.marca === "fato") tags.appendChild(el("span", "inv-nota-marca fato", "Fato"));
+      if (n.marca === "duvida") tags.appendChild(el("span", "inv-nota-marca duvida", "Dúvida"));
+      nTopo.appendChild(tags);
+      card.appendChild(nTopo);
+      card.appendChild(el("p", "inv-nota-texto", n.texto));
+
+      if (n.autor === eu || (invPartidaAtual && invPartidaAtual.um_celular)) {
+        const acoes = el("div", "inv-nota-acoes");
+        const bEd = el("button", "linkbtn", "Editar");
+        bEd.type = "button";
+        bEd.addEventListener("click", () => invAbrirModalNota(n, ""));
+        const bAp = el("button", "linkbtn", "Apagar");
+        bAp.type = "button";
+        bAp.addEventListener("click", async () => {
+          if (!await perguntar("Apagar esta nota?")) return;
+          const { error } = await sb.from("investigacoes_notas").delete().eq("id", n.id);
+          if (error) aviso("Não foi possível apagar.");
+        });
+        acoes.append(bEd, bAp);
+        card.appendChild(acoes);
+      }
+      lista.appendChild(card);
+    });
+    raiz.appendChild(lista);
+  }
+
+  function invAbrirModalNota(nota, textoInicial) {
+    const dlg = $("dlgInvNota");
+    if (!dlg || !invPartidaAtual) return;
+    dlg.textContent = "";
+    const topo = el("div", "pos-topo");
+    const h = el("h3", "", nota ? "Editar nota" : "Nova nota");
+    h.id = "invNotaTitulo";
+    topo.appendChild(h);
+    const fechar = el("button", "linkbtn", "Fechar"); fechar.type = "button"; fechar.addEventListener("click", () => dlg.close());
+    topo.appendChild(fechar);
+    dlg.appendChild(topo);
+
+    const form = el("form", "inv-form");
+    const cTexto = el("label", "inv-campo", "Texto");
+    const ta = document.createElement("textarea");
+    ta.name = "texto";
+    ta.rows = 3;
+    ta.maxLength = 500;
+    ta.required = true;
+    ta.value = nota ? nota.texto : (textoInicial || "");
+    cTexto.appendChild(ta);
+
+    const cSusp = el("label", "inv-campo", "Suspeito (opcional)");
+    const selSusp = document.createElement("select");
+    selSusp.name = "suspeito";
+    const op0 = document.createElement("option"); op0.value = ""; op0.textContent = "Nenhum";
+    selSusp.appendChild(op0);
+    ((invDossie && invDossie.suspeitos) || []).forEach(s => {
+      const op = document.createElement("option"); op.value = s.id; op.textContent = s.nome;
+      selSusp.appendChild(op);
+    });
+    selSusp.value = (nota && nota.suspeito) || "";
+    cSusp.appendChild(selSusp);
+
+    const cHora = el("label", "inv-campo", "Horário na linha do tempo (opcional, HH:MM)");
+    const inpHora = document.createElement("input");
+    inpHora.type = "text";
+    inpHora.name = "hora";
+    inpHora.placeholder = "Ex.: 21:30";
+    inpHora.pattern = "^[0-2][0-9]:[0-5][0-9]$";
+    inpHora.value = (nota && nota.hora) || "";
+    cHora.appendChild(inpHora);
+
+    const cMarca = el("label", "inv-campo", "Classificação");
+    const selMarca = document.createElement("select");
+    selMarca.name = "marca";
+    [["", "Sem marca"], ["fato", "Fato (confirmado)"], ["duvida", "Dúvida (a conferir)"]].forEach(([v, r]) => {
+      const op = document.createElement("option"); op.value = v; op.textContent = r;
+      selMarca.appendChild(op);
+    });
+    selMarca.value = (nota && nota.marca) || "";
+    cMarca.appendChild(selMarca);
+
+    const msgErro = el("p", "erro");
+    const btnSalvar = el("button", "primary", "Salvar nota");
+    btnSalvar.type = "submit";
+    form.addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const texto = ta.value.trim();
+      const hora = inpHora.value.trim() || null;
+      if (!texto) { msgErro.textContent = "Escreva a nota."; return; }
+      if (hora && !/^[0-2][0-9]:[0-5][0-9]$/.test(hora)) { msgErro.textContent = "Use o formato HH:MM."; return; }
+      const payload = {
+        texto,
+        suspeito: selSusp.value || null,
+        hora,
+        marca: selMarca.value || null
+      };
+      if (nota) {
+        payload.atualizada_em = new Date().toISOString();
+        const { error } = await sb.from("investigacoes_notas").update(payload).eq("id", nota.id);
+        if (error) { msgErro.textContent = error.message; return; }
+      } else {
+        const { error } = await sb.from("investigacoes_notas").insert({
+          investigacao: invPartidaAtual.id,
+          sala: codigo,
+          autor: eu,
+          ...payload
+        });
+        if (error) { msgErro.textContent = error.message; return; }
+      }
+      dlg.close();
+      await invCarregarEstadoCaso();
+      invRender();
+    });
+    form.append(cTexto, cSusp, cHora, cMarca, msgErro, btnSalvar);
+    dlg.appendChild(form);
+    dlg.showModal();
+  }
+
+  function invRenderAbaCaso(raiz, p) {
+    if (!invDossie) return;
+    // Progresso
+    const boxProg = el("div", "inv-card");
+    const euDocs = (invDossie.docs || []).length;
+    const parDocs = (invDossie.do_parceiro || []).length + (invDossie.docs || []).filter(d => !d.exclusivo).length;
+    const lEu = ((p.lidos && p.lidos[String(eu)]) || []).length;
+    const lOutro = ((p.lidos && p.lidos[String(1 - eu)]) || []).length;
+    boxProg.appendChild(el("p", "inv-sub", p.um_celular
+      ? `Vocês leram ${lEu} de ${euDocs} documentos`
+      : `Você leu ${lEu} de ${euDocs} · ${nomeDe(1 - eu)} leu ${lOutro} de ${parDocs}`));
+    if (p.tentativas > 0 || p.feedback) {
+      boxProg.appendChild(el("p", "inv-sub", `Tentativas de acusação: ${p.tentativas}`));
+      if (p.feedback) boxProg.appendChild(el("p", "inv-nota-texto", p.feedback));
+    }
+    raiz.appendChild(boxProg);
+
+    // Acusação pendente
+    if (p.estado === "acusacao" && p.proposta) {
+      const boxAc = el("div", "inv-card inv-card-destaque");
+      const propPor = p.proposta.por;
+      boxAc.appendChild(el("h3", "inv-caso-titulo", propPor === eu ? `Aguardando ${nomeDe(1 - eu)} assinar` : `${nomeDe(propPor)} propôs a acusação`));
+      const ul = el("div", "inv-casos-lista");
+      (invDossie.perguntas || []).forEach(q => {
+        const respId = p.proposta.respostas && p.proposta.respostas[q.id];
+        const op = (q.opcoes || []).find(o => o.id === respId);
+        ul.appendChild(el("p", "inv-sub", `${q.rotulo}: ${op ? op.texto : respId}`));
+      });
+      boxAc.appendChild(ul);
+      const row = el("div", "row");
+      if (propPor === eu) {
+        const bRet = el("button", "secondary", "Retirar acusação");
+        bRet.type = "button";
+        bRet.addEventListener("click", async () => {
+          await sb.rpc("inv_retirar", { p_sala: codigo, p_inv: p.id, p_jogador: eu });
+          await invCarregarEstadoCaso();
+          invRender();
+        });
+        row.appendChild(bRet);
+      } else {
+        const bAss = el("button", "primary", "Assinar acusação");
+        bAss.type = "button";
+        bAss.addEventListener("click", async () => {
+          await sb.rpc("inv_confirmar", { p_sala: codigo, p_inv: p.id, p_jogador: eu, p_aceita: true });
+          await invCarregarEstadoCaso();
+          invRender();
+        });
+        const bDev = el("button", "secondary", "Ainda não");
+        bDev.type = "button";
+        bDev.addEventListener("click", async () => {
+          await sb.rpc("inv_confirmar", { p_sala: codigo, p_inv: p.id, p_jogador: eu, p_aceita: false });
+          await invCarregarEstadoCaso();
+          invRender();
+        });
+        row.append(bAss, bDev);
+      }
+      boxAc.appendChild(row);
+      raiz.appendChild(boxAc);
+    } else if (p.estado === "investigando") {
+      // Botão Acusação final + espera
+      const boxAc = el("div", "inv-card");
+      const esperaMin = (invDossie.limites && invDossie.limites.espera_min) || 5;
+      const livreEm = p.ultima_tentativa ? new Date(new Date(p.ultima_tentativa).getTime() + esperaMin * 60000).toISOString() : null;
+      const restEspera = livreEm ? invFormatarRestante(livreEm) : "";
+      const btnAc = el("button", "primary", restEspera ? `Aguarde ${restEspera} para acusar` : "Acusação final");
+      btnAc.type = "button";
+      btnAc.disabled = !!restEspera;
+      btnAc.addEventListener("click", invAbrirModalAcusacao);
+      boxAc.appendChild(btnAc);
+      if (restEspera) {
+        invTimerContagem = setInterval(() => {
+          const r = invFormatarRestante(livreEm);
+          btnAc.textContent = r ? `Aguarde ${r} para acusar` : "Acusação final";
+          btnAc.disabled = !!r;
+          if (!r) invPararContagem();
+        }, 1000);
+      }
+      raiz.appendChild(boxAc);
+    }
+
+    // Dicas
+    const boxDicas = el("div", "inv-card");
+    boxDicas.appendChild(el("h3", "inv-caso-titulo", "Dicas"));
+    const dicas = invDossie.dicas || [];
+    const totalDicas = invDossie.dicas_total || 0;
+    if (!dicas.length) boxDicas.appendChild(el("p", "inv-sub", "Nenhuma dica pedida ainda."));
+    dicas.forEach((d, idx) => boxDicas.appendChild(el("p", "inv-nota-texto", `${idx + 1}. ${d}`)));
+    if (p.estado === "investigando" && dicas.length < totalDicas) {
+      const bDica = el("button", "secondary", `Pedir dica (${dicas.length}/${totalDicas})`);
+      bDica.type = "button";
+      bDica.addEventListener("click", async () => {
+        if (!await perguntar("Pedir uma dica pode reduzir as estrelas finais do caso. Continuar?")) return;
+        const { error } = await sb.rpc("inv_dica", { p_sala: codigo, p_inv: p.id });
+        if (error) { aviso(error.message || "Erro ao pedir dica."); return; }
+        await invCarregarEstadoCaso();
+        invRender();
+      });
+      boxDicas.appendChild(bDica);
+    }
+    raiz.appendChild(boxDicas);
+
+    // Revelar solução & Recomeçar
+    const boxAcoes = el("div", "inv-card");
+    const row = el("div", "row");
+    if (p.estado === "investigando" && p.tentativas >= 1) {
+      const euDesisti = !!(p.desistiu && p.desistiu[eu]);
+      const outroDesistiu = !!(p.desistiu && p.desistiu[1 - eu]);
+      const rot = euDesisti ? "Cancelar pedido de revelar" : (outroDesistiu ? `Revelar solução (${nomeDe(1 - eu)} pediu)` : "Revelar a solução");
+      const bDes = el("button", "secondary", rot);
+      bDes.type = "button";
+      bDes.addEventListener("click", async () => {
+        if (!euDesisti && !await perguntar("Revelar a solução encerra o caso com 0 estrelas. Os dois precisam concordar. Continuar?")) return;
+        await sb.rpc("inv_desistir", { p_sala: codigo, p_inv: p.id, p_jogador: eu, p_quer: !euDesisti });
+        await invCarregarEstadoCaso();
+        invRender();
+      });
+      row.appendChild(bDes);
+    }
+    const bRec = el("button", "linkbtn", "Recomeçar o caso");
+    bRec.type = "button";
+    bRec.addEventListener("click", invPedirReinicio);
+    row.appendChild(bRec);
+    boxAcoes.appendChild(row);
+    raiz.appendChild(boxAcoes);
+  }
+
+  async function invPedirReinicio() {
+    if (!invPartidaAtual) return;
+    if (!await perguntar("Recomeçar apaga o progresso e todas as notas deste caso para os dois. Confirmar?")) return;
+    const { error } = await sb.rpc("inv_reiniciar", { p_sala: codigo, p_inv: invPartidaAtual.id });
+    if (error) { aviso(error.message || "Erro ao recomeçar."); return; }
+    invPartidaAtual = null;
+    invDossie = null;
+    invRelatorio = null;
+    invNotas = [];
+    await invCarregarPrateleira();
+    invAbrirCaso(invCasoAtual);
+  }
+
+  function invAbrirModalAcusacao() {
+    const dlg = $("dlgInvAcusacao");
+    if (!dlg || !invDossie) return;
+    dlg.textContent = "";
+    const topo = el("div", "pos-topo");
+    const h = el("h3", "", "Acusação final");
+    h.id = "invAcusacaoTitulo";
+    topo.appendChild(h);
+    const f = el("button", "linkbtn", "Fechar"); f.type = "button"; f.addEventListener("click", () => dlg.close());
+    topo.appendChild(f);
+    dlg.appendChild(topo);
+
+    const form = el("form", "inv-form");
+    const escolhas = {};
+    (invDossie.perguntas || []).forEach(q => {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-doc-titulo", q.texto || q.rotulo));
+      const ops = el("div", "inv-opcoes-lista");
+      (q.opcoes || []).forEach(o => {
+        const b = el("button", "inv-opcao-btn", o.texto);
+        b.type = "button";
+        b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", () => {
+          escolhas[q.id] = o.id;
+          ops.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+        });
+        ops.appendChild(b);
+      });
+      grp.appendChild(ops);
+      form.appendChild(grp);
+    });
+
+    const msgErro = el("p", "erro");
+    const btnEnv = el("button", "primary", invPartidaAtual.um_celular ? "Enviar acusação" : `Enviar para ${nomeDe(1 - eu)} assinar`);
+    btnEnv.type = "submit";
+    form.addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const falta = (invDossie.perguntas || []).find(q => !escolhas[q.id]);
+      if (falta) { msgErro.textContent = `Falta responder: ${falta.rotulo}`; return; }
+      const { data, error } = await sb.rpc("inv_propor", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_respostas: escolhas });
+      if (error) { msgErro.textContent = error.message; return; }
+      if (data && !data.ok && data.motivo === "espera") {
+        msgErro.textContent = `Aguarde ${invFormatarRestante(data.livre_em)} para tentar novamente.`;
+        return;
+      }
+      dlg.close();
+      await invCarregarEstadoCaso();
+      invRender();
+    });
+    form.append(msgErro, btnEnv);
+    dlg.appendChild(form);
+    dlg.showModal();
+  }
+
+  function invRenderRelatorio(raiz, c, p) {
+    if (!invRelatorio) { raiz.appendChild(el("p", "inv-sub", "Carregando relatório...")); return; }
+    const r = invRelatorio;
+    const box = el("div", "inv-card inv-card-destaque");
+    const est = el("div", "inv-estrelas");
+    for (let i = 0; i < 3; i++) est.appendChild(invIcone("star", 20, i < (r.estrelas || 0) ? "icone-estrela-cheia" : ""));
+    box.appendChild(est);
+    box.appendChild(el("h3", "inv-caso-titulo", p.estado === "concluido" ? "Caso resolvido!" : "Solução revelada"));
+
+    const durMin = (r.iniciada_em && r.concluida_em) ? Math.max(1, Math.round((new Date(r.concluida_em) - new Date(r.iniciada_em)) / 60000)) : null;
+    const resumoMeta = [`Tentativas erradas: ${r.tentativas || 0}`, `Dicas: ${r.dicas || 0}`];
+    if (durMin) resumoMeta.push(`Tempo: ${durMin} min`);
+    box.appendChild(el("p", "inv-sub", resumoMeta.join(" · ")));
+
+    if (r.solucao && r.solucao.resumo) {
+      box.appendChild(el("p", "inv-doc-texto", r.solucao.resumo));
+    }
+    raiz.appendChild(box);
+
+    if (r.solucao && Array.isArray(r.solucao.linha_do_tempo) && r.solucao.linha_do_tempo.length) {
+      const boxTl = el("div", "inv-card");
+      boxTl.appendChild(el("h3", "inv-caso-titulo", "Linha do tempo real"));
+      const tl = el("div", "inv-timeline");
+      r.solucao.linha_do_tempo.forEach(item => {
+        const it = el("div", "inv-tl-item");
+        it.appendChild(el("span", "inv-tl-hora", item.hora || ""));
+        it.appendChild(el("p", "inv-tl-txt", item.texto || ""));
+        tl.appendChild(it);
+      });
+      boxTl.appendChild(tl);
+      raiz.appendChild(boxTl);
+    }
+
+    if (r.solucao && Array.isArray(r.solucao.falsas_pistas) && r.solucao.falsas_pistas.length) {
+      const boxFp = el("div", "inv-card");
+      boxFp.appendChild(el("h3", "inv-caso-titulo", "Pistas falsas explicadas"));
+      r.solucao.falsas_pistas.forEach(fp => boxFp.appendChild(el("p", "inv-tl-txt", `• ${fp}`)));
+      raiz.appendChild(boxFp);
+    }
+
+    if (Array.isArray(r.docs) && r.docs.length) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", "Todos os documentos do caso"));
+      r.docs.forEach(d => grp.appendChild(invCriarItemDoc(d, true)));
+      raiz.appendChild(grp);
+    }
+
+    const bRec = el("button", "secondary", "Recomeçar este caso");
+    bRec.type = "button";
+    bRec.addEventListener("click", invPedirReinicio);
+    raiz.appendChild(bRec);
+  }
+
+  presencaMudou.push(() => {
+    if (vista === "vInvestigacao" && invCasoAtual && invPartidaAtual) {
+      const faixa = document.querySelector("#invRaiz .inv-faixa-presenca");
+      const txt = invTextoPresenca();
+      if (txt && !faixa) invRender();
+      else if (txt && faixa) { const s = faixa.querySelector(".inv-pres-txt"); if (s) s.textContent = txt; }
+      else if (!txt && faixa) faixa.remove();
+    }
+  });
+  manualMudouFns.push(() => {
+    if (vista === "vInvestigacao") invRender();
+  });
+
+  if ($("avatarModoSeg")) {
+    $("avatarModoSeg").querySelectorAll("[data-avatar-modo]").forEach(b => {
+      b.addEventListener("click", () => {
+        avatarModoAba = b.dataset.avatarModo;
+        fecharAjusteAvatar();
+      });
+    });
+  }
+  if ($("avatarTirarFoto") && $("avatarInputFoto")) {
+    $("avatarTirarFoto").addEventListener("click", () => {
+      $("avatarInputFoto").setAttribute("capture", "user");
+      $("avatarInputFoto").click();
+    });
+  }
+  if ($("avatarEscolherFoto") && $("avatarInputFoto")) {
+    $("avatarEscolherFoto").addEventListener("click", () => {
+      $("avatarInputFoto").removeAttribute("capture");
+      $("avatarInputFoto").click();
+    });
+  }
+  if ($("avatarInputFoto")) {
+    $("avatarInputFoto").addEventListener("change", () => {
+      const f = $("avatarInputFoto").files && $("avatarInputFoto").files[0];
+      if (f) abrirAjusteAvatar(f);
+    });
+  }
+  if ($("avatarRemoverFoto")) {
+    $("avatarRemoverFoto").addEventListener("click", () => {
+      salvarFotoAvatar(null);
+    });
+  }
+  if ($("avatarAjusteZoom")) {
+    $("avatarAjusteZoom").addEventListener("input", () => {
+      avZoom = Number($("avatarAjusteZoom").value) || 1;
+      desenharCanvasAvatar();
+    });
+  }
+  if ($("avatarAjusteQuadro")) {
+    const q = $("avatarAjusteQuadro");
+    q.addEventListener("pointerdown", ev => {
+      if (!avImg) return;
+      ev.preventDefault();
+      avArrastando = true;
+      avIniX = ev.clientX - avDx;
+      avIniY = ev.clientY - avDy;
+      try { q.setPointerCapture(ev.pointerId); } catch (e) {}
+    });
+    q.addEventListener("pointermove", ev => {
+      if (!avArrastando || !avImg) return;
+      avDx = ev.clientX - avIniX;
+      avDy = ev.clientY - avIniY;
+      desenharCanvasAvatar();
+    });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => {
+      q.addEventListener(t, () => { avArrastando = false; });
+    });
+  }
+  if ($("avatarAjusteCancelar")) {
+    $("avatarAjusteCancelar").addEventListener("click", fecharAjusteAvatar);
+  }
+  if ($("avatarAjusteSalvar")) {
+    $("avatarAjusteSalvar").addEventListener("click", async () => {
+      const dataUrl = exportarCanvasAvatar();
+      fecharAjusteAvatar();
+      if (dataUrl) await salvarFotoAvatar(dataUrl);
+    });
+  }
+
+  if ($("invVoltar")) {
+    $("invVoltar").addEventListener("click", () => {
+      if (invCasoAtual) {
+        invCasoAtual = null;
+        invPartidaAtual = null;
+        invDossie = null;
+        invRelatorio = null;
+        invNotas = [];
+        invRender();
+      } else {
+        mostrarVista(estado && estado.fixa ? "casa" : "jogo");
+      }
+    });
   }
 
   iniciar();

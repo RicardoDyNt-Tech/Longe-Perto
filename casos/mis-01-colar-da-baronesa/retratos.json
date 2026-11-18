@@ -1,0 +1,22 @@
+{
+  "estilo": "Vintage studio portrait photograph from the 1940s of a fictional adult, head and shoulders, centered, facing the camera, plain mottled studio backdrop, soft window light, sepia toned black and white, fine film grain, period-accurate hairstyle and clothing, sharp focus. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "augusto",
+      "semente": 1024,
+      "prompt": "Brazilian man, 27 years old, 1930s style, light skin, thin pencil mustache, slicked dark hair, white linen suit, panama hat in hand, charming smirk."
+    },
+    {
+      "id": "rosa",
+      "semente": 1031,
+      "prompt": "Brazilian woman, 35 years old, 1930s style, dark brown skin, hair under a white maid's cap, black maid uniform with starched white apron, wary eyes."
+    },
+    {
+      "id": "lirio",
+      "semente": 1038,
+      "prompt": "Brazilian man, 50 years old, 1930s style, light skin, long gray hair, worn black tailcoat, white bow tie, melancholic face."
+    }
+  ]
+}

@@ -20,7 +20,7 @@
     for (const [tela, botao] of telas) if ($(tela) && !$(tela).hidden) { $(botao).click(); return; }
     if ($("callCard") && !$("callCard").hidden) { $("callCard").hidden = true; return; }
     if ($("descongelar") && !$("descongelar").hidden) return;   // o descongelar se fecha pelos botões dele
-    // uma tela da Casa aberta: o "← Início" dela
+    // uma tela da Casa aberta: o botão voltar dela
     const vistaAberta = [...document.querySelectorAll(".casa-vista:not(.aba-vista)")].find(v => !v.hidden);
     const voltarBtn = vistaAberta && vistaAberta.querySelector(".voltar");
     if (voltarBtn) { voltarBtn.click(); return; }
@@ -69,9 +69,9 @@
     if (!lobby || salas.length || localStorage.getItem("lp-app-boasvindas")) return;
     const box = document.createElement("div");
     box.className = "app-boasvindas";
-    const t = document.createElement("p"); t.className = "app-bv-titulo"; t.textContent = "📱 Já joga no navegador?";
+    const t = document.createElement("p"); t.className = "app-bv-titulo"; t.textContent = "Já joga no navegador?";
     const p1 = document.createElement("p"); p1.textContent = "O app é como um navegador novo: entre na mesma sala digitando o código (ou o nome) da sala logo abaixo, ou colando o link de convite.";
-    const p2 = document.createElement("p"); p2.textContent = "Quem é dono da sala: depois de entrar, abra as Configurações e use \"👑 Entrar como dono\".";
+    const p2 = document.createElement("p"); p2.textContent = "Quem é dono da sala: depois de entrar, abra as Configurações e use \"Entrar como dono\".";
     const ok = document.createElement("button"); ok.type = "button"; ok.className = "secondary"; ok.textContent = "Entendi";
     ok.addEventListener("click", () => { try { localStorage.setItem("lp-app-boasvindas", "1"); } catch (err) {} box.remove(); });
     box.append(t, p1, p2, ok);

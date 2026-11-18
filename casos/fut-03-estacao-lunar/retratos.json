@@ -1,0 +1,22 @@
+{
+  "estilo": "Cinematic science fiction portrait of a fictional adult in the future, head and shoulders, centered, facing the camera, soft cool rim light with a warm key light, blurred futuristic interior behind, subtle reflections, realistic skin texture, 85mm lens, sharp focus. No text, no letters, no watermark, no logos.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "viktor",
+      "semente": 1020,
+      "prompt": "Futuristic engineer, 45 years old, year 2112 lunar base, fair skin, trimmed red beard, blue station jumpsuit, magnetic boots, tired resentful eyes, cramped metal module with Earth in window."
+    },
+    {
+      "id": "amara",
+      "semente": 1027,
+      "prompt": "Futuristic doctor, 38 years old, year 2112, dark skin, braided hair tied up, white medical jumpsuit, wrist tablet, calm serious face, clean infirmary module."
+    },
+    {
+      "id": "leo",
+      "semente": 1034,
+      "prompt": "Futuristic Brazilian technician, 29 years old, year 2112, light brown skin, curly hair, orange jumpsuit with band patches, comm headset, nervous friendly face, radio console glow."
+    }
+  ]
+}

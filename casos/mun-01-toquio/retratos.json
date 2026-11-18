@@ -1,0 +1,22 @@
+{
+  "estilo": "Photorealistic police booking photo of a fictional adult, head and shoulders, centered, facing the camera, neutral expression, plain warm gray wall with faint horizontal height-chart lines behind, soft even flash lighting, 85mm lens, sharp focus, natural skin texture, muted warm colors, slightly desaturated, subtle film grain. No text, no letters, no numbers, no watermark, no placard.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "kenji",
+      "semente": 1013,
+      "prompt": "Japanese man, 34 years old, contemporary Tokyo, light skin, neat black hair, navy suit, company lanyard, clear umbrella, polite tense expression, neon-lit rainy street."
+    },
+    {
+      "id": "mei",
+      "semente": 1020,
+      "prompt": "Japanese woman, 29 years old, contemporary Tokyo, light skin, bob haircut, round glasses, beige cardigan, canvas bag, shy wary look, karaoke room lights."
+    },
+    {
+      "id": "ricardo",
+      "semente": 1027,
+      "prompt": "Brazilian-Japanese man, 41 years old, contemporary Tokyo, light tan skin, cap, leather jacket, friendly tired face, small ramen restaurant counter."
+    }
+  ]
+}

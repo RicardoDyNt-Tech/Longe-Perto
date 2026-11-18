@@ -1,0 +1,27 @@
+{
+  "estilo": "Painterly realistic portrait of a fictional adult character from Brazilian folklore, head and shoulders, centered, facing the camera, deep Atlantic forest at night behind, moonlight and firefly glow, rich greens and warm skin tones, detailed face, storybook realism. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "clovis",
+      "semente": 1025,
+      "prompt": "Brazilian man, 55 years old, timeless rural Brazil folklore, tan skin, leather hat, shirt buttoned to the neck, rosary on wrist, pious but cold eyes, candlelit wake, painterly."
+    },
+    {
+      "id": "juvenal",
+      "semente": 1032,
+      "prompt": "Brazilian man, 50 years old, timeless rural Brazil folklore, tan skin, thick beard, long nails, viola guitar on back, wolfish but gentle eyes, wedding lights, painterly."
+    },
+    {
+      "id": "vitinho",
+      "semente": 1039,
+      "prompt": "Brazilian young man, 20 years old, timeless rural Brazil, light brown skin, technical school backpack, cap, earphones around neck, uneasy face, dorm light, painterly."
+    },
+    {
+      "id": "saci",
+      "semente": 1046,
+      "prompt": "Brazilian folklore trickster Saci, ageless adult-looking one-legged figure with red cap and clay pipe, mischievous grin, swirling dust, moonlit yard, painterly."
+    }
+  ]
+}

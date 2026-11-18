@@ -1,0 +1,22 @@
+{
+  "estilo": "Painterly realistic portrait of a fictional adult character from Brazilian folklore, head and shoulders, centered, facing the camera, deep Atlantic forest at night behind, moonlight and firefly glow, rich greens and warm skin tones, detailed face, storybook realism. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "lau",
+      "semente": 1020,
+      "prompt": "Brazilian potter, 61 years old, timeless rural Brazil folklore, tan skin, clay-red hands, clay-stained apron, unlit pipe, cunning smile, kiln firelight, painterly."
+    },
+    {
+      "id": "caipora",
+      "semente": 1027,
+      "prompt": "Brazilian folklore forest spirit Caipora, appearing as an ageless adult woman with fiery red hair, copper skin, riding a wild peccary, fierce protective eyes, moonlit forest, painterly."
+    },
+    {
+      "id": "iaia",
+      "semente": 1034,
+      "prompt": "Brazilian elderly healer woman, 76 years old, dark skin, calico headscarf, sprig of rue, small bright eyes, lamp-lit doorway, painterly."
+    }
+  ]
+}

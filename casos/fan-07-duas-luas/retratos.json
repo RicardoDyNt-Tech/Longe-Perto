@@ -1,0 +1,32 @@
+{
+  "estilo": "Realistic fantasy character portrait of a fictional adult, head and shoulders, centered, facing the camera, painterly realism, medieval-fantasy clothing, soft candlelight, dark neutral background, muted earthy colors, detailed face, no armor helmet covering the face. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "gerd",
+      "semente": 1016,
+      "prompt": "Fantasy miller, 54 years old, ruddy light skin, flour-dusted beard, thick arms, floppy felt hat, white apron, grieving face hiding something, painterly riverside night with two moons."
+    },
+    {
+      "id": "brina",
+      "semente": 1023,
+      "prompt": "Fantasy herbalist apprentice, 22 years old, freckled fair skin, red-brown braid, green apprentice cloak, herb bundles at belt, tearful determined eyes, painterly style."
+    },
+    {
+      "id": "sigur",
+      "semente": 1030,
+      "prompt": "Fantasy hunter, 37 years old, tanned skin, scar through eyebrow, wolf pelts on shoulders, bow on back, brooding face, forest at night, painterly style."
+    },
+    {
+      "id": "odile",
+      "semente": 1037,
+      "prompt": "Fantasy old wise woman, 79 years old, wrinkled olive skin, white wild hair, black fringed shawl, bone amulets, sharp suspicious eyes, temple candles, painterly style."
+    },
+    {
+      "id": "jarl",
+      "semente": 1044,
+      "prompt": "Fantasy ferryman, 45 years old, weathered dark skin, wool cap, rowing-callused hands, silver chain, gruff honest face, painterly river inn."
+    }
+  ]
+}

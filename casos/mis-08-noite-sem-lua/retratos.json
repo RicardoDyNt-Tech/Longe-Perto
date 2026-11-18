@@ -1,0 +1,32 @@
+{
+  "estilo": "Vintage studio portrait photograph from the 1940s of a fictional adult, head and shoulders, centered, facing the camera, plain mottled studio backdrop, soft window light, sepia toned black and white, fine film grain, period-accurate hairstyle and clothing, sharp focus. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "firmino",
+      "semente": 1020,
+      "prompt": "Brazilian man, 48 years old, 1920s northeastern backlands style, sun-weathered brown skin, leather cowboy hat, leather vest, knife at belt, hard stare."
+    },
+    {
+      "id": "damiao",
+      "semente": 1027,
+      "prompt": "Brazilian man, 27 years old, 1920s northeastern backlands style, dark brown skin, straw hat, raw cotton shirt, leather sandals, worried open face."
+    },
+    {
+      "id": "benta",
+      "semente": 1034,
+      "prompt": "Brazilian woman, 61 years old, 1920s northeastern backlands style, dark skin, white headscarf, wide skirt, rosary around neck, wise calm face."
+    },
+    {
+      "id": "joca",
+      "semente": 1041,
+      "prompt": "Brazilian man, 25 years old, 1920s style, light skin, center-parted slick hair, linen suit, city boots, restless look."
+    },
+    {
+      "id": "lourenco",
+      "semente": 1048,
+      "prompt": "Brazilian man, 55 years old, 1920s style, olive skin, gold tooth, worn bowler hat, traveling peddler with a big case, sly grin."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "estilo": "Photorealistic police booking photo of a fictional adult, head and shoulders, centered, facing the camera, neutral expression, plain warm gray wall with faint horizontal height-chart lines behind, soft even flash lighting, 85mm lens, sharp focus, natural skin texture, muted warm colors, slightly desaturated, subtle film grain. No text, no letters, no numbers, no watermark, no placard.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "igor",
+      "semente": 1025,
+      "prompt": "Brazilian man, 22 years old, light brown skin, bleached short hair, black store polo shirt, eager expression."
+    },
+    {
+      "id": "paula",
+      "semente": 1032,
+      "prompt": "Brazilian woman, 39 years old, light skin, shoulder-length brown hair, sunglasses pushed up on her head, gray blazer, composed expression."
+    },
+    {
+      "id": "denis",
+      "semente": 1039,
+      "prompt": "Brazilian man, 45 years old, dark skin, short graying hair, gray work shirt with a jeweler's loupe in the pocket, skeptical look."
+    }
+  ]
+}

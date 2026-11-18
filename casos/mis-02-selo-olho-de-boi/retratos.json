@@ -1,0 +1,22 @@
+{
+  "estilo": "Vintage studio portrait photograph from the 1940s of a fictional adult, head and shoulders, centered, facing the camera, plain mottled studio backdrop, soft window light, sepia toned black and white, fine film grain, period-accurate hairstyle and clothing, sharp focus. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "vilar",
+      "semente": 1023,
+      "prompt": "Brazilian man, 58 years old, 1940s style, light skin, gray slicked hair, monocle, pinstripe three-piece suit, magnifying glass in vest pocket, haughty expression."
+    },
+    {
+      "id": "teodoro",
+      "semente": 1030,
+      "prompt": "Brazilian man, 44 years old, 1940s style, dark brown skin, short hair, gray doorman livery with brass buttons, cap in hand, calm face."
+    },
+    {
+      "id": "celeste",
+      "semente": 1037,
+      "prompt": "Brazilian woman, 31 years old, 1940s style, light brown skin, dark hair in victory rolls, round glasses, navy dress with white collar, white gloves."
+    }
+  ]
+}

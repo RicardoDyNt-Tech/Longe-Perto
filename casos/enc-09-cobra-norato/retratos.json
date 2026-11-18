@@ -1,0 +1,32 @@
+{
+  "estilo": "Painterly realistic portrait of a fictional adult character from Brazilian folklore, head and shoulders, centered, facing the camera, deep Atlantic forest at night behind, moonlight and firefly glow, rich greens and warm skin tones, detailed face, storybook realism. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "leonel",
+      "semente": 1019,
+      "prompt": "Brazilian young man, 27 years old, timeless rural Brazil folklore, light skin, fine straw hat, silk plaid shirt, pointed new boots, jealous charming face, festa junina lights, painterly."
+    },
+    {
+      "id": "caninana",
+      "semente": 1026,
+      "prompt": "Brazilian folklore serpent Maria Caninana, dark river snake with yellow eyes, shown with the shadow of a pale woman in a black dress, menacing, murky river at night, painterly."
+    },
+    {
+      "id": "tiburcio",
+      "semente": 1033,
+      "prompt": "Brazilian colonel landowner, 62 years old, timeless rural Brazil, light skin, thick mustache, white suit, riding crop, imposing face, festival stage lights, painterly."
+    },
+    {
+      "id": "rosinha",
+      "semente": 1040,
+      "prompt": "Brazilian young woman, 24 years old, timeless rural Brazil, medium brown skin, braided hair with ribbon, flowered calico dress, flower behind ear, shy determined smile, festa lights, painterly."
+    },
+    {
+      "id": "mariadedeus",
+      "semente": 1047,
+      "prompt": "Brazilian elderly mother, 66 years old, timeless rural Brazil, dark skin, blue devout dress, rosary of Job's tears, tearful hopeful eyes, chapel candlelight, painterly."
+    }
+  ]
+}

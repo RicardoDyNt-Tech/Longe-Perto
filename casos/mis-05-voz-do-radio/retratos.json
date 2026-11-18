@@ -1,0 +1,32 @@
+{
+  "estilo": "Vintage studio portrait photograph from the 1940s of a fictional adult, head and shoulders, centered, facing the camera, plain mottled studio backdrop, soft window light, sepia toned black and white, fine film grain, period-accurate hairstyle and clothing, sharp focus. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "paulo",
+      "semente": 1019,
+      "prompt": "Brazilian man, 42 years old, early 1950s style, light skin, slicked back hair with brilliantine, black tuxedo, standing by a vintage studio microphone, charming radio-star smile."
+    },
+    {
+      "id": "lilian",
+      "semente": 1026,
+      "prompt": "Brazilian woman, 29 years old, early 1950s style, medium brown skin, glossy waved hair, sequined evening gown, long gloves, beauty mark, diva pose."
+    },
+    {
+      "id": "benedito",
+      "semente": 1033,
+      "prompt": "Brazilian man, 51 years old, early 1950s style, dark brown skin, gray temples, white shirt with suspenders, big headphones around the neck, focused face."
+    },
+    {
+      "id": "marta",
+      "semente": 1040,
+      "prompt": "Brazilian woman, 35 years old, early 1950s style, light skin, dark hair in a bun with a pencil stuck in it, gray skirt suit, clipboard, efficient look."
+    },
+    {
+      "id": "caldas",
+      "semente": 1047,
+      "prompt": "Brazilian man, 60 years old, early 1950s style, light skin, white hair, linen suit, signet ring, walking cane, self-important expression."
+    }
+  ]
+}

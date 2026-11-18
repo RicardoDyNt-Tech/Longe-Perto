@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic police booking photo of a fictional adult, head and shoulders, centered, facing the camera, neutral expression, plain warm gray wall with faint horizontal height-chart lines behind, soft even flash lighting, 85mm lens, sharp focus, natural skin texture, muted warm colors, slightly desaturated, subtle film grain. No text, no letters, no numbers, no watermark, no placard.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "grant",
+      "semente": 1016,
+      "prompt": "American man, 56 years old, contemporary New York, light skin, slicked silver hair, pinstripe suit, silk tie, gold pinky ring, smooth showman smile, jazz club neon."
+    },
+    {
+      "id": "nia",
+      "semente": 1023,
+      "prompt": "African American young woman, 22 years old, contemporary New York, dark skin, long braids, mustard wool coat, sheet music under arm, determined grieving face, conservatory hallway."
+    },
+    {
+      "id": "sal",
+      "semente": 1030,
+      "prompt": "Italian American man, 63 years old, contemporary New York, olive skin, gray stubble, fedora hat, worn coat, saxophone in hand, bitter nostalgic eyes, subway station light."
+    },
+    {
+      "id": "esther",
+      "semente": 1037,
+      "prompt": "Puerto Rican American woman, 48 years old, contemporary New York, tan skin, hair in a headscarf, apron, small crucifix, warm worried face, community hall light."
+    }
+  ]
+}
