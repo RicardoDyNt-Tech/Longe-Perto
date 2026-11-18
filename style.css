@@ -1384,3 +1384,29 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:.01ms !important; animation-duration:.01ms !important}
 }
+
+/* Novo Início (Fase 4) */
+.casa-grade{display:flex; flex-direction:column; gap:20px}
+.inicio-topo{display:flex; align-items:flex-start; justify-content:space-between; gap:12px}
+.inicio-saudacao{min-width:0; flex:1}
+.inicio-saudacao .rotulo-sec{margin-bottom:4px}
+.inicio-topo .ola{font-family:var(--f-serif); font-size:var(--t-h1); line-height:1.1; font-weight:500; margin:0; color:var(--ink)}
+.inicio-presenca{margin:6px 0 0; font-size:var(--t-sec); color:var(--muted); display:flex; align-items:center; gap:6px}
+.inicio-presenca.on{color:var(--ok)}
+.inicio-presenca.on::before{content:""; width:8px; height:8px; border-radius:999px; background:var(--ok); flex-shrink:0}
+.inicio-reencontro{background:var(--s1); border:1px solid var(--line); border-radius:var(--r-c); padding:16px}
+.inicio-reencontro .ct-caixa b{font-family:var(--f-serif); font-size:var(--t-num); line-height:1; font-weight:400; font-variant-numeric:tabular-nums}
+.inicio-agora{padding:16px}
+#casaAgoraSlots > div:not(.agora-vencedor){display:none !important}
+#casaAgoraSlots > .agora-vencedor{margin:0; padding:0; border:0; background:transparent}
+.inicio-secao{display:flex; flex-direction:column}
+.para-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.para-atalho{display:flex; align-items:center; gap:10px; background:var(--s1); color:var(--ink); border:1px solid var(--line); border-radius:var(--r-c); padding:10px 12px; min-height:52px; font-size:var(--t-sec); font-weight:500; text-align:left}
+.para-atalho:active:not(:disabled){background:var(--s2)}
+.tudo-box{background:var(--s1); border:1px solid var(--line); border-radius:var(--r-c); overflow:hidden}
+.tudo-summary{list-style:none; cursor:pointer}
+.tudo-summary::-webkit-details-marker{display:none}
+.tudo-box[open] .tudo-summary .lista-seta{transform:rotate(90deg)}
+.tudo-conteudo{padding:12px 16px 16px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:12px}
+.tudo-conteudo .rotulo-sec{margin:8px 0 0}
+.tudo-lista{margin:0}

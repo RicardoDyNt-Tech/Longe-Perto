@@ -155,231 +155,322 @@
       <p class="casa-convite" id="casaConvite" hidden>Crie uma sala fixa para guardar envelopes, álbum e conquistas. No início, toque em "Criar sala fixa".</p>
       <div class="casa-grade" id="casaGrade">
         <header class="inicio-topo" id="inicioTopo">
-          <div class="inicio-titulo-par">
-            <svg class="icone icone-24 marca-casa" aria-hidden="true"><use href="icones.svg#marca"/></svg>
-            <p class="ola" id="ola"></p>
+          <div class="inicio-saudacao">
+            <p class="rotulo-sec" id="inicioData"></p>
+            <div class="inicio-titulo-par">
+              <svg class="icone icone-24 marca-casa" aria-hidden="true"><use href="icones.svg#marca"/></svg>
+              <p class="ola" id="ola"></p>
+            </div>
+            <p class="inicio-presenca" id="inicioPresenca" hidden></p>
           </div>
           <div class="avatares" id="avatares" aria-hidden="true"></div>
         </header>
-        <div class="casa-bloco clausulas" id="casaClausulas" hidden>
-          <ul class="clausulas-lista" id="clausulasLista"></ul>
-          <p class="erro" id="erroClausula" role="alert"></p>
-        </div>
-        <div class="casa-bloco espelho-aviso" id="casaEspelho" hidden>
-          <p class="cumprir-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#frame"/></svg> Uma cápsula de espelho abre hoje</p>
-          <button class="primary" type="button" data-abre="vCapsulas">Abrir</button>
-        </div>
-        <div class="casa-bloco nosso-ano-aviso" id="casaNossoAno" hidden>
-          <p class="cumprir-titulo" id="casaNossoAnoTitulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#sparkles"/></svg> Nosso ano</p>
-          <button class="primary" type="button" id="casaNossoAnoAbrir">Ver a retrospectiva</button>
-        </div>
-        <div class="casa-bloco cardapio-aviso" id="casaCardapio" hidden>
-          <p class="cumprir-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#eye-off"/></svg> Cardápio secreto</p>
-          <p class="extras-sub">Marque o que você quer fazer nos dias juntos.</p>
-          <button class="primary" type="button" data-abre="vCardapio">Abrir o cardápio</button>
-        </div>
-        <div class="casa-bloco cumprir" id="casaCumprir" hidden>
-          <p class="cumprir-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#receipt"/></svg> A fatura chegou</p>
-          <p class="fatura-placar" id="faturaPlacar" hidden></p>
-          <p class="cumprir-dias" id="cumprirDias"></p>
-          <div class="fatura-resgate" id="faturaResgate" hidden role="status">
-            <p class="fatura-resgate-quem" id="resgateQuem"></p>
-            <p class="cumprir-sorteado" id="resgateTexto"></p>
-            <p class="fatura-resgate-timer" id="resgateTimer" hidden></p>
-            <div class="row">
-              <button class="secondary" id="resgateIniciar" type="button" hidden></button>
-              <button class="done" id="resgateQuitar" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#check"/></svg> Quitado</button>
-              <button class="linkbtn" id="resgateFechar" type="button" hidden>Fechar</button>
-            </div>
-          </div>
-          <div class="chips fatura-filtros" role="radiogroup" aria-label="Filtrar a fatura">
-            <label class="chip"><input type="radio" name="filtroFatura" value="todos" checked><span>Tudo</span></label>
-            <label class="chip"><input type="radio" name="filtroFatura" value="vale"><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#ticket"/></svg> Vales</span></label>
-            <label class="chip"><input type="radio" name="filtroFatura" value="prenda"><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#receipt"/></svg> Prendas</span></label>
-            <label class="chip"><input type="radio" name="filtroFatura" value="promessa"><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#heart"/></svg> Promessas</span></label>
-          </div>
-          <div class="cumprir-sorteio" id="cumprirSorteio" hidden>
-            <p class="cumprir-sorteado" id="cumprirSorteado"></p>
-            <div class="row">
-              <button class="done" id="cumprirSim" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#check"/></svg> Cumprimos</button>
-              <button class="secondary" id="cumprirNao" type="button">Hoje não</button>
-            </div>
-          </div>
-          <button class="primary" id="cumprirSortear" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#gift"/></svg> Sortear do cofre</button>
-          <p class="extras-sub vazio" id="cumprirVazio" hidden>Nada guardado para o reencontro. Guardem cartas no cofre durante a distância.</p>
-          <ul class="cumprir-lista" id="cumprirLista"></ul>
-          <p class="extras-sub" id="cumprirFechados"></p>
-          <button class="linkbtn" id="cumprirAte" type="button">Até quando vocês ficam juntos?</button>
-          <p class="erro" id="erroCumprir" role="alert"></p>
-        </div>
-        <div class="casa-bloco dengo-recebido" id="dengoRecebido" hidden role="alert">
-          <p class="dr-titulo" id="drTitulo"></p>
-          <ul class="dengo-itens" id="drItens"></ul>
-          <p class="dr-msg" id="drMsg" hidden></p>
-          <p class="dr-quando" id="drQuando"></p>
-          <p class="dr-dica" id="drDica" hidden></p>
-          <div class="dr-extras" id="drExtras"></div>
-          <div class="dr-acoes" id="drAcoes">
-            <button class="primary dr-indo" id="drIndo" type="button">Tô indo</button>
-            <button class="secondary" id="drNao" type="button">Agora não consigo</button>
-          </div>
-          <div class="dr-resp" id="drRespIndo" hidden>
-            <input type="text" id="drIndoTexto" maxlength="200" placeholder="Te ligo em 5 min" aria-label="Resposta (opcional)">
-            <button class="primary" id="drIndoEnviar" type="button">Enviar "Tô indo"</button>
-          </div>
-          <div class="dr-resp" id="drRespNao" hidden>
-            <div class="dr-frases" id="drFrases">
-              <button type="button" class="chip-btn">Tô no trabalho, te ligo às 18h</button>
-              <button type="button" class="chip-btn">Tô sem sinal agora</button>
-              <button type="button" class="chip-btn">Já já eu volto, te amo</button>
-            </div>
-            <input type="text" id="drNaoTexto" maxlength="200" placeholder="Ou escreva…" aria-label="Resposta">
-            <button class="secondary" id="drNaoEnviar" type="button">Enviar</button>
-          </div>
-          <button class="primary" id="drAqui" type="button" hidden>Tô aqui quando precisar</button>
-          <p class="erro" id="erroDengoResp" role="alert"></p>
-        </div>
-        <div class="casa-bloco recado calmo" id="casaRecado" hidden role="status">
-          <p class="cumprir-titulo" id="recadoTitulo"></p>
-          <p class="recado-texto" id="recadoTexto"></p>
-          <p class="config-dica">Não precisa responder. É só para você receber o carinho.</p>
-          <button class="secondary" id="recadoFechar" type="button">Fechar</button>
-        </div>
-        <p class="casa-bloco recado-lido calmo" id="casaRecadoLido" hidden></p>
-        <div class="casa-bloco cuidado" id="casaCuidado" hidden>
-          <p class="cumprir-titulo" id="cuidadoTitulo"></p>
-          <ul class="cuidado-lista" id="cuidadoItens"></ul>
-          <div class="row">
-            <button class="secondary" id="cuidadoRecado" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#mail"/></svg> Deixar um recado</button>
-            <button class="secondary" id="cuidadoPensei" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#message-circle-heart"/></svg> Pensei em você</button>
-          </div>
-        </div>
-        <div class="casa-bloco dengo" id="casaDengo">
-          <div class="dengo-resposta" id="dengoResposta" hidden role="status">
-            <p class="dengo-resp-titulo" id="dengoRespTitulo"></p>
-            <p class="dengo-resp-texto" id="dengoRespTexto" hidden></p>
-            <button class="secondary" id="dengoRespOk" type="button">Ok</button>
-          </div>
-          <button class="primary dengo-botao" id="dengoPedir" type="button">Pedir dengo</button>
-          <div class="dengo-meu" id="dengoMeu" hidden>
-            <p class="dengo-esperando" id="dengoEsperando"></p>
-            <ul class="dengo-itens" id="dengoMeuItens"></ul>
-            <div class="row">
-              <a class="wa" id="dengoAvisar" target="_blank" rel="noopener">Avisar no WhatsApp</a>
-              <button class="secondary" id="dengoCancelar" type="button">Cancelar pedido</button>
-            </div>
-          </div>
-          <div class="dengo-grade" id="dengoGrade" role="group" aria-label="Pedidos rápidos"></div>
-          <div class="dengo-rodape">
-            <span class="dengo-conta" id="dengoConta"></span>
-            <button class="linkbtn" id="dengoEditar" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#pencil"/></svg> Editar pedidos</button>
-          </div>
-          <p class="erro" id="erroDengo" role="alert"></p>
-        </div>
-        <div class="casa-bloco humor" id="casaHumor">
-          <p class="humor-titulo">Como você se sente hoje?</p>
-          <div class="humor-caras" id="humorCaras" role="group" aria-label="Seu humor hoje">
-            <button type="button" data-v="1" aria-label="Péssimo" aria-pressed="false" class="humor-btn humor-1"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#angry"/></svg><span class="rotulo-humor">Péssimo</span></button>
-            <button type="button" data-v="2" aria-label="Mal" aria-pressed="false" class="humor-btn humor-2"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#frown"/></svg><span class="rotulo-humor">Mal</span></button>
-            <button type="button" data-v="3" aria-label="Mais ou menos" aria-pressed="false" class="humor-btn humor-3"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#meh"/></svg><span class="rotulo-humor">Mais ou menos</span></button>
-            <button type="button" data-v="4" aria-label="Bem" aria-pressed="false" class="humor-btn humor-4"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#smile"/></svg><span class="rotulo-humor">Bem</span></button>
-            <button type="button" data-v="5" aria-label="Ótimo" aria-pressed="false" class="humor-btn humor-5"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#laugh"/></svg><span class="rotulo-humor">Ótimo</span></button>
-          </div>
-          <div class="humor-nota" id="humorNotaBox" hidden>
-            <input type="text" id="humorNota" maxlength="140" placeholder="Quer contar por quê?" aria-label="Quer contar por quê? (opcional)">
-            <button class="secondary" id="humorNotaSalvar" type="button">Salvar</button>
-          </div>
-          <p class="humor-salvo" id="humorSalvo" aria-live="polite"></p>
-          <div class="humor-outro" id="humorOutro">
-            <p class="humor-titulo" id="humorOutroTitulo"></p>
-            <div class="humor-caras outro" id="humorOutroCaras" hidden><span data-v="1" class="humor-op humor-1" title="Péssimo"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#angry"/></svg></span><span data-v="2" class="humor-op humor-2" title="Mal"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#frown"/></svg></span><span data-v="3" class="humor-op humor-3" title="Mais ou menos"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#meh"/></svg></span><span data-v="4" class="humor-op humor-4" title="Bem"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#smile"/></svg></span><span data-v="5" class="humor-op humor-5" title="Ótimo"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#laugh"/></svg></span></div>
-            <p class="humor-outro-nota" id="humorOutroNota" hidden></p>
-            <p class="extras-sub" id="humorOutroVazio" hidden></p>
-            <div class="humor-dicas" id="humorDicas"></div>
-            <ul class="humor-sug" id="humorSug"></ul>
-          </div>
-          <p class="erro" id="erroHumor" role="alert"></p>
-        </div>
-        <div class="casa-bloco bateria calmo" id="casaBateria">
-          <div id="bateriaDesligada">
-            <button class="secondary" id="bateriaLigar" type="button" aria-expanded="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#battery-low"/></svg> Estou sem bateria social</button>
-            <div id="bateriaOpcoes" hidden>
-              <p class="config-dica">Sem jogo e sem cobrança por um tempo. Por quanto?</p>
-              <div class="row">
-                <button class="secondary" type="button" data-bat="2h">2 horas</button>
-                <button class="secondary" type="button" data-bat="amanha">Até amanhã</button>
-                <button class="secondary" type="button" data-bat="sempre">Até eu desligar</button>
-              </div>
-            </div>
-          </div>
-          <div id="bateriaLigada" hidden>
-            <p class="bateria-texto" id="bateriaTexto"></p>
-            <button class="linkbtn" id="bateriaDesligar" type="button">Desligar</button>
-          </div>
-        </div>
-        <div class="casa-bloco mural-inicio" id="casaMural">
-          <p class="mural-inicio-titulo"><b>Mural</b> <span id="muralInicioTxt"></span></p>
-          <button type="button" class="mural-mini" id="muralInicioVer" hidden aria-label="Ver o desenho"></button>
-          <p class="extras-sub mural-legenda" id="muralInicioLegenda" hidden></p>
-          <button class="secondary" type="button" id="muralInicioDesenhar"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#pencil"/></svg> Desenhar</button>
-        </div>
-        <div class="casa-bloco carinhos" id="casaCarinhos">
-          <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#x"/></svg></button></p>
-          <div class="carinho-botoes" id="carinhoBotoes">
-            <button type="button" data-carinho="pensei"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#message-circle-heart"/></svg></span>Pensei em você</button>
-            <button type="button" data-carinho="beijo"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart"/></svg></span>Beijo</button>
-            <button type="button" data-carinho="abraco"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart-handshake"/></svg></span>Abraço</button>
-            <button type="button" data-carinho="saudade"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#cloud-moon"/></svg></span>Saudade</button>
-          </div>
-          <p class="carinho-hoje"><span id="carinhoHoje"></span> <span class="carinho-enviado" id="carinhoEnviado" aria-live="polite"></span></p>
-          <div class="maos">
-            <button class="maos-coracao" id="maosCoracao" type="button" aria-label="Segure junto"><svg class="icone icone-24 icone-cheio" aria-hidden="true"><use href="icones.svg#heart"/></svg></button>
-            <p class="maos-status" id="maosStatus" aria-live="polite">Segure junto</p>
-            <p class="maos-msg" id="maosMsg" aria-live="polite"></p>
-            <p class="maos-total" id="maosTotal"></p>
-          </div>
-        </div>
-        <div class="casa-bloco distancia" id="casaDistancia">
+
+        <div class="casa-bloco distancia inicio-reencontro" id="casaDistancia">
           <div id="lugarReencontro"></div>
           <p class="juntos-ha" id="juntosHa" hidden></p>
           <div class="datas-especiais" id="datasEspeciais" hidden></div>
           <button type="button" class="linkbtn" data-abre="vMapa" id="distMapa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#map"/></svg> <span id="distMapaTxt">Mapa da saudade</span></button>
         </div>
-        <div class="casa-bloco pergunta-dia" id="casaPergunta">
-          <p class="pd-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#message-circle"/></svg> Pergunta de hoje</p>
-          <p class="pd-pergunta" id="pdPergunta"></p>
-          <p class="pd-aviso" id="pdAviso"></p>
-          <div id="pdForm">
-            <textarea id="pdResposta" maxlength="500" rows="3" aria-label="Sua resposta"></textarea>
-            <button class="secondary" id="pdResponder" type="button">Responder</button>
+
+        <section class="cartao-agora inicio-agora" id="casaAgora" hidden aria-label="Agora">
+          <p class="rotulo-sec">Agora</p>
+          <div id="casaAgoraSlots">
+            <div class="casa-bloco dengo-recebido" id="dengoRecebido" hidden role="alert">
+              <p class="dr-titulo" id="drTitulo"></p>
+              <ul class="dengo-itens" id="drItens"></ul>
+              <p class="dr-msg" id="drMsg" hidden></p>
+              <p class="dr-quando" id="drQuando"></p>
+              <p class="dr-dica" id="drDica" hidden></p>
+              <div class="dr-extras" id="drExtras"></div>
+              <div class="dr-acoes" id="drAcoes">
+                <button class="primary dr-indo" id="drIndo" type="button">Tô indo</button>
+                <button class="secondary" id="drNao" type="button">Agora não consigo</button>
+              </div>
+              <div class="dr-resp" id="drRespIndo" hidden>
+                <input type="text" id="drIndoTexto" maxlength="200" placeholder="Te ligo em 5 min" aria-label="Resposta (opcional)">
+                <button class="primary" id="drIndoEnviar" type="button">Enviar "Tô indo"</button>
+              </div>
+              <div class="dr-resp" id="drRespNao" hidden>
+                <div class="dr-frases" id="drFrases">
+                  <button type="button" class="chip-btn">Tô no trabalho, te ligo às 18h</button>
+                  <button type="button" class="chip-btn">Tô sem sinal agora</button>
+                  <button type="button" class="chip-btn">Já já eu volto, te amo</button>
+                </div>
+                <input type="text" id="drNaoTexto" maxlength="200" placeholder="Ou escreva…" aria-label="Resposta">
+                <button class="secondary" id="drNaoEnviar" type="button">Enviar</button>
+              </div>
+              <button class="primary" id="drAqui" type="button" hidden>Tô aqui quando precisar</button>
+              <p class="erro" id="erroDengoResp" role="alert"></p>
+            </div>
+            <div class="casa-bloco cuidado" id="casaCuidado" hidden>
+              <p class="cumprir-titulo" id="cuidadoTitulo"></p>
+              <ul class="cuidado-lista" id="cuidadoItens"></ul>
+              <div class="row">
+                <button class="secondary" id="cuidadoRecado" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#mail"/></svg> Deixar um recado</button>
+                <button class="secondary" id="cuidadoPensei" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#message-circle-heart"/></svg> Pensei em você</button>
+              </div>
+            </div>
+            <div class="casa-bloco clausulas" id="casaClausulas" hidden>
+              <ul class="clausulas-lista" id="clausulasLista"></ul>
+              <p class="erro" id="erroClausula" role="alert"></p>
+            </div>
+            <div class="casa-bloco espelho-aviso" id="casaEspelho" hidden>
+              <p class="cumprir-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#frame"/></svg> Uma cápsula de espelho abre hoje</p>
+              <button class="primary" type="button" data-abre="vCapsulas">Abrir</button>
+            </div>
+            <div class="casa-bloco recado calmo" id="casaRecado" hidden role="status">
+              <p class="cumprir-titulo" id="recadoTitulo"></p>
+              <p class="recado-texto" id="recadoTexto"></p>
+              <p class="config-dica">Não precisa responder. É só para você receber o carinho.</p>
+              <button class="secondary" id="recadoFechar" type="button">Fechar</button>
+            </div>
+            <div class="casa-bloco pergunta-agora" id="casaPerguntaAgora" hidden>
+              <p class="cumprir-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#message-circle"/></svg> Pergunta de hoje</p>
+              <p class="pd-pergunta" id="pdPerguntaResumo"></p>
+              <button class="secondary" id="pdAgoraAbrir" type="button">Responder</button>
+            </div>
           </div>
-          <p class="pd-minha" id="pdMinha" hidden></p>
-          <div class="pd-lado" id="pdLado" hidden></div>
-          <button class="linkbtn" id="pdEditar" type="button" hidden>Editar minha resposta</button>
-          <p class="erro" id="erroPergunta" role="alert"></p>
-        </div>
-        <h3 class="casa-mais" id="casaMais">Mais</h3>
-        <button type="button" class="casa-card" data-abre="vMural" id="cardMural"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#pencil"/></svg></span><b>Mural</b><span class="sub" id="cardMuralSub">Desenhos de vocês</span></button>
-        <button type="button" class="casa-card" data-abre="vDiario"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#flame"/></svg></span><b>Desafio do dia</b><span class="sub" id="cardDiarioSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vEnvelopes" id="cardEnv"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#mail"/></svg></span><b>Envelopes</b><span class="sub" id="cardEnvSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vSemana" id="cardSemana"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#calendar"/></svg></span><b>Semana</b><span class="sub" id="cardSemanaSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vCapsulas" id="cardCap"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#hourglass"/></svg></span><b>Cápsulas</b><span class="sub" id="cardCapSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vAlbum" id="cardAlbum"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#camera"/></svg></span><b>Álbum</b><span class="sub" id="cardAlbumSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vBaralho" id="cardBaralho"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#square-stack"/></svg></span><b>Baralho</b><span class="sub" id="cardBaralhoSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vConquistas" id="cardConq"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#trophy"/></svg></span><b>Conquistas</b><span class="sub" id="cardConqSub"></span></button>
-        <button type="button" class="casa-card" id="cardPoses" hidden><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#camera"/></svg></span><b>Poses</b><span class="sub">Ideias para fotos e vídeos</span></button>
-        <button type="button" class="casa-card" id="cardPosicoes" hidden><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#book-open"/></svg></span><b>Posições</b><span class="sub">Guia para escolher e sortear</span></button>
-        <button type="button" class="casa-card" data-abre="vMapa" id="cardMapa"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#map"/></svg></span><b>Mapa da saudade</b><span class="sub" id="cardMapaSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vHistoria" id="cardHistoria"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#scroll-text"/></svg></span><b>Nossa história</b><span class="sub" id="cardHistoriaSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vPote" id="cardPote"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#sparkles"/></svg></span><b>Pote de motivos</b><span class="sub" id="cardPoteSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vAbra" id="cardAbra"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#mail"/></svg></span><b>Abra quando…</b><span class="sub" id="cardAbraSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#book-open"/></svg></span><b>Diário</b><span class="sub" id="cardDiarioCasalSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vChamadas" id="cardChamadas"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#phone"/></svg></span><b>Nossas chamadas</b><span class="sub" id="cardChamadasSub">Tempo em chamada</span></button>
-        <button type="button" class="casa-card" data-abre="vPlaylist" id="cardPlaylist"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#music"/></svg></span><b>Nossa playlist</b><span class="sub" id="cardPlaylistSub"></span></button>
-        <button type="button" class="casa-card calmo" data-abre="vRecados" id="cardRecados"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#mail"/></svg></span><b>Recados</b><span class="sub" id="cardRecadosSub">Sem resposta, só carinho</span></button>
-        <button type="button" class="casa-card calmo" id="cardCompanhia"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#lamp"/></svg></span><b>Ficar junto em silêncio</b><span class="sub">Companhia sem conversa</span></button>
-        <button type="button" class="casa-card" data-abre="vCardapio" id="cardCardapio"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#sparkles"/></svg></span><b>Cardápio secreto</b><span class="sub" id="cardCardapioSub"></span></button>
-        <button type="button" class="casa-card" data-abre="vCofre"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart"/></svg></span><b>Cofre</b><span class="sub" id="cardCofreSub"></span></button>
+        </section>
+
+        <section class="inicio-secao" id="blocoPara">
+          <p class="rotulo-sec" id="paraOutroTitulo">Para você</p>
+          <div class="para-grid">
+            <button type="button" class="para-atalho" id="atalhoPensei"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#message-circle-heart"/></svg></span><span>Pensei em você</span></button>
+            <button type="button" class="para-atalho" data-abre="vRecados"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#mail"/></svg></span><span>Recado</span></button>
+            <button type="button" class="para-atalho" id="atalhoMaos"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart-handshake"/></svg></span><span>Mãos juntas</span></button>
+            <button type="button" class="para-atalho" id="atalhoHumor"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#smile"/></svg></span><span>Meu humor</span></button>
+          </div>
+        </section>
+
+        <section class="inicio-secao" id="blocoJogar">
+          <p class="rotulo-sec">Jogar</p>
+          <div class="lista-itens">
+            <button type="button" class="lista-linha" id="atalhoJogo">
+              <span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#dices"/></svg></span>
+              <span class="lista-txt"><span class="lista-titulo">Verdade ou desafio</span><span class="lista-info" id="inicioJogoInfo">Abrir partida</span></span>
+              <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
+            </button>
+            <button type="button" class="lista-linha" id="atalhoCampanha" hidden>
+              <span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#film"/></svg></span>
+              <span class="lista-txt"><span class="lista-titulo">Campanha de 3 noites</span><span class="lista-info" id="inicioCampInfo"></span></span>
+              <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
+            </button>
+          </div>
+        </section>
+
+        <section class="inicio-secao" id="blocoVoces">
+          <p class="rotulo-sec">Vocês dois</p>
+          <div class="lista-itens">
+            <button type="button" class="lista-linha" data-abre="vChamadas" id="cardChamadas">
+              <span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#phone"/></svg></span>
+              <span class="lista-txt"><span class="lista-titulo">Chamadas</span><span class="lista-info" id="cardChamadasSub">Tempo em chamada</span></span>
+              <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
+            </button>
+            <button type="button" class="lista-linha" data-abre="vCofre">
+              <span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart"/></svg></span>
+              <span class="lista-txt"><span class="lista-titulo">Cofre</span><span class="lista-info" id="cardCofreSub"></span></span>
+              <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
+            </button>
+            <button type="button" class="lista-linha" data-abre="vAlbum" id="cardAlbum">
+              <span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#camera"/></svg></span>
+              <span class="lista-txt"><span class="lista-titulo">Álbum</span><span class="lista-info" id="cardAlbumSub"></span></span>
+              <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
+            </button>
+            <button type="button" class="lista-linha" data-abre="vHistoria" id="cardHistoria">
+              <span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#scroll-text"/></svg></span>
+              <span class="lista-txt"><span class="lista-titulo">Linha do tempo</span><span class="lista-info" id="cardHistoriaSub"></span></span>
+              <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
+            </button>
+          </div>
+        </section>
+
+        <details class="tudo-box" id="tudoBox">
+          <summary class="lista-linha tudo-summary">
+            <span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#square-stack"/></svg></span>
+            <span class="lista-txt"><span class="lista-titulo">Tudo</span><span class="lista-info">Jogo, cuidado, memórias e ajustes</span></span>
+            <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
+          </summary>
+          <div class="tudo-conteudo">
+            <p class="rotulo-sec">Cuidado</p>
+            <p class="casa-bloco recado-lido calmo" id="casaRecadoLido" hidden></p>
+            <div class="casa-bloco dengo" id="casaDengo">
+              <div class="dengo-resposta" id="dengoResposta" hidden role="status">
+                <p class="dengo-resp-titulo" id="dengoRespTitulo"></p>
+                <p class="dengo-resp-texto" id="dengoRespTexto" hidden></p>
+                <button class="secondary" id="dengoRespOk" type="button">Ok</button>
+              </div>
+              <button class="primary dengo-botao" id="dengoPedir" type="button">Pedir dengo</button>
+              <div class="dengo-meu" id="dengoMeu" hidden>
+                <p class="dengo-esperando" id="dengoEsperando"></p>
+                <ul class="dengo-itens" id="dengoMeuItens"></ul>
+                <div class="row">
+                  <a class="wa" id="dengoAvisar" target="_blank" rel="noopener">Avisar no WhatsApp</a>
+                  <button class="secondary" id="dengoCancelar" type="button">Cancelar pedido</button>
+                </div>
+              </div>
+              <div class="dengo-grade" id="dengoGrade" role="group" aria-label="Pedidos rápidos"></div>
+              <div class="dengo-rodape">
+                <span class="dengo-conta" id="dengoConta"></span>
+                <button class="linkbtn" id="dengoEditar" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#pencil"/></svg> Editar pedidos</button>
+              </div>
+              <p class="erro" id="erroDengo" role="alert"></p>
+            </div>
+            <div class="casa-bloco humor" id="casaHumor">
+              <p class="humor-titulo">Como você se sente hoje?</p>
+              <div class="humor-caras" id="humorCaras" role="group" aria-label="Seu humor hoje">
+                <button type="button" data-v="1" aria-label="Péssimo" aria-pressed="false" class="humor-btn humor-1"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#angry"/></svg><span class="rotulo-humor">Péssimo</span></button>
+                <button type="button" data-v="2" aria-label="Mal" aria-pressed="false" class="humor-btn humor-2"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#frown"/></svg><span class="rotulo-humor">Mal</span></button>
+                <button type="button" data-v="3" aria-label="Mais ou menos" aria-pressed="false" class="humor-btn humor-3"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#meh"/></svg><span class="rotulo-humor">Mais ou menos</span></button>
+                <button type="button" data-v="4" aria-label="Bem" aria-pressed="false" class="humor-btn humor-4"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#smile"/></svg><span class="rotulo-humor">Bem</span></button>
+                <button type="button" data-v="5" aria-label="Ótimo" aria-pressed="false" class="humor-btn humor-5"><svg class="icone icone-24" aria-hidden="true"><use href="icones.svg#laugh"/></svg><span class="rotulo-humor">Ótimo</span></button>
+              </div>
+              <div class="humor-nota" id="humorNotaBox" hidden>
+                <input type="text" id="humorNota" maxlength="140" placeholder="Quer contar por quê?" aria-label="Quer contar por quê? (opcional)">
+                <button class="secondary" id="humorNotaSalvar" type="button">Salvar</button>
+              </div>
+              <p class="humor-salvo" id="humorSalvo" aria-live="polite"></p>
+              <div class="humor-outro" id="humorOutro">
+                <p class="humor-titulo" id="humorOutroTitulo"></p>
+                <div class="humor-caras outro" id="humorOutroCaras" hidden><span data-v="1" class="humor-op humor-1" title="Péssimo"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#angry"/></svg></span><span data-v="2" class="humor-op humor-2" title="Mal"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#frown"/></svg></span><span data-v="3" class="humor-op humor-3" title="Mais ou menos"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#meh"/></svg></span><span data-v="4" class="humor-op humor-4" title="Bem"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#smile"/></svg></span><span data-v="5" class="humor-op humor-5" title="Ótimo"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#laugh"/></svg></span></div>
+                <p class="humor-outro-nota" id="humorOutroNota" hidden></p>
+                <p class="extras-sub" id="humorOutroVazio" hidden></p>
+                <div class="humor-dicas" id="humorDicas"></div>
+                <ul class="humor-sug" id="humorSug"></ul>
+              </div>
+              <p class="erro" id="erroHumor" role="alert"></p>
+            </div>
+            <div class="casa-bloco bateria calmo" id="casaBateria">
+              <div id="bateriaDesligada">
+                <button class="secondary" id="bateriaLigar" type="button" aria-expanded="false"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#battery-low"/></svg> Estou sem bateria social</button>
+                <div id="bateriaOpcoes" hidden>
+                  <p class="config-dica">Sem jogo e sem cobrança por um tempo. Por quanto?</p>
+                  <div class="row">
+                    <button class="secondary" type="button" data-bat="2h">2 horas</button>
+                    <button class="secondary" type="button" data-bat="amanha">Até amanhã</button>
+                    <button class="secondary" type="button" data-bat="sempre">Até eu desligar</button>
+                  </div>
+                </div>
+              </div>
+              <div id="bateriaLigada" hidden>
+                <p class="bateria-texto" id="bateriaTexto"></p>
+                <button class="linkbtn" id="bateriaDesligar" type="button">Desligar</button>
+              </div>
+            </div>
+            <div class="casa-bloco carinhos" id="casaCarinhos">
+              <p class="carinho-resumo" id="carinhoResumo" hidden><span id="carinhoResumoTexto"></span> <button class="linkbtn" id="carinhoResumoFechar" type="button" aria-label="Fechar resumo"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#x"/></svg></button></p>
+              <div class="carinho-botoes" id="carinhoBotoes">
+                <button type="button" data-carinho="pensei"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#message-circle-heart"/></svg></span>Pensei em você</button>
+                <button type="button" data-carinho="beijo"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart"/></svg></span>Beijo</button>
+                <button type="button" data-carinho="abraco"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#heart-handshake"/></svg></span>Abraço</button>
+                <button type="button" data-carinho="saudade"><span class="ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#cloud-moon"/></svg></span>Saudade</button>
+              </div>
+              <p class="carinho-hoje"><span id="carinhoHoje"></span> <span class="carinho-enviado" id="carinhoEnviado" aria-live="polite"></span></p>
+              <div class="maos">
+                <button class="maos-coracao" id="maosCoracao" type="button" aria-label="Segure junto"><svg class="icone icone-24 icone-cheio" aria-hidden="true"><use href="icones.svg#heart"/></svg></button>
+                <p class="maos-status" id="maosStatus" aria-live="polite">Segure junto</p>
+                <p class="maos-msg" id="maosMsg" aria-live="polite"></p>
+                <p class="maos-total" id="maosTotal"></p>
+              </div>
+            </div>
+            <div class="casa-bloco pergunta-dia" id="casaPergunta">
+              <p class="pd-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#message-circle"/></svg> Pergunta de hoje</p>
+              <p class="pd-pergunta" id="pdPergunta"></p>
+              <p class="pd-aviso" id="pdAviso"></p>
+              <div id="pdForm">
+                <textarea id="pdResposta" maxlength="500" rows="3" aria-label="Sua resposta"></textarea>
+                <button class="secondary" id="pdResponder" type="button">Responder</button>
+              </div>
+              <p class="pd-minha" id="pdMinha" hidden></p>
+              <div class="pd-lado" id="pdLado" hidden></div>
+              <button class="linkbtn" id="pdEditar" type="button" hidden>Editar minha resposta</button>
+              <p class="erro" id="erroPergunta" role="alert"></p>
+            </div>
+            <div class="casa-bloco cardapio-aviso" id="casaCardapio" hidden>
+              <p class="cumprir-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#eye-off"/></svg> Cardápio secreto</p>
+              <p class="extras-sub">Marque o que você quer fazer nos dias juntos.</p>
+              <button class="primary" type="button" data-abre="vCardapio">Abrir o cardápio</button>
+            </div>
+
+            <p class="rotulo-sec">Jogo</p>
+            <div class="casa-bloco cumprir" id="casaCumprir" hidden>
+              <p class="cumprir-titulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#receipt"/></svg> A fatura chegou</p>
+              <p class="fatura-placar" id="faturaPlacar" hidden></p>
+              <p class="cumprir-dias" id="cumprirDias"></p>
+              <div class="fatura-resgate" id="faturaResgate" hidden role="status">
+                <p class="fatura-resgate-quem" id="resgateQuem"></p>
+                <p class="cumprir-sorteado" id="resgateTexto"></p>
+                <p class="fatura-resgate-timer" id="resgateTimer" hidden></p>
+                <div class="row">
+                  <button class="secondary" id="resgateIniciar" type="button" hidden></button>
+                  <button class="done" id="resgateQuitar" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#check"/></svg> Quitado</button>
+                  <button class="linkbtn" id="resgateFechar" type="button" hidden>Fechar</button>
+                </div>
+              </div>
+              <div class="chips fatura-filtros" role="radiogroup" aria-label="Filtrar a fatura">
+                <label class="chip"><input type="radio" name="filtroFatura" value="todos" checked><span>Tudo</span></label>
+                <label class="chip"><input type="radio" name="filtroFatura" value="vale"><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#ticket"/></svg> Vales</span></label>
+                <label class="chip"><input type="radio" name="filtroFatura" value="prenda"><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#receipt"/></svg> Prendas</span></label>
+                <label class="chip"><input type="radio" name="filtroFatura" value="promessa"><span><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#heart"/></svg> Promessas</span></label>
+              </div>
+              <div class="cumprir-sorteio" id="cumprirSorteio" hidden>
+                <p class="cumprir-sorteado" id="cumprirSorteado"></p>
+                <div class="row">
+                  <button class="done" id="cumprirSim" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#check"/></svg> Cumprimos</button>
+                  <button class="secondary" id="cumprirNao" type="button">Hoje não</button>
+                </div>
+              </div>
+              <button class="primary" id="cumprirSortear" type="button"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#gift"/></svg> Sortear do cofre</button>
+              <p class="extras-sub vazio" id="cumprirVazio" hidden>Nada guardado para o reencontro. Guardem cartas no cofre durante a distância.</p>
+              <ul class="cumprir-lista" id="cumprirLista"></ul>
+              <p class="extras-sub" id="cumprirFechados"></p>
+              <button class="linkbtn" id="cumprirAte" type="button">Até quando vocês ficam juntos?</button>
+              <p class="erro" id="erroCumprir" role="alert"></p>
+            </div>
+            <div class="lista-itens tudo-lista">
+              <button type="button" class="lista-linha" data-abre="vDiario"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#flame"/></svg></span><span class="lista-txt"><span class="lista-titulo">Desafio do dia</span><span class="lista-info" id="cardDiarioSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vBaralho" id="cardBaralho"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#square-stack"/></svg></span><span class="lista-txt"><span class="lista-titulo">Baralho</span><span class="lista-info" id="cardBaralhoSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vConquistas" id="cardConq"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#trophy"/></svg></span><span class="lista-txt"><span class="lista-titulo">Conquistas</span><span class="lista-info" id="cardConqSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" id="cardPoses" hidden><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#camera"/></svg></span><span class="lista-txt"><span class="lista-titulo">Poses</span><span class="lista-info">Ideias para fotos e vídeos</span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" id="cardPosicoes" hidden><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#book-open"/></svg></span><span class="lista-txt"><span class="lista-titulo">Posições</span><span class="lista-info">Guia para escolher e sortear</span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+            </div>
+
+            <p class="rotulo-sec">Memórias</p>
+            <div class="casa-bloco nosso-ano-aviso" id="casaNossoAno" hidden>
+              <p class="cumprir-titulo" id="casaNossoAnoTitulo"><svg class="icone icone-18" aria-hidden="true"><use href="icones.svg#sparkles"/></svg> Nosso ano</p>
+              <button class="primary" type="button" id="casaNossoAnoAbrir">Ver a retrospectiva</button>
+            </div>
+            <div class="casa-bloco mural-inicio" id="casaMural">
+              <p class="mural-inicio-titulo"><b>Mural</b> <span id="muralInicioTxt"></span></p>
+              <button type="button" class="mural-mini" id="muralInicioVer" hidden aria-label="Ver o desenho"></button>
+              <p class="extras-sub mural-legenda" id="muralInicioLegenda" hidden></p>
+              <button class="secondary" type="button" id="muralInicioDesenhar"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#pencil"/></svg> Desenhar</button>
+            </div>
+            <div class="lista-itens tudo-lista">
+              <button type="button" class="lista-linha" data-abre="vMural" id="cardMural"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#pencil"/></svg></span><span class="lista-txt"><span class="lista-titulo">Mural</span><span class="lista-info" id="cardMuralSub">Desenhos de vocês</span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vEnvelopes" id="cardEnv"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#mail"/></svg></span><span class="lista-txt"><span class="lista-titulo">Envelopes</span><span class="lista-info" id="cardEnvSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vCapsulas" id="cardCap"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#hourglass"/></svg></span><span class="lista-txt"><span class="lista-titulo">Cápsulas</span><span class="lista-info" id="cardCapSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vPote" id="cardPote"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#sparkles"/></svg></span><span class="lista-txt"><span class="lista-titulo">Pote de motivos</span><span class="lista-info" id="cardPoteSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vAbra" id="cardAbra"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#mail"/></svg></span><span class="lista-txt"><span class="lista-titulo">Abra quando…</span><span class="lista-info" id="cardAbraSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vDiarioCasal" id="cardDiarioCasal"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#book-open"/></svg></span><span class="lista-txt"><span class="lista-titulo">Diário</span><span class="lista-info" id="cardDiarioCasalSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+            </div>
+
+            <p class="rotulo-sec">Juntos</p>
+            <div class="lista-itens tudo-lista">
+              <button type="button" class="lista-linha" data-abre="vMapa" id="cardMapa"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#map"/></svg></span><span class="lista-txt"><span class="lista-titulo">Mapa da saudade</span><span class="lista-info" id="cardMapaSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vPlaylist" id="cardPlaylist"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#music"/></svg></span><span class="lista-txt"><span class="lista-titulo">Nossa playlist</span><span class="lista-info" id="cardPlaylistSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vSemana" id="cardSemana"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#calendar"/></svg></span><span class="lista-txt"><span class="lista-titulo">Semana</span><span class="lista-info" id="cardSemanaSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vRecados" id="cardRecados"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#mail"/></svg></span><span class="lista-txt"><span class="lista-titulo">Recados</span><span class="lista-info" id="cardRecadosSub">Sem resposta, só carinho</span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" id="cardCompanhia"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#lamp"/></svg></span><span class="lista-txt"><span class="lista-titulo">Ficar junto em silêncio</span><span class="lista-info">Companhia sem conversa</span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+              <button type="button" class="lista-linha" data-abre="vCardapio" id="cardCardapio"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#sparkles"/></svg></span><span class="lista-txt"><span class="lista-titulo">Cardápio secreto</span><span class="lista-info" id="cardCardapioSub"></span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+            </div>
+
+            <p class="rotulo-sec">Ajustes</p>
+            <div class="lista-itens tudo-lista">
+              <button type="button" class="lista-linha" data-abre="vPerfil"><span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#user"/></svg></span><span class="lista-txt"><span class="lista-titulo">Perfil e aparência</span><span class="lista-info">Tema, avatar e manual</span></span><svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg></button>
+            </div>
+          </div>
+        </details>
       </div>
       <section class="casa-vista" id="vDiario" hidden>
         <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>

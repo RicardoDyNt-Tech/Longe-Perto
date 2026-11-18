@@ -430,8 +430,10 @@
     erro("erroDado", "");
     gravarFresco(n => {
       const quem = n.dado ? 1 - n.dado.quem : n.vez;   // quem faz alterna a cada rolagem
-      n.dado = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), quem, faces: { acao: faces.acao.texto, parte: faces.parte.texto, tempo: faces.tempo.texto },
-        niveis: [faces.acao.nivel, faces.parte.nivel, faces.tempo.nivel], timer: null };
+      n.dado = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), quem, faces: { acao: faces.acao.texto, parte: faces.parte.texto, tempo: faces.tempo.texto },
+        niveis: [faces.acao.nivel, faces.parte.nivel, faces.tempo.nivel], timer: null
+      };
     });
   }
   function iniciarTimerDado() {
@@ -601,8 +603,10 @@
   // tudo o que está esperando os dois, com chave para o check da lista
   function promessas(e) {
     const l = [];
-    cofre.forEach(x => l.push({ chave: "cofre:" + x.id, texto: x.carta + (x.nota ? ` · ${x.nota}` : "") + (x.minutos ? ` (${x.minutos} min)` : ""), ic: TIPO_FATURA[x.tipo] || "heart",
-      feito: !!x.feito, cofre: x, tipo: TIPO_FATURA[x.tipo] ? x.tipo : "promessa", credor: x.credor === 0 || x.credor === 1 ? x.credor : null }));
+    cofre.forEach(x => l.push({
+      chave: "cofre:" + x.id, texto: x.carta + (x.nota ? ` · ${x.nota}` : "") + (x.minutos ? ` (${x.minutos} min)` : ""), ic: TIPO_FATURA[x.tipo] || "heart",
+      feito: !!x.feito, cofre: x, tipo: TIPO_FATURA[x.tipo] ? x.tipo : "promessa", credor: x.credor === 0 || x.credor === 1 ? x.credor : null
+    }));
     if (permitido("posicoes")) marcasPos.filter(m => m.marca === "testar").forEach(m => {
       const p = posicoes.find(x => x.id === m.posicao_id);
       if (p) l.push({ chave: "pos:" + p.id, texto: `Posição: ${p.nome}`, ic: "book-open", feito: !!e.lista["pos:" + p.id] });
@@ -626,7 +630,7 @@
       const total = e.juntosAte ? diasAte(e.juntosAte) - diasAte(e.juntosDesde) + 1 : null;
       dias = e.juntosAte && hoje === e.juntosAte ? `Último dia juntos · já cumpriram ${feitas} de ${l.length} promessas`
         : total && total > 0 ? `Dia ${dia} de ${total} juntos · ${feitas} de ${l.length} promessas cumpridas`
-        : `Dia ${dia} juntos · ${feitas} de ${l.length} promessas cumpridas`;
+          : `Dia ${dia} juntos · ${feitas} de ${l.length} promessas cumpridas`;
     }
     $("cumprirDias").textContent = dias;
     $("cumprirAte").hidden = !!e.juntosAte;
@@ -721,7 +725,7 @@
     const outro = cardapioEnviaram.filter(j => j !== eu);
     $("cardCardapioSub").textContent = !r ? "Desejos para o reencontro"
       : cardapioEnviaram.length >= 2 ? "Os dois enviaram"
-      : outro.length ? `${nomeDe(outro[0])} já enviou` : cardapioEnviaram.includes(eu) ? "Você já enviou" : "Marque o que você quer";
+        : outro.length ? `${nomeDe(outro[0])} já enviou` : cardapioEnviaram.includes(eu) ? "Você já enviou" : "Marque o que você quer";
   }
   function desenharCardapio() {
     if ($("vCardapio").hidden || !estado) return;
@@ -1465,7 +1469,7 @@
   // para uma não apagar a outra.
   async function gravarFresco(mudar) {
     if (!estado || !codigo) return;
-    try { const e = await buscarSala(codigo); if (e) estado = normalizar(e); } catch (err) {}
+    try { const e = await buscarSala(codigo); if (e) estado = normalizar(e); } catch (err) { }
     return gravar(mudar);
   }
 
@@ -1650,7 +1654,7 @@
       })
       .subscribe(status => {
         if (status === "SUBSCRIBED" && canal) {
-          canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => {}); marcarVisto(true);
+          canal.track({ jogador: idx, online_em: new Date().toISOString() }).catch(() => { }); marcarVisto(true);
           if (conexaoCaiu) { conexaoCaiu = false; $("conexao").hidden = true; if ($("erroJogo").textContent === MSG_CAIU) erro("erroJogo", ""); }
         }
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
@@ -1771,9 +1775,9 @@
     $("contadorDica").hidden = !(contando && st.r.length === 10);
     const txt = st.fase === "sem" ? "Quando é o reencontro?"
       : contando ? "Contagem para o reencontro"
-      : st.fase === "agora" ? "É agora"
-      : st.fase === "juntos" ? `Vocês estão juntos há ${textoJuntos(-st.falta)}`
-      : `O reencontro foi em ${dataBR(st.r)}. Marcar uma nova data?`;
+        : st.fase === "agora" ? "É agora"
+          : st.fase === "juntos" ? `Vocês estão juntos há ${textoJuntos(-st.falta)}`
+            : `O reencontro foi em ${dataBR(st.r)}. Marcar uma nova data?`;
     if ($("reencontroTxt").textContent !== txt) $("reencontroTxt").textContent = txt;
     // chegou a hora: oferece o modo Juntos (se a sala tiver e ele ainda não estiver ligado)
     $("contadorJuntos").hidden = !((st.fase === "agora" || st.fase === "juntos") && !juntos(e) && podeTrocarModo() && e.jogadores[1]);
@@ -2338,35 +2342,8 @@
     pa.textContent = ""; pa.appendChild(avatarEl(eu, "grande"));
     $("perfilNome").textContent = estado.jogadores[eu] || "";
     desenharEscolhaAvatar();
-    atualizarBotoesTema();
     if (refazForm || !$("manualForm").childElementCount) desenharManualForm();
     desenharManualOutro();
-  }
-  function temaAtual() {
-    try { const t = localStorage.getItem("lp-tema"); return (t === "noite" || t === "papel") ? t : "auto"; } catch (e) { return "auto"; }
-  }
-  function aplicarTema(val) {
-    if (val === "noite" || val === "papel") {
-      document.documentElement.setAttribute("data-tema", val);
-      try { localStorage.setItem("lp-tema", val); } catch (e) {}
-    } else {
-      document.documentElement.removeAttribute("data-tema");
-      try { localStorage.removeItem("lp-tema"); } catch (e) {}
-    }
-    atualizarBotoesTema();
-  }
-  function atualizarBotoesTema() {
-    const t = temaAtual();
-    document.querySelectorAll("#temaOpcoes [data-tema-val]").forEach(b => {
-      b.setAttribute("aria-pressed", String(b.dataset.temaVal === t));
-    });
-  }
-  if ($("temaOpcoes")) {
-    $("temaOpcoes").addEventListener("click", ev => {
-      const b = ev.target.closest("[data-tema-val]");
-      if (b) aplicarTema(b.dataset.temaVal);
-    });
-    atualizarBotoesTema();
   }
   function desenharEscolhaAvatar() {
     const a = avatarDe(eu), c = $("corGrade");
@@ -2660,7 +2637,8 @@
   function abrirPedidos() {
     const minhas = meusModelos();
     pedidosRascunho = (minhas.length ? minhas : padroes()).map(m => ({
-      id: minhas.length ? m.id : null, chave: m.chave || null, icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "💗", titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false }));
+      id: minhas.length ? m.id : null, chave: m.chave || null, icone: m.icone || iconeDeEmoji(m.emoji, "hand-heart"), emoji: m.emoji || "💗", titulo: m.titulo, detalhe: m.detalhe || "", ativo: m.ativo !== false
+    }));
     erro("erroPedidos", "");
     desenharPedidosEdit();
     $("dlgPedidos").showModal();
@@ -2709,8 +2687,10 @@
   }
   async function salvarPedidos() {
     if (!codigo || !pedidosRascunho) return;
-    const linhas = pedidosRascunho.map((p, i) => ({ id: p.id, sala: codigo, jogador: eu, chave: p.chave, icone: p.icone || iconeDeEmoji(p.emoji, "hand-heart"), emoji: (p.emoji || EMOJI_DE_ICONE[p.icone] || "💗").trim(), titulo: p.titulo.trim(),
-      detalhe: p.detalhe.trim() ? p.detalhe.slice(0, 120) : null, ordem: i + 1, ativo: p.ativo }));
+    const linhas = pedidosRascunho.map((p, i) => ({
+      id: p.id, sala: codigo, jogador: eu, chave: p.chave, icone: p.icone || iconeDeEmoji(p.emoji, "hand-heart"), emoji: (p.emoji || EMOJI_DE_ICONE[p.icone] || "💗").trim(), titulo: p.titulo.trim(),
+      detalhe: p.detalhe.trim() ? p.detalhe.slice(0, 120) : null, ordem: i + 1, ativo: p.ativo
+    }));
     if (linhas.some(l => l.titulo.length < 2)) return erro("erroPedidos", "Cada pedido precisa de um nome (2 letras ou mais).");
     if (!linhas.some(l => l.ativo)) return erro("erroPedidos", "Deixe pelo menos um pedido ativo.");
     $("pedidosSalvar").disabled = true;
@@ -2983,7 +2963,7 @@
   function comecarTraco(ev) {
     if (ev.button !== undefined && ev.button > 0) return;
     ev.preventDefault();
-    try { $("muralCanvas").setPointerCapture(ev.pointerId); } catch (err) {}
+    try { $("muralCanvas").setPointerCapture(ev.pointerId); } catch (err) { }
     if (!muralJuntos) guardarPasso();
     tracoAtual = { id: `${eu}-${Date.now().toString(36)}-${contTraco++}`, de: eu, cor: muralBorracha ? "apagar" : muralCor, esp: muralEsp, pts: [pontoDe(ev)] };
     tracos.push(tracoAtual);
@@ -3038,7 +3018,7 @@
   }
   let recebendoEstado = false;
   function mandarMural(p) {
-    try { canal && canal.send({ type: "broadcast", event: "mural", payload: { ...p, jogador: eu } }); } catch (err) {}
+    try { canal && canal.send({ type: "broadcast", event: "mural", payload: { ...p, jogador: eu } }); } catch (err) { }
   }
   function comecarJuntos() {
     muralJuntos = true; muralOutroNoJuntos = false;
@@ -3188,7 +3168,7 @@
     if (m.para === eu && !m.visto_em) {
       const agora = new Date().toISOString();
       linhaV5("murais", "UPDATE", { ...m, visto_em: agora });
-      sb.from("murais").update({ visto_em: agora }).eq("id", m.id).then(() => {}, () => {});
+      sb.from("murais").update({ visto_em: agora }).eq("id", m.id).then(() => { }, () => { });
     }
   }
   async function apagarMural() {
@@ -3386,8 +3366,38 @@
     x.style.background = a.cor;
     return x;
   }
+  function saudacaoHora() {
+    const h = new Date().getHours();
+    return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+  }
   function desenharCabecalho(e) {
-    $("ola").textContent = `Olá, ${e.jogadores[eu] || ""}`;
+    if ($("inicioData")) {
+      const fmt = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+      $("inicioData").textContent = fmt.format(new Date());
+    }
+    $("ola").textContent = `${saudacaoHora()}, ${e.jogadores[eu] || ""}`;
+    const outroNome = e.jogadores[1 - eu] || "";
+    if ($("inicioPresenca")) {
+      if (outroNome) {
+        $("inicioPresenca").hidden = false;
+        const online = presentes && presentes.has(1 - eu);
+        $("inicioPresenca").classList.toggle("on", !!online);
+        $("inicioPresenca").textContent = online ? `${outroNome} está no app agora` : outroNome;
+      } else {
+        $("inicioPresenca").hidden = true;
+      }
+    }
+    if ($("paraOutroTitulo")) {
+      $("paraOutroTitulo").textContent = outroNome ? `Para ${outroNome}` : "Para você";
+    }
+    if ($("inicioJogoInfo")) {
+      const p0 = (e.pontos && e.pontos[0]) || 0, p1 = (e.pontos && e.pontos[1]) || 0;
+      $("inicioJogoInfo").textContent = e.jogadores[1] ? `Placar ${p0} × ${p1} · rodada ${e.rodada || 1}` : "Abrir partida";
+    }
+    if ($("atalhoCampanha") && $("campanhaAbrir")) {
+      $("atalhoCampanha").hidden = $("campanhaAbrir").hidden;
+      if ($("inicioCampInfo")) $("inicioCampInfo").textContent = $("campanhaCapa") && $("campanhaCapa").textContent ? $("campanhaCapa").textContent : "Em andamento";
+    }
     const box = $("avatares");
     box.textContent = "";
     box.append(avatarEl(eu));
@@ -3396,10 +3406,62 @@
       coracao.appendChild(icone("heart", 16));
       box.append(coracao, avatarEl(1 - eu));
     }
+    atualizarCartaoAgora();
   }
+  function atualizarCartaoAgora() {
+    const agoraBox = $("casaAgora");
+    if (!agoraBox) return;
+    if ($("pdForm") && $("pdPergunta") && $("casaPerguntaAgora")) {
+      const temPerg = !$("pdForm").hidden && $("pdPergunta").textContent.trim().length > 0;
+      $("casaPerguntaAgora").hidden = !temPerg;
+      if (temPerg && $("pdPerguntaResumo")) $("pdPerguntaResumo").textContent = $("pdPergunta").textContent;
+    }
+    const prioridade = ["dengoRecebido", "casaCuidado", "casaClausulas", "casaEspelho", "casaRecado", "casaPerguntaAgora"];
+    let vencedor = null;
+    for (const id of prioridade) {
+      const elSlot = $(id);
+      if (elSlot && !elSlot.hidden) {
+        if (!vencedor) vencedor = elSlot;
+      }
+    }
+    for (const id of prioridade) {
+      const elSlot = $(id);
+      if (elSlot) elSlot.classList.toggle("agora-vencedor", elSlot === vencedor);
+    }
+    agoraBox.hidden = !vencedor;
+  }
+  (function iniciarAtalhosInicio() {
+    if ($("atalhoPensei")) $("atalhoPensei").addEventListener("click", () => {
+      const b = document.querySelector('#carinhoBotoes [data-carinho="pensei"]');
+      if (b) b.click();
+    });
+    if ($("atalhoMaos")) $("atalhoMaos").addEventListener("click", () => {
+      if ($("tudoBox")) $("tudoBox").open = true;
+      if ($("casaCarinhos")) $("casaCarinhos").scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    if ($("atalhoHumor")) $("atalhoHumor").addEventListener("click", () => {
+      if ($("tudoBox")) $("tudoBox").open = true;
+      if ($("casaHumor")) $("casaHumor").scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    if ($("pdAgoraAbrir")) $("pdAgoraAbrir").addEventListener("click", () => {
+      if ($("tudoBox")) $("tudoBox").open = true;
+      if ($("casaPergunta")) $("casaPergunta").scrollIntoView({ behavior: "smooth", block: "center" });
+      if ($("pdResposta")) $("pdResposta").focus();
+    });
+    if ($("atalhoJogo")) $("atalhoJogo").addEventListener("click", () => {
+      if ($("abaJogo")) $("abaJogo").click();
+    });
+    if ($("atalhoCampanha")) $("atalhoCampanha").addEventListener("click", () => {
+      if ($("campanhaAbrir")) $("campanhaAbrir").click();
+    });
+    const obsAgora = new MutationObserver(() => atualizarCartaoAgora());
+    ["dengoRecebido", "casaCuidado", "casaClausulas", "casaEspelho", "casaRecado", "pdForm"].forEach(id => {
+      if ($(id)) obsAgora.observe($(id), { attributes: true, attributeFilter: ["hidden"] });
+    });
+  })();
   // as fases seguintes acrescentam cartões (envelopes, semana, cápsulas…)
   const extrasDaCasa = [];
-  function desenharCasaExtras(e) { extrasDaCasa.forEach(f => f(e)); }
+  function desenharCasaExtras(e) { extrasDaCasa.forEach(f => f(e)); atualizarCartaoAgora(); }
 
   // Presence: cada aparelho anuncia { jogador, online_em } no canal da sala
   function sincronizarPresenca(c) {
@@ -3434,9 +3496,11 @@
   }
 
   // ---------- tabelas da v5 (só em sala fixa): carga, Realtime e redesenho ----------
-  const TABELAS_V5 = { envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
+  const TABELAS_V5 = {
+    envelopes: "criada_em", capsulas: "criada_em", apostas: "criada_em", observacoes: "confirmada_em", momentos: "criada_em", conquistas: "desbloqueada_em",
     carinhos: "criada_em", marcos: "data", motivos: "criada_em", abra_quando: "criada_em", respostas_dia: "dia",
-    dengos: "criada_em", murais: "criada_em" };
+    dengos: "criada_em", murais: "criada_em"
+  };
   const LIMITE_TABELA = { carinhos: 500, respostas_dia: 1000, dengos: 500, murais: 200 };   // tabelas que crescem sem parar: só as linhas mais novas
   const aoCarregar = {};                     // tabela -> fn() depois da primeira carga
   const dados = {};
@@ -4584,7 +4648,7 @@
   function contarVista(id, gravarNoBanco) {
     const vezes = (vistas.get(id) || 0) + 1;
     vistas.set(id, vezes);
-    if (gravarNoBanco) sb.from("cartas_vistas").upsert({ sala: codigo, carta_id: id, vezes, ultima_vez: new Date().toISOString() }, { onConflict: "sala,carta_id" }).then(() => {}, () => {});
+    if (gravarNoBanco) sb.from("cartas_vistas").upsert({ sala: codigo, carta_id: id, vezes, ultima_vez: new Date().toISOString() }, { onConflict: "sala,carta_id" }).then(() => { }, () => { });
   }
 
   // peso = max(0,2; 1/(1+vezes)), favorita × 3; aposentada fica fora; "jogar de novo" sai primeiro
@@ -4891,7 +4955,7 @@
       // e manda um sinal a cada batida; o outro vibra quando o sinal chega
       if (eu === 0) batidaMaos = setInterval(() => {
         vibrar(BATIMENTO);
-        try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "batida", jogador: eu } }); } catch (err) {}
+        try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "batida", jogador: eu } }); } catch (err) { }
       }, 1040);
       clearInterval(timerMaos);
       timerMaos = setInterval(desenharMaos, 250);
@@ -4912,7 +4976,7 @@
   function segurar(v) {
     if (!estado || !estado.fixa || maos[eu] === v) return;
     mudarMaos(eu, v, true);
-    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "mao", jogador: eu, segurando: v } }); } catch (err) {}
+    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "mao", jogador: eu, segurando: v } }); } catch (err) { }
   }
   // [0, 120, 100, 120, 700] em loop (espera, vibra, pausa, vibra, pausa): no navegador, vibra 120, pausa 100, vibra 120, a cada 1,04 s
   const BATIMENTO = [120, 100, 120];
@@ -5468,7 +5532,7 @@
     // na sala fixa, a frase vira um momento do álbum
     if (txt && estado.fixa) {
       sb.from("momentos").insert({ sala: codigo, carta_texto: `Nossa noite em ${dataBR(hojeISO())}`, carta_tipo: "encerramento", frase: txt, autor: nomeDe(eu) })
-        .select("*").single().then(({ data }) => { if (data) linhaV5("momentos", "INSERT", data); }, () => {});
+        .select("*").single().then(({ data }) => { if (data) linhaV5("momentos", "INSERT", data); }, () => { });
     }
   }
   function gravarFraseNoite(txt, id) {
@@ -5715,7 +5779,7 @@
   }
   const chaveToken = c => "lp-dono-" + c;
   const lerToken = c => { try { return localStorage.getItem(chaveToken(c)) || null; } catch (err) { return null; } };
-  const salvarToken = (c, t) => { try { localStorage.setItem(chaveToken(c), t); } catch (err) {} };
+  const salvarToken = (c, t) => { try { localStorage.setItem(chaveToken(c), t); } catch (err) { } };
   const formatarCodigo = t => (t.match(/.{1,4}/g) || []).join("-");
   const normalizarCodigo = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
@@ -5883,7 +5947,7 @@
     salvarToken(c, novo);
     mostrarCodigoDono(novo);
     // regrava a config para os outros aparelhos conferirem se ainda são donos
-    sb.rpc("sala_config_salvar", { p_sala: c, p_token: novo, p_config: config }).then(() => {}, () => {});
+    sb.rpc("sala_config_salvar", { p_sala: c, p_token: novo, p_config: config }).then(() => { }, () => { });
   }
   async function passarCoroa() {
     const outro = 1 - (donoIndice === null ? eu : donoIndice);
@@ -6047,7 +6111,7 @@
     ultimoVistoGravado = Date.now();
     const agora = new Date().toISOString();
     vistos[euReal] = agora;
-    sb.from("vistos").upsert({ sala: codigo, jogador: euReal, visto_em: agora }, { onConflict: "sala,jogador" }).then(() => {}, () => {});
+    sb.from("vistos").upsert({ sala: codigo, jogador: euReal, visto_em: agora }, { onConflict: "sala,jogador" }).then(() => { }, () => { });
   }
   // "há 5 min", "hoje às 21:43", "ontem às 23:10", "12/10 às 08:00"
   function quandoVisto(iso) {
@@ -6068,7 +6132,7 @@
 
   // depois de uma ação das fases 2 a 5 (as conquistas se ligam aqui na fase 7)
   const aposAcao = [];
-  function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) {} }); }
+  function depoisDeAcao() { aposAcao.forEach(f => { try { f(); } catch (err) { } }); }
   aposAcao.push(verificarConquistas);
 
   // ---------- salas recentes (só neste aparelho) ----------
@@ -6164,10 +6228,12 @@
 
   // ---------- placar ----------
   const placarVazio = (pontos, pulosMax) =>
-    ({ pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, duplas: 0, reverso: true, livresV: pulosMax, livresD: pulosMax,
-      // v5 (conquistas): por nível, eventos que saíram, pulos usados, efeitos Pesados até o fim, missões secretas Pesadas
-      porNivel: { leve: { v: 0, d: 0 }, criativo: { v: 0, d: 0 }, picante: { v: 0, d: 0 }, pesado: { v: 0, d: 0 } },
-      eventos: {}, pulosUsados: 0, efeitosPesados: 0, secretasPesadas: 0 });
+  ({
+    pontos: pontos || 0, verdades: 0, desafios: 0, prendas: 0, liberadas: 0, estrelas: 0, duelos: 0, sintonias: 0, duplas: 0, reverso: true, livresV: pulosMax, livresD: pulosMax,
+    // v5 (conquistas): por nível, eventos que saíram, pulos usados, efeitos Pesados até o fim, missões secretas Pesadas
+    porNivel: { leve: { v: 0, d: 0 }, criativo: { v: 0, d: 0 }, picante: { v: 0, d: 0 }, pesado: { v: 0, d: 0 } },
+    eventos: {}, pulosUsados: 0, efeitosPesados: 0, secretasPesadas: 0
+  });
 
   const novoAviso = texto => ({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), texto });
 
@@ -6615,7 +6681,7 @@
 
   // som e vibração: guardado neste aparelho
   let somLigado = lerLocal("lp-som") !== false;
-  const vibrar = padrao => { if (!somLigado) return; try { navigator.vibrate?.(padrao); } catch (err) {} };
+  const vibrar = padrao => { if (!somLigado) return; try { navigator.vibrate?.(padrao); } catch (err) { } };
 
   // aviso curto nos dois aparelhos (ex.: "Ana liberou Bia da prenda.")
   function mostrarAviso(a, inicial) {
@@ -6677,8 +6743,8 @@
       const quem = estado.jogadores[estado.vez];
       ag.textContent = c && c.tipo === "prenda" ? `Aguardando ${quem} cumprir a prenda.`
         : evento && c.tipo === "efeito" ? `Aguardando ${quem} aceitar ou recusar o efeito.`
-        : evento ? `Aguardando ${quem} concluir o evento.`
-        : `Aguardando ${quem} cumprir ou pular.`;
+          : evento ? `Aguardando ${quem} concluir o evento.`
+            : `Aguardando ${quem} cumprir ou pular.`;
     }
   }
 
@@ -6696,14 +6762,14 @@
     $("selo").textContent = !c.evento ? "" : c.tipo === "missao_dupla" ? "Evento especial · Missão em dupla" : c.tipo === "sequencia" ? "Evento especial · Em etapas" : "Evento especial";
     $("kind").textContent = c.recusa ? "Prenda por recusar o efeito"
       : c.motivo === "duelo" ? "Prenda por perder o duelo"
-      : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
-      : ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
-      : c.motivo === "final" ? "Prenda final"
-      : c.motivo === "sequencia" ? "Prenda por parar a carta em etapas"
-      : c.surpresa ? `Desafio surpresa de ${e.jogadores[c.surpresaDe] || ""}`
-      : c.reversa ? `Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
-      : c.cega ? `Escolhida às cegas · ${TIPO_NOMES[c.tipo] || c.tipo}`
-      : TIPO_NOMES[c.tipo] || c.tipo;
+        : c.motivo === "quebra" ? "Prenda por quebrar o efeito"
+          : ehPulo(c) ? (origemDe(c) === "desafio" ? "Prenda por pular o desafio" : "Prenda por pular a verdade")
+            : c.motivo === "final" ? "Prenda final"
+              : c.motivo === "sequencia" ? "Prenda por parar a carta em etapas"
+                : c.surpresa ? `Desafio surpresa de ${e.jogadores[c.surpresaDe] || ""}`
+                  : c.reversa ? `Reverso de ${e.jogadores[c.revertidaPor] || ""} · ${TIPO_NOMES[c.tipo] || c.tipo}`
+                    : c.cega ? `Escolhida às cegas · ${TIPO_NOMES[c.tipo] || c.tipo}`
+                      : TIPO_NOMES[c.tipo] || c.tipo;
     $("level").textContent = "Nível " + (LEVEL_NAMES[c.nivel] || c.nivel)
       + (c.autor ? ", carta de " + c.autor : "") + ", para " + nome
       + (c.tipo === "efeito" && c.rodadas ? ` · dura ${c.rodadas} ${c.rodadas === 1 ? "rodada" : "rodadas"}` : "")
@@ -6811,7 +6877,7 @@
     try {
       if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
       if (audio.state === "suspended") audio.resume();
-    } catch (err) {}
+    } catch (err) { }
   });
   function tom(freq, dur, depois = 0, tipo = "sine", vol = 0.15) {
     if (!audio || !somLigado) return;
@@ -6824,7 +6890,7 @@
       g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
       o.connect(g).connect(audio.destination);
       o.start(t0); o.stop(t0 + dur + 0.02);
-    } catch (err) {}
+    } catch (err) { }
   }
   const bipe = () => tom(880, 0.35, 0, "sine", 0.2);
   const somTique = () => tom(1400, 0.03, 0, "square", 0.05);
@@ -6889,7 +6955,7 @@
     const card = $("card");
     card.classList.remove("chegando"); void card.getBoundingClientRect(); card.classList.add("chegando");   // a carta chega virando
     const suave = !matchMedia("(prefers-reduced-motion: reduce)").matches;
-    try { card.scrollIntoView({ block: "start", behavior: suave ? "smooth" : "auto" }); } catch (err) {}
+    try { card.scrollIntoView({ block: "start", behavior: suave ? "smooth" : "auto" }); } catch (err) { }
     if (c.evento) { somEvento(); vibrar([100, 50, 100]); }
     else if (c.nivel === "pesado") vibrar([80, 60, 80, 60, 200]);
   }
@@ -7162,7 +7228,7 @@
     });
     $("dueloStatus").textContent = !iniciado ? "Qualquer um dos dois pode começar."
       : meu === null ? (dele === null ? "Quem ganhou? Os dois escolhem." : `${e.jogadores[1 - eu]} já escolheu. Sua vez de escolher.`)
-      : dele === null ? `Você escolheu "${rotulo(meu)}". Esperando ${e.jogadores[1 - eu]}…` : "";
+        : dele === null ? `Você escolheu "${rotulo(meu)}". Esperando ${e.jogadores[1 - eu]}…` : "";
   }
 
   // ---------- modo sintonia ----------
@@ -7644,8 +7710,10 @@
     $("dlgCampanhas").close();
     gravar(n => {
       if (n.campanha || n.roteiro || !placarZerado(n) || n.carta || n.vencedor !== null) return;
-      n.campanha = { id: x.id, nome: x.nome, icone: x.icone || iconeDeEmoji(x.emoji, "film"), emoji: x.emoji, noites: x.noites.map(nt => ({ titulo: nt.titulo, roteiro: nt.roteiro, regra: nt.regra || "" })),
-        noite: 0, comecou: hojeISO(), bonus: [0, 0], quebrou: [false, false], jogando: false, ultima: null, placares: [], concluida: false, nivelProx: null };
+      n.campanha = {
+        id: x.id, nome: x.nome, icone: x.icone || iconeDeEmoji(x.emoji, "film"), emoji: x.emoji, noites: x.noites.map(nt => ({ titulo: nt.titulo, roteiro: nt.roteiro, regra: nt.regra || "" })),
+        noite: 0, comecou: hojeISO(), bonus: [0, 0], quebrou: [false, false], jogando: false, ultima: null, placares: [], concluida: false, nivelProx: null
+      };
       iniciarNoite(n);
     });
   }
@@ -7970,11 +8038,13 @@
         if (tot > 0) {
           const rec = l.slice().sort((a, b) => (b.duracao_minutos || 0) - (a.duracao_minutos || 0))[0];
           const h = Math.floor(tot / 60);
-          telas.push({ icone: "phone", titulo: h ? `${h} ${h === 1 ? "hora" : "horas"} em chamada` : `${tot} minutos em chamada`,
-            linhas: [`${l.length} ${l.length === 1 ? "chamada" : "chamadas"}`, `Recorde: ${fmtDuracao(rec.duracao_minutos || 0)} em ${dataBR(diaBahia(rec.inicio))}`] });
+          telas.push({
+            icone: "phone", titulo: h ? `${h} ${h === 1 ? "hora" : "horas"} em chamada` : `${tot} minutos em chamada`,
+            linhas: [`${l.length} ${l.length === 1 ? "chamada" : "chamadas"}`, `Recorde: ${fmtDuracao(rec.duracao_minutos || 0)} em ${dataBR(diaBahia(rec.inicio))}`]
+          });
         }
       }
-    } catch (err) {}
+    } catch (err) { }
     if (c !== codigo) return null;
     // 2 e 3. partidas, placar geral e nível mais jogado por mês
     const ps = partidasDoPeriodo(ini);
@@ -8071,7 +8141,7 @@
   function ligarBateria(op) {
     const ate = op === "2h" ? new Date(Date.now() + 2 * 3600000).toISOString()
       : op === "amanha" ? new Date(`${somarDias(hojeISO(), 1)}T06:00:00-03:00`).toISOString()
-      : new Date(Date.now() + 30 * 86400000).toISOString();
+        : new Date(Date.now() + 30 * 86400000).toISOString();
     $("bateriaOpcoes").hidden = true;
     gravar(n => { n.bateria = { ...(n.bateria || {}), [eu]: ate }; n.aviso = novoAviso(`${n.jogadores[eu]} está sem bateria social`); });
   }
@@ -8196,7 +8266,7 @@
   let compBatida = null, compWake = null, compVigia = null;
   const compOutroAqui = () => compOutro.ativo && Date.now() - compOutro.visto < 45000 && presentes.has(1 - eu);
   function avisarCompanhia(ativo) {
-    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "companhia", jogador: eu, ativo } }); } catch (err) {}
+    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "companhia", jogador: eu, ativo } }); } catch (err) { }
   }
   async function entrarCompanhia() {
     if (!estado || !estado.fixa) return;
@@ -8227,7 +8297,7 @@
     $("compPlayer").textContent = "";
     avisarCompanhia(false);
     clearInterval(compBatida); clearInterval(compVigia); compBatida = compVigia = null;
-    try { compWake && compWake.release(); } catch (err) {}
+    try { compWake && compWake.release(); } catch (err) { }
     compWake = null;
   }
   // tempo com os dois na tela: grava quem saiu primeiro (para não somar duas vezes)
@@ -8253,7 +8323,7 @@
   function tocarLuz() {
     if (!emCompanhia || !compOutroAqui() || Date.now() - compUltimoToque < 30000) return;
     compUltimoToque = Date.now();
-    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "toqueComp", jogador: eu } }); } catch (err) {}
+    try { canal && canal.send({ type: "broadcast", event: "mao", payload: { evento: "toqueComp", jogador: eu } }); } catch (err) { }
     $("compDica").textContent = "Toque enviado";
     setTimeout(() => { if (emCompanhia) desenharCompanhia(); }, 2000);
   }
@@ -8323,8 +8393,8 @@
   function pararMic() {
     if (!mic) return;
     clearInterval(mic.timer);
-    try { mic.stream.getTracks().forEach(t => t.stop()); } catch (err) {}
-    try { mic.ctx.close(); } catch (err) {}
+    try { mic.stream.getTracks().forEach(t => t.stop()); } catch (err) { }
+    try { mic.ctx.close(); } catch (err) { }
     mic = null;
   }
   function volumeAgora() {
@@ -8441,8 +8511,8 @@
     $("silencioTempo").hidden = s.fase !== "valendo";
     $("silencioStatus").textContent = s.fase === "preparando" ? (ouvinte ? "" : `O celular de ${e.jogadores[s.ouvinte] || "vocês"} vai ouvir.`)
       : s.fase === "calibrando" ? "Calibrando: 3 segundos em silêncio…"
-      : s.fase === "valendo" ? `${quem} não pode fazer nenhum som.`
-      : s.fase === "falhou" ? "Falhou!" : `${quem} aguentou em silêncio! +2`;
+        : s.fase === "valendo" ? `${quem} não pode fazer nenhum som.`
+          : s.fase === "falhou" ? "Falhou!" : `${quem} aguentou em silêncio! +2`;
     $("silencioBox").classList.toggle("falhou", s.fase === "falhou");
     // falhou: tela vermelha piscando e vibração, uma vez em cada aparelho
     if (s.fase === "falhou" && falhouVisto !== s.chave) {
@@ -9040,7 +9110,7 @@
   async function instalar() {
     if (!pedidoInstalar) return;
     pedidoInstalar.prompt();
-    try { await pedidoInstalar.userChoice; } catch (err) {}
+    try { await pedidoInstalar.userChoice; } catch (err) { }
     pedidoInstalar = null;
     $("instalar").hidden = true;
   }
@@ -9109,7 +9179,7 @@
       const b = ev.target.closest && ev.target.closest("[data-abre]");
       if (b && $("jogo").contains(b)) mostrarVista(b.dataset.abre);
     });
-    addEventListener("pagehide", () => { segurar(false); try { if (canal) canal.untrack(); } catch (err) {} });
+    addEventListener("pagehide", () => { segurar(false); try { if (canal) canal.untrack(); } catch (err) { } });
     [0, 1].forEach(i => {
       $("cidadeBuscar" + i).addEventListener("click", () => buscarCidade(i));
       $("cidadeBusca" + i).addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); buscarCidade(i); } });
@@ -9154,7 +9224,7 @@
     document.querySelectorAll("#carinhoBotoes [data-carinho]").forEach(b => b.addEventListener("click", () => mandarCarinho(b.dataset.carinho)));
     $("carinhoResumoFechar").addEventListener("click", () => { resumoCarinhos = ""; desenharCarinhos(); });
     const coracao = $("maosCoracao");
-    coracao.addEventListener("pointerdown", ev => { ev.preventDefault(); try { coracao.setPointerCapture(ev.pointerId); } catch (err) {} segurar(true); });
+    coracao.addEventListener("pointerdown", ev => { ev.preventDefault(); try { coracao.setPointerCapture(ev.pointerId); } catch (err) { } segurar(true); });
     ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => coracao.addEventListener(t, () => segurar(false)));
     coracao.addEventListener("contextmenu", ev => ev.preventDefault());
     document.addEventListener("visibilitychange", () => { if (document.hidden) segurar(false); });
@@ -9283,9 +9353,9 @@
     $("pedidoNovo").addEventListener("click", novoPedido);
     setInterval(() => { if (vista === "casa" && !document.hidden) desenharDengo(); }, 60000);   // "há X min"
     $("navMostrar").addEventListener("click", () => recolherNav(false));
-    try { new ResizeObserver(() => document.documentElement.style.setProperty("--nav", $("navBaixo").offsetHeight + "px")).observe($("navBaixo")); } catch (err) {}
+    try { new ResizeObserver(() => document.documentElement.style.setProperty("--nav", $("navBaixo").offsetHeight + "px")).observe($("navBaixo")); } catch (err) { }
     // reserva o espaço da barra fixa no fim da página
-    try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) {}
+    try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) { }
     desenharRoleta();
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenharRoleta);
 
