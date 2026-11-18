@@ -102,7 +102,12 @@
   function iconeHtml(nome, tamanho = 20, classeExtra = "") {
     let id = (nome || "").trim();
     if (!id || !ICONES_CONHECIDOS.has(id)) {
-      if (id) console.warn(`[icone] Ícone não encontrado: "${nome}
+      if (id) console.warn(`[icone] Ícone não encontrado: "${nome}". Usando ponto neutro.`);
+      id = "ponto-neutro";
+    }
+    const cls = `icone icone-${tamanho}` + (classeExtra ? " " + classeExtra : "");
+    return `<svg class="${cls}" aria-hidden="true"><use href="icones.svg#${id}"></use></svg>`;
+  }
 
   // Mapeamento e compatibilidade reversa de ícones/emojis (Fase 4)
   const ICONE_DE_EMOJI = {
@@ -146,12 +151,6 @@
   const ROTULO_PLAYLIST = { "🤍": "Calma", "HOT playlist 🔥": "Quente", "🔥": "Quente", "🍀": "Sorte" };
   const rotuloPlaylist = p => (p && ROTULO_PLAYLIST[p]) || p || "";
   const DENGO_ICONES = ["hand-heart", "heart", "phone", "message-circle", "bed", "coffee", "utensils", "film", "moon", "sparkles", "gift", "music", "sun", "flame", "eye-off"];
-". Usando ponto neutro.`);
-      id = "ponto-neutro";
-    }
-    const cls = `icone icone-${tamanho}` + (classeExtra ? " " + classeExtra : "");
-    return `<svg class="${cls}" aria-hidden="true"><use href="icones.svg#${id}"></use></svg>`;
-  }
   const salvarLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
   const lerLocal = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
   const mesmoNome = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
@@ -9371,67 +9370,6 @@
     $("trilhaNossa").addEventListener("click", () => alternarNossa(idMusicaAtual(estado && estado.musica)));
     $("soNossas").addEventListener("change", () => { const v = $("soNossas").checked; gravar(n => { n.playlistSoNossas = v; }); });
     $("encerrarNoiteFim").addEventListener("click", encerrarNoite);
-    $("noiteEnviar").addEventListener("click", () => enviarFraseNoite(false));
-    $("noitePular").addEventListener("click", () => enviarFraseNoite(true));
-    $("noiteDormir").addEventListener("click", boaNoite);
-    $("noiteCancelar").addEventListener("click", cancelarNoite);
-    $("pdResponder").addEventListener("click", responderPergunta);
-    $("pdEditar").addEventListener("click", () => { editandoResposta = true; $("pdResposta").value = ""; desenharPergunta(); $("pdResposta").focus(); });
-    $("diarioMais").addEventListener("click", () => { paginasDiario++; desenharDiarioCasal(); });
-    $("motivoTirar").addEventListener("click", tirarMotivo);
-    $("motivoPapel").addEventListener("click", () => { $("motivoPapel").hidden = true; });
-    $("novaAbra").addEventListener("click", () => abrirNovaAbra(null));
-    $("formAbra").addEventListener("submit", salvarAbra);
-    $("cancelarAbra").addEventListener("click", () => $("dlgAbra").close());
-    $("abraOcasiao").addEventListener("change", () => { $("abraOutraLinha").hidden = $("abraOcasiao").value !== "outra"; });
-    $("abraTexto").addEventListener("input", () => { $("abraContador").textContent = `${$("abraTexto").value.length}/1000`; });
-    $("fecharAbraLer").addEventListener("click", () => $("dlgAbraLer").close());
-    $("formMarco").addEventListener("submit", salvarMarco);
-    $("cancelarMarco").addEventListener("click", () => $("dlgMarco").close());
-    document.querySelectorAll("#marcoIcones [data-icone]").forEach(b => b.addEventListener("click", () => {
-      $("marcoIcone").value = b.dataset.icone;
-      document.querySelectorAll("#marcoIcones .btn-icone-opcao").forEach(x => x.classList.remove("selecionado"));
-      b.classList.add("selecionado");
-      if (!$("marcoTitulo").value.trim() && b.dataset.titulo) $("marcoTitulo").value = b.dataset.titulo;
-    }));
-    document.querySelectorAll("#carinhoBotoes [data-carinho]").forEach(b => b.addEventListener("click", () => mandarCarinho(b.dataset.carinho)));
-    $("carinhoResumoFechar").addEventListener("click", () => { resumoCarinhos = ""; desenharCarinhos(); });
-    const coracao = $("maosCoracao");
-    coracao.addEventListener("pointerdown", ev => { ev.preventDefault(); try { coracao.setPointerCapture(ev.pointerId); } catch (err) { } segurar(true); });
-    ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => coracao.addEventListener(t, () => segurar(false)));
-    coracao.addEventListener("contextmenu", ev => ev.preventDefault());
-    document.addEventListener("visibilitychange", () => { if (document.hidden) segurar(false); });
-    $("camera").addEventListener("change", mudarCamera);
-    $("navRecolher").addEventListener("click", () => recolherNav(true));
-    $("dengoPedir").addEventListener("click", botaoPedir);
-    $("seqFeito").addEventListener("click", feitoEtapa);
-    $("modoBtn").addEventListener("click", trocarModo);
-    $("chamadaBtn").addEventListener("click", apertarChamada);
-    $("callCard").querySelectorAll("[data-h]").forEach(b => b.addEventListener("click", () => votarComoFoi(b.dataset.h)));
-    document.addEventListener("pointerdown", toqueChamada, true);
-    presencaMudou.push(conferirPresencaChamada);
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden || !codigo) return;
-      if (presencaContaChamada()) sinalChamada("presenca");   // ao voltar, sinal na hora
-      else if (botaoLigado()) sinalChamada("botao");
-    });
-    $("chamadaRegistrar").addEventListener("click", abrirChamadaPassada);
-    $("chViagemSalvar").addEventListener("click", salvarViagem);
-    $("formChamadaPassada").addEventListener("submit", salvarChamadaPassada);
-    $("chPassadaCancelar").addEventListener("click", () => $("dlgChamadaPassada").close());
-    document.querySelectorAll('input[name="chDia"]').forEach(r => r.addEventListener("change", () => { $("chDataLinha").hidden = document.querySelector('input[name="chDia"]:checked').value !== "outro"; }));
-    document.querySelectorAll("#chAtalhos [data-min]").forEach(b => b.addEventListener("click", () => { const m = Number(b.dataset.min); $("chHoras").value = Math.floor(m / 60); $("chMinutos").value = m % 60; }));
-    $("formChamadaAjustar").addEventListener("submit", ev => salvarAjuste(ev, false));
-    $("chAjustarCerto").addEventListener("click", () => salvarAjuste(null, true));
-    $("chamadasMais").addEventListener("click", () => { paginasChamadas++; desenharChamadas(); });
-    $("contadorJuntos").addEventListener("click", trocarModo);
-    $("umCelular").addEventListener("change", mudarUmCelular);
-    $("passeOk").addEventListener("click", confirmarPasse);
-    $("cumprirSortear").addEventListener("click", sortearPromessa);
-    $("cumprirSim").addEventListener("click", () => cumprirSorteada(true));
-    $("cumprirNao").addEventListener("click", () => cumprirSorteada(false));
-    $("cumprirAte").addEventListener("click", abrirJuntosAte);
-    $("formJuntosAte").addEventListener("submit", salvarJuntosAte);
     ["pointerup", "pointercancel", "pointerleave"].forEach(t => $("card").addEventListener(t, () => { if (segurandoCarta) segurarCarta(false); }));
     $("card").addEventListener("contextmenu", ev => { if ($("card").dataset.secreta) ev.preventDefault(); });
     $("silencioBtn").addEventListener("click", ligarSilencio);
