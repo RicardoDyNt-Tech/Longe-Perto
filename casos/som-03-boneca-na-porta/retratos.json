@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "marcelo",
+      "semente": 1022,
+      "prompt": "Brazilian man, 47 years old, contemporary, light skin, receding hair, polo shirt, big wristwatch, car key in hand, forced calm smile, cold porch light at night."
+    },
+    {
+      "id": "tania",
+      "semente": 1029,
+      "prompt": "Brazilian woman, 45 years old, contemporary, light brown skin, messy bun, blue hospital scrubs, staff badge, exhausted worried face, cold light."
+    },
+    {
+      "id": "luan",
+      "semente": 1036,
+      "prompt": "Brazilian young man, 19 years old, contemporary, light skin, shaggy hair, anime hoodie, gaming headset, sleepless eyes, screen glow."
+    },
+    {
+      "id": "irma",
+      "semente": 1043,
+      "prompt": "Brazilian woman of Polish descent, 70 years old, contemporary, fair wrinkled skin, white hair in a bun, crochet shawl, artisan hands, gentle sad eyes, dim light."
+    }
+  ]
+}

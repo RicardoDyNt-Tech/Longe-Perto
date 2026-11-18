@@ -1,0 +1,27 @@
+{
+  "estilo": "Vintage studio portrait photograph from the 1940s of a fictional adult, head and shoulders, centered, facing the camera, plain mottled studio backdrop, soft window light, sepia toned black and white, fine film grain, period-accurate hairstyle and clothing, sharp focus. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "iracema",
+      "semente": 1019,
+      "prompt": "Brazilian woman, 46 years old, early 1950s style, light skin, dark hair in an elegant updo, green silk dress, bead necklace, lace gloves, composed expression."
+    },
+    {
+      "id": "fausto",
+      "semente": 1026,
+      "prompt": "Brazilian man, 55 years old, early 1950s style, light skin, heavy build, gray mustache, rumpled dark suit, unlit cigar, sour face."
+    },
+    {
+      "id": "nina",
+      "semente": 1033,
+      "prompt": "Brazilian woman, 26 years old, early 1950s style, fair skin, platinum blonde curls, red lipstick, faux fur coat, theatrical confident look."
+    },
+    {
+      "id": "ezequiel",
+      "semente": 1040,
+      "prompt": "Brazilian man, 38 years old, early 1950s style, dark skin, short hair, white railway steward uniform with golden buttons, polite but tense."
+    }
+  ]
+}

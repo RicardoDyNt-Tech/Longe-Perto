@@ -1,0 +1,22 @@
+{
+  "estilo": "Photorealistic police booking photo of a fictional adult, head and shoulders, centered, facing the camera, neutral expression, plain warm gray wall with faint horizontal height-chart lines behind, soft even flash lighting, 85mm lens, sharp focus, natural skin texture, muted warm colors, slightly desaturated, subtle film grain. No text, no letters, no numbers, no watermark, no placard.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "valdir",
+      "semente": 1027,
+      "prompt": "Brazilian man, 63 years old, dark brown skin, gray mustache, navy blue doorman uniform shirt, walkie-talkie clipped to the chest, calm face."
+    },
+    {
+      "id": "thiago",
+      "semente": 1034,
+      "prompt": "Brazilian man, 36 years old, light skin, short brown hair, gray gym t-shirt, earbuds cable around the neck, annoyed expression."
+    },
+    {
+      "id": "rafa",
+      "semente": 1041,
+      "prompt": "Brazilian man, 27 years old, brown skin, curly black hair, red delivery jacket, holding a motorcycle helmet, tired eyes."
+    }
+  ]
+}

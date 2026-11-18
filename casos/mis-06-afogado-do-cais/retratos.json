@@ -1,0 +1,27 @@
+{
+  "estilo": "Vintage studio portrait photograph from the 1940s of a fictional adult, head and shoulders, centered, facing the camera, plain mottled studio backdrop, soft window light, sepia toned black and white, fine film grain, period-accurate hairstyle and clothing, sharp focus. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "afonso",
+      "semente": 1022,
+      "prompt": "Brazilian man, 50 years old, 1930s style, light skin, heavy jowls, bowler hat, wool three-piece suit with pocket watch chain, smug expression."
+    },
+    {
+      "id": "lola",
+      "semente": 1029,
+      "prompt": "Brazilian woman, 45 years old, 1930s style, olive skin, dark curly hair pinned up, hoop earrings, apron over a calico dress, tough look."
+    },
+    {
+      "id": "bento",
+      "semente": 1036,
+      "prompt": "Brazilian man, 33 years old, 1930s style, dark skin, muscular arms, striped sleeveless shirt, dock hook on belt, guarded face."
+    },
+    {
+      "id": "rocha",
+      "semente": 1043,
+      "prompt": "Brazilian man, 36 years old, 1930s style, light brown skin, trimmed mustache, khaki customs guard uniform and cap, rigid posture."
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "estilo": "Realistic fantasy character portrait of a fictional adult, head and shoulders, centered, facing the camera, painterly realism, medieval-fantasy clothing, soft candlelight, dark neutral background, muted earthy colors, detailed face, no armor helmet covering the face. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "malric",
+      "semente": 1023,
+      "prompt": "Fantasy royal chancellor, 61 years old, pale skin, thin silver hair, black velvet robe, heavy gold chain of office, hands folded, polite cold smile, painterly throne hall."
+    },
+    {
+      "id": "aelis",
+      "semente": 1030,
+      "prompt": "Fantasy princess, 21 years old, warm brown skin, long loose black hair, white coronation gown, tear-reddened eyes, quiet strength, painterly chapel candlelight."
+    },
+    {
+      "id": "edmar",
+      "semente": 1037,
+      "prompt": "Fantasy duke general, 44 years old, fair skin, trimmed red beard, campaign armor, red cloak, ambitious confident face, painterly war camp."
+    },
+    {
+      "id": "hadrin",
+      "semente": 1044,
+      "prompt": "Fantasy goldsmith, 58 years old, olive skin, bald head, jeweler's loupe in eye, leather apron with gold flecks, nervous careful face, painterly workshop."
+    },
+    {
+      "id": "kestrel",
+      "semente": 1051,
+      "prompt": "Fantasy royal guard, 33 years old, dark skin, close-cropped hair, ceremonial armor, spear, burn scar on hand, rigid loyal face, painterly chapel door."
+    },
+    {
+      "id": "maud",
+      "semente": 1058,
+      "prompt": "Fantasy high priestess, 50 years old, light skin, golden veil, white habit, pearl rosary, serene severe face, painterly chapel."
+    }
+  ]
+}

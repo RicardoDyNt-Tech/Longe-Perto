@@ -1,0 +1,32 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "valter",
+      "semente": 1016,
+      "prompt": "Brazilian man, 61 years old, contemporary small colonial town, light skin, gold-rimmed glasses, purple brotherhood cape over a suit, pious expression hiding fear, candlelit church."
+    },
+    {
+      "id": "lino",
+      "semente": 1023,
+      "prompt": "Brazilian priest, 48 years old, contemporary, medium brown skin, black cassock with purple stole, tired gentle face, candle procession at night."
+    },
+    {
+      "id": "zelia",
+      "semente": 1030,
+      "prompt": "Brazilian woman, 66 years old, contemporary, light skin, black veil, dark Veronica costume holding a cloth, strong solemn face, candlelight."
+    },
+    {
+      "id": "tonho",
+      "semente": 1037,
+      "prompt": "Brazilian man, 44 years old, contemporary rural town, dark skin, straw hat, gunpowder-stained t-shirt, hand-rolled cigarette, wary eyes, night sky with smoke."
+    },
+    {
+      "id": "mateus",
+      "semente": 1044,
+      "prompt": "Brazilian man, 29 years old, contemporary, light brown skin, bar staff shirt, dish towel on shoulder, restless look, string lights at night."
+    }
+  ]
+}

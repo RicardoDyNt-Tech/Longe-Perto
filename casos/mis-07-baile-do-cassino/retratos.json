@@ -1,0 +1,32 @@
+{
+  "estilo": "Vintage studio portrait photograph from the 1940s of a fictional adult, head and shoulders, centered, facing the camera, plain mottled studio backdrop, soft window light, sepia toned black and white, fine film grain, period-accurate hairstyle and clothing, sharp focus. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "helena",
+      "semente": 1023,
+      "prompt": "Brazilian woman, 24 years old, 1940s style, fair skin, glossy chestnut waves, ivory satin evening gown, golden feathered masquerade mask held in hand, cigarette holder, cool gaze."
+    },
+    {
+      "id": "irene",
+      "semente": 1030,
+      "prompt": "Brazilian woman, 27 years old, 1940s style, medium brown skin, sleek black hair, black sequined dress, silver masquerade mask, singer at a vintage microphone."
+    },
+    {
+      "id": "tavares",
+      "semente": 1037,
+      "prompt": "Brazilian man, 57 years old, 1940s style, ruddy light skin, white mustache, military dress uniform with medals, holding a whisky glass, angry expression."
+    },
+    {
+      "id": "kranz",
+      "semente": 1044,
+      "prompt": "German-Brazilian man, 49 years old, 1940s style, pale skin, thinning blond hair, rimless glasses, tuxedo, calculating expression."
+    },
+    {
+      "id": "dirceu",
+      "semente": 1051,
+      "prompt": "Brazilian man, 30 years old, 1940s style, light brown skin, neat side-parted hair, croupier vest and bow tie, holding a roulette rake, nervous smile."
+    }
+  ]
+}

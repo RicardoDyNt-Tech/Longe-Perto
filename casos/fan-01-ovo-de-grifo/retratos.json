@@ -1,0 +1,22 @@
+{
+  "estilo": "Realistic fantasy character portrait of a fictional adult, head and shoulders, centered, facing the camera, painterly realism, medieval-fantasy clothing, soft candlelight, dark neutral background, muted earthy colors, detailed face, no armor helmet covering the face. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "oswin",
+      "semente": 1019,
+      "prompt": "Fantasy knight, 34 years old, light skin, short auburn hair, scar on chin, polished light plate armor, green cloak, proud ambitious gaze, painterly medieval castle interior by candlelight."
+    },
+    {
+      "id": "brom",
+      "semente": 1026,
+      "prompt": "Fantasy old beastmaster, 61 years old, ruddy weathered skin, gray braided beard, scratched leather apron, thick gloves, gentle tired eyes, painterly style."
+    },
+    {
+      "id": "lyra",
+      "semente": 1033,
+      "prompt": "Fantasy young woman, 19 years old, olive skin, short black hair, gray wool hood, rope-callused hands, alert defiant look, bell tower at night, painterly style."
+    }
+  ]
+}

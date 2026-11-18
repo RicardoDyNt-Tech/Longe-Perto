@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic police booking photo of a fictional adult, head and shoulders, centered, facing the camera, neutral expression, plain warm gray wall with faint horizontal height-chart lines behind, soft even flash lighting, 85mm lens, sharp focus, natural skin texture, muted warm colors, slightly desaturated, subtle film grain. No text, no letters, no numbers, no watermark, no placard.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "rose",
+      "semente": 1023,
+      "prompt": "Brazilian woman, 47 years old, light brown skin, sleek dark bob haircut, black elegant dress, small earpiece in one ear, professional smile."
+    },
+    {
+      "id": "edson",
+      "semente": 1030,
+      "prompt": "Brazilian man, 52 years old, tan skin, receding black hair, tight navy suit with a loose tie, red cheeks, uneasy smile."
+    },
+    {
+      "id": "kaique",
+      "semente": 1037,
+      "prompt": "Brazilian man, 29 years old, dark skin, black cap, big headphones around the neck, black t-shirt, confident look."
+    },
+    {
+      "id": "lucas",
+      "semente": 1044,
+      "prompt": "Brazilian man, 19 years old, light skin, short wavy hair, white shirt with black waiter vest, shy expression."
+    }
+  ]
+}

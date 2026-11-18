@@ -1,0 +1,27 @@
+{
+  "estilo": "Realistic fantasy character portrait of a fictional adult, head and shoulders, centered, facing the camera, painterly realism, medieval-fantasy clothing, soft candlelight, dark neutral background, muted earthy colors, detailed face, no armor helmet covering the face. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "seraphine",
+      "semente": 1026,
+      "prompt": "Fantasy noblewoman, 42 years old, porcelain skin, dark auburn hair under a lace veil, lilac silk gown, silver lily brooch, delicate face with cold eyes, painterly candlelit castle."
+    },
+    {
+      "id": "bram",
+      "semente": 1033,
+      "prompt": "Fantasy young lord, 23 years old, light skin, tousled blond hair, unbuttoned red doublet, bone dice on belt, reckless grin, painterly barracks light."
+    },
+    {
+      "id": "quill",
+      "semente": 1040,
+      "prompt": "Fantasy alchemist, 66 years old, wrinkled tan skin, wild white hair, green-lensed spectacles, stained robe, vials on belt, curious eccentric face, glowing potions, painterly style."
+    },
+    {
+      "id": "tess",
+      "semente": 1047,
+      "prompt": "Fantasy castle cook, 48 years old, ruddy skin, red kerchief, flour-dusted arms, linen apron, frightened kind face, kitchen hearth, painterly style."
+    }
+  ]
+}

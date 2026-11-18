@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "renata",
+      "semente": 1016,
+      "prompt": "Brazilian woman, 30 years old, contemporary, light skin, dark ponytail, black jacket with reflective stripes, yellow backpack with plush keychain, flashlight, abandoned building at night."
+    },
+    {
+      "id": "juliana",
+      "semente": 1023,
+      "prompt": "Brazilian woman, 27 years old, contemporary, medium brown skin, wool beanie, headlamp, hiking boots, scared eyes, dark corridor."
+    },
+    {
+      "id": "caio",
+      "semente": 1030,
+      "prompt": "Brazilian man, 25 years old, contemporary, light brown skin, thin beard, gray hoodie, camera on chest rig, nervous face, dark corridor."
+    },
+    {
+      "id": "oto",
+      "semente": 1037,
+      "prompt": "Brazilian man, 68 years old, contemporary rural, weathered dark skin, old raincoat, battery flashlight, thin dog beside him, suspicious stare, ruins at night."
+    }
+  ]
+}

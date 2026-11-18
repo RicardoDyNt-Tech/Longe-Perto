@@ -1,0 +1,32 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "fabio",
+      "semente": 1021,
+      "prompt": "Brazilian man, 45 years old, contemporary, light skin, short graying hair, white coat over gym clothes, hospital badge, bloodshot eyes, cold fluorescent corridor at night."
+    },
+    {
+      "id": "cristina",
+      "semente": 1028,
+      "prompt": "Brazilian woman, 52 years old, contemporary, light skin, blonde shoulder-length hair, knit coat, pearl earrings, composed sorrow, dim hospital light."
+    },
+    {
+      "id": "henrique",
+      "semente": 1035,
+      "prompt": "Brazilian man, 34 years old, contemporary, light skin, dark hair, suit without tie, rolling suitcase, phone in hand, anxious look, airport light at night."
+    },
+    {
+      "id": "debora",
+      "semente": 1042,
+      "prompt": "Brazilian woman, 39 years old, contemporary, dark skin, braided hair tied up, green scrubs, staff badge, frightened eyes, harsh fluorescent light."
+    },
+    {
+      "id": "murilo",
+      "semente": 1049,
+      "prompt": "Brazilian man, 50 years old, contemporary, medium brown skin, surgical cap, mask around neck, tired stern face, operating room light."
+    }
+  ]
+}

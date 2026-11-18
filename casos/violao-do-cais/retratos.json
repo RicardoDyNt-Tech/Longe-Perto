@@ -1,0 +1,32 @@
+{
+  "estilo": "Photorealistic police booking photo of a fictional adult, head and shoulders, centered, facing the camera, neutral expression, plain warm gray wall with faint horizontal height-chart lines behind, soft even flash lighting, 85mm lens, sharp focus, natural skin texture, muted warm colors, slightly desaturated, subtle film grain. No text, no letters, no numbers, no watermark, no placard.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "helena",
+      "semente": 1101,
+      "prompt": "Brazilian woman, 52 years old, light tan skin, gray hair pulled back in a neat bun, red-framed glasses, dark teal blouse, composed and serious."
+    },
+    {
+      "id": "caio",
+      "semente": 1102,
+      "prompt": "Brazilian man, 34 years old, brown skin, short curly black hair, short beard, worn brown leather work apron over a gray t-shirt, a yellow pencil tucked behind his ear, calloused craftsman look."
+    },
+    {
+      "id": "marlene",
+      "semente": 1103,
+      "prompt": "Black Brazilian woman, 61 years old, dark brown skin, short white-gray natural hair, red dress with small yellow print, chunky teal bead necklace, gold earrings, proud posture."
+    },
+    {
+      "id": "otavio",
+      "semente": 1104,
+      "prompt": "Brazilian man, 45 years old, light skin, dark slicked-back hair graying at the temples, neatly trimmed beard, cream-colored blazer over a navy shirt with open collar, confident businessman."
+    },
+    {
+      "id": "bia",
+      "semente": 1105,
+      "prompt": "Brazilian woman, 29 years old, light brown skin, long straight dark hair, mustard yellow t-shirt, blue lanyard with a blank ID badge around her neck, slightly nervous."
+    }
+  ]
+}

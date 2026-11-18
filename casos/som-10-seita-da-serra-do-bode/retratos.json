@@ -1,0 +1,32 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "elias",
+      "semente": 1029,
+      "prompt": "Brazilian man, 58 years old, contemporary rural cult leader, light weathered skin, long white hair and beard, raw linen tunic, barefoot, hypnotic calm gaze, torchlit cave entrance."
+    },
+    {
+      "id": "aurora",
+      "semente": 1036,
+      "prompt": "Brazilian woman, 44 years old, contemporary, olive skin, long dark hair, blue tunic, seed necklace, hardcover ledger, devoted yet calculating eyes, candlelight."
+    },
+    {
+      "id": "mateus",
+      "semente": 1043,
+      "prompt": "Brazilian young man, 22 years old, contemporary, light brown skin, shaved head, white tunic, frightened wide eyes, candlelit wooden temple."
+    },
+    {
+      "id": "lurdes",
+      "semente": 1050,
+      "prompt": "Brazilian woman, 55 years old, contemporary, medium brown skin, short graying hair, nylon jacket, crossbody bag, holding a photo of her son, desperate determined face, night road."
+    },
+    {
+      "id": "rui",
+      "semente": 1057,
+      "prompt": "Brazilian man, 50 years old, contemporary, light skin, slicked hair, light gray suit, leather briefcase, mud on shoes, evasive smile, dim hotel light."
+    }
+  ]
+}

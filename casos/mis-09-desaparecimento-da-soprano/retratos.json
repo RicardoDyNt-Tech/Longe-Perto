@@ -1,0 +1,32 @@
+{
+  "estilo": "Vintage studio portrait photograph from the 1940s of a fictional adult, head and shoulders, centered, facing the camera, plain mottled studio backdrop, soft window light, sepia toned black and white, fine film grain, period-accurate hairstyle and clothing, sharp focus. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "ofelia",
+      "semente": 1033,
+      "prompt": "Brazilian woman of Italian descent, 52 years old, 1950 style, light skin, gray hair in a bun, tape measure around neck, pins on lapel, seamstress apron, stern eyes."
+    },
+    {
+      "id": "ruggero",
+      "semente": 1040,
+      "prompt": "Italian man, 45 years old, 1950 style, olive skin, trimmed dark beard, heavy stage makeup, opera costume tailcoat, dramatic proud expression."
+    },
+    {
+      "id": "marina",
+      "semente": 1047,
+      "prompt": "Brazilian woman, 23 years old, 1950 style, light skin, dark hair tied back, simple rehearsal dress, holding a music score, hopeful nervous look."
+    },
+    {
+      "id": "brandi",
+      "semente": 1054,
+      "prompt": "Italian man, 60 years old, 1950 style, light skin, bald with white sideburns, tuxedo with carnation, cigar, shrewd smile."
+    },
+    {
+      "id": "tito",
+      "semente": 1061,
+      "prompt": "Brazilian man, 34 years old, 1950 style, brown skin, denim overalls, leather work gloves, pencil behind ear, honest tired face."
+    }
+  ]
+}

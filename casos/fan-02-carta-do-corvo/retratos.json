@@ -1,0 +1,27 @@
+{
+  "estilo": "Realistic fantasy character portrait of a fictional adult, head and shoulders, centered, facing the camera, painterly realism, medieval-fantasy clothing, soft candlelight, dark neutral background, muted earthy colors, detailed face, no armor helmet covering the face. No text, no letters, no watermark, no frame.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "tibor",
+      "semente": 1021,
+      "prompt": "Fantasy scribe, 41 years old, pale skin, receding dark hair, round crystal spectacles, brown wool tunic, ink-stained fingers, nervous clever eyes, painterly library."
+    },
+    {
+      "id": "garra",
+      "semente": 1028,
+      "prompt": "Fantasy guard captain, 38 years old, freckled fair skin, long braided red hair, chainmail, short sword, stern loyal face, painterly style."
+    },
+    {
+      "id": "fenna",
+      "semente": 1035,
+      "prompt": "Fantasy noblewoman, 52 years old, olive skin, silver-streaked dark hair in an ornate updo, burgundy velvet gown, many rings, cool calculating look, painterly style."
+    },
+    {
+      "id": "piet",
+      "semente": 1042,
+      "prompt": "Fantasy young man, 26 years old, tan skin, messy black hair with feathers tangled in it, leather vest, bandaged forearm, ravens around him, shy face, painterly style."
+    }
+  ]
+}

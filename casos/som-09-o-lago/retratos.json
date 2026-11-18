@@ -1,0 +1,32 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "clara",
+      "semente": 1013,
+      "prompt": "Brazilian woman, 33 years old, contemporary, fair freckled skin, braided red hair, cream wool coat, calm smile with cold eyes, misty lake at night."
+    },
+    {
+      "id": "sandro",
+      "semente": 1020,
+      "prompt": "Brazilian man, 34 years old, contemporary, light brown skin, full beard, waterproof jacket, coffee mug, sullen expression, foggy lakeside."
+    },
+    {
+      "id": "mel",
+      "semente": 1027,
+      "prompt": "Brazilian woman, 32 years old, contemporary, dark skin, big curly hair, colorful poncho, guitar on back, uneasy eyes, campfire glow."
+    },
+    {
+      "id": "diogo",
+      "semente": 1034,
+      "prompt": "Brazilian man, 35 years old, contemporary, light skin, beanie, fishing vest, headlamp, nervous laugh, campfire glow."
+    },
+    {
+      "id": "ivo",
+      "semente": 1041,
+      "prompt": "Brazilian man, 30 years old, contemporary, medium brown skin, faded hoodie, sunken grieving eyes, car keys in hand, dark road."
+    }
+  ]
+}

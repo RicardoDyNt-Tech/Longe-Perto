@@ -1,0 +1,27 @@
+{
+  "estilo": "Photorealistic portrait of a fictional adult, head and shoulders, centered, facing the camera, serious expression, dim overcast light, dark muted background, low saturation, cool shadows with warm skin, 85mm lens, sharp focus, subtle film grain. No text, no letters, no watermark.",
+  "largura": 800,
+  "altura": 1000,
+  "retratos": [
+    {
+      "id": "gustavo",
+      "semente": 1025,
+      "prompt": "Brazilian man, 38 years old, contemporary, light skin, stubble, white meditation retreat clothes, tan line on wrist where a watch was, calm mask over tension, candlelit wooden room."
+    },
+    {
+      "id": "bia",
+      "semente": 1032,
+      "prompt": "Brazilian woman, 33 years old, contemporary, medium brown skin, undercut hairstyle, small moon tattoo on neck, white retreat clothes, guarded eyes, dim candlelight."
+    },
+    {
+      "id": "sara",
+      "semente": 1039,
+      "prompt": "Brazilian woman, 50 years old, contemporary, light skin, long loose gray hair, sand-colored tunic, serene but tired face, dim light."
+    },
+    {
+      "id": "icaro",
+      "semente": 1046,
+      "prompt": "Brazilian man, 27 years old, contemporary, dark skin, head bandana, tattooed forearms, kitchen apron, nervous honest look, dim light."
+    }
+  ]
+}
