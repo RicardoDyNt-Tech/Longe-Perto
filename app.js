@@ -9305,56 +9305,6 @@
     $("roteiroContinuar").addEventListener("click", sairRoteiro);
     $("roteiroCofre").addEventListener("click", () => estado && estado.roteiro && abrirGuardar(estado.roteiro.ultima));
     $("seqParar").addEventListener("click", pararSequencia);
-    document.querySelectorAll("#histFiltro [data-f]").forEach(b => b.addEventListener("click", () => { filtroHist = b.dataset.f; desenharLinhaTempo(); }));
-    $("histMais").addEventListener("click", () => { diasHist += 30; desenharLinhaTempo(); });
-    const cv = $("muralCanvas");
-    cv.addEventListener("pointerdown", comecarTraco);
-    cv.addEventListener("pointermove", moverTraco);
-    ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => cv.addEventListener(t, fimTraco));
-    $("muralBorracha").addEventListener("click", () => { muralBorracha = !muralBorracha; desenharFerramentas(); });
-    $("muralDesfazer").addEventListener("click", desfazerMural);
-    $("muralLimpar").addEventListener("click", limparMural);
-    $("muralFundo").addEventListener("change", mudarFundoMural);
-    $("muralEnviar").addEventListener("click", () => salvarMural(false));
-    $("muralGuardar").addEventListener("click", () => salvarMural(true));
-    $("muralJuntos").addEventListener("click", comecarJuntos);
-    $("muralSairJuntos").addEventListener("click", () => sairJuntos());
-    $("muralConviteEntrar").addEventListener("click", entrarNoConvite);
-    $("muralConviteFechar").addEventListener("click", esconderConvite);
-    $("muralInicioDesenhar").addEventListener("click", () => abrirMural(false));
-    $("fecharMuralVer").addEventListener("click", () => $("dlgMuralVer").close());
-    $("muralApagar").addEventListener("click", apagarMural);
-    $("cartaMural").addEventListener("click", () => abrirMural(ambosPresentes()));
-    document.querySelectorAll("#muralFiltro [data-f]").forEach(b => b.addEventListener("click", () => { filtroMural = b.dataset.f; desenharGaleria(); }));
-    addEventListener("resize", () => { if (vista === "vMural") redesenharMural(); });
-    document.querySelectorAll("#humorCaras button").forEach(b => b.addEventListener("click", () => escolherHumor(Number(b.dataset.v))));
-    $("humorNotaSalvar").addEventListener("click", salvarNotaHumor);
-    $("humorNota").addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); salvarNotaHumor(); } });
-    $("faixaHumorUsar").addEventListener("click", usarFaixaHumor);
-    $("faixaHumorFechar").addEventListener("click", () => { faixaHumorFechada = true; desenharFaixaHumor(); });
-    $("formDengo").addEventListener("submit", enviarDengo);
-    $("dengoVoltar").addEventListener("click", () => $("dlgDengo").close());
-    $("dengoCancelar").addEventListener("click", cancelarDengo);
-    $("dengoRespOk").addEventListener("click", fecharResposta);
-    $("drIndo").addEventListener("click", () => { dengoRespondendo = "indo"; desenharDengo(); $("drIndoTexto").focus(); });
-    $("drNao").addEventListener("click", () => { dengoRespondendo = "nao"; desenharDengo(); });
-    $("drIndoEnviar").addEventListener("click", () => responderDengo("indo", $("drIndoTexto").value));
-    $("drNaoEnviar").addEventListener("click", () => {
-      const t = $("drNaoTexto").value.trim();
-      if (!t) return erro("erroDengoResp", "Escolha uma frase ou escreva uma resposta.");
-      responderDengo("nao_consigo", t);
-    });
-    document.querySelectorAll("#drFrases button").forEach(b => b.addEventListener("click", () => responderDengo("nao_consigo", b.textContent)));
-    $("drAqui").addEventListener("click", () => responderDengo("indo", "Tô aqui quando precisar"));
-    $("dengoEditar").addEventListener("click", abrirPedidos);
-    $("fecharPedidos").addEventListener("click", () => $("dlgPedidos").close());
-    $("pedidosSalvar").addEventListener("click", salvarPedidos);
-    $("pedidosRestaurar").addEventListener("click", restaurarPedidos);
-    $("pedidoNovo").addEventListener("click", novoPedido);
-    setInterval(() => { if (vista === "casa" && !document.hidden) desenharDengo(); }, 60000);   // "há X min"
-    $("navMostrar").addEventListener("click", () => recolherNav(false));
-    try { new ResizeObserver(() => document.documentElement.style.setProperty("--nav", $("navBaixo").offsetHeight + "px")).observe($("navBaixo")); } catch (err) { }
-    // reserva o espaço da barra fixa no fim da página
     try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) { }
     desenharRoleta();
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenharRoleta);
@@ -9362,7 +9312,19 @@
     const nome = lerLocal("lp-nome");
     if (nome) $("nome").value = nome;
     const salaUrl = new URLSearchParams(location.search).get("sala");
-    if (salaUrl) $("codigo").value = lerCodigo(salaUrl) || salaUrl;
+    if ($("abrirCodigo") && $("codigoBox")) {
+      $("abrirCodigo").addEventListener("click", () => {
+        const aberto = !$("codigoBox").hidden;
+        $("codigoBox").hidden = aberto;
+        $("abrirCodigo").setAttribute("aria-expanded", String(!aberto));
+        if (!aberto) $("codigo").focus();
+      });
+    }
+    if (salaUrl) {
+      $("codigo").value = lerCodigo(salaUrl) || salaUrl;
+      if ($("codigoBox")) $("codigoBox").hidden = false;
+      if ($("abrirCodigo")) $("abrirCodigo").setAttribute("aria-expanded", "true");
+    }
     desenharRecentes();
 
     if (!configurado() || !window.supabase) {

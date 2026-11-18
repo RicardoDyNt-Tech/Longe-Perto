@@ -37,28 +37,31 @@
 
   <!-- Entrada -->
   <section id="lobby">
-    <p class="sub">Verdade ou desafio para fazer cada um na sua casa. Um cria a sala, o outro entra pelo link, e a roleta gira igual nos dois celulares.</p>
+    <p class="sub">Verdade ou desafio para fazer cada um na sua casa.</p>
     <label class="field">Seu nome
       <input type="text" id="nome" maxlength="20" autocomplete="given-name">
     </label>
+    <p class="erro erro-discreto" id="erroLobby" role="alert"></p>
     <button class="primary" id="criar">Criar sala</button>
-    <p class="or">ou</p>
-    <label class="field">Código ou nome da sala
-      <input type="text" id="codigo" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" placeholder="ABC12 ou nome-da-sala">
-    </label>
-    <button class="secondary" id="entrar">Entrar na sala</button>
-    <p class="erro" id="erroLobby" role="alert"></p>
+    <div class="lobby-acoes">
+      <button type="button" class="linkbtn" id="abrirCodigo" aria-expanded="false">Já tenho um código</button>
+    </div>
+    <div class="codigo-box" id="codigoBox" hidden>
+      <label class="field">Código ou nome da sala
+        <input type="text" id="codigo" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" placeholder="ABC12 ou nome-da-sala">
+      </label>
+      <button class="secondary" id="entrar">Entrar na sala</button>
+    </div>
 
     <div class="recentes" id="recentes" hidden>
-      <p class="or">Salas recentes</p>
+      <p class="rotulo-sec">Salas recentes</p>
       <ul class="lista-recentes" id="listaRecentes"></ul>
     </div>
 
-    <p class="or">ou</p>
     <details class="fixa-box">
-      <summary>Criar sala fixa</summary>
-      <p class="extras-sub">Uma sala só de vocês, que fica guardada: cartas, histórico e configurações continuam lá.</p>
-      <label class="field">Nome da sala
+      <summary>Mais opções</summary>
+      <p class="extras-sub">Uma sala fixa fica guardada: cartas, histórico e configurações continuam lá.</p>
+      <label class="field">Nome da sala fixa
         <input type="text" id="nomeSala" maxlength="25" autocomplete="off" placeholder="ricaecarol">
       </label>
       <p class="extras-sub">Guarde o link: o final aleatório protege a sala de vocês.</p>
