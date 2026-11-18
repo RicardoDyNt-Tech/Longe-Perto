@@ -1599,7 +1599,7 @@
     invCasoAtual = null; invPartidaAtual = null; invDossie = null; invRelatorio = null; invNotas = [];
     invCarregarPrateleira();
     invAplicarVisibilidade();
-    history.replaceState(null, "", "?sala=" + c);
+    history.replaceState(null, "", "?sala=" + c + (invModoTeste ? "&teste=1" : ""));
     $("lobby").hidden = true;
     $("jogo").hidden = false;
     $("salaCodigo").textContent = c;
@@ -9465,7 +9465,17 @@
   // ============================================================================
   // Investigação — mistério cooperativo para dois
   // ============================================================================
-  const invModoTeste = new URLSearchParams(location.search).get("teste") === "1";
+  const invModoTeste = (() => {
+    try {
+      if (new URLSearchParams(location.search).get("teste") === "1") {
+        sessionStorage.setItem("lp-inv-teste", "1");
+        return true;
+      }
+      return sessionStorage.getItem("lp-inv-teste") === "1";
+    } catch (e) {
+      return new URLSearchParams(location.search).get("teste") === "1";
+    }
+  })();
   const INV_TEMAS = [
     ["todos", "Todos"],
     ["policial", "Policial"],
@@ -9479,7 +9489,7 @@
   const INV_DIFS = [["todas", "Qualquer"], ["1", "Fácil"], ["2", "Média"], ["3", "Difícil"]];
   const INV_SELOS = { lenda: "Lenda", criaturas: "Criaturas", mundo: "Mundo" };
   const INV_DOC_IC = {
-    briefing: "file-text", depoimento: "file-text", laudo: "clipboard-list",
+    briefing: "file-text", depoimento: "file-text", laudo: "scroll-text",
     chat: "message-circle", email: "mail", registro: "file-text",
     extrato: "receipt", recibo: "receipt", folheto: "newspaper",
     aviso: "alert-circle", bilhete: "scroll", planta: "map",
