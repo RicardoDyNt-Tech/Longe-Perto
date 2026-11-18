@@ -75,7 +75,13 @@
     "ribbon", "sandwich", "scroll-text", "search", "settings", "shirt", "shopping-basket", "shower-head", "skip-forward",
     "smartphone", "smile", "snowflake", "sofa", "sparkles", "square", "square-stack", "star", "sun", "sunrise", "sunset",
     "target", "thermometer", "ticket", "timer", "tree-palm", "shield", "trophy", "tv", "user", "users", "utensils",
-    "utensils-crossed", "volume-2", "volume-x", "wine", "x", "zap"
+    "utensils-crossed", "volume-2", "volume-x", "wine", "x", "zap",
+    "alert-circle", "anchor", "anvil", "award", "bike", "bird", "building", "bus", "castle", "clock",
+    "compass", "container", "copy", "cpu", "croissant", "cross", "door-closed", "egg", "file-text", "fish",
+    "flame-kindling", "flask-round", "flower", "folder", "footprints", "headphones", "help-circle", "hospital", "mountain", "newspaper",
+    "orbit", "phone-off", "pickaxe", "pin", "play", "plus", "radio", "rocket", "rotate-ccw", "sailboat",
+    "satellite", "scale", "scan-face", "scroll", "shield-alert", "ship", "spade", "stamp", "swords", "tornado",
+    "train-front", "trash-2", "trees", "unlock", "user-check", "user-x", "waves"
   ]);
 
   function icone(nome, tamanho = 20, classeExtra = "") {
@@ -1590,6 +1596,9 @@
     $("dicaFixa").hidden = !e.fixa;
     ultimoVencedor = e.vencedor === undefined ? null : e.vencedor;
     carregarHistorico(c);
+    invCasoAtual = null; invPartidaAtual = null; invDossie = null; invRelatorio = null; invNotas = [];
+    invCarregarPrateleira();
+    invAplicarVisibilidade();
     history.replaceState(null, "", "?sala=" + c);
     $("lobby").hidden = true;
     $("jogo").hidden = false;
@@ -1651,6 +1660,19 @@
         if (c !== codigo || p.eventType === "DELETE" || !p.new) return;
         aplicarLinhaConfig(p.new);
         conferirDono(c);   // ex.: "Gerar novo código" em outro aparelho
+        invAplicarVisibilidade();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "investigacoes", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo) invReceberPartida(p.eventType, p.eventType === "DELETE" ? p.old : p.new);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "investigacoes" }, p => {
+        if (c === codigo) invReceberPartida("DELETE", p.old);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "investigacoes_notas", filter: `sala=eq.${c}` }, p => {
+        if (c === codigo) invReceberNota(p.eventType, p.eventType === "DELETE" ? p.old : p.new);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "investigacoes_notas" }, p => {
+        if (c === codigo) invReceberNota("DELETE", p.old);
       })
       .subscribe(status => {
         if (status === "SUBSCRIBED" && canal) {
@@ -2182,11 +2204,11 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vChamadas", "vCardapio", "vRecados"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vChamadas", "vCardapio", "vRecados", "vInvestigacao"];
   const ABAS = { casa: "abaCasa", jogo: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
 
   function mostrarVista(nome) {
-    if (!(estado && estado.fixa)) nome = "jogo";   // sala comum: só o jogo
+    if (!(estado && estado.fixa) && nome !== "vInvestigacao") nome = "jogo";   // sala comum: só o jogo (e Investigação)
     vista = nome;
     if (estado) conferirCelular(estado);
     if (estado) setTimeout(() => estado && desenharModosHoje(estado), 0);
@@ -2217,8 +2239,10 @@
     if (nome === "vMural") entrarMural();
     if (nome === "vCardapio") abrirCardapio();
     if (nome === "vRecados") desenharRecados();
+    if (nome === "vInvestigacao") invAbrirTela();
     if (nome === "vHistorico") desenharHistCompanhia();
-    if (nome === "casa") setTimeout(desenharRecados, 0);
+    if (nome === "casa") { setTimeout(desenharRecados, 0); invAtualizarResumoInicio(); }
+    invAplicarVisibilidade();
     tickContador();
     window.scrollTo(0, 0);
   }
@@ -5694,7 +5718,8 @@
     fatura: { vales: true },
     cardapio: { ativo: true },
     clausulas: { ativo: true },
-    silencio: { ativo: true }
+    silencio: { ativo: true },
+    investigacao: { ativo: true }
   };
   // merge profundo: o padrão preenche o que faltar (e o que vier com tipo errado)
   function mesclar(pad, x) {
@@ -6052,6 +6077,7 @@
     sm.appendChild(cfgModo("reverso", "Reverso"));
     sm.appendChild(cfgModo("presencial", "Modo Juntos (presencial)"));
     sm.appendChild(cfgModo("silencio", "Desafio do silêncio (microfone, no modo Juntos)"));
+    sm.appendChild(cfgModo("investigacao", "Investigação (mistério cooperativo)"));
     sm.appendChild(cfgInterruptor("Contar chamada pela presença (os dois com a sala aberta)", config.chamadas.presenca, v => mudarConfig(c => { c.chamadas.presenca = v; }), "chamadas.presenca"));
     d.appendChild(sm);
 
@@ -9280,31 +9306,6 @@
     $("enredoAbrir").addEventListener("click", abrirEnredos);
     $("secretaBtn").addEventListener("click", alternarSecreta);
     $("card").addEventListener("pointerdown", ev => { if ($("card").dataset.secreta) { ev.preventDefault(); segurarCarta(true); } });
-    ["pointerup", "pointercancel", "pointerleave"].forEach(t => $("card").addEventListener(t, () => { if (segurandoCarta) segurarCarta(false); }));
-    $("card").addEventListener("contextmenu", ev => { if ($("card").dataset.secreta) ev.preventDefault(); });
-    $("silencioBtn").addEventListener("click", ligarSilencio);
-    $("silencioComecar").addEventListener("click", comecarSilencio);
-    $("silencioCancelar").addEventListener("click", cancelarSilencio);
-    $("fecharEnredos").addEventListener("click", () => $("dlgEnredos").close());
-    $("enredoVoltar").addEventListener("click", () => { $("enredosEscolher").hidden = false; $("enredosPapeis").hidden = true; });
-    $("enredoComecar").addEventListener("click", comecarEnredo);
-    $("enredoCumpri").addEventListener("click", cumpriTrecho);
-    $("enredoSair").addEventListener("click", () => sairEnredo(false));
-    $("enredoContinuar").addEventListener("click", () => sairEnredo(true));
-    $("fecharCampanhas").addEventListener("click", () => $("dlgCampanhas").close());
-    $("campanhaJogar").addEventListener("click", jogarNoite);
-    $("campanhaRecomecar").addEventListener("click", recomecarCampanha);
-    $("campanhaSair").addEventListener("click", sairCampanha);
-    $("campanhaQuebrei").addEventListener("click", quebreiRegra);
-    $("fichaNivelUsar").addEventListener("click", () => usarFicha("nivel"));
-    $("fichaQuem").addEventListener("click", () => usarFicha("quem"));
-    $("fichaPular").addEventListener("click", () => usarFicha("pular"));
-    $("fecharRoteiros").addEventListener("click", () => $("dlgRoteiros").close());
-    $("dlgRoteiros").addEventListener("close", fecharRoteiros);
-    $("roteiroSair").addEventListener("click", sairRoteiro);
-    $("roteiroContinuar").addEventListener("click", sairRoteiro);
-    $("roteiroCofre").addEventListener("click", () => estado && estado.roteiro && abrirGuardar(estado.roteiro.ultima));
-    $("seqParar").addEventListener("click", pararSequencia);
     try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) { }
     desenharRoleta();
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenharRoleta);
@@ -9459,6 +9460,1331 @@
 
     // link com ?sala= e nome já salvo: entra direto
     if (salaUrl && nome) entrarSala(salaUrl);
+  }
+
+  // ============================================================================
+  // Investigação — mistério cooperativo para dois
+  // ============================================================================
+  const invModoTeste = new URLSearchParams(location.search).get("teste") === "1";
+  const INV_TEMAS = [
+    ["todos", "Todos"],
+    ["policial", "Policial"],
+    ["misterio", "Mistério"],
+    ["sombrio", "Sombrio"],
+    ["fantasia", "Fantasia"],
+    ["folclore", "Folclore"],
+    ["futuro", "Futuro"]
+  ];
+  const INV_FORMATOS = [["todos", "Todas"], ["curto", "Curto"], ["medio", "Médio"], ["longo", "Longo"]];
+  const INV_DIFS = [["todas", "Qualquer"], ["1", "Fácil"], ["2", "Média"], ["3", "Difícil"]];
+  const INV_SELOS = { lenda: "Lenda", criaturas: "Criaturas", mundo: "Mundo" };
+  const INV_DOC_IC = {
+    briefing: "file-text", depoimento: "file-text", laudo: "clipboard-list",
+    chat: "message-circle", email: "mail", registro: "file-text",
+    extrato: "receipt", recibo: "receipt", folheto: "newspaper",
+    aviso: "alert-circle", bilhete: "scroll", planta: "map",
+    audio: "mic", foto: "camera"
+  };
+  const INV_DOC_NOME = {
+    briefing: "Briefing", depoimento: "Depoimento", laudo: "Laudo",
+    chat: "Conversa", email: "E-mail", registro: "Registro",
+    extrato: "Extrato", recibo: "Recibo", folheto: "Folheto",
+    aviso: "Aviso", bilhete: "Bilhete", planta: "Planta",
+    audio: "Áudio", foto: "Foto"
+  };
+
+  let invCasos = [];
+  let invPartidas = [];
+  let invFiltroTema = "todos";
+  let invFiltroFmt = "todos";
+  let invFiltroDif = "todas";
+  let invCasoAtual = null;
+  let invPartidaAtual = null;
+  let invDossie = null;
+  let invRelatorio = null;
+  let invNotas = [];
+  let invAba = "dossie";
+  let invFiltroNota = "todas";
+  let invTravasConhecidas = new Set();
+  let invTimerContagem = null;
+  let invDocAberto = null;
+  let invCarregando = false;
+
+  function invIcone(nome, tam = 20, cls = "") {
+    const id = ICONES_CONHECIDOS.has((nome || "").trim()) ? nome.trim() : "sparkles";
+    return icone(id, tam, cls);
+  }
+
+  function invAplicarVisibilidade() {
+    const ativo = !(config && config.investigacao && config.investigacao.ativo === false);
+    if ($("atalhoInvestigacao")) $("atalhoInvestigacao").hidden = !ativo;
+    if ($("jogoBtnInvWrap")) $("jogoBtnInvWrap").hidden = !ativo;
+    if (!ativo && vista === "vInvestigacao") mostrarVista(estado && estado.fixa ? "casa" : "jogo");
+  }
+
+  function invTrack(lendo) {
+    if (!canal) return;
+    try {
+      canal.track({ jogador: eu, online_em: new Date().toISOString(), inv_lendo: lendo || null }).catch(() => {});
+    } catch (e) {}
+  }
+
+  function invTextoPresenca() {
+    if (!canal || !invPartidaAtual || invPartidaAtual.um_celular) return "";
+    const st = canal.presenceState() || {};
+    const lista = st[String(1 - eu)] || [];
+    const lendo = lista.map(x => x && x.inv_lendo).find(x => x && x.inv === invPartidaAtual.id);
+    if (!lendo) return "";
+    return `${nomeDe(1 - eu)} está lendo: ${lendo.titulo}`;
+  }
+
+  function invPararContagem() {
+    if (invTimerContagem) { clearInterval(invTimerContagem); invTimerContagem = null; }
+  }
+
+  function invPararFala() {
+    try { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); } catch (e) {}
+  }
+
+  function invTemVozPt() {
+    try {
+      if (!("speechSynthesis" in window)) return false;
+      const vozes = window.speechSynthesis.getVoices() || [];
+      return vozes.some(v => (v.lang || "").toLowerCase().startsWith("pt"));
+    } catch (e) { return false; }
+  }
+
+  function invFormatarRestante(ateIso) {
+    const ms = new Date(ateIso).getTime() - Date.now();
+    if (ms <= 0) return "";
+    const s = Math.ceil(ms / 1000);
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return m > 0 ? `${m}m ${String(r).padStart(2, "0")}s` : `${r}s`;
+  }
+
+  async function invCarregarPrateleira() {
+    if (!codigo) return;
+    const [{ data: cData, error: cErr }, { data: pData, error: pErr }] = await Promise.all([
+      sb.from("casos").select("id,titulo,icone,tema,selo,formato,minutos,dificuldade,sinopse,serie,capitulo,versao,n_suspeitos,n_docs,teste,ativo").eq("ativo", true).order("tema").order("id"),
+      sb.from("investigacoes").select("*").eq("sala", codigo)
+    ]);
+    if (!cErr && cData) invCasos = cData.filter(c => invModoTeste || !c.teste);
+    if (!pErr && pData) invPartidas = pData;
+    invAtualizarResumoInicio();
+  }
+
+  function invAtualizarResumoInicio() {
+    const elInfo = $("inicioInvInfo");
+    if (!elInfo) return;
+    const emAndamento = invPartidas.filter(p => p.estado === "investigando" || p.estado === "acusacao");
+    const concluidos = invPartidas.filter(p => p.estado === "concluido");
+    if (emAndamento.length) {
+      const c = invCasos.find(x => x.id === emAndamento[0].caso);
+      elInfo.textContent = c ? `Em andamento: ${c.titulo}` : `${emAndamento.length} caso em andamento`;
+    } else if (concluidos.length) {
+      elInfo.textContent = `${concluidos.length} ${concluidos.length === 1 ? "caso resolvido" : "casos resolvidos"}`;
+    } else {
+      elInfo.textContent = "Mistério cooperativo para dois";
+    }
+  }
+
+  async function invAbrirTela() {
+    if ($("invVoltarTexto")) $("invVoltarTexto").textContent = invCasoAtual ? "Casos" : (estado && estado.fixa ? "Início" : "Jogo");
+    if (!invCasos.length && codigo) await invCarregarPrateleira();
+    invRender();
+  }
+
+  async function invAbrirCaso(caso) {
+    if (!codigo || invCarregando) return;
+    invCarregando = true;
+    try {
+      let partida = invPartidas.find(p => p.caso === caso.id) || null;
+      if (!partida) {
+        const umCelular = !!(estado && estado.juntos && invEscolheuUmCelular);
+        const { data: invId, error } = await sb.rpc("inv_iniciar", { p_sala: codigo, p_caso: caso.id, p_um_celular: umCelular });
+        if (error) { aviso(error.message || "Não deu para iniciar o caso."); return; }
+        const { data: pNova } = await sb.from("investigacoes").select("*").eq("id", invId).single();
+        partida = pNova;
+        if (partida) {
+          invPartidas = invPartidas.filter(x => x.id !== partida.id).concat(partida);
+        }
+      }
+      invCasoAtual = caso;
+      invPartidaAtual = partida;
+      invAba = "dossie";
+      invRelatorio = null;
+      invDossie = null;
+      invTravasConhecidas = new Set((partida && partida.travas_abertas) || []);
+      await invCarregarEstadoCaso();
+      invRender();
+    } finally {
+      invCarregando = false;
+      invEscolheuUmCelular = false;
+    }
+  }
+
+  let invEscolheuUmCelular = false;
+
+  async function invCarregarEstadoCaso() {
+    if (!invPartidaAtual || !codigo) return;
+    const invId = invPartidaAtual.id;
+    const [{ data: pRow }, { data: nRows }] = await Promise.all([
+      sb.from("investigacoes").select("*").eq("id", invId).single(),
+      sb.from("investigacoes_notas").select("*").eq("investigacao", invId).order("criada_em", { ascending: true })
+    ]);
+    if (pRow) {
+      invPartidaAtual = pRow;
+      invPartidas = invPartidas.filter(x => x.id !== pRow.id).concat(pRow);
+    }
+    if (nRows) invNotas = nRows;
+
+    if (invPartidaAtual.estado === "investigando" || invPartidaAtual.estado === "acusacao") {
+      const { data: dData, error: dErr } = await sb.rpc("inv_dossie", { p_sala: codigo, p_inv: invId, p_jogador: eu });
+      if (!dErr && dData) {
+        const abertas = (dData.travas || []).filter(t => t.aberta).map(t => t.id);
+        const novas = abertas.filter(id => !invTravasConhecidas.has(id));
+        if (invTravasConhecidas.size > 0 && novas.length > 0) {
+          aviso("Novas provas chegaram ao dossiê.");
+        }
+        abertas.forEach(id => invTravasConhecidas.add(id));
+        invDossie = dData;
+      }
+    } else if (invPartidaAtual.estado === "concluido" || invPartidaAtual.estado === "revelado") {
+      const { data: rData, error: rErr } = await sb.rpc("inv_relatorio", { p_sala: codigo, p_inv: invId });
+      if (!rErr && rData) invRelatorio = rData;
+    }
+  }
+
+  async function invReceberPartida(tipo, row) {
+    if (!row) return;
+    if (tipo === "DELETE") {
+      invPartidas = invPartidas.filter(p => p.id !== row.id);
+      if (invPartidaAtual && invPartidaAtual.id === row.id) {
+        invPartidaAtual = null;
+        invDossie = null;
+        invRelatorio = null;
+        invNotas = [];
+        invCasoAtual = null;
+        aviso("A partida foi reiniciada.");
+        if (vista === "vInvestigacao") invRender();
+      }
+      invAtualizarResumoInicio();
+      return;
+    }
+    invPartidas = invPartidas.filter(p => p.id !== row.id).concat(row);
+    invAtualizarResumoInicio();
+    if (invPartidaAtual && invPartidaAtual.id === row.id) {
+      invPartidaAtual = row;
+      await invCarregarEstadoCaso();
+      if (vista === "vInvestigacao") invRender();
+    } else if (vista === "vInvestigacao" && !invCasoAtual) {
+      invRender();
+    }
+  }
+
+  function invReceberNota(tipo, row) {
+    if (!row || !invPartidaAtual) return;
+    if (tipo === "DELETE") {
+      invNotas = invNotas.filter(n => n.id !== row.id);
+      if (vista === "vInvestigacao" && invCasoAtual) invRender();
+      return;
+    }
+    if (row.investigacao !== invPartidaAtual.id) return;
+    const idx = invNotas.findIndex(n => n.id === row.id);
+    if (idx >= 0) invNotas[idx] = row;
+    else invNotas.push(row);
+    if (vista === "vInvestigacao" && invCasoAtual) invRender();
+  }
+
+  function invRender() {
+    invPararContagem();
+    const raiz = $("invRaiz");
+    if (!raiz) return;
+    raiz.textContent = "";
+    if ($("invVoltarTexto")) $("invVoltarTexto").textContent = invCasoAtual ? "Casos" : (estado && estado.fixa ? "Início" : "Jogo");
+
+    if (!invCasoAtual || !invPartidaAtual) {
+      invRenderPrateleira(raiz);
+      return;
+    }
+    invRenderCaso(raiz);
+  }
+
+  function invRenderPrateleira(raiz) {
+    const cab = el("div", "inv-cab");
+    cab.appendChild(el("h2", "inv-titulo", "Investigação"));
+    cab.appendChild(el("p", "inv-sub", "Cada um abre seu envelope no celular e vocês cruzam as pistas pela conversa."));
+    raiz.appendChild(cab);
+
+    // Filtros
+    const filtros = el("div", "inv-filtros");
+    const abasTema = el("div", "inv-tema-abas");
+    abasTema.setAttribute("role", "tablist");
+    INV_TEMAS.forEach(([val, rot]) => {
+      const b = el("button", "inv-tab-btn", rot);
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", invFiltroTema === val ? "true" : "false");
+      b.addEventListener("click", () => { invFiltroTema = val; invRender(); });
+      abasTema.appendChild(b);
+    });
+    filtros.appendChild(abasTema);
+
+    const linhaChips = el("div", "inv-chips-linha");
+    INV_FORMATOS.forEach(([val, rot]) => {
+      const b = el("button", "inv-chip", rot);
+      b.type = "button";
+      b.setAttribute("aria-pressed", invFiltroFmt === val ? "true" : "false");
+      b.addEventListener("click", () => { invFiltroFmt = val; invRender(); });
+      linhaChips.appendChild(b);
+    });
+    INV_DIFS.forEach(([val, rot]) => {
+      const b = el("button", "inv-chip", val === "todas" ? "Dif: todas" : rot);
+      b.type = "button";
+      b.setAttribute("aria-pressed", invFiltroDif === val ? "true" : "false");
+      b.addEventListener("click", () => { invFiltroDif = val; invRender(); });
+      linhaChips.appendChild(b);
+    });
+    filtros.appendChild(linhaChips);
+    raiz.appendChild(filtros);
+
+    // Lista de casos
+    const lista = el("div", "inv-casos-lista");
+    const filtrados = invCasos.filter(c => {
+      if (invFiltroTema !== "todos" && c.tema !== invFiltroTema) return false;
+      if (invFiltroFmt !== "todos" && c.formato !== invFiltroFmt) return false;
+      if (invFiltroDif !== "todas" && String(c.dificuldade) !== invFiltroDif) return false;
+      return true;
+    });
+
+    if (!filtrados.length) {
+      lista.appendChild(el("p", "inv-sub", "Nenhum caso encontrado com esses filtros."));
+      raiz.appendChild(lista);
+      return;
+    }
+
+    filtrados.forEach(c => {
+      const p = invPartidas.find(x => x.caso === c.id);
+      const card = el("div", "inv-caso-card");
+      card.setAttribute("role", "button");
+      card.tabIndex = 0;
+
+      const topo = el("div", "inv-caso-topo");
+      const icBox = el("div", "inv-caso-ic");
+      icBox.appendChild(invIcone(c.icone, 20));
+      topo.appendChild(icBox);
+
+      const meta = el("div", "inv-caso-meta");
+      const tLinha = el("div", "inv-caso-titulo-linha");
+      tLinha.appendChild(el("h3", "inv-caso-titulo", c.titulo));
+      if (c.selo && INV_SELOS[c.selo]) {
+        tLinha.appendChild(el("span", "inv-selo", INV_SELOS[c.selo]));
+      }
+      meta.appendChild(tLinha);
+      meta.appendChild(el("p", "inv-caso-sinopse", c.sinopse));
+      topo.appendChild(meta);
+      card.appendChild(topo);
+
+      const rodape = el("div", "inv-caso-rodape");
+      const info = el("div", "inv-caso-info");
+      info.appendChild(el("span", "", `~${c.minutos} min`));
+      const difWrap = el("span", "inv-dif-tracos");
+      difWrap.setAttribute("aria-label", `Dificuldade ${c.dificuldade} de 3`);
+      for (let i = 1; i <= 3; i++) {
+        difWrap.appendChild(el("span", "inv-dif-traco" + (i <= c.dificuldade ? " ativo" : "")));
+      }
+      info.appendChild(difWrap);
+      rodape.appendChild(info);
+
+      if (!p) {
+        rodape.appendChild(el("span", "inv-status-pill", "Novo"));
+      } else if (p.estado === "envelope") {
+        rodape.appendChild(el("span", "inv-status-pill", "Envelope fechado"));
+      } else if (p.estado === "investigando" || p.estado === "acusacao") {
+        const l0 = (p.lidos && p.lidos["0"]) || [];
+        const l1 = (p.lidos && p.lidos["1"]) || [];
+        const uniao = new Set([...l0, ...l1]).size;
+        rodape.appendChild(el("span", "inv-status-pill", `Vocês leram ${uniao} de ${c.n_docs}`));
+      } else if (p.estado === "concluido") {
+        const st = el("span", "inv-status-pill gold");
+        for (let i = 0; i < (p.estrelas || 0); i++) st.appendChild(invIcone("star", 14));
+        st.appendChild(el("span", "", "Concluído"));
+        rodape.appendChild(st);
+      } else if (p.estado === "revelado") {
+        rodape.appendChild(el("span", "inv-status-pill", "Revelado"));
+      }
+      card.appendChild(rodape);
+
+      // Modo um celular só no modo Juntos (quando o caso ainda não começou)
+      if (!p && estado && estado.juntos) {
+        const rowJ = el("div", "row");
+        const btnDois = el("button", "primary", "Dois celulares");
+        btnDois.type = "button";
+        btnDois.addEventListener("click", ev => { ev.stopPropagation(); invEscolheuUmCelular = false; invAbrirCaso(c); });
+        const btnUm = el("button", "secondary", "Jogar num celular só");
+        btnUm.type = "button";
+        btnUm.addEventListener("click", ev => { ev.stopPropagation(); invEscolheuUmCelular = true; invAbrirCaso(c); });
+        rowJ.append(btnDois, btnUm);
+        card.appendChild(rowJ);
+      } else {
+        card.addEventListener("click", () => { invEscolheuUmCelular = false; invAbrirCaso(c); });
+        card.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); invEscolheuUmCelular = false; invAbrirCaso(c); } });
+      }
+      lista.appendChild(card);
+    });
+    raiz.appendChild(lista);
+  }
+
+  function invRenderCaso(raiz) {
+    const c = invCasoAtual;
+    const p = invPartidaAtual;
+
+    const cab = el("div", "inv-cab");
+    const cabLinha = el("div", "inv-cab-linha");
+    cabLinha.appendChild(el("h2", "inv-titulo", c.titulo));
+    if (p.um_celular) cabLinha.appendChild(el("span", "inv-status-pill", "Um celular"));
+    cab.appendChild(cabLinha);
+    cab.appendChild(el("p", "inv-sub", c.sinopse));
+    raiz.appendChild(cab);
+
+    // Aviso de versão corrigida
+    if (p.versao !== c.versao) {
+      const av = el("div", "inv-faixa-aviso");
+      av.appendChild(el("span", "", "Este caso foi corrigido desde o início da partida."));
+      const btnRec = el("button", "secondary", "Recomeçar");
+      btnRec.type = "button";
+      btnRec.addEventListener("click", invPedirReinicio);
+      av.appendChild(btnRec);
+      raiz.appendChild(av);
+    }
+
+    // Estado: envelope
+    if (p.estado === "envelope") {
+      invRenderEnvelope(raiz, c, p);
+      return;
+    }
+
+    // Estado: concluido ou revelado
+    if (p.estado === "concluido" || p.estado === "revelado") {
+      invRenderRelatorio(raiz, c, p);
+      return;
+    }
+
+    // Presença do parceiro
+    const txtPres = invTextoPresenca();
+    if (txtPres) {
+      const faixa = el("div", "inv-faixa-presenca");
+      faixa.appendChild(invIcone("eye", 16));
+      faixa.appendChild(el("span", "", txtPres));
+      raiz.appendChild(faixa);
+    }
+
+    // Abas
+    const abas = el("div", "inv-abas");
+    abas.setAttribute("role", "tablist");
+    [
+      ["dossie", "folder", "Dossiê"],
+      ["suspeitos", "users", "Suspeitos"],
+      ["quadro", "pin", "Quadro"],
+      ["caso", "scale", "Caso"]
+    ].forEach(([id, ic, rot]) => {
+      const b = el("button", "inv-aba-btn");
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", invAba === id ? "true" : "false");
+      b.appendChild(invIcone(ic, 18));
+      b.appendChild(el("span", "", rot));
+      b.addEventListener("click", () => { invAba = id; invRender(); });
+      abas.appendChild(b);
+    });
+    raiz.appendChild(abas);
+
+    if (invAba === "dossie") invRenderAbaDossie(raiz, p);
+    else if (invAba === "suspeitos") invRenderAbaSuspeitos(raiz, p);
+    else if (invAba === "quadro") invRenderAbaQuadro(raiz, p);
+    else invRenderAbaCaso(raiz, p);
+  }
+
+  function invRenderEnvelope(raiz, c, p) {
+    const box = el("div", "inv-card inv-card-destaque");
+    const euAbri = !!(p.abriu && p.abriu[eu]);
+    const outroAbri = !!(p.abriu && p.abriu[1 - eu]);
+
+    if (!euAbri) {
+      box.appendChild(el("h3", "inv-caso-titulo", "Seu envelope está pronto"));
+      box.appendChild(el("p", "inv-sub", p.um_celular
+        ? "Todos os documentos serão abertos neste celular."
+        : "Cada um recebe pistas diferentes. A investigação começa quando os dois abrirem."));
+      const btn = el("button", "primary", "Abrir meu envelope");
+      btn.type = "button";
+      btn.addEventListener("click", async () => {
+        const { error } = await sb.rpc("inv_abrir", { p_sala: codigo, p_inv: p.id, p_jogador: eu });
+        if (error) { aviso(error.message || "Erro ao abrir envelope."); return; }
+        await invCarregarEstadoCaso();
+        invRender();
+      });
+      box.appendChild(btn);
+    } else {
+      box.appendChild(el("h3", "inv-caso-titulo", `Esperando ${nomeDe(1 - eu)} abrir o envelope`));
+      box.appendChild(el("p", "inv-sub", outroAbri ? "Carregando dossiê..." : "Assim que a outra pessoa abrir, os documentos aparecem."));
+      if (!estado || !estado.jogadores || !estado.jogadores[1]) {
+        const wa = el("a", "secondary", "Convidar no WhatsApp");
+        wa.href = "https://wa.me/?text=" + encodeURIComponent(`Bora investigar "${c.titulo}" no Longe & Perto? Entra na sala ${codigo}: ${linkSala(codigo)}`);
+        wa.target = "_blank";
+        wa.rel = "noopener";
+        box.appendChild(wa);
+      }
+    }
+    raiz.appendChild(box);
+  }
+
+  function invRenderAbaDossie(raiz, p) {
+    if (!invDossie) { raiz.appendChild(el("p", "inv-sub", "Carregando dossiê...")); return; }
+    const docs = invDossie.docs || [];
+    const lidosEu = new Set((p.lidos && p.lidos[String(eu)]) || []);
+
+    const briefing = docs.find(d => d.tipo === "briefing");
+    const paraAmbos = docs.filter(d => d.id !== (briefing && briefing.id) && !d.exclusivo);
+    const meuEnv = docs.filter(d => d.exclusivo);
+    const travas = invDossie.travas || [];
+    const doParceiro = invDossie.do_parceiro || [];
+
+    if (briefing) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", "Briefing"));
+      grp.appendChild(invCriarItemDoc(briefing, lidosEu.has(briefing.id)));
+      raiz.appendChild(grp);
+    }
+
+    if (paraAmbos.length) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", p.um_celular ? "Documentos" : "Para os dois"));
+      paraAmbos.forEach(d => grp.appendChild(invCriarItemDoc(d, lidosEu.has(d.id))));
+      raiz.appendChild(grp);
+    }
+
+    if (meuEnv.length) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", "Meu envelope"));
+      meuEnv.forEach(d => grp.appendChild(invCriarItemDoc(d, lidosEu.has(d.id))));
+      raiz.appendChild(grp);
+    }
+
+    const travasPendentes = travas.filter(t => !t.aberta);
+    if (travasPendentes.length) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", "Provas trancadas e objetivos"));
+      travasPendentes.forEach(t => {
+        const item = el("button", "inv-doc-item");
+        item.type = "button";
+        const ic = el("span", "inv-doc-ic");
+        ic.appendChild(invIcone(t.formato === "escolha" ? "target" : "lock", 18));
+        item.appendChild(ic);
+        const txt = el("div", "inv-doc-txt");
+        txt.appendChild(el("span", "inv-doc-titulo", t.formato === "escolha" ? `Objetivo: ${t.titulo}` : t.titulo));
+        txt.appendChild(el("span", "inv-doc-meta", t.descricao || ""));
+        item.appendChild(txt);
+        const rest = t.bloqueada_ate ? invFormatarRestante(t.bloqueada_ate) : "";
+        item.appendChild(el("span", "inv-doc-badge", rest ? `Bloqueado (${rest})` : "Abrir"));
+        item.addEventListener("click", () => invAbrirTrava(t));
+        grp.appendChild(item);
+      });
+      raiz.appendChild(grp);
+    }
+
+    if (doParceiro.length && !p.um_celular) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", `Com ${nomeDe(1 - eu)}`));
+      doParceiro.forEach(d => {
+        const item = el("button", "inv-doc-item parceiro");
+        item.type = "button";
+        const ic = el("span", "inv-doc-ic");
+        ic.appendChild(invIcone(INV_DOC_IC[d.tipo] || "file-text", 18));
+        item.appendChild(ic);
+        const txt = el("div", "inv-doc-txt");
+        txt.appendChild(el("span", "inv-doc-titulo", d.titulo));
+        txt.appendChild(el("span", "inv-doc-meta", INV_DOC_NOME[d.tipo] || "Documento"));
+        item.appendChild(txt);
+        item.addEventListener("click", () => aviso(`Peça para ${nomeDe(1 - eu)} te contar o que diz aqui.`));
+        grp.appendChild(item);
+      });
+      raiz.appendChild(grp);
+    }
+  }
+
+  function invCriarItemDoc(d, lido) {
+    const item = el("button", "inv-doc-item");
+    item.type = "button";
+    const ic = el("span", "inv-doc-ic");
+    ic.appendChild(invIcone(INV_DOC_IC[d.tipo] || "file-text", 18));
+    item.appendChild(ic);
+
+    const txt = el("div", "inv-doc-txt");
+    txt.appendChild(el("span", "inv-doc-titulo", d.titulo));
+    const meta = [INV_DOC_NOME[d.tipo] || "Documento"];
+    if (d.mostrado) meta.push(`Mostrado a ${nomeDe(1 - eu)}`);
+    txt.appendChild(el("span", "inv-doc-meta", meta.join(" · ")));
+    item.appendChild(txt);
+
+    item.appendChild(el("span", "inv-doc-badge" + (lido ? " lido" : ""), lido ? "Lido" : "Novo"));
+    item.addEventListener("click", () => invAbrirDocumento(d));
+    return item;
+  }
+
+  async function invAbrirDocumento(doc) {
+    const dlg = $("dlgInvDoc");
+    if (!dlg) return;
+    invDocAberto = doc;
+    invTrack({ inv: invPartidaAtual.id, titulo: doc.titulo });
+
+    // Marca como lido no banco
+    if (invPartidaAtual.estado === "investigando" || invPartidaAtual.estado === "acusacao") {
+      sb.rpc("inv_ler", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_doc: doc.id }).then(({ data }) => {
+        if (data && invPartidaAtual) {
+          const l = invPartidaAtual.lidos || { "0": [], "1": [] };
+          const arr = l[String(eu)] || [];
+          if (!arr.includes(doc.id)) {
+            l[String(eu)] = arr.concat(doc.id);
+            invPartidaAtual.lidos = l;
+          }
+        }
+      });
+    }
+
+    dlg.textContent = "";
+    const topo = el("div", "inv-leitor-topo");
+    const tEl = el("h3", "inv-doc-box-titulo", doc.titulo);
+    tEl.id = "invDocTitulo";
+    topo.appendChild(tEl);
+    const fechar = el("button", "linkbtn", "Fechar");
+    fechar.type = "button";
+    fechar.addEventListener("click", () => dlg.close());
+    topo.appendChild(fechar);
+    dlg.appendChild(topo);
+
+    const corpo = el("div", "inv-leitor-corpo");
+    corpo.appendChild(invRenderConteudoDoc(doc));
+    dlg.appendChild(corpo);
+
+    const acoes = el("div", "inv-leitor-acoes");
+    if (doc.tipo === "audio" && invTemVozPt()) {
+      const btnOuvir = el("button", "secondary");
+      btnOuvir.type = "button";
+      btnOuvir.appendChild(invIcone("play", 16));
+      btnOuvir.appendChild(el("span", "", "Ouvir"));
+      btnOuvir.addEventListener("click", () => {
+        invPararFala();
+        const textoFala = doc.texto || (doc.mensagens || []).map(m => `${m.de}: ${m.texto}`).join(". ");
+        if (!textoFala) return;
+        const u = new SpeechSynthesisUtterance(textoFala);
+        u.lang = "pt-BR";
+        window.speechSynthesis.speak(u);
+      });
+      acoes.appendChild(btnOuvir);
+    }
+
+    if (invPartidaAtual && (invPartidaAtual.estado === "investigando" || invPartidaAtual.estado === "acusacao")) {
+      const btnAnotar = el("button", "secondary");
+      btnAnotar.type = "button";
+      btnAnotar.appendChild(invIcone("pin", 16));
+      btnAnotar.appendChild(el("span", "", "Anotar"));
+      btnAnotar.addEventListener("click", () => {
+        invAbrirModalNota(null, `[${doc.titulo}] `);
+      });
+      acoes.appendChild(btnAnotar);
+
+      if (doc.exclusivo && !doc.mostrado && !invPartidaAtual.um_celular && invDossie && invDossie.limites) {
+        const restam = Math.max(0, invDossie.limites.mostrar - invDossie.limites.mostrei);
+        const btnMostrar = el("button", "primary");
+        btnMostrar.type = "button";
+        btnMostrar.disabled = restam <= 0;
+        btnMostrar.appendChild(invIcone("eye", 16));
+        btnMostrar.appendChild(el("span", "", restam > 0 ? `Mostrar a ${nomeDe(1 - eu)} (restam ${restam})` : "Limite de provas mostradas"));
+        btnMostrar.addEventListener("click", async () => {
+          const { data, error } = await sb.rpc("inv_mostrar", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_doc: doc.id });
+          if (error) { aviso(error.message || "Erro ao mostrar prova."); return; }
+          if (data && !data.ok && data.motivo === "limite") { aviso("Vocês já atingiram o limite de provas mostradas."); return; }
+          aviso(`Prova mostrada a ${nomeDe(1 - eu)}.`);
+          await invCarregarEstadoCaso();
+          dlg.close();
+          invRender();
+        });
+        acoes.appendChild(btnMostrar);
+      }
+    }
+
+    dlg.appendChild(acoes);
+    dlg.onclose = () => {
+      invDocAberto = null;
+      invPararFala();
+      invTrack(null);
+      if (vista === "vInvestigacao") invRender();
+    };
+    dlg.showModal();
+  }
+
+  function invRenderConteudoDoc(doc) {
+    const tipo = doc.tipo || "cartao";
+    const box = el("div", "inv-doc-box");
+    if (tipo === "briefing" || tipo === "depoimento") box.classList.add("inv-doc-papel");
+    else if (tipo === "laudo") {
+      box.classList.add("inv-doc-laudo");
+      box.appendChild(el("span", "inv-doc-laudo-selo", "PERÍCIA"));
+    } else if (tipo === "registro" || tipo === "extrato" || tipo === "recibo") {
+      box.classList.add("inv-doc-tabela");
+    }
+
+    if (tipo === "email" && doc.texto) {
+      const linhas = String(doc.texto).split("\n");
+      const cab = el("div", "inv-doc-email-cab");
+      let idxCorpo = 0;
+      while (idxCorpo < linhas.length && /^(de|para|assunto|data):/i.test(linhas[idxCorpo].trim())) {
+        cab.appendChild(el("div", "", linhas[idxCorpo]));
+        idxCorpo++;
+      }
+      if (cab.childNodes.length) {
+        box.appendChild(cab);
+        const resto = linhas.slice(idxCorpo).join("\n").trim();
+        if (resto) box.appendChild(el("p", "inv-doc-texto", resto));
+        return box;
+      }
+    }
+
+    if (Array.isArray(doc.mensagens) && doc.mensagens.length) {
+      const lista = el("div", "inv-chat-lista");
+      const primeiroRem = doc.mensagens[0].de;
+      doc.mensagens.forEach(m => {
+        const bolha = el("div", "inv-chat-msg" + (m.de !== primeiroRem ? " dir" : ""));
+        const cab = el("div", "inv-chat-cab");
+        cab.appendChild(el("strong", "", m.de || ""));
+        cab.appendChild(el("span", "", m.hora || ""));
+        bolha.appendChild(cab);
+        bolha.appendChild(el("p", "inv-chat-txt", m.texto || ""));
+        lista.appendChild(bolha);
+      });
+      box.appendChild(lista);
+    }
+
+    if (doc.texto) {
+      box.appendChild(el("p", "inv-doc-texto", doc.texto));
+    }
+    return box;
+  }
+
+  function invAbrirTrava(t) {
+    const dlg = $("dlgInvTrava");
+    if (!dlg) return;
+    dlg.textContent = "";
+    const topo = el("div", "pos-topo");
+    const h = el("h3", "", t.formato === "escolha" ? `Objetivo: ${t.titulo}` : t.titulo);
+    h.id = "invTravaTitulo";
+    topo.appendChild(h);
+    const f = el("button", "linkbtn", "Fechar"); f.type = "button"; f.addEventListener("click", () => dlg.close());
+    topo.appendChild(f);
+    dlg.appendChild(topo);
+
+    dlg.appendChild(el("p", "inv-sub", t.descricao || ""));
+    const msgErro = el("p", "erro");
+    const atualizarBloqueio = ate => {
+      const r = ate ? invFormatarRestante(ate) : "";
+      msgErro.textContent = r ? `Bloqueado temporariamente (${r})` : "";
+    };
+    if (t.bloqueada_ate) atualizarBloqueio(t.bloqueada_ate);
+
+    if (t.formato === "codigo") {
+      let valor = "";
+      const visor = el("div", "inv-codigo-visor", "----");
+      const teclado = el("div", "inv-teclado");
+      const atualizarVisor = () => { visor.textContent = valor || "----"; };
+      ["1", "2", "3", "4", "5", "6", "7", "8", "9", "Limpar", "0", "Apagar"].forEach(k => {
+        const b = el("button", "inv-tecla", k);
+        b.type = "button";
+        b.addEventListener("click", () => {
+          if (k === "Limpar") valor = "";
+          else if (k === "Apagar") valor = valor.slice(0, -1);
+          else if (valor.length < 12) valor += k;
+          atualizarVisor();
+        });
+        teclado.appendChild(b);
+      });
+      const btnOk = el("button", "primary", "Destravar");
+      btnOk.type = "button";
+      btnOk.addEventListener("click", async () => {
+        if (!valor) return;
+        const { data, error } = await sb.rpc("inv_destravar", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_trava: t.id, p_tentativa: valor });
+        if (error) { msgErro.textContent = error.message; return; }
+        if (data && data.ok) {
+          aviso("Prova destravada!");
+          dlg.close();
+          await invCarregarEstadoCaso();
+          invRender();
+        } else {
+          valor = "";
+          atualizarVisor();
+          if (data && data.bloqueada_ate) atualizarBloqueio(data.bloqueada_ate);
+          else msgErro.textContent = `Código incorreto. Restam ${data && data.restam !== undefined ? data.restam : "?"} tentativas.`;
+        }
+      });
+      dlg.append(visor, teclado, msgErro, btnOk);
+    } else if (t.formato === "escolha") {
+      let sel = "";
+      const ops = el("div", "inv-opcoes-lista");
+      (t.opcoes || []).forEach(o => {
+        const b = el("button", "inv-opcao-btn", o.texto);
+        b.type = "button";
+        b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", () => {
+          sel = o.id;
+          ops.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+        });
+        ops.appendChild(b);
+      });
+      const btnOk = el("button", "primary", "Confirmar resposta");
+      btnOk.type = "button";
+      btnOk.addEventListener("click", async () => {
+        if (!sel) { msgErro.textContent = "Escolha uma opção."; return; }
+        const { data, error } = await sb.rpc("inv_destravar", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_trava: t.id, p_tentativa: sel });
+        if (error) { msgErro.textContent = error.message; return; }
+        if (data && data.ok) {
+          aviso("Objetivo concluído! Novas provas chegaram.");
+          dlg.close();
+          await invCarregarEstadoCaso();
+          invRender();
+        } else if (data && data.bloqueada_ate) {
+          atualizarBloqueio(data.bloqueada_ate);
+        }
+      });
+      dlg.append(ops, msgErro, btnOk);
+    } else {
+      const form = el("form", "inv-form");
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.placeholder = "Digite a palavra-chave";
+      inp.required = true;
+      const btnOk = el("button", "primary", "Destravar");
+      btnOk.type = "submit";
+      form.addEventListener("submit", async ev => {
+        ev.preventDefault();
+        const { data, error } = await sb.rpc("inv_destravar", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_trava: t.id, p_tentativa: inp.value });
+        if (error) { msgErro.textContent = error.message; return; }
+        if (data && data.ok) {
+          aviso("Prova destravada!");
+          dlg.close();
+          await invCarregarEstadoCaso();
+          invRender();
+        } else {
+          if (data && data.bloqueada_ate) atualizarBloqueio(data.bloqueada_ate);
+          else msgErro.textContent = `Palavra incorreta. Restam ${data && data.restam !== undefined ? data.restam : "?"} tentativas.`;
+        }
+      });
+      form.append(inp, msgErro, btnOk);
+      dlg.appendChild(form);
+    }
+    dlg.showModal();
+  }
+
+  function invCriarRetrato(s) {
+    const wrap = el("div", "inv-retrato-wrap");
+    const inicial = ((s.nome || "?").trim()[0] || "?").toUpperCase();
+    if (!s.retrato) {
+      wrap.appendChild(el("span", "inv-retrato-inicial", inicial));
+      return wrap;
+    }
+    const base = String(s.retrato).replace(/\.(jpg|jpeg|png|svg|webp)$/i, "");
+    const exts = [".jpg", ".png", ".svg"];
+    let idx = 0;
+    const img = document.createElement("img");
+    img.className = "inv-retrato-img";
+    img.alt = s.nome || "Suspeito";
+    img.src = base + exts[idx];
+    img.addEventListener("error", () => {
+      idx++;
+      if (idx < exts.length) {
+        img.src = base + exts[idx];
+      } else {
+        wrap.textContent = "";
+        wrap.appendChild(el("span", "inv-retrato-inicial", inicial));
+      }
+    });
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  function invRenderAbaSuspeitos(raiz, p) {
+    if (!invDossie || !invDossie.suspeitos) return;
+    const lista = el("div", "inv-suspeitos-lista");
+    const marcas = p.marcacoes || {};
+
+    invDossie.suspeitos.forEach(s => {
+      const card = el("div", "inv-suspeito-card");
+      const cab = el("div", "inv-suspeito-cab");
+      cab.appendChild(invCriarRetrato(s));
+
+      const info = el("div", "inv-suspeito-info");
+      info.appendChild(el("h3", "inv-suspeito-nome", s.idade ? `${s.nome}, ${s.idade}` : s.nome));
+      if (s.aparencia) info.appendChild(el("p", "inv-suspeito-det", s.aparencia));
+      if (s.vinculo) info.appendChild(el("p", "inv-suspeito-det", `Vínculo: ${s.vinculo}`));
+      if (s.motivo) info.appendChild(el("p", "inv-suspeito-det", `Motivo: ${s.motivo}`));
+      if (s.alibi) info.appendChild(el("p", "inv-suspeito-det", `Álibi: ${s.alibi}`));
+      cab.appendChild(info);
+      card.appendChild(cab);
+
+      const atual = marcas[s.id] || "neutro";
+      const rowM = el("div", "inv-suspeito-marcas");
+      [
+        ["suspeito", "Suspeito", "m-suspeito"],
+        ["alibi", "Álibi confirmado", "m-alibi"],
+        ["descartado", "Descartado", "m-descartado"]
+      ].forEach(([est, rot, cls]) => {
+        const b = el("button", "inv-marca-btn " + cls, rot);
+        b.type = "button";
+        b.setAttribute("aria-pressed", atual === est ? "true" : "false");
+        b.addEventListener("click", async () => {
+          const prox = atual === est ? "neutro" : est;
+          const { error } = await sb.rpc("inv_marcar", { p_sala: codigo, p_inv: p.id, p_suspeito: s.id, p_estado: prox });
+          if (error) { aviso(error.message || "Não foi possível marcar."); return; }
+          if (prox === "neutro") delete marcas[s.id]; else marcas[s.id] = prox;
+          p.marcacoes = marcas;
+          invRender();
+        });
+        rowM.appendChild(b);
+      });
+      card.appendChild(rowM);
+
+      const notasSusp = invNotas.filter(n => n.suspeito === s.id);
+      if (notasSusp.length) {
+        const boxN = el("div", "inv-suspeito-notas");
+        notasSusp.forEach(n => {
+          boxN.appendChild(el("p", "inv-sub", `${n.hora ? n.hora + " · " : ""}${n.texto} (${nomeDe(n.autor)})`));
+        });
+        card.appendChild(boxN);
+      }
+      lista.appendChild(card);
+    });
+    raiz.appendChild(lista);
+  }
+
+  function invRenderAbaQuadro(raiz) {
+    const topo = el("div", "inv-cab-linha");
+    const filtros = el("div", "inv-chips-linha");
+    [["todas", "Todas"], ["fato", "Fatos"], ["duvida", "Dúvidas"], ["linha", "Linha do tempo"]].forEach(([v, rot]) => {
+      const b = el("button", "inv-chip", rot);
+      b.type = "button";
+      b.setAttribute("aria-pressed", invFiltroNota === v ? "true" : "false");
+      b.addEventListener("click", () => { invFiltroNota = v; invRender(); });
+      filtros.appendChild(b);
+    });
+    const btnNova = el("button", "primary");
+    btnNova.type = "button";
+    btnNova.appendChild(invIcone("plus", 16));
+    btnNova.appendChild(el("span", "", "Nova nota"));
+    btnNova.addEventListener("click", () => invAbrirModalNota(null, ""));
+    topo.append(filtros, btnNova);
+    raiz.appendChild(topo);
+
+    let notas = invNotas.slice();
+    if (invFiltroNota === "fato") notas = notas.filter(n => n.marca === "fato");
+    else if (invFiltroNota === "duvida") notas = notas.filter(n => n.marca === "duvida");
+    else if (invFiltroNota === "linha") notas = notas.filter(n => !!n.hora).sort((a, b) => a.hora.localeCompare(b.hora));
+
+    if (!notas.length) {
+      raiz.appendChild(el("p", "inv-sub", invFiltroNota === "linha"
+        ? "Nenhuma nota com horário ainda. Adicione um horário (HH:MM) para montar a linha do tempo."
+        : "Nenhuma nota no quadro ainda."));
+      return;
+    }
+
+    const lista = el("div", "inv-notas-lista");
+    const suspMap = new Map(((invDossie && invDossie.suspeitos) || []).map(s => [s.id, s.nome]));
+    notas.forEach(n => {
+      const card = el("div", "inv-nota-card");
+      const nTopo = el("div", "inv-nota-topo");
+      const tags = el("div", "inv-nota-tags");
+      tags.appendChild(el("span", "", nomeDe(n.autor)));
+      if (n.hora) tags.appendChild(el("span", "inv-status-pill", n.hora));
+      if (n.suspeito && suspMap.has(n.suspeito)) tags.appendChild(el("span", "inv-status-pill", suspMap.get(n.suspeito)));
+      if (n.marca === "fato") tags.appendChild(el("span", "inv-nota-marca fato", "Fato"));
+      if (n.marca === "duvida") tags.appendChild(el("span", "inv-nota-marca duvida", "Dúvida"));
+      nTopo.appendChild(tags);
+      card.appendChild(nTopo);
+      card.appendChild(el("p", "inv-nota-texto", n.texto));
+
+      if (n.autor === eu || (invPartidaAtual && invPartidaAtual.um_celular)) {
+        const acoes = el("div", "inv-nota-acoes");
+        const bEd = el("button", "linkbtn", "Editar");
+        bEd.type = "button";
+        bEd.addEventListener("click", () => invAbrirModalNota(n, ""));
+        const bAp = el("button", "linkbtn", "Apagar");
+        bAp.type = "button";
+        bAp.addEventListener("click", async () => {
+          if (!await perguntar("Apagar esta nota?")) return;
+          const { error } = await sb.from("investigacoes_notas").delete().eq("id", n.id);
+          if (error) aviso("Não foi possível apagar.");
+        });
+        acoes.append(bEd, bAp);
+        card.appendChild(acoes);
+      }
+      lista.appendChild(card);
+    });
+    raiz.appendChild(lista);
+  }
+
+  function invAbrirModalNota(nota, textoInicial) {
+    const dlg = $("dlgInvNota");
+    if (!dlg || !invPartidaAtual) return;
+    dlg.textContent = "";
+    const topo = el("div", "pos-topo");
+    const h = el("h3", "", nota ? "Editar nota" : "Nova nota");
+    h.id = "invNotaTitulo";
+    topo.appendChild(h);
+    const fechar = el("button", "linkbtn", "Fechar"); fechar.type = "button"; fechar.addEventListener("click", () => dlg.close());
+    topo.appendChild(fechar);
+    dlg.appendChild(topo);
+
+    const form = el("form", "inv-form");
+    const cTexto = el("label", "inv-campo", "Texto");
+    const ta = document.createElement("textarea");
+    ta.rows = 3;
+    ta.maxLength = 500;
+    ta.required = true;
+    ta.value = nota ? nota.texto : (textoInicial || "");
+    cTexto.appendChild(ta);
+
+    const cSusp = el("label", "inv-campo", "Suspeito (opcional)");
+    const selSusp = document.createElement("select");
+    const op0 = document.createElement("option"); op0.value = ""; op0.textContent = "Nenhum";
+    selSusp.appendChild(op0);
+    ((invDossie && invDossie.suspeitos) || []).forEach(s => {
+      const op = document.createElement("option"); op.value = s.id; op.textContent = s.nome;
+      selSusp.appendChild(op);
+    });
+    selSusp.value = (nota && nota.suspeito) || "";
+    cSusp.appendChild(selSusp);
+
+    const cHora = el("label", "inv-campo", "Horário na linha do tempo (opcional, HH:MM)");
+    const inpHora = document.createElement("input");
+    inpHora.type = "text";
+    inpHora.placeholder = "Ex.: 21:30";
+    inpHora.pattern = "^[0-2][0-9]:[0-5][0-9]$";
+    inpHora.value = (nota && nota.hora) || "";
+    cHora.appendChild(inpHora);
+
+    const cMarca = el("label", "inv-campo", "Classificação");
+    const selMarca = document.createElement("select");
+    [["", "Sem marca"], ["fato", "Fato (confirmado)"], ["duvida", "Dúvida (a conferir)"]].forEach(([v, r]) => {
+      const op = document.createElement("option"); op.value = v; op.textContent = r;
+      selMarca.appendChild(op);
+    });
+    selMarca.value = (nota && nota.marca) || "";
+    cMarca.appendChild(selMarca);
+
+    const msgErro = el("p", "erro");
+    const btnSalvar = el("button", "primary", "Salvar nota");
+    btnSalvar.type = "submit";
+    form.addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const texto = ta.value.trim();
+      const hora = inpHora.value.trim() || null;
+      if (!texto) { msgErro.textContent = "Escreva a nota."; return; }
+      if (hora && !/^[0-2][0-9]:[0-5][0-9]$/.test(hora)) { msgErro.textContent = "Use o formato HH:MM."; return; }
+      const payload = {
+        texto,
+        suspeito: selSusp.value || null,
+        hora,
+        marca: selMarca.value || null
+      };
+      if (nota) {
+        payload.atualizada_em = new Date().toISOString();
+        const { error } = await sb.from("investigacoes_notas").update(payload).eq("id", nota.id);
+        if (error) { msgErro.textContent = error.message; return; }
+      } else {
+        const { error } = await sb.from("investigacoes_notas").insert({
+          investigacao: invPartidaAtual.id,
+          sala: codigo,
+          autor: eu,
+          ...payload
+        });
+        if (error) { msgErro.textContent = error.message; return; }
+      }
+      dlg.close();
+      await invCarregarEstadoCaso();
+      invRender();
+    });
+    form.append(cTexto, cSusp, cHora, cMarca, msgErro, btnSalvar);
+    dlg.appendChild(form);
+    dlg.showModal();
+  }
+
+  function invRenderAbaCaso(raiz, p) {
+    if (!invDossie) return;
+    // Progresso
+    const boxProg = el("div", "inv-card");
+    const euDocs = (invDossie.docs || []).length;
+    const parDocs = (invDossie.do_parceiro || []).length + (invDossie.docs || []).filter(d => !d.exclusivo).length;
+    const lEu = ((p.lidos && p.lidos[String(eu)]) || []).length;
+    const lOutro = ((p.lidos && p.lidos[String(1 - eu)]) || []).length;
+    boxProg.appendChild(el("p", "inv-sub", p.um_celular
+      ? `Vocês leram ${lEu} de ${euDocs} documentos`
+      : `Você leu ${lEu} de ${euDocs} · ${nomeDe(1 - eu)} leu ${lOutro} de ${parDocs}`));
+    if (p.tentativas > 0 || p.feedback) {
+      boxProg.appendChild(el("p", "inv-sub", `Tentativas de acusação: ${p.tentativas}`));
+      if (p.feedback) boxProg.appendChild(el("p", "inv-nota-texto", p.feedback));
+    }
+    raiz.appendChild(boxProg);
+
+    // Acusação pendente
+    if (p.estado === "acusacao" && p.proposta) {
+      const boxAc = el("div", "inv-card inv-card-destaque");
+      const propPor = p.proposta.por;
+      boxAc.appendChild(el("h3", "inv-caso-titulo", propPor === eu ? `Aguardando ${nomeDe(1 - eu)} assinar` : `${nomeDe(propPor)} propôs a acusação`));
+      const ul = el("div", "inv-casos-lista");
+      (invDossie.perguntas || []).forEach(q => {
+        const respId = p.proposta.respostas && p.proposta.respostas[q.id];
+        const op = (q.opcoes || []).find(o => o.id === respId);
+        ul.appendChild(el("p", "inv-sub", `${q.rotulo}: ${op ? op.texto : respId}`));
+      });
+      boxAc.appendChild(ul);
+      const row = el("div", "row");
+      if (propPor === eu) {
+        const bRet = el("button", "secondary", "Retirar acusação");
+        bRet.type = "button";
+        bRet.addEventListener("click", async () => {
+          await sb.rpc("inv_retirar", { p_sala: codigo, p_inv: p.id, p_jogador: eu });
+          await invCarregarEstadoCaso();
+          invRender();
+        });
+        row.appendChild(bRet);
+      } else {
+        const bAss = el("button", "primary", "Assinar acusação");
+        bAss.type = "button";
+        bAss.addEventListener("click", async () => {
+          await sb.rpc("inv_confirmar", { p_sala: codigo, p_inv: p.id, p_jogador: eu, p_aceita: true });
+          await invCarregarEstadoCaso();
+          invRender();
+        });
+        const bDev = el("button", "secondary", "Ainda não");
+        bDev.type = "button";
+        bDev.addEventListener("click", async () => {
+          await sb.rpc("inv_confirmar", { p_sala: codigo, p_inv: p.id, p_jogador: eu, p_aceita: false });
+          await invCarregarEstadoCaso();
+          invRender();
+        });
+        row.append(bAss, bDev);
+      }
+      boxAc.appendChild(row);
+      raiz.appendChild(boxAc);
+    } else if (p.estado === "investigando") {
+      // Botão Acusação final + espera
+      const boxAc = el("div", "inv-card");
+      const esperaMin = (invDossie.limites && invDossie.limites.espera_min) || 5;
+      const livreEm = p.ultima_tentativa ? new Date(new Date(p.ultima_tentativa).getTime() + esperaMin * 60000).toISOString() : null;
+      const restEspera = livreEm ? invFormatarRestante(livreEm) : "";
+      const btnAc = el("button", "primary", restEspera ? `Aguarde ${restEspera} para acusar` : "Acusação final");
+      btnAc.type = "button";
+      btnAc.disabled = !!restEspera;
+      btnAc.addEventListener("click", invAbrirModalAcusacao);
+      boxAc.appendChild(btnAc);
+      if (restEspera) {
+        invTimerContagem = setInterval(() => {
+          const r = invFormatarRestante(livreEm);
+          btnAc.textContent = r ? `Aguarde ${r} para acusar` : "Acusação final";
+          btnAc.disabled = !!r;
+          if (!r) invPararContagem();
+        }, 1000);
+      }
+      raiz.appendChild(boxAc);
+    }
+
+    // Dicas
+    const boxDicas = el("div", "inv-card");
+    boxDicas.appendChild(el("h3", "inv-caso-titulo", "Dicas"));
+    const dicas = invDossie.dicas || [];
+    const totalDicas = invDossie.dicas_total || 0;
+    if (!dicas.length) boxDicas.appendChild(el("p", "inv-sub", "Nenhuma dica pedida ainda."));
+    dicas.forEach((d, idx) => boxDicas.appendChild(el("p", "inv-nota-texto", `${idx + 1}. ${d}`)));
+    if (p.estado === "investigando" && dicas.length < totalDicas) {
+      const bDica = el("button", "secondary", `Pedir dica (${dicas.length}/${totalDicas})`);
+      bDica.type = "button";
+      bDica.addEventListener("click", async () => {
+        if (!await perguntar("Pedir uma dica pode reduzir as estrelas finais do caso. Continuar?")) return;
+        const { error } = await sb.rpc("inv_dica", { p_sala: codigo, p_inv: p.id });
+        if (error) { aviso(error.message || "Erro ao pedir dica."); return; }
+        await invCarregarEstadoCaso();
+        invRender();
+      });
+      boxDicas.appendChild(bDica);
+    }
+    raiz.appendChild(boxDicas);
+
+    // Revelar solução & Recomeçar
+    const boxAcoes = el("div", "inv-card");
+    const row = el("div", "row");
+    if (p.estado === "investigando" && p.tentativas >= 1) {
+      const euDesisti = !!(p.desistiu && p.desistiu[eu]);
+      const outroDesistiu = !!(p.desistiu && p.desistiu[1 - eu]);
+      const rot = euDesisti ? "Cancelar pedido de revelar" : (outroDesistiu ? `Revelar solução (${nomeDe(1 - eu)} pediu)` : "Revelar a solução");
+      const bDes = el("button", "secondary", rot);
+      bDes.type = "button";
+      bDes.addEventListener("click", async () => {
+        if (!euDesisti && !await perguntar("Revelar a solução encerra o caso com 0 estrelas. Os dois precisam concordar. Continuar?")) return;
+        await sb.rpc("inv_desistir", { p_sala: codigo, p_inv: p.id, p_jogador: eu, p_quer: !euDesisti });
+        await invCarregarEstadoCaso();
+        invRender();
+      });
+      row.appendChild(bDes);
+    }
+    const bRec = el("button", "linkbtn", "Recomeçar o caso");
+    bRec.type = "button";
+    bRec.addEventListener("click", invPedirReinicio);
+    row.appendChild(bRec);
+    boxAcoes.appendChild(row);
+    raiz.appendChild(boxAcoes);
+  }
+
+  async function invPedirReinicio() {
+    if (!invPartidaAtual) return;
+    if (!await perguntar("Recomeçar apaga o progresso e todas as notas deste caso para os dois. Confirmar?")) return;
+    const { error } = await sb.rpc("inv_reiniciar", { p_sala: codigo, p_inv: invPartidaAtual.id });
+    if (error) { aviso(error.message || "Erro ao recomeçar."); return; }
+    invPartidaAtual = null;
+    invDossie = null;
+    invRelatorio = null;
+    invNotas = [];
+    await invCarregarPrateleira();
+    invAbrirCaso(invCasoAtual);
+  }
+
+  function invAbrirModalAcusacao() {
+    const dlg = $("dlgInvAcusacao");
+    if (!dlg || !invDossie) return;
+    dlg.textContent = "";
+    const topo = el("div", "pos-topo");
+    const h = el("h3", "", "Acusação final");
+    h.id = "invAcusacaoTitulo";
+    topo.appendChild(h);
+    const f = el("button", "linkbtn", "Fechar"); f.type = "button"; f.addEventListener("click", () => dlg.close());
+    topo.appendChild(f);
+    dlg.appendChild(topo);
+
+    const form = el("form", "inv-form");
+    const escolhas = {};
+    (invDossie.perguntas || []).forEach(q => {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-doc-titulo", q.texto || q.rotulo));
+      const ops = el("div", "inv-opcoes-lista");
+      (q.opcoes || []).forEach(o => {
+        const b = el("button", "inv-opcao-btn", o.texto);
+        b.type = "button";
+        b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", () => {
+          escolhas[q.id] = o.id;
+          ops.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+        });
+        ops.appendChild(b);
+      });
+      grp.appendChild(ops);
+      form.appendChild(grp);
+    });
+
+    const msgErro = el("p", "erro");
+    const btnEnv = el("button", "primary", invPartidaAtual.um_celular ? "Enviar acusação" : `Enviar para ${nomeDe(1 - eu)} assinar`);
+    btnEnv.type = "submit";
+    form.addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const falta = (invDossie.perguntas || []).find(q => !escolhas[q.id]);
+      if (falta) { msgErro.textContent = `Falta responder: ${falta.rotulo}`; return; }
+      const { data, error } = await sb.rpc("inv_propor", { p_sala: codigo, p_inv: invPartidaAtual.id, p_jogador: eu, p_respostas: escolhas });
+      if (error) { msgErro.textContent = error.message; return; }
+      if (data && !data.ok && data.motivo === "espera") {
+        msgErro.textContent = `Aguarde ${invFormatarRestante(data.livre_em)} para tentar novamente.`;
+        return;
+      }
+      dlg.close();
+      await invCarregarEstadoCaso();
+      invRender();
+    });
+    form.append(msgErro, btnEnv);
+    dlg.appendChild(form);
+    dlg.showModal();
+  }
+
+  function invRenderRelatorio(raiz, c, p) {
+    if (!invRelatorio) { raiz.appendChild(el("p", "inv-sub", "Carregando relatório...")); return; }
+    const r = invRelatorio;
+    const box = el("div", "inv-card inv-card-destaque");
+    const est = el("div", "inv-estrelas");
+    for (let i = 0; i < 3; i++) est.appendChild(invIcone("star", 20, i < (r.estrelas || 0) ? "icone-estrela-cheia" : ""));
+    box.appendChild(est);
+    box.appendChild(el("h3", "inv-caso-titulo", p.estado === "concluido" ? "Caso resolvido!" : "Solução revelada"));
+
+    const durMin = (r.iniciada_em && r.concluida_em) ? Math.max(1, Math.round((new Date(r.concluida_em) - new Date(r.iniciada_em)) / 60000)) : null;
+    const resumoMeta = [`Tentativas erradas: ${r.tentativas || 0}`, `Dicas: ${r.dicas || 0}`];
+    if (durMin) resumoMeta.push(`Tempo: ${durMin} min`);
+    box.appendChild(el("p", "inv-sub", resumoMeta.join(" · ")));
+
+    if (r.solucao && r.solucao.resumo) {
+      box.appendChild(el("p", "inv-doc-texto", r.solucao.resumo));
+    }
+    raiz.appendChild(box);
+
+    if (r.solucao && Array.isArray(r.solucao.linha_do_tempo) && r.solucao.linha_do_tempo.length) {
+      const boxTl = el("div", "inv-card");
+      boxTl.appendChild(el("h3", "inv-caso-titulo", "Linha do tempo real"));
+      const tl = el("div", "inv-timeline");
+      r.solucao.linha_do_tempo.forEach(item => {
+        const it = el("div", "inv-tl-item");
+        it.appendChild(el("span", "inv-tl-hora", item.hora || ""));
+        it.appendChild(el("p", "inv-tl-txt", item.texto || ""));
+        tl.appendChild(it);
+      });
+      boxTl.appendChild(tl);
+      raiz.appendChild(boxTl);
+    }
+
+    if (r.solucao && Array.isArray(r.solucao.falsas_pistas) && r.solucao.falsas_pistas.length) {
+      const boxFp = el("div", "inv-card");
+      boxFp.appendChild(el("h3", "inv-caso-titulo", "Pistas falsas explicadas"));
+      r.solucao.falsas_pistas.forEach(fp => boxFp.appendChild(el("p", "inv-tl-txt", `• ${fp}`)));
+      raiz.appendChild(boxFp);
+    }
+
+    if (Array.isArray(r.docs) && r.docs.length) {
+      const grp = el("div", "inv-grupo");
+      grp.appendChild(el("p", "inv-grupo-titulo", "Todos os documentos do caso"));
+      r.docs.forEach(d => grp.appendChild(invCriarItemDoc(d, true)));
+      raiz.appendChild(grp);
+    }
+
+    const bRec = el("button", "secondary", "Recomeçar este caso");
+    bRec.type = "button";
+    bRec.addEventListener("click", invPedirReinicio);
+    raiz.appendChild(bRec);
+  }
+
+  presencaMudou.push(() => {
+    if (vista === "vInvestigacao" && invCasoAtual && invPartidaAtual) {
+      const faixa = document.querySelector("#invRaiz .inv-faixa-presenca");
+      const txt = invTextoPresenca();
+      if (txt && !faixa) invRender();
+      else if (txt && faixa) faixa.querySelector("span").textContent = txt;
+      else if (!txt && faixa) faixa.remove();
+    }
+  });
+
+  if ($("invVoltar")) {
+    $("invVoltar").addEventListener("click", () => {
+      if (invCasoAtual) {
+        invCasoAtual = null;
+        invPartidaAtual = null;
+        invDossie = null;
+        invRelatorio = null;
+        invNotas = [];
+        invRender();
+      } else {
+        mostrarVista(estado && estado.fixa ? "casa" : "jogo");
+      }
+    });
   }
 
   iniciar();

@@ -259,6 +259,11 @@
               <span class="lista-txt"><span class="lista-titulo">Campanha de 3 noites</span><span class="lista-info" id="inicioCampInfo"></span></span>
               <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
             </button>
+            <button type="button" class="lista-linha" data-abre="vInvestigacao" id="atalhoInvestigacao">
+              <span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#search"/></svg></span>
+              <span class="lista-txt"><span class="lista-titulo">Investigação</span><span class="lista-info" id="inicioInvInfo">Mistério cooperativo para dois</span></span>
+              <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
+            </button>
           </div>
         </section>
 
@@ -837,9 +842,18 @@
         <button type="button" class="linkbtn voltar" data-abre="casa"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> Início</button>
         <div id="lugarCofre"></div>
       </section>
+      <section class="casa-vista inv-vista" id="vInvestigacao" hidden>
+        <div class="inv-topo-voltar">
+          <button type="button" class="linkbtn voltar" id="invVoltar"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#chevron-left"/></svg> <span id="invVoltarTexto">Início</span></button>
+        </div>
+        <div id="invRaiz" class="inv-raiz"></div>
+      </section>
     </section>
 
     <div id="telaJogo">
+    <div class="inv-atalho-jogo-wrap" id="jogoBtnInvWrap">
+      <button type="button" class="secondary inv-atalho-jogo" data-abre="vInvestigacao" id="jogoBtnInvestigacao"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#search"/></svg> Investigação</button>
+    </div>
     <div class="faixa-humor" id="faixaHumor" hidden role="status">
       <p>Dia difícil? Que tal Romântico e prendas fofas hoje?</p>
       <button class="secondary" id="faixaHumorUsar" type="button">Usar</button>
@@ -1906,6 +1920,10 @@
       </div>
     </form>
   </dialog>
+  <dialog class="dlg inv-dlg-doc" id="dlgInvDoc" aria-labelledby="invDocTitulo"></dialog>
+  <dialog class="dlg inv-dlg-trava" id="dlgInvTrava" aria-labelledby="invTravaTitulo"></dialog>
+  <dialog class="dlg inv-dlg-nota" id="dlgInvNota" aria-labelledby="invNotaTitulo"></dialog>
+  <dialog class="dlg inv-dlg-acusacao" id="dlgInvAcusacao" aria-labelledby="invAcusacaoTitulo"></dialog>
 </main>
 
 <div class="call-card" id="callCard" role="group" aria-labelledby="callCardTitulo" hidden>

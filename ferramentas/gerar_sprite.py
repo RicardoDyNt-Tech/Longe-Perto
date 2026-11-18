@@ -13,10 +13,27 @@ icons = [
     'scroll-text', 'search', 'settings', 'shirt', 'shopping-basket', 'shower-head', 'skip-forward', 'smartphone', 'smile',
     'snowflake', 'sofa', 'sparkles', 'square', 'square-stack', 'star', 'sun', 'sunrise', 'sunset', 'target',
     'thermometer', 'ticket', 'timer', 'tree-palm', 'trophy', 'tv', 'user', 'users', 'utensils', 'utensils-crossed',
-    'volume-2', 'volume-x', 'wine', 'x', 'zap'
+    'volume-2', 'volume-x', 'wine', 'x', 'zap',
+    # Investigacao (casos + UI)
+    'alert-circle', 'anchor', 'anvil', 'award', 'bike', 'bird', 'building', 'bus', 'castle', 'clock',
+    'compass', 'container', 'copy', 'cpu', 'croissant', 'cross', 'door-closed', 'egg', 'file-text', 'fish',
+    'flame-kindling', 'flask-round', 'flower', 'folder', 'footprints', 'headphones', 'help-circle', 'hospital', 'mountain', 'newspaper',
+    'orbit', 'phone-off', 'pickaxe', 'pin', 'play', 'plus', 'radio', 'rocket', 'rotate-ccw', 'sailboat',
+    'satellite', 'scale', 'scan-face', 'scroll', 'shield-alert', 'ship', 'spade', 'stamp', 'swords', 'tornado',
+    'train-front', 'trash-2', 'trees', 'unlock', 'user-check', 'user-x', 'waves'
 ]
 
 symbols = []
+# Preserva marca e shield se já existirem no icones.svg atual
+try:
+    atual = open("icones.svg", encoding="utf-8").read()
+    for keep in ("marca", "shield"):
+        m = re.search(rf'<symbol id="{keep}"[^>]*>.*?</symbol>', atual, re.S)
+        if m:
+            symbols.append(m.group(0))
+except FileNotFoundError:
+    pass
+
 # Ponto neutro para ícone inexistente
 symbols.append('<symbol id="ponto-neutro" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></symbol>')
 
