@@ -40,6 +40,9 @@
     jornada("album_10", "Álbum de família", "10 momentos no álbum", "casal", 10, d => d.momentos.length),
     jornada("cofre_1", "Promessa cumprida", "1 item do cofre marcado como feito", "casal", 1, d => d.cofre.filter(x => x.feito).length),
     jornada("campanha_1", "Minissérie completa", "1 campanha de 3 noites concluída", "casal", 1, d => d.campanhas || 0),
+    jornada("caso_1", "Detetives", "1 caso de Investigação resolvido", "casal", 1, d => (d.investigacoes || []).filter(x => x.estado === "concluido").length),
+    jornada("caso_3estrelas", "Caso perfeito", "1 caso de Investigação resolvido com 3 estrelas", "casal", 1, d => (d.investigacoes || []).filter(x => x.estado === "concluido" && x.estrelas === 3).length),
+    jornada("caso_sem_dica", "Pura dedução", "1 caso de Investigação resolvido sem pedir dica", "casal", 1, d => (d.investigacoes || []).filter(x => x.estado === "concluido" && (x.dicas || 0) === 0).length),
     jornada("eventos_todos", "Experimentamos de tudo", "Pelo menos 1 de cada: efeito, duelo, sintonia e missão em dupla", "casal", 4,
       d => TIPOS_EVENTO.filter(t => d.partidas.some(p => p.placar.some(q => ((q || {}).eventos || {})[t] > 0))).length),
     // Jornada · jogador

@@ -3258,6 +3258,11 @@
     humores.forEach(h => ev.push({ tipo: "humor", quando: h.atualizado_em || h.dia + "T15:00:00Z", dia: h.dia, x: h }));
     dados.murais.forEach(m => { if (m.criada_em) ev.push({ tipo: "mural", quando: m.criada_em, dia: diaDe(m.criada_em), x: m }); });
     partidasSala.forEach(p => { if (p.finalizada_em) ev.push({ tipo: "partida", quando: p.finalizada_em, dia: diaDe(p.finalizada_em), x: p }); });
+    (invPartidas || []).forEach(p => {
+      if ((p.estado === "concluido" || p.estado === "revelado") && p.concluida_em && p.caso !== "teste-biscoito") {
+        ev.push({ tipo: "partida", sub: "investigacao", quando: p.concluida_em, dia: diaDe(p.concluida_em), x: p });
+      }
+    });
     return ev.sort((a, b) => a.quando < b.quando ? 1 : a.quando > b.quando ? -1 : 0);
   }
   function itemHist(e) {
@@ -3286,6 +3291,12 @@
       li.insertBefore(b, null);
       corpo.appendChild(el("p", "hist-t", x.para == null ? "Desenho feito juntos" : `${nomeDe(x.de)} desenhou para ${nomeDe(x.para)}`));
       if (x.legenda) corpo.appendChild(el("p", "hist-sub", x.legenda));
+    } else if (e.sub === "investigacao") {
+      const c = (invCasos || []).find(k => k.id === x.caso);
+      const t = c ? c.titulo : x.caso;
+      const est = x.estado === "concluido" ? `${x.estrelas || 0} ${(x.estrelas || 0) === 1 ? "estrela" : "estrelas"}` : "Solução revelada";
+      corpo.appendChild(el("p", "hist-t", `Investigação: ${t}`));
+      corpo.appendChild(el("p", "hist-sub", est));
     } else {
       const j = x.jogadores || [], pts = (x.placar || []).map(p => p && p.pontos);
       corpo.appendChild(el("p", "hist-t", `Partida: ${j[0] || ""} ${pts[0] ?? ""} × ${pts[1] ?? ""} ${j[1] || ""}`));
@@ -3322,7 +3333,9 @@
     const indo = dg.filter(d => d.status === "indo").length;
     $("histMesDengos").textContent = `Dengos pedidos: ${dg.length} · atendidos com “Tô indo”: ${indo}`;
     $("histMesMural").textContent = `Desenhos trocados: ${dados.murais.filter(x => doMes(x.criada_em)).length}`;
-    $("histMesPartidas").textContent = `Partidas: ${partidasSala.filter(p => doMes(p.finalizada_em)).length}`;
+    const nPart = partidasSala.filter(p => doMes(p.finalizada_em)).length;
+    const nCasos = (invPartidas || []).filter(p => p.estado === "concluido" && p.caso !== "teste-biscoito" && doMes(p.concluida_em)).length;
+    $("histMesPartidas").textContent = `Partidas: ${nPart}` + (nCasos ? ` · Casos resolvidos: ${nCasos}` : "");
   }
   // gráfico: últimos 7 dias, uma linha por pessoa na cor do avatar; dia sem registro fica em branco
   function desenharHumorSemana() {
@@ -4769,7 +4782,8 @@
     return {
       partidas: partidasDoCasal(), autorais: cartas.filter(c => c.sala).length,
       envelopes: dados.envelopes, capsulas: dados.capsulas, apostas: dados.apostas, observacoes: dados.observacoes, momentos: dados.momentos,
-      cofre, seq: [sequencia(0), sequencia(1)], chamadas: resumoCh || {}, campanhas: (estado && estado.campanhasFeitas) || 0
+      cofre, seq: [sequencia(0), sequencia(1)], chamadas: resumoCh || {}, campanhas: (estado && estado.campanhasFeitas) || 0,
+      investigacoes: (invPartidas || []).filter(p => invModoTeste || p.caso !== "teste-biscoito")
     };
   }
   function progresso(c, d, j) { try { return Number(c.contar(d, j)) || 0; } catch (err) { return 0; } }
@@ -8094,6 +8108,11 @@
       if (linhas.length) telas.push({ icone: "thermometer", titulo: "O nível mais jogado, mês a mês", linhas });
     }
     // 4. dengos
+    const invRes = (invPartidas || []).filter(p => p.estado === "concluido" && p.caso !== "teste-biscoito" && noPeriodo(p.concluida_em));
+    if (invRes.length) {
+      const estTot = invRes.reduce((s, p) => s + (p.estrelas || 0), 0);
+      telas.push({ icone: "search", titulo: `${invRes.length} ${invRes.length === 1 ? "caso resolvido" : "casos resolvidos"}`, linhas: [`${estTot} ${estTot === 1 ? "estrela conquistada" : "estrelas conquistadas"} na Investigação`] });
+    }
     const dg = (dados.dengos || []).filter(d => noPeriodo(d.criada_em));
     if (dg.length) {
       const indo = dg.filter(d => d.status === "indo").length;
@@ -8187,7 +8206,8 @@
         : `Você está sem bateria social até ${hojeISO(ate) === hojeISO() ? "" : "amanhã, "}${ate.toLocaleTimeString("pt-BR", { timeZone: "America/Bahia", hour: "2-digit", minute: "2-digit" })}. Tudo calmo por aqui.`;
     }
     // sem jogo para os dois enquanto alguém está sem bateria
-    if ((minha || dele) && vista === "jogo") setTimeout(() => mostrarVista("casa"), 0);
+    if ((minha || dele) && (vista === "jogo" || vista === "vInvestigacao")) setTimeout(() => mostrarVista("casa"), 0);
+    invAplicarVisibilidade();
     desenharCuidado(e, dele);
     // expira sozinho
     clearTimeout(timerBateria);
@@ -9544,11 +9564,63 @@
     return icone(id, tam, cls);
   }
 
+  let invWake = null;
+
+  async function invManterTelaAcesa(ligar) {
+    try {
+      if (ligar && !invWake && navigator.wakeLock) {
+        invWake = await navigator.wakeLock.request("screen");
+        invWake.addEventListener("release", () => { invWake = null; });
+      } else if (!ligar && invWake) {
+        await invWake.release();
+        invWake = null;
+      }
+    } catch (e) {}
+  }
+
+  function invNotificarParceiro(texto) {
+    aviso(texto);
+    try {
+      const C = window.Capacitor;
+      const LN = C && C.Plugins && C.Plugins.LocalNotifications;
+      if (LN && typeof LN.schedule === "function") {
+        LN.schedule({ notifications: [{ id: Math.floor(Date.now() % 100000), title: "Investigação", body: texto }] }).catch(() => {});
+        return;
+      }
+      if ("Notification" in window && document.hidden && Notification.permission === "granted") {
+        new Notification("Longe & Perto — Investigação", { body: texto });
+      }
+    } catch (e) {}
+  }
+
+  async function invGanharVales3Estrelas(row) {
+    if (!row || row.estado !== "concluido" || row.estrelas !== 3 || row.caso === "teste-biscoito") return;
+    if (!config || !config.fatura || !config.fatura.vales || !codigo) return;
+    const pool = (valesModelos || []).filter(v => config.niveis[v.nivel]);
+    if (!pool.length) return;
+    const credores = row.um_celular ? [0, 1] : [eu];
+    for (const c of credores) {
+      if (!nomeDe(c)) continue;
+      const chave = `inv-vale:${row.id}:${c}`;
+      if (valesDados.has(chave)) continue;
+      valesDados.add(chave);
+      const v = pool[Math.floor(Math.random() * pool.length)];
+      const { data, error } = await sb.from("cofre")
+        .insert({ sala: codigo, carta: v.texto.slice(0, 280), nota: "Caso resolvido com 3 estrelas", autor: nomeDe(c).slice(0, 20), tipo: "vale", credor: c, minutos: v.minutos || null })
+        .select("*").single();
+      if (!error && data) juntarCofre(data);
+    }
+  }
+
   function invAplicarVisibilidade() {
-    const ativo = !(config && config.investigacao && config.investigacao.ativo === false);
+    const semBateria = typeof bateriaAlguem === "function" && estado && bateriaAlguem(estado);
+    const ativo = !(config && config.investigacao && config.investigacao.ativo === false) && !semBateria;
     if ($("atalhoInvestigacao")) $("atalhoInvestigacao").hidden = !ativo;
     if ($("jogoBtnInvWrap")) $("jogoBtnInvWrap").hidden = !ativo;
-    if (!ativo && vista === "vInvestigacao") mostrarVista(estado && estado.fixa ? "casa" : "jogo");
+    if (!ativo && vista === "vInvestigacao") {
+      invManterTelaAcesa(false);
+      mostrarVista(estado && estado.fixa ? "casa" : "jogo");
+    }
   }
 
   function invTrack(lendo) {
@@ -9682,11 +9754,16 @@
     } else if (invPartidaAtual.estado === "concluido" || invPartidaAtual.estado === "revelado") {
       const { data: rData, error: rErr } = await sb.rpc("inv_relatorio", { p_sala: codigo, p_inv: invId });
       if (!rErr && rData) invRelatorio = rData;
+      if (invPartidaAtual.estado === "concluido") {
+        verificarConquistas();
+        invGanharVales3Estrelas(invPartidaAtual);
+      }
     }
   }
 
   async function invReceberPartida(tipo, row) {
     if (!row) return;
+    const antes = invPartidas.find(p => p.id === row.id) || null;
     if (tipo === "DELETE") {
       invPartidas = invPartidas.filter(p => p.id !== row.id);
       if (invPartidaAtual && invPartidaAtual.id === row.id) {
@@ -9703,6 +9780,22 @@
     }
     invPartidas = invPartidas.filter(p => p.id !== row.id).concat(row);
     invAtualizarResumoInicio();
+
+    // Avisos e notificações de ações do parceiro
+    if (!row.um_celular) {
+      if (row.estado === "envelope" && row.abriu && row.abriu[1 - eu] && !row.abriu[eu] && (!antes || !antes.abriu || !antes.abriu[1 - eu])) {
+        invNotificarParceiro(`${nomeDe(1 - eu)} abriu um caso. Seu envelope está esperando.`);
+      } else if (row.estado === "acusacao" && row.proposta && row.proposta.por !== eu && (!antes || antes.estado !== "acusacao")) {
+        invNotificarParceiro(`${nomeDe(1 - eu)} fez uma acusação e precisa da sua assinatura.`);
+      } else if (antes && Array.isArray(row.travas_abertas) && Array.isArray(antes.travas_abertas) && row.travas_abertas.length > antes.travas_abertas.length) {
+        invNotificarParceiro("Uma prova foi destrancada.");
+      }
+    }
+    if (row.estado === "concluido" && (!antes || antes.estado !== "concluido")) {
+      verificarConquistas();
+      invGanharVales3Estrelas(row);
+    }
+
     if (invPartidaAtual && invPartidaAtual.id === row.id) {
       invPartidaAtual = row;
       await invCarregarEstadoCaso();
@@ -9728,6 +9821,7 @@
 
   function invRender() {
     invPararContagem();
+    invManterTelaAcesa(vista === "vInvestigacao" && !!invCasoAtual);
     const raiz = $("invRaiz");
     if (!raiz) return;
     raiz.textContent = "";
