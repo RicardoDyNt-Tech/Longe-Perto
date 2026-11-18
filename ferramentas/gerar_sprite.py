@@ -43,8 +43,9 @@ for name in icons:
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req) as resp:
         content = resp.read().decode("utf-8")
-    inner = re.sub(r"^<svg[^>]*>", "", content.strip())
-    inner = re.sub(r"</svg>$", "", inner.strip()).strip()
+    inner = re.sub(r"<!--[^>]*-->", "", content.strip()).strip()
+    inner = re.sub(r"^<svg[^>]*>", "", inner).strip()
+    inner = re.sub(r"</svg>$", "", inner).strip()
     symbols.append(f'<symbol id="{name}" viewBox="0 0 24 24">{inner}</symbol>')
 
 cabecalho = """<!--
