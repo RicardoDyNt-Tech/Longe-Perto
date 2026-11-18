@@ -878,12 +878,12 @@
       <button class="secondary" id="roteiroAbrir" type="button" hidden><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#clapperboard"/></svg> Jogar com roteiro</button>
       <p class="config-dica" id="roteiroEscolhendo" hidden></p>
     </div>
-    <div class="chips" id="niveis" aria-label="Níveis">
-      <label class="chip"><input type="checkbox" value="romantico"><span>Romântico</span></label>
-      <label class="chip"><input type="checkbox" value="leve"><span>Leve</span></label>
-      <label class="chip"><input type="checkbox" value="criativo"><span>Criativo</span></label>
-      <label class="chip"><input type="checkbox" value="picante"><span>Picante</span></label>
-      <label class="chip"><input type="checkbox" value="pesado"><span>Pesado +18</span></label>
+    <div class="niveis-barras" id="niveis" aria-label="Níveis">
+      <label class="nivel-barra nivel-romantico"><input type="checkbox" value="romantico"><span class="nb-traco"></span><span class="nb-txt">Romântico</span></label>
+      <label class="nivel-barra nivel-leve"><input type="checkbox" value="leve"><span class="nb-traco"></span><span class="nb-txt">Leve</span></label>
+      <label class="nivel-barra nivel-criativo"><input type="checkbox" value="criativo"><span class="nb-traco"></span><span class="nb-txt">Criativo</span></label>
+      <label class="nivel-barra nivel-picante"><input type="checkbox" value="picante"><span class="nb-traco"></span><span class="nb-txt">Picante</span></label>
+      <label class="nivel-barra nivel-pesado"><input type="checkbox" value="pesado"><span class="nb-traco"></span><span class="nb-txt">Pesado</span></label>
     </div>
     <div class="adicionar">
       <button class="linkbtn addcarta" id="abrirCarta" type="button">+ Adicionar carta</button>
@@ -1012,7 +1012,7 @@
       <div class="wheel-wrap">
         <svg class="pointer" id="ponteira" viewBox="0 0 28 36" aria-hidden="true"><path d="M14 34 L3 9 A12 12 0 1 1 25 9 Z"/><circle cx="14" cy="11" r="4"/></svg>
         <svg id="wheel" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
-        <div class="hub" aria-hidden="true"><svg viewBox="0 0 40 28"><circle class="hub-a" cx="14" cy="14" r="10"/><circle class="hub-b" cx="26" cy="14" r="10"/></svg></div>
+        <div class="hub" aria-hidden="true"><svg class="icone icone-24"><use href="icones.svg#dices"/></svg></div>
       </div>
     </div>
 
