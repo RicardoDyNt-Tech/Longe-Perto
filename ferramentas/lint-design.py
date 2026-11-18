@@ -87,8 +87,8 @@ def checar_css(caminho):
         if not strip:
             continue
 
-        # Detecta entrada/saída de bloco de tokens (:root ou [data-tema...])
-        if not em_tokens and re.match(r"^\s*(:root|\[data-tema[^\]]*\])\s*\{", strip):
+        # Detecta entrada/saída de bloco de tokens (:root, [data-tema...], body.juntos ou @media (prefers-color-scheme...))
+        if not em_tokens and re.match(r"^\s*(:root|\[data-tema[^\]]*\]|body\.juntos|@media\s*\(prefers-color-scheme)", strip):
             em_tokens = True
             profundidade_tokens = strip.count("{") - strip.count("}")
             if profundidade_tokens <= 0:
