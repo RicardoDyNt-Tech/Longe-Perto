@@ -1713,7 +1713,7 @@
     posicoes = []; marcasPos = []; carregarPosicoes(c);
     vistos = [null, null]; ultimoVistoGravado = 0; carregarVistos(c);
     nossas = []; if (fixa) carregarNossas(c);
-    manuais = [{}, {}]; clearTimeout(timerManual); timerManual = null; $("manualForm").textContent = ""; statusManual("");
+    manuais = [{}, {}]; avatarFotos = [null, null]; avatarModoAba = null; clearTimeout(timerManual); timerManual = null; $("manualForm").textContent = ""; statusManual("");
     if (fixa) carregarManuais(c);
     modelos = []; dengoSel = []; dengoRespondendo = null; $("dengoMeu").hidden = true;
     if (fixa) carregarModelos(c);
@@ -2277,7 +2277,10 @@
 
   // ---------- v7: Manual de mim (um por pessoa, tabela manuais) ----------
   let manuais = [{}, {}];            // campos de cada jogador
+  let avatarFotos = [null, null];    // foto do avatar (data URL) de cada jogador
+  let avatarModoAba = null;          // "inicial" | "foto"
   let timerManual = null, salvandoManual = 0;
+  const validarFotoAvatar = v => (typeof v === "string" && /^data:image\/(webp|jpeg|png);base64,/i.test(v) && v.length <= 60000) ? v : null;
   const LINGUAGENS = { palavras: "Palavras de afirmação", tempo: "Tempo de qualidade", presentes: "Presentes", servico: "Atos de serviço", toque: "Toque físico" };
   const TAMANHOS = [["camiseta", "Camiseta"], ["calca", "Calça"], ["calcado", "Calçado"], ["anel", "Anel"]];
   // [campo, rótulo, limite, tipo, dica]
@@ -2318,15 +2321,25 @@
     return out;
   }
   async function carregarManuais(c) {
-    const { data, error } = await sb.from("manuais").select("jogador, campos").eq("sala", c);
+    let { data, error } = await sb.from("manuais").select("jogador, campos, avatar_foto").eq("sala", c);
+    if (error) {
+      const fb = await sb.from("manuais").select("jogador, campos").eq("sala", c);
+      data = fb.data; error = fb.error;
+    }
     if (c !== codigo || error || !data) return;
-    data.forEach(r => { if (r.jogador === 0 || r.jogador === 1) manuais[r.jogador] = limparManual(r.campos); });
+    data.forEach(r => {
+      if (r.jogador === 0 || r.jogador === 1) {
+        manuais[r.jogador] = limparManual(r.campos);
+        if ("avatar_foto" in r) avatarFotos[r.jogador] = validarFotoAvatar(r.avatar_foto);
+      }
+    });
     manualMudou(true);
   }
   function receberManual(r) {
     if (!r || (r.jogador !== 0 && r.jogador !== 1) || r.sala !== codigo) return;
+    if ("avatar_foto" in r) avatarFotos[r.jogador] = validarFotoAvatar(r.avatar_foto);
     // o meu, enquanto estou editando, fica como está neste aparelho
-    if (r.jogador === eu && (timerManual || salvandoManual)) return;
+    if (r.jogador === eu && (timerManual || salvandoManual)) { manualMudou(false); return; }
     manuais[r.jogador] = limparManual(r.campos);
     manualMudou(r.jogador === eu && !editandoManual());
   }
@@ -2353,7 +2366,31 @@
     salvandoManual++;
     statusManual("Salvando…");
     const c = codigo;
-    const { error } = await sb.from("manuais").upsert({ sala: c, jogador: eu, campos: limparManual(manuais[eu]), atualizado_em: new Date().toISOString() }, { onConflict: "sala,jogador" });
+    const { error } = await sb.from("manuais").upsert({
+      sala: c,
+      jogador: eu,
+      campos: limparManual(manuais[eu]),
+      avatar_foto: avatarFotos[eu] || null,
+      atualizado_em: new Date().toISOString()
+    }, { onConflict: "sala,jogador" });
+    salvandoManual--;
+    if (c !== codigo) return;
+    statusManual(error ? "Não consegui salvar. Confira a internet." : "Salvo");
+  }
+  async function salvarFotoAvatar(novaFoto) {
+    if (!codigo || (eu !== 0 && eu !== 1)) return;
+    avatarFotos[eu] = validarFotoAvatar(novaFoto);
+    manualMudou(false);
+    salvandoManual++;
+    statusManual("Salvando…");
+    const c = codigo;
+    const { error } = await sb.from("manuais").upsert({
+      sala: c,
+      jogador: eu,
+      campos: limparManual(manuais[eu]),
+      avatar_foto: avatarFotos[eu],
+      atualizado_em: new Date().toISOString()
+    }, { onConflict: "sala,jogador" });
     salvandoManual--;
     if (c !== codigo) return;
     statusManual(error ? "Não consegui salvar. Confira a internet." : "Salvo");
@@ -2372,6 +2409,20 @@
   function desenharEscolhaAvatar() {
     const a = avatarDe(eu), c = $("corGrade");
     if ($("emojiGrade")) $("emojiGrade").hidden = true;
+    if (!avatarModoAba) avatarModoAba = a.foto ? "foto" : "inicial";
+    const emAjuste = $("avatarAjustePainel") && !$("avatarAjustePainel").hidden;
+    if ($("avatarModoSeg")) {
+      $("avatarModoSeg").querySelectorAll("[data-avatar-modo]").forEach(b => {
+        b.setAttribute("aria-pressed", b.dataset.avatarModo === avatarModoAba ? "true" : "false");
+      });
+    }
+    c.hidden = avatarModoAba !== "inicial" || emAjuste;
+    if ($("avatarFotoPainel")) $("avatarFotoPainel").hidden = avatarModoAba !== "foto" || emAjuste;
+    if ($("avatarFotoPrevia")) {
+      $("avatarFotoPrevia").textContent = "";
+      $("avatarFotoPrevia").appendChild(avatarEl(eu, "grande"));
+    }
+    if ($("avatarRemoverFoto")) $("avatarRemoverFoto").disabled = !a.foto;
     c.textContent = "";
     PALETA_AVATAR.forEach(cor => {
       const b = el("button", "cor-op"); b.type = "button"; b.style.background = cor;
@@ -2379,6 +2430,64 @@
       b.addEventListener("click", () => { mudarManual(m => { m.avatarCor = cor; }); manualMudou(false); });
       c.appendChild(b);
     });
+  }
+
+  // Ajuste e recorte de foto do avatar (256x256 WebP/JPEG <= 60KB)
+  let avImg = null, avZoom = 1, avDx = 0, avDy = 0, avArrastando = false, avIniX = 0, avIniY = 0;
+  function desenharCanvasAvatar() {
+    const cv = $("avatarAjusteCanvas");
+    if (!cv || !avImg) return;
+    const ctx = cv.getContext("2d");
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    const iw = avImg.naturalWidth || avImg.width || 1;
+    const ih = avImg.naturalHeight || avImg.height || 1;
+    const base = Math.max(W / iw, H / ih);
+    const esc = base * avZoom;
+    const dw = iw * esc, dh = ih * esc;
+    const maxDx = Math.max(0, (dw - W) / 2);
+    const maxDy = Math.max(0, (dh - H) / 2);
+    if (avDx > maxDx) avDx = maxDx;
+    if (avDx < -maxDx) avDx = -maxDx;
+    if (avDy > maxDy) avDy = maxDy;
+    if (avDy < -maxDy) avDy = -maxDy;
+    const x = (W - dw) / 2 + avDx;
+    const y = (H - dh) / 2 + avDy;
+    ctx.drawImage(avImg, x, y, dw, dh);
+  }
+  function abrirAjusteAvatar(arquivo) {
+    if (!arquivo) return;
+    const url = URL.createObjectURL(arquivo);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      avImg = img;
+      avZoom = 1; avDx = 0; avDy = 0;
+      if ($("avatarAjusteZoom")) $("avatarAjusteZoom").value = "1";
+      if ($("avatarAjustePainel")) $("avatarAjustePainel").hidden = false;
+      if ($("avatarFotoPainel")) $("avatarFotoPainel").hidden = true;
+      if ($("corGrade")) $("corGrade").hidden = true;
+      desenharCanvasAvatar();
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); };
+    img.src = url;
+  }
+  function fecharAjusteAvatar() {
+    avImg = null;
+    if ($("avatarAjustePainel")) $("avatarAjustePainel").hidden = true;
+    if ($("avatarInputFoto")) $("avatarInputFoto").value = "";
+    desenharEscolhaAvatar();
+  }
+  function exportarCanvasAvatar() {
+    const cv = $("avatarAjusteCanvas");
+    if (!cv || !avImg) return null;
+    desenharCanvasAvatar();
+    for (const q of [0.8, 0.65, 0.5]) {
+      let out = cv.toDataURL("image/webp", q);
+      if (!/^data:image\/webp/i.test(out)) out = cv.toDataURL("image/jpeg", q);
+      if (out.length <= 60000) return out;
+    }
+    return cv.toDataURL("image/jpeg", 0.4);
   }
   function desenharManualForm() {
     const f = $("manualForm"), m = manuais[eu] || {};
@@ -3392,15 +3501,29 @@
   const EMOJIS_AVATAR = [];
   function avatarDe(i) {
     const m = manuais[i] || {};
-    return { cor: PALETA_AVATAR.includes(m.avatarCor) ? m.avatarCor : CORES_AVATAR[i] };
+    return {
+      cor: PALETA_AVATAR.includes(m.avatarCor) ? m.avatarCor : CORES_AVATAR[i],
+      foto: avatarFotos[i] || null
+    };
   }
   function iniciais(nome) {
     const p = (nome || "").trim().split(/\s+/).filter(Boolean);
     return ((p[0] || "?")[0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
   }
   function avatarEl(i, classe) {
-    const a = avatarDe(i), x = el("span", "avatar" + (classe ? " " + classe : ""), iniciais(nomeDe(i)));
+    const a = avatarDe(i), ini = iniciais(nomeDe(i));
+    const x = el("span", "avatar" + (classe ? " " + classe : ""));
     x.style.background = a.cor;
+    if (a.foto) {
+      const img = document.createElement("img");
+      img.className = "avatar-img";
+      img.alt = "";
+      img.src = a.foto;
+      img.addEventListener("error", () => { x.textContent = ini; });
+      x.appendChild(img);
+    } else {
+      x.textContent = ini;
+    }
     return x;
   }
   function saudacaoHora() {
@@ -8284,7 +8407,8 @@
     const r = recados.find(x => x.de === o && !fechados.includes(x.id));
     $("casaRecado").hidden = !r;
     if (r) {
-      $("recadoTitulo").textContent = `Recado de ${nomeDe(o)}`;
+      $("recadoTitulo").textContent = "";
+      $("recadoTitulo").append(avatarEl(o, "mini"), document.createTextNode(` Recado de ${nomeDe(o)}`));
       $("recadoTexto").textContent = r.texto;
       if (!r.lido_em && !document.hidden && vista !== "jogo") marcarLido(r);
     }
@@ -8301,10 +8425,13 @@
     const ul = $("recadosLista"); ul.textContent = "";
     recebidos.forEach(x => {
       const li = el("li");
-      li.append(el("span", "t", x.texto), el("span", "autor", `${nomeDe(o)} · ${dataCurta(x.criado_em)}`));
+      const spAutor = el("span", "autor");
+      spAutor.append(avatarEl(o, "mini"), document.createTextNode(` ${nomeDe(o)} · ${dataCurta(x.criado_em)}`));
+      li.append(el("span", "t", x.texto), spAutor);
       ul.appendChild(li);
     });
   }
+  manualMudouFns.push(desenharRecados);
   addEventListener("visibilitychange", () => { if (!document.hidden) desenharRecados(); });
 
   // ---------- v9: companhia silenciosa (pelo broadcast da sala; não grava nada além do tempo) ----------
@@ -9305,27 +9432,6 @@
     $("cumprirNao").addEventListener("click", () => cumprirSorteada(false));
     $("cumprirAte").addEventListener("click", abrirJuntosAte);
     $("formJuntosAte").addEventListener("submit", salvarJuntosAte);
-    $("juntosAteDepois").addEventListener("click", () => $("dlgJuntosAte").close());
-    $("formResumoJuntos").addEventListener("submit", salvarProximo);
-    $("resumoFechar").addEventListener("click", () => $("dlgResumoJuntos").close());
-    document.querySelectorAll("[data-modo-hoje]").forEach(b => b.addEventListener("click", () => {
-      modoHoje = modoHoje === b.dataset.modoHoje ? null : b.dataset.modoHoje;
-      if (estado) desenharModosHoje(estado);
-    }));
-    $("dadoRolar").addEventListener("click", rolarDado);
-    $("dadoTimer").addEventListener("click", iniciarTimerDado);
-    $("massagemComecar").addEventListener("click", comecarMassagem);
-    $("massagemTerminar").addEventListener("click", terminarMassagem);
-    $("vendadoLigar").addEventListener("click", () => ligarVendado(true));
-    $("vendadoDesligar").addEventListener("click", () => ligarVendado(false));
-    $("vendadaLer").addEventListener("click", () => { vendadaLida = estado && estado.carta ? estado.carta.chave : null; if (estado) mostrarCarta(estado); });
-    $("quenteAcao").addEventListener("click", acaoQuente);
-    $("quenteDesistir").addEventListener("click", () => achou(true));
-    $("roteiroAbrir").addEventListener("click", abrirRoteiros);
-    $("campanhaAbrir").addEventListener("click", abrirCampanhas);
-    $("enredoAbrir").addEventListener("click", abrirEnredos);
-    $("secretaBtn").addEventListener("click", alternarSecreta);
-    $("card").addEventListener("pointerdown", ev => { if ($("card").dataset.secreta) { ev.preventDefault(); segurarCarta(true); } });
     ["pointerup", "pointercancel", "pointerleave"].forEach(t => $("card").addEventListener(t, () => { if (segurandoCarta) segurarCarta(false); }));
     $("card").addEventListener("contextmenu", ev => { if ($("card").dataset.secreta) ev.preventDefault(); });
     $("silencioBtn").addEventListener("click", ligarSilencio);
@@ -10130,8 +10236,8 @@
     const txtPres = invTextoPresenca();
     if (txtPres) {
       const faixa = el("div", "inv-faixa-presenca");
-      faixa.appendChild(invIcone("eye", 16));
-      faixa.appendChild(el("span", "", txtPres));
+      faixa.appendChild(avatarEl(1 - eu, "mini"));
+      faixa.appendChild(el("span", "inv-pres-txt", txtPres));
       raiz.appendChild(faixa);
     }
 
@@ -10660,7 +10766,9 @@
       const card = el("div", "inv-nota-card");
       const nTopo = el("div", "inv-nota-topo");
       const tags = el("div", "inv-nota-tags");
-      tags.appendChild(el("span", "", nomeDe(n.autor)));
+      const spAut = el("span", "");
+      spAut.append(avatarEl(n.autor, "mini"), document.createTextNode(nomeDe(n.autor)));
+      tags.appendChild(spAut);
       if (n.hora) tags.appendChild(el("span", "inv-status-pill", n.hora));
       if (n.suspeito && suspMap.has(n.suspeito)) tags.appendChild(el("span", "inv-status-pill", suspMap.get(n.suspeito)));
       if (n.marca === "fato") tags.appendChild(el("span", "inv-nota-marca fato", "Fato"));
@@ -11030,10 +11138,81 @@
       const faixa = document.querySelector("#invRaiz .inv-faixa-presenca");
       const txt = invTextoPresenca();
       if (txt && !faixa) invRender();
-      else if (txt && faixa) faixa.querySelector("span").textContent = txt;
+      else if (txt && faixa) { const s = faixa.querySelector(".inv-pres-txt"); if (s) s.textContent = txt; }
       else if (!txt && faixa) faixa.remove();
     }
   });
+  manualMudouFns.push(() => {
+    if (vista === "vInvestigacao") invRender();
+  });
+
+  if ($("avatarModoSeg")) {
+    $("avatarModoSeg").querySelectorAll("[data-avatar-modo]").forEach(b => {
+      b.addEventListener("click", () => {
+        avatarModoAba = b.dataset.avatarModo;
+        fecharAjusteAvatar();
+      });
+    });
+  }
+  if ($("avatarTirarFoto") && $("avatarInputFoto")) {
+    $("avatarTirarFoto").addEventListener("click", () => {
+      $("avatarInputFoto").setAttribute("capture", "user");
+      $("avatarInputFoto").click();
+    });
+  }
+  if ($("avatarEscolherFoto") && $("avatarInputFoto")) {
+    $("avatarEscolherFoto").addEventListener("click", () => {
+      $("avatarInputFoto").removeAttribute("capture");
+      $("avatarInputFoto").click();
+    });
+  }
+  if ($("avatarInputFoto")) {
+    $("avatarInputFoto").addEventListener("change", () => {
+      const f = $("avatarInputFoto").files && $("avatarInputFoto").files[0];
+      if (f) abrirAjusteAvatar(f);
+    });
+  }
+  if ($("avatarRemoverFoto")) {
+    $("avatarRemoverFoto").addEventListener("click", () => {
+      salvarFotoAvatar(null);
+    });
+  }
+  if ($("avatarAjusteZoom")) {
+    $("avatarAjusteZoom").addEventListener("input", () => {
+      avZoom = Number($("avatarAjusteZoom").value) || 1;
+      desenharCanvasAvatar();
+    });
+  }
+  if ($("avatarAjusteQuadro")) {
+    const q = $("avatarAjusteQuadro");
+    q.addEventListener("pointerdown", ev => {
+      if (!avImg) return;
+      ev.preventDefault();
+      avArrastando = true;
+      avIniX = ev.clientX - avDx;
+      avIniY = ev.clientY - avDy;
+      try { q.setPointerCapture(ev.pointerId); } catch (e) {}
+    });
+    q.addEventListener("pointermove", ev => {
+      if (!avArrastando || !avImg) return;
+      avDx = ev.clientX - avIniX;
+      avDy = ev.clientY - avIniY;
+      desenharCanvasAvatar();
+    });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => {
+      q.addEventListener(t, () => { avArrastando = false; });
+    });
+  }
+  if ($("avatarAjusteCancelar")) {
+    $("avatarAjusteCancelar").addEventListener("click", fecharAjusteAvatar);
+  }
+  if ($("avatarAjusteSalvar")) {
+    $("avatarAjusteSalvar").addEventListener("click", async () => {
+      const dataUrl = exportarCanvasAvatar();
+      fecharAjusteAvatar();
+      if (dataUrl) await salvarFotoAvatar(dataUrl);
+    });
+  }
 
   if ($("invVoltar")) {
     $("invVoltar").addEventListener("click", () => {

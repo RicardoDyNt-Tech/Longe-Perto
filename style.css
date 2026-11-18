@@ -1555,3 +1555,19 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .inv-campo{display:flex; flex-direction:column; gap:4px; font-size:var(--t-sec); color:var(--muted)}
 .inv-campo input,.inv-campo select,.inv-campo textarea{background:var(--s1); border:1px solid var(--line); border-radius:var(--r-b); padding:8px 10px; color:var(--ink); font-family:var(--f-sans); font-size:var(--t-corpo)}
 .hs-icone{color:var(--muted); fill:none; stroke:currentColor; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round}
+
+/* Foto no avatar */
+.avatar{overflow:hidden}
+.avatar-img{width:100%; height:100%; object-fit:cover; border-radius:var(--r-full); display:block}
+.avatar-modo-seg{display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line); border-radius:var(--r-b); background:var(--s1); overflow:hidden; margin:10px 0 12px}
+.avatar-foto-painel{display:flex; flex-direction:column; align-items:center; gap:var(--esp-3); padding:var(--esp-2) 0}
+.avatar-foto-previa .avatar.grande{width:88px; height:88px; font-size:var(--t-h1)}
+.avatar-foto-dica{margin:0; text-align:center}
+.avatar-foto-botoes{display:flex; flex-wrap:wrap; justify-content:center; gap:var(--esp-2)}
+.avatar-ajuste-painel{display:flex; flex-direction:column; align-items:center; gap:var(--esp-3); padding:var(--esp-2) 0}
+.avatar-ajuste-quadro{position:relative; width:240px; height:240px; border-radius:var(--r-c); overflow:hidden; border:1px solid var(--line); background:var(--bg); touch-action:none; cursor:grab}
+.avatar-ajuste-quadro:active{cursor:grabbing}
+.avatar-ajuste-quadro canvas{width:100%; height:100%; display:block}
+.avatar-ajuste-mascara{position:absolute; inset:0; border-radius:var(--r-full); border:2px solid var(--acc); pointer-events:none}
+.avatar-zoom-campo{width:100%; max-width:240px}
+.avatar-zoom-campo input[type=range]{width:100%; accent-color:var(--acc); padding:0}

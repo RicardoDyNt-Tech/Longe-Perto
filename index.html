@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/marca.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css?v=65">
+<link rel="stylesheet" href="style.css?v=66">
 <script>(function(){try{var t=localStorage.getItem("lp-tema");if(t==="noite"||t==="papel")document.documentElement.setAttribute("data-tema",t);}catch(e){}})();</script>
 </head>
 <body>
@@ -815,8 +815,35 @@
         </div>
         <details class="perfil-bloco" id="perfilAvatarBox">
           <summary>Meu avatar</summary>
-          <div class="emoji-grade" id="emojiGrade" role="group" aria-label="Emoji do avatar"></div>
+          <div class="avatar-modo-seg" id="avatarModoSeg" role="group" aria-label="Tipo de avatar">
+            <button type="button" class="inv-seg-btn" data-avatar-modo="inicial" aria-pressed="true">Inicial</button>
+            <button type="button" class="inv-seg-btn" data-avatar-modo="foto" aria-pressed="false">Foto</button>
+          </div>
+          <div class="emoji-grade" id="emojiGrade" role="group" aria-label="Emoji do avatar" hidden></div>
           <div class="cor-grade" id="corGrade" role="group" aria-label="Cor do avatar"></div>
+          <div class="avatar-foto-painel" id="avatarFotoPainel" hidden>
+            <div class="avatar-foto-previa" id="avatarFotoPrevia"></div>
+            <p class="config-dica avatar-foto-dica">Use uma foto do seu rosto. Ela aparece para os dois.</p>
+            <div class="avatar-foto-botoes">
+              <button type="button" class="secondary" id="avatarTirarFoto">Tirar foto</button>
+              <button type="button" class="secondary" id="avatarEscolherFoto">Escolher da galeria</button>
+              <button type="button" class="linkbtn" id="avatarRemoverFoto">Remover foto</button>
+            </div>
+            <input type="file" id="avatarInputFoto" name="avatarFoto" accept="image/*" hidden>
+          </div>
+          <div class="avatar-ajuste-painel" id="avatarAjustePainel" hidden>
+            <div class="avatar-ajuste-quadro" id="avatarAjusteQuadro">
+              <canvas id="avatarAjusteCanvas" width="256" height="256"></canvas>
+              <div class="avatar-ajuste-mascara" aria-hidden="true"></div>
+            </div>
+            <label class="inv-campo avatar-zoom-campo">Zoom
+              <input type="range" id="avatarAjusteZoom" name="avatarZoom" min="1" max="3" step="0.02" value="1">
+            </label>
+            <div class="row">
+              <button type="button" class="secondary" id="avatarAjusteCancelar">Cancelar</button>
+              <button type="button" class="primary" id="avatarAjusteSalvar">Usar foto</button>
+            </div>
+          </div>
         </details>
         <section class="perfil-bloco" id="perfilAparencia" aria-labelledby="perfilAparenciaTitulo">
           <h3 class="casa-h3" id="perfilAparenciaTitulo">Aparência</h3>
@@ -1998,7 +2025,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js?v=59"></script>
 <script src="conquistas.js?v=60"></script>
-<script src="app.js?v=65"></script>
+<script src="app.js?v=66"></script>
 <script src="nativo.js?v=59"></script>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
