@@ -9517,8 +9517,27 @@
   let invFiltroNota = "todas";
   let invTravasConhecidas = new Set();
   let invTimerContagem = null;
+  let invTimerToast = null;
   let invDocAberto = null;
   let invCarregando = false;
+
+  function aviso(texto) {
+    if (!texto) return;
+    try { mostrarAviso({ id: "inv-" + Date.now() + "-" + Math.random(), texto }, false); } catch (e) {}
+    const v = $("vInvestigacao");
+    if (!v) return;
+    let bar = $("invToastBar");
+    if (!bar) {
+      bar = el("div", "inv-faixa-aviso");
+      bar.id = "invToastBar";
+      bar.setAttribute("role", "status");
+      v.insertBefore(bar, $("invRaiz"));
+    }
+    bar.textContent = texto;
+    bar.hidden = false;
+    clearTimeout(invTimerToast);
+    invTimerToast = setTimeout(() => { bar.hidden = true; }, 4000);
+  }
 
   function invIcone(nome, tam = 20, cls = "") {
     const id = ICONES_CONHECIDOS.has((nome || "").trim()) ? nome.trim() : "sparkles";
@@ -9955,8 +9974,9 @@
     const lidosEu = new Set((p.lidos && p.lidos[String(eu)]) || []);
 
     const briefing = docs.find(d => d.tipo === "briefing");
-    const paraAmbos = docs.filter(d => d.id !== (briefing && briefing.id) && !d.exclusivo);
-    const meuEnv = docs.filter(d => d.exclusivo);
+    const meuPac = invDossie.meu_envelope;
+    const paraAmbos = docs.filter(d => d.id !== (briefing && briefing.id) && (!d.exclusivo || (meuPac && d.para !== meuPac)));
+    const meuEnv = docs.filter(d => d.exclusivo && (!meuPac || d.para === meuPac));
     const travas = invDossie.travas || [];
     const doParceiro = invDossie.do_parceiro || [];
 
@@ -10033,7 +10053,8 @@
     const txt = el("div", "inv-doc-txt");
     txt.appendChild(el("span", "inv-doc-titulo", d.titulo));
     const meta = [INV_DOC_NOME[d.tipo] || "Documento"];
-    if (d.mostrado) meta.push(`Mostrado a ${nomeDe(1 - eu)}`);
+    const ehMeuOrig = !invDossie || !invDossie.meu_envelope || d.para === invDossie.meu_envelope;
+    if (d.mostrado) meta.push(ehMeuOrig ? `Mostrado a ${nomeDe(1 - eu)}` : `Mostrado por ${nomeDe(1 - eu)}`);
     txt.appendChild(el("span", "inv-doc-meta", meta.join(" · ")));
     item.appendChild(txt);
 
@@ -10104,7 +10125,8 @@
       });
       acoes.appendChild(btnAnotar);
 
-      if (doc.exclusivo && !doc.mostrado && !invPartidaAtual.um_celular && invDossie && invDossie.limites) {
+      const ehMeuOrig = doc.exclusivo && (!invDossie || !invDossie.meu_envelope || doc.para === invDossie.meu_envelope);
+      if (ehMeuOrig && !doc.mostrado && !invPartidaAtual.um_celular && invDossie && invDossie.limites) {
         const restam = Math.max(0, invDossie.limites.mostrar - invDossie.limites.mostrei);
         const btnMostrar = el("button", "primary");
         btnMostrar.type = "button";
@@ -10270,6 +10292,7 @@
       const form = el("form", "inv-form");
       const inp = document.createElement("input");
       inp.type = "text";
+      inp.name = "tentativa";
       inp.placeholder = "Digite a palavra-chave";
       inp.required = true;
       const btnOk = el("button", "primary", "Destravar");
@@ -10455,6 +10478,7 @@
     const form = el("form", "inv-form");
     const cTexto = el("label", "inv-campo", "Texto");
     const ta = document.createElement("textarea");
+    ta.name = "texto";
     ta.rows = 3;
     ta.maxLength = 500;
     ta.required = true;
@@ -10463,6 +10487,7 @@
 
     const cSusp = el("label", "inv-campo", "Suspeito (opcional)");
     const selSusp = document.createElement("select");
+    selSusp.name = "suspeito";
     const op0 = document.createElement("option"); op0.value = ""; op0.textContent = "Nenhum";
     selSusp.appendChild(op0);
     ((invDossie && invDossie.suspeitos) || []).forEach(s => {
@@ -10475,6 +10500,7 @@
     const cHora = el("label", "inv-campo", "Horário na linha do tempo (opcional, HH:MM)");
     const inpHora = document.createElement("input");
     inpHora.type = "text";
+    inpHora.name = "hora";
     inpHora.placeholder = "Ex.: 21:30";
     inpHora.pattern = "^[0-2][0-9]:[0-5][0-9]$";
     inpHora.value = (nota && nota.hora) || "";
@@ -10482,6 +10508,7 @@
 
     const cMarca = el("label", "inv-campo", "Classificação");
     const selMarca = document.createElement("select");
+    selMarca.name = "marca";
     [["", "Sem marca"], ["fato", "Fato (confirmado)"], ["duvida", "Dúvida (a conferir)"]].forEach(([v, r]) => {
       const op = document.createElement("option"); op.value = v; op.textContent = r;
       selMarca.appendChild(op);
