@@ -145,7 +145,10 @@ body{
 }
 main{max-width:520px; margin:0 auto; padding:20px 20px 40px}
 [hidden]{display:none !important}
-h1{font-family:var(--f-serif); font-size:var(--t-h1); line-height:1.1; font-weight:500; margin:8px 0 8px; letter-spacing:-.01em}
+h1{font-family:var(--f-serif); font-size:var(--t-h1); line-height:1.1; font-weight:500; margin:8px 0 8px; letter-spacing:-.01em; display:flex; align-items:center; gap:12px}
+.marca-titulo{width:38px; height:38px; color:var(--acc)}
+.inicio-titulo-par{display:flex; align-items:center; gap:10px; min-width:0}
+.marca-casa{width:24px; height:24px; color:var(--acc)}
 .tema-opcoes{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
 .tema-btn{flex:1; min-width:88px; padding:10px 12px; border-radius:var(--r-b); border:1px solid var(--line); background:var(--s1); color:var(--muted); font-size:var(--t-sec); font-weight:500; text-align:center}
 .tema-btn[aria-pressed="true"]{border-color:var(--acc); color:var(--acc); background:var(--acc-soft)}
