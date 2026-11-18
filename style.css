@@ -1545,3 +1545,4 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .inv-form{display:flex; flex-direction:column; gap:var(--esp-3)}
 .inv-campo{display:flex; flex-direction:column; gap:4px; font-size:var(--t-sec); color:var(--muted)}
 .inv-campo input,.inv-campo select,.inv-campo textarea{background:var(--s1); border:1px solid var(--line); border-radius:var(--r-b); padding:8px 10px; color:var(--ink); font-family:var(--f-sans); font-size:var(--t-corpo)}
+.hs-icone{color:var(--muted); fill:none; stroke:currentColor; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round}

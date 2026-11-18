@@ -152,7 +152,7 @@
     const cls = `icone icone-${tamanho}` + (classeExtra ? " " + classeExtra : "");
     return `<svg class="${cls}" aria-hidden="true"><use href="icones.svg#${id}"></use></svg>`;
   }
-  const salvarLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const salvarLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
   const lerLocal = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
   const mesmoNome = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
   const gerarCodigo = () => Array.from({ length: 5 }, () => ALFABETO[Math.floor(Math.random() * ALFABETO.length)]).join("");
@@ -3350,7 +3350,7 @@
       use.setAttribute("y", String(Y(v) - 8));
       use.setAttribute("width", "16");
       use.setAttribute("height", "16");
-      use.setAttribute("class", `hs-icone humor-${v}`);
+      use.setAttribute("class", `icone hs-icone humor-${v}`);
       svg.appendChild(use);
     });
     dias.forEach((d, i) => {
@@ -9326,6 +9326,101 @@
     $("enredoAbrir").addEventListener("click", abrirEnredos);
     $("secretaBtn").addEventListener("click", alternarSecreta);
     $("card").addEventListener("pointerdown", ev => { if ($("card").dataset.secreta) { ev.preventDefault(); segurarCarta(true); } });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(t => $("card").addEventListener(t, () => { if (segurandoCarta) segurarCarta(false); }));
+    $("card").addEventListener("contextmenu", ev => { if ($("card").dataset.secreta) ev.preventDefault(); });
+    $("silencioBtn").addEventListener("click", ligarSilencio);
+    $("silencioComecar").addEventListener("click", comecarSilencio);
+    $("silencioCancelar").addEventListener("click", cancelarSilencio);
+    $("fecharEnredos").addEventListener("click", () => $("dlgEnredos").close());
+    $("enredoVoltar").addEventListener("click", () => { $("enredosEscolher").hidden = false; $("enredosPapeis").hidden = true; });
+    $("enredoComecar").addEventListener("click", comecarEnredo);
+    $("enredoCumpri").addEventListener("click", cumpriTrecho);
+    $("enredoSair").addEventListener("click", () => sairEnredo(false));
+    $("enredoContinuar").addEventListener("click", () => sairEnredo(true));
+    $("fecharCampanhas").addEventListener("click", () => $("dlgCampanhas").close());
+    $("campanhaJogar").addEventListener("click", jogarNoite);
+    $("campanhaRecomecar").addEventListener("click", recomecarCampanha);
+    $("campanhaSair").addEventListener("click", sairCampanha);
+    $("campanhaQuebrei").addEventListener("click", quebreiRegra);
+    $("fichaNivelUsar").addEventListener("click", () => usarFicha("nivel"));
+    $("fichaQuem").addEventListener("click", () => usarFicha("quem"));
+    $("fichaPular").addEventListener("click", () => usarFicha("pular"));
+    $("fecharRoteiros").addEventListener("click", () => $("dlgRoteiros").close());
+    $("dlgRoteiros").addEventListener("close", fecharRoteiros);
+    $("roteiroSair").addEventListener("click", sairRoteiro);
+    $("roteiroContinuar").addEventListener("click", sairRoteiro);
+    $("roteiroCofre").addEventListener("click", () => estado && estado.roteiro && abrirGuardar(estado.roteiro.ultima));
+    $("seqParar").addEventListener("click", pararSequencia);
+    document.querySelectorAll("#histFiltro [data-f]").forEach(b => b.addEventListener("click", () => { filtroHist = b.dataset.f; desenharLinhaTempo(); }));
+    $("histMais").addEventListener("click", () => { diasHist += 30; desenharLinhaTempo(); });
+    const cv = $("muralCanvas");
+    cv.addEventListener("pointerdown", comecarTraco);
+    cv.addEventListener("pointermove", moverTraco);
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => cv.addEventListener(t, fimTraco));
+    $("muralBorracha").addEventListener("click", () => { muralBorracha = !muralBorracha; desenharFerramentas(); });
+    $("muralDesfazer").addEventListener("click", desfazerMural);
+    $("muralLimpar").addEventListener("click", limparMural);
+    $("muralFundo").addEventListener("change", mudarFundoMural);
+    $("muralEnviar").addEventListener("click", () => salvarMural(false));
+    $("muralGuardar").addEventListener("click", () => salvarMural(true));
+    $("muralJuntos").addEventListener("click", comecarJuntos);
+    $("muralSairJuntos").addEventListener("click", () => sairJuntos());
+    $("muralConviteEntrar").addEventListener("click", entrarNoConvite);
+    $("muralConviteFechar").addEventListener("click", esconderConvite);
+    $("muralInicioDesenhar").addEventListener("click", () => abrirMural(false));
+    $("fecharMuralVer").addEventListener("click", () => $("dlgMuralVer").close());
+    $("muralApagar").addEventListener("click", apagarMural);
+    $("cartaMural").addEventListener("click", () => abrirMural(ambosPresentes()));
+    document.querySelectorAll("#muralFiltro [data-f]").forEach(b => b.addEventListener("click", () => { filtroMural = b.dataset.f; desenharGaleria(); }));
+    addEventListener("resize", () => { if (vista === "vMural") redesenharMural(); });
+    document.querySelectorAll("#humorCaras button").forEach(b => b.addEventListener("click", () => escolherHumor(Number(b.dataset.v))));
+    $("humorNotaSalvar").addEventListener("click", salvarNotaHumor);
+    $("humorNota").addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); salvarNotaHumor(); } });
+    $("faixaHumorUsar").addEventListener("click", usarFaixaHumor);
+    $("faixaHumorFechar").addEventListener("click", () => { faixaHumorFechada = true; desenharFaixaHumor(); });
+    $("formDengo").addEventListener("submit", enviarDengo);
+    $("dengoVoltar").addEventListener("click", () => $("dlgDengo").close());
+    $("dengoCancelar").addEventListener("click", cancelarDengo);
+    $("dengoRespOk").addEventListener("click", fecharResposta);
+    $("drIndo").addEventListener("click", () => { dengoRespondendo = "indo"; desenharDengo(); $("drIndoTexto").focus(); });
+    $("drNao").addEventListener("click", () => { dengoRespondendo = "nao"; desenharDengo(); });
+    $("drIndoEnviar").addEventListener("click", () => responderDengo("indo", $("drIndoTexto").value));
+    $("drNaoEnviar").addEventListener("click", () => {
+      const t = $("drNaoTexto").value.trim();
+      if (!t) return erro("erroDengoResp", "Escolha uma frase ou escreva uma resposta.");
+      responderDengo("nao_consigo", t);
+    });
+    document.querySelectorAll("#drFrases button").forEach(b => b.addEventListener("click", () => responderDengo("nao_consigo", b.textContent)));
+    $("drAqui").addEventListener("click", () => responderDengo("indo", "Tô aqui quando precisar"));
+    $("dengoEditar").addEventListener("click", abrirPedidos);
+    $("fecharPedidos").addEventListener("click", () => $("dlgPedidos").close());
+    $("pedidosSalvar").addEventListener("click", salvarPedidos);
+    $("pedidosRestaurar").addEventListener("click", restaurarPedidos);
+    $("pedidoNovo").addEventListener("click", novoPedido);
+    setInterval(() => { if (vista === "casa" && !document.hidden) desenharDengo(); }, 60000);   // "há X min"
+    $("navMostrar").addEventListener("click", () => recolherNav(false));
+    try { new ResizeObserver(() => document.documentElement.style.setProperty("--nav", $("navBaixo").offsetHeight + "px")).observe($("navBaixo")); } catch (err) {}
+    if ($("temaOpcoes")) {
+      const aplicarTema = val => {
+        if (val === "noite" || val === "papel") {
+          document.documentElement.setAttribute("data-tema", val);
+          try { localStorage.setItem("lp-tema", val); } catch (e) {}
+        } else {
+          document.documentElement.removeAttribute("data-tema");
+          try { localStorage.removeItem("lp-tema"); } catch (e) {}
+        }
+        $("temaOpcoes").querySelectorAll("[data-tema-val]").forEach(b => {
+          b.setAttribute("aria-pressed", (b.dataset.temaVal === (val === "noite" || val === "papel" ? val : "auto")) ? "true" : "false");
+        });
+        desenharRoleta();
+      };
+      let temaSalvo = "auto";
+      try { const t = localStorage.getItem("lp-tema"); if (t === "noite" || t === "papel") temaSalvo = t; } catch (e) {}
+      aplicarTema(temaSalvo);
+      $("temaOpcoes").querySelectorAll("[data-tema-val]").forEach(b => {
+        b.addEventListener("click", () => aplicarTema(b.dataset.temaVal));
+      });
+    }
     try { new ResizeObserver(() => document.documentElement.style.setProperty("--barra", $("barraAcoes").offsetHeight + "px")).observe($("barraAcoes")); } catch (err) { }
     desenharRoleta();
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenharRoleta);
@@ -9475,7 +9570,7 @@
     // voltou para o app depois de um tempo? pega o estado mais novo
     document.addEventListener("visibilitychange", async () => {
       if (document.visibilityState !== "visible" || !codigo) return;
-      try { const e = await buscarSala(codigo); if (e) aplicar(e, false); } catch (e) {}
+      try { const e = await buscarSala(codigo); if (e) aplicar(e, false); } catch (e) { }
     });
 
     // link com ?sala= e nome já salvo: entra direto
@@ -9543,7 +9638,7 @@
 
   function aviso(texto) {
     if (!texto) return;
-    try { mostrarAviso({ id: "inv-" + Date.now() + "-" + Math.random(), texto }, false); } catch (e) {}
+    try { mostrarAviso({ id: "inv-" + Date.now() + "-" + Math.random(), texto }, false); } catch (e) { }
     const v = $("vInvestigacao");
     if (!v) return;
     let bar = $("invToastBar");
@@ -9564,70 +9659,18 @@
     return icone(id, tam, cls);
   }
 
-  let invWake = null;
-
-  async function invManterTelaAcesa(ligar) {
-    try {
-      if (ligar && !invWake && navigator.wakeLock) {
-        invWake = await navigator.wakeLock.request("screen");
-        invWake.addEventListener("release", () => { invWake = null; });
-      } else if (!ligar && invWake) {
-        await invWake.release();
-        invWake = null;
-      }
-    } catch (e) {}
-  }
-
-  function invNotificarParceiro(texto) {
-    aviso(texto);
-    try {
-      const C = window.Capacitor;
-      const LN = C && C.Plugins && C.Plugins.LocalNotifications;
-      if (LN && typeof LN.schedule === "function") {
-        LN.schedule({ notifications: [{ id: Math.floor(Date.now() % 100000), title: "Investigação", body: texto }] }).catch(() => {});
-        return;
-      }
-      if ("Notification" in window && document.hidden && Notification.permission === "granted") {
-        new Notification("Longe & Perto — Investigação", { body: texto });
-      }
-    } catch (e) {}
-  }
-
-  async function invGanharVales3Estrelas(row) {
-    if (!row || row.estado !== "concluido" || row.estrelas !== 3 || row.caso === "teste-biscoito") return;
-    if (!config || !config.fatura || !config.fatura.vales || !codigo) return;
-    const pool = (valesModelos || []).filter(v => config.niveis[v.nivel]);
-    if (!pool.length) return;
-    const credores = row.um_celular ? [0, 1] : [eu];
-    for (const c of credores) {
-      if (!nomeDe(c)) continue;
-      const chave = `inv-vale:${row.id}:${c}`;
-      if (valesDados.has(chave)) continue;
-      valesDados.add(chave);
-      const v = pool[Math.floor(Math.random() * pool.length)];
-      const { data, error } = await sb.from("cofre")
-        .insert({ sala: codigo, carta: v.texto.slice(0, 280), nota: "Caso resolvido com 3 estrelas", autor: nomeDe(c).slice(0, 20), tipo: "vale", credor: c, minutos: v.minutos || null })
-        .select("*").single();
-      if (!error && data) juntarCofre(data);
-    }
-  }
-
   function invAplicarVisibilidade() {
-    const semBateria = typeof bateriaAlguem === "function" && estado && bateriaAlguem(estado);
-    const ativo = !(config && config.investigacao && config.investigacao.ativo === false) && !semBateria;
+    const ativo = !(config && config.investigacao && config.investigacao.ativo === false);
     if ($("atalhoInvestigacao")) $("atalhoInvestigacao").hidden = !ativo;
     if ($("jogoBtnInvWrap")) $("jogoBtnInvWrap").hidden = !ativo;
-    if (!ativo && vista === "vInvestigacao") {
-      invManterTelaAcesa(false);
-      mostrarVista(estado && estado.fixa ? "casa" : "jogo");
-    }
+    if (!ativo && vista === "vInvestigacao") mostrarVista(estado && estado.fixa ? "casa" : "jogo");
   }
 
   function invTrack(lendo) {
     if (!canal) return;
     try {
-      canal.track({ jogador: eu, online_em: new Date().toISOString(), inv_lendo: lendo || null }).catch(() => {});
-    } catch (e) {}
+      canal.track({ jogador: eu, online_em: new Date().toISOString(), inv_lendo: lendo || null }).catch(() => { });
+    } catch (e) { }
   }
 
   function invTextoPresenca() {
@@ -9644,7 +9687,7 @@
   }
 
   function invPararFala() {
-    try { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); } catch (e) {}
+    try { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); } catch (e) { }
   }
 
   function invTemVozPt() {
@@ -9754,16 +9797,11 @@
     } else if (invPartidaAtual.estado === "concluido" || invPartidaAtual.estado === "revelado") {
       const { data: rData, error: rErr } = await sb.rpc("inv_relatorio", { p_sala: codigo, p_inv: invId });
       if (!rErr && rData) invRelatorio = rData;
-      if (invPartidaAtual.estado === "concluido") {
-        verificarConquistas();
-        invGanharVales3Estrelas(invPartidaAtual);
-      }
     }
   }
 
   async function invReceberPartida(tipo, row) {
     if (!row) return;
-    const antes = invPartidas.find(p => p.id === row.id) || null;
     if (tipo === "DELETE") {
       invPartidas = invPartidas.filter(p => p.id !== row.id);
       if (invPartidaAtual && invPartidaAtual.id === row.id) {
@@ -9780,22 +9818,6 @@
     }
     invPartidas = invPartidas.filter(p => p.id !== row.id).concat(row);
     invAtualizarResumoInicio();
-
-    // Avisos e notificações de ações do parceiro
-    if (!row.um_celular) {
-      if (row.estado === "envelope" && row.abriu && row.abriu[1 - eu] && !row.abriu[eu] && (!antes || !antes.abriu || !antes.abriu[1 - eu])) {
-        invNotificarParceiro(`${nomeDe(1 - eu)} abriu um caso. Seu envelope está esperando.`);
-      } else if (row.estado === "acusacao" && row.proposta && row.proposta.por !== eu && (!antes || antes.estado !== "acusacao")) {
-        invNotificarParceiro(`${nomeDe(1 - eu)} fez uma acusação e precisa da sua assinatura.`);
-      } else if (antes && Array.isArray(row.travas_abertas) && Array.isArray(antes.travas_abertas) && row.travas_abertas.length > antes.travas_abertas.length) {
-        invNotificarParceiro("Uma prova foi destrancada.");
-      }
-    }
-    if (row.estado === "concluido" && (!antes || antes.estado !== "concluido")) {
-      verificarConquistas();
-      invGanharVales3Estrelas(row);
-    }
-
     if (invPartidaAtual && invPartidaAtual.id === row.id) {
       invPartidaAtual = row;
       await invCarregarEstadoCaso();
@@ -9821,7 +9843,6 @@
 
   function invRender() {
     invPararContagem();
-    invManterTelaAcesa(vista === "vInvestigacao" && !!invCasoAtual);
     const raiz = $("invRaiz");
     if (!raiz) return;
     raiz.textContent = "";
