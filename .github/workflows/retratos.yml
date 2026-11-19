@@ -9,6 +9,8 @@ name: Retratos
 on:
   push:
     paths: ["casos/**/retratos.json"]
+  schedule:
+    - cron: "0 4 * * *"
   workflow_dispatch:
     inputs:
       servico:
@@ -60,6 +62,8 @@ jobs:
           VARIAR: ${{ inputs.variar }}
           LIMITE: ${{ inputs.limite || '120' }}
         run: |
+          faltam=$(python -c "import glob,json,os; print(sum(1 for p in glob.glob('casos/*/retratos.json') for r in json.load(open(p))['retratos'] if not (os.path.exists(os.path.join(os.path.dirname(p),r['id']+'.jpg')) or os.path.exists(os.path.join(os.path.dirname(p),r['id']+'.png')))))")
+          if [ "$faltam" = "0" ] && [ -z "$SO" ]; then echo "Todos os retratos já existem."; exit 0; fi
           args="--servico $SERVICO"
           if [ -n "$CASO" ]; then args="$CASO $args"; else args="--todos $args"; fi
           if [ -n "$SO" ]; then args="$args --so $SO"; fi
