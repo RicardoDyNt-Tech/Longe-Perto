@@ -171,7 +171,25 @@ p.add_argument("--so", nargs="*", help="gera só estes ids (mesmo que já exista
 p.add_argument("--variar", action="store_true", help="sorteia uma semente nova (rosto diferente)")
 p.add_argument("--forcar", action="store_true", help="refaz mesmo os que já existem")
 p.add_argument("--limite", type=int, default=0, help="no máximo N imagens nesta rodada (0 = sem limite)")
+p.add_argument("--prontos", action="store_true", help="só atualiza casos/prontos.json e sai")
 a = p.parse_args()
+
+def atualizar_prontos():
+    prontos = []
+    for arq in sorted(glob.glob(os.path.join("casos", "*", "retratos.json"))):
+        pasta = os.path.dirname(arq)
+        cfg = json.load(open(arq, encoding="utf-8"))
+        rets = cfg.get("retratos", [])
+        if rets and all(existente(pasta, r["id"]) for r in rets):
+            prontos.append(os.path.basename(pasta))
+    with open(os.path.join("casos", "prontos.json"), "w", encoding="utf-8") as f:
+        json.dump(prontos, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    print(f"casos/prontos.json atualizado: {len(prontos)} caso(s) completos.")
+
+if a.prontos:
+    atualizar_prontos()
+    sys.exit(0)
 
 if a.todos:
     pastas = sorted(os.path.dirname(f) for f in glob.glob(os.path.join("casos", "*", "retratos.json")))
@@ -193,4 +211,5 @@ try:
         total = CONTA["feitos"]
 except CotaAcabou as e:
     print(f"\nA cota do serviço acabou ({e}). Rode de novo mais tarde: o que já foi gerado fica guardado.")
+atualizar_prontos()
 print(f"\nPronto: {CONTA['feitos']} retrato(s) gerado(s), {CONTA['erros']} com erro.")

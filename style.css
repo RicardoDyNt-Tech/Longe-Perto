@@ -1446,6 +1446,8 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .inv-casos-lista{display:flex; flex-direction:column; gap:var(--esp-3)}
 .inv-caso-card{display:flex; flex-direction:column; gap:var(--esp-2); background:var(--s1); border:1px solid var(--line); border-radius:var(--r-c); padding:var(--esp-4); text-align:left; cursor:pointer; width:100%; color:var(--ink)}
 .inv-caso-card:hover{border-color:var(--acc)}
+.inv-caso-card.bloqueado{opacity:.55; cursor:default}
+.inv-caso-card.bloqueado:hover{border-color:var(--line)}
 .inv-caso-topo{display:flex; align-items:flex-start; gap:var(--esp-3)}
 .inv-caso-ic{flex:0 0 auto; width:38px; height:38px; border-radius:var(--r-b); background:var(--s2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--acc)}
 .inv-caso-meta{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px}

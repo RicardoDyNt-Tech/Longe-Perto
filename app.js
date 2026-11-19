@@ -9783,6 +9783,7 @@
 
   let invCasos = [];
   let invPartidas = [];
+  let invProntos = null;             // Set de IDs com retratos completos (null = não carregou ainda)
   let invFiltroTema = "todos";
   let invFiltroSelo = "todos";
   let invFiltroFmt = "todos";
@@ -9944,12 +9945,14 @@
 
   async function invCarregarPrateleira() {
     if (!codigo) return;
-    const [{ data: cData, error: cErr }, { data: pData, error: pErr }] = await Promise.all([
+    const [{ data: cData, error: cErr }, { data: pData, error: pErr }, prontosRes] = await Promise.all([
       sb.from("casos").select("id,titulo,icone,tema,selo,formato,minutos,dificuldade,sinopse,serie,capitulo,versao,n_suspeitos,n_docs,teste,ativo").eq("ativo", true).order("tema").order("id"),
-      sb.from("investigacoes").select("*").eq("sala", codigo)
+      sb.from("investigacoes").select("*").eq("sala", codigo),
+      fetch("casos/prontos.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
     if (!cErr && cData) invCasos = cData.filter(c => invModoTeste || !c.teste);
     if (!pErr && pData) invPartidas = pData;
+    if (Array.isArray(prontosRes)) invProntos = new Set(prontosRes);
     invAtualizarResumoInicio();
   }
 
@@ -10247,13 +10250,18 @@
 
     filtrados.forEach(c => {
       const p = invPartidas.find(x => x.caso === c.id);
-      const card = el("div", "inv-caso-card");
-      card.setAttribute("role", "button");
-      card.tabIndex = 0;
+      const bloqueado = !p && !c.teste && invProntos !== null && !invProntos.has(c.id);
+      const card = el("div", "inv-caso-card" + (bloqueado ? " bloqueado" : ""));
+      if (!bloqueado) {
+        card.setAttribute("role", "button");
+        card.tabIndex = 0;
+      } else {
+        card.setAttribute("aria-disabled", "true");
+      }
 
       const topo = el("div", "inv-caso-topo");
       const icBox = el("div", "inv-caso-ic");
-      icBox.appendChild(invIcone(c.icone, 20));
+      icBox.appendChild(invIcone(bloqueado ? "lock" : c.icone, 20));
       topo.appendChild(icBox);
 
       const meta = el("div", "inv-caso-meta");
@@ -10279,7 +10287,12 @@
       info.appendChild(difWrap);
       rodape.appendChild(info);
 
-      if (!p) {
+      if (bloqueado) {
+        const bl = el("span", "inv-status-pill");
+        bl.appendChild(invIcone("lock", 12));
+        bl.appendChild(el("span", "", "Em breve · gerando retratos"));
+        rodape.appendChild(bl);
+      } else if (!p) {
         rodape.appendChild(el("span", "inv-status-pill", "Novo"));
       } else if (p.estado === "envelope") {
         rodape.appendChild(el("span", "inv-status-pill", "Envelope fechado"));
@@ -10299,7 +10312,9 @@
       card.appendChild(rodape);
 
       // Modo um celular só no modo Juntos (quando o caso ainda não começou)
-      if (!p && estado && estado.juntos) {
+      if (bloqueado) {
+        card.addEventListener("click", () => aviso("Este caso será liberado assim que os retratos terminarem de ser gerados."));
+      } else if (!p && estado && estado.juntos) {
         const rowJ = el("div", "row");
         const btnDois = el("button", "primary", "Dois celulares");
         btnDois.type = "button";
