@@ -429,18 +429,35 @@ class Speechify(ElevenLabs):
             if not novo or novo == cursor or not d.get("has_more", True):
                 break
             cursor = novo
-        def brasileira(v):
-            locs = [v.get("locale", "")] + [l.get("locale", "") for m in v.get("models", []) for l in m.get("languages", [])]
-            return any(str(l).lower().startswith("pt") for l in locs)
+        def _locs(v):
+            return [str(v.get("locale", "")).lower().replace("_", "-")] + [
+                str(l.get("locale", "")).lower().replace("_", "-")
+                for m in v.get("models", []) for l in m.get("languages", [])
+            ]
+        def eh_pt_br(v):
+            return any(l == "pt-br" for l in _locs(v))
+        def eh_pt(v):
+            return any(l.startswith("pt") for l in _locs(v))
         def ordem(v):
-            # vozes brasileiras primeiro, depois as escolhidas pela equipe deles
-            return (0 if brasileira(v) else 1, v.get("staff_pick_rank") or 9999, v.get("display_name", ""))
+            # vozes pt-BR primeiro, depois pt-PT, depois estrangeiras
+            tier = 0 if eh_pt_br(v) else (1 if eh_pt(v) else 2)
+            return (tier, v.get("staff_pick_rank") or 9999, v.get("display_name", ""))
         vistas = set()
         vozes = [v for v in vozes if not (v["id"] in vistas or vistas.add(v["id"]))]
+        br_f, br_m = [], []
         for v in sorted(vozes, key=ordem):
             g = str(v.get("gender", "")).lower()
-            (self.F if g.startswith("f") else self.M if g.startswith("m") else []).append(v["id"])
-            self.nomes[v["id"]] = v.get("display_name", v["id"]) + ("" if brasileira(v) else " (estrangeira)")
+            alvo = self.F if g.startswith("f") else self.M if g.startswith("m") else None
+            if alvo is not None:
+                alvo.append(v["id"])
+                if eh_pt_br(v):
+                    (br_f if g.startswith("f") else br_m).append(v["id"])
+            tag = "" if eh_pt_br(v) else (" (pt-PT)" if eh_pt(v) else " (estrangeira)")
+            self.nomes[v["id"]] = v.get("display_name", v["id"]) + tag
+        if len(br_f) >= 6:
+            self.F = br_f
+        if len(br_m) >= 7:
+            self.M = br_m
         for g in ("F", "M"):
             fixas = [x.strip() for x in os.environ.get(f"SPEECHIFY_VOZES_{g}", "").split(",") if x.strip()]
             if fixas:
