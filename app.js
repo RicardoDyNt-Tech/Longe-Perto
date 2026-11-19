@@ -79,7 +79,7 @@
     "alert-circle", "anchor", "anvil", "award", "bike", "bird", "building", "bus", "castle", "clock",
     "compass", "container", "copy", "cpu", "croissant", "cross", "door-closed", "egg", "file-text", "fish",
     "flame-kindling", "flask-round", "flower", "folder", "footprints", "headphones", "help-circle", "hospital", "mountain", "newspaper",
-    "orbit", "phone-off", "pickaxe", "pin", "play", "plus", "radio", "rocket", "rotate-ccw", "sailboat",
+    "orbit", "phone-off", "pickaxe", "pin", "pause", "play", "plus", "radio", "rocket", "rotate-ccw", "sailboat",
     "satellite", "scale", "scan-face", "scroll", "shield-alert", "ship", "spade", "stamp", "swords", "tornado",
     "train-front", "trash-2", "trees", "unlock", "user-check", "user-x", "waves"
   ]);
@@ -9938,6 +9938,163 @@
     try { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); } catch (e) { }
   }
 
+  let invAudiosCasoId = null;
+  let invAudiosCaso = null;
+  let invAudioAtivo = null;
+
+  function invPararAudio() {
+    invPararFala();
+    if (invAudioAtivo) {
+      const ativo = invAudioAtivo;
+      invAudioAtivo = null;
+      try { ativo.audio.pause(); } catch (e) { }
+      if (typeof ativo.sincronizar === "function") ativo.sincronizar();
+    }
+  }
+
+  async function invCarregarAudiosCaso(casoId) {
+    if (!casoId || invAudiosCasoId === casoId) return;
+    invAudiosCasoId = casoId;
+    invAudiosCaso = { servico: null, docs: {} };
+    try {
+      const r = await fetch(`casos/${casoId}/audio/audios.json`, { cache: "no-store" });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d && typeof d === "object") {
+        invAudiosCaso = {
+          servico: d.servico || null,
+          docs: (d.docs && typeof d.docs === "object") ? d.docs : {}
+        };
+      }
+    } catch (e) { }
+  }
+
+  function invFmtTempo(seg) {
+    if (!isFinite(seg) || seg < 0) return "0:00";
+    const s = Math.floor(seg);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }
+
+  function invCriarPlayerMp3(casoId, doc, servico, onErro) {
+    const wrap = el("div", "inv-audio-wrap");
+    const bar = el("div", "inv-audio-player");
+
+    const audio = document.createElement("audio");
+    audio.preload = "none";
+    audio.src = `casos/${casoId}/audio/${doc.id}.mp3`;
+
+    const btnPlay = el("button", "inv-audio-play");
+    btnPlay.type = "button";
+    btnPlay.setAttribute("aria-label", "Tocar áudio");
+    btnPlay.appendChild(invIcone("play", 18));
+
+    const btnVoltar = el("button", "inv-audio-voltar");
+    btnVoltar.type = "button";
+    btnVoltar.setAttribute("aria-label", "Voltar 10 segundos");
+    btnVoltar.appendChild(invIcone("rotate-ccw", 16));
+
+    const range = document.createElement("input");
+    range.type = "range";
+    range.className = "inv-audio-progresso";
+    range.min = "0";
+    range.max = "1000";
+    range.value = "0";
+    range.setAttribute("aria-label", "Progresso do áudio");
+
+    const tempo = el("span", "inv-audio-tempo", "0:00 / 0:00");
+
+    const velocidades = [0.8, 1, 1.25];
+    let idxVel = 1;
+    const btnVel = el("button", "inv-audio-vel", "1×");
+    btnVel.type = "button";
+    btnVel.setAttribute("aria-label", "Velocidade de reprodução");
+
+    let arrastando = false;
+
+    function atualizarTempo() {
+      const dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+      const cur = audio.currentTime || 0;
+      const pct = dur > 0 ? Math.min(100, (cur / dur) * 100) : 0;
+      if (!arrastando) {
+        range.value = dur > 0 ? String(Math.round((cur / dur) * 1000)) : "0";
+      }
+      range.style.setProperty("--pct", `${pct}%`);
+      tempo.textContent = `${invFmtTempo(cur)} / ${invFmtTempo(dur)}`;
+    }
+
+    function sincronizar() {
+      const tocando = !audio.paused && !audio.ended;
+      btnPlay.textContent = "";
+      btnPlay.appendChild(invIcone(tocando ? "pause" : "play", 18));
+      btnPlay.setAttribute("aria-label", tocando ? "Pausar áudio" : "Tocar áudio");
+      atualizarTempo();
+    }
+
+    btnPlay.addEventListener("click", () => {
+      if (!audio.paused && !audio.ended) {
+        audio.pause();
+        if (invAudioAtivo && invAudioAtivo.audio === audio) invAudioAtivo = null;
+        sincronizar();
+        return;
+      }
+      invPararAudio();
+      audio.playbackRate = velocidades[idxVel];
+      invAudioAtivo = { audio, sincronizar };
+      audio.play().then(sincronizar).catch(() => {
+        if (invAudioAtivo && invAudioAtivo.audio === audio) invAudioAtivo = null;
+        sincronizar();
+      });
+    });
+
+    btnVoltar.addEventListener("click", () => {
+      audio.currentTime = Math.max(0, (audio.currentTime || 0) - 10);
+      atualizarTempo();
+    });
+
+    range.addEventListener("input", () => {
+      arrastando = true;
+      const dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+      const pct = Number(range.value) / 10;
+      range.style.setProperty("--pct", `${pct}%`);
+      if (dur > 0) {
+        tempo.textContent = `${invFmtTempo((Number(range.value) / 1000) * dur)} / ${invFmtTempo(dur)}`;
+      }
+    });
+    range.addEventListener("change", () => {
+      arrastando = false;
+      const dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+      if (dur > 0) audio.currentTime = (Number(range.value) / 1000) * dur;
+      atualizarTempo();
+    });
+
+    btnVel.addEventListener("click", () => {
+      idxVel = (idxVel + 1) % velocidades.length;
+      const v = velocidades[idxVel];
+      audio.playbackRate = v;
+      btnVel.textContent = String(v).replace(".", ",") + "×";
+    });
+
+    audio.addEventListener("loadedmetadata", atualizarTempo);
+    audio.addEventListener("timeupdate", atualizarTempo);
+    audio.addEventListener("play", sincronizar);
+    audio.addEventListener("pause", sincronizar);
+    audio.addEventListener("ended", () => {
+      if (invAudioAtivo && invAudioAtivo.audio === audio) invAudioAtivo = null;
+      sincronizar();
+    });
+    audio.addEventListener("error", () => {
+      if (invAudioAtivo && invAudioAtivo.audio === audio) invAudioAtivo = null;
+      if (typeof onErro === "function") onErro();
+    });
+
+    bar.append(btnPlay, btnVoltar, range, tempo, btnVel, audio);
+    wrap.appendChild(bar);
+    if (servico === "elevenlabs") {
+      wrap.appendChild(el("p", "inv-audio-credito", "Vozes: ElevenLabs"));
+    }
+    return wrap;
+  }
+
   function invTemVozPt() {
     try {
       if (!("speechSynthesis" in window)) return false;
@@ -10010,7 +10167,7 @@
       invRelatorio = null;
       invDossie = null;
       invTravasConhecidas = new Set((partida && partida.travas_abertas) || []);
-      await invCarregarEstadoCaso();
+      await Promise.all([invCarregarEstadoCaso(), invCarregarAudiosCaso(caso.id)]);
       invRender();
     } finally {
       invCarregando = false;
@@ -10023,6 +10180,9 @@
   async function invCarregarEstadoCaso() {
     if (!invPartidaAtual || !codigo) return;
     const invId = invPartidaAtual.id;
+    if (invCasoAtual && invAudiosCasoId !== invCasoAtual.id) {
+      invCarregarAudiosCaso(invCasoAtual.id);
+    }
     const [{ data: pRow }, { data: nRows }] = await Promise.all([
       sb.from("investigacoes").select("*").eq("id", invId).single(),
       sb.from("investigacoes_notas").select("*").eq("investigacao", invId).order("criada_em", { ascending: true })
@@ -10473,7 +10633,7 @@
       b.setAttribute("aria-selected", invAba === id ? "true" : "false");
       b.appendChild(invIcone(ic, 18));
       b.appendChild(el("span", "", rot));
-      b.addEventListener("click", () => { invAba = id; invRender(); });
+      b.addEventListener("click", () => { invPararAudio(); invAba = id; invRender(); });
       abas.appendChild(b);
     });
     raiz.appendChild(abas);
@@ -10644,25 +10804,36 @@
     dlg.appendChild(topo);
 
     const corpo = el("div", "inv-leitor-corpo");
-    corpo.appendChild(invRenderConteudoDoc(doc));
-    dlg.appendChild(corpo);
-
+    const playerSlot = el("div", "inv-audio-slot");
+    const temMp3 = !!(invCasoAtual && invAudiosCaso && invAudiosCaso.docs && Object.prototype.hasOwnProperty.call(invAudiosCaso.docs, doc.id));
     const acoes = el("div", "inv-leitor-acoes");
-    if (doc.tipo === "audio" && invTemVozPt()) {
+
+    function montarReservaFala() {
+      playerSlot.textContent = "";
+      if (doc.tipo !== "audio" || !invTemVozPt()) return;
       const btnOuvir = el("button", "secondary");
       btnOuvir.type = "button";
       btnOuvir.appendChild(invIcone("play", 16));
       btnOuvir.appendChild(el("span", "", "Ouvir"));
       btnOuvir.addEventListener("click", () => {
-        invPararFala();
+        invPararAudio();
         const textoFala = doc.texto || (doc.mensagens || []).map(m => `${m.de}: ${m.texto}`).join(". ");
         if (!textoFala) return;
         const u = new SpeechSynthesisUtterance(textoFala);
         u.lang = "pt-BR";
         window.speechSynthesis.speak(u);
       });
-      acoes.appendChild(btnOuvir);
+      acoes.prepend(btnOuvir);
     }
+
+    if (temMp3) {
+      playerSlot.appendChild(invCriarPlayerMp3(invCasoAtual.id, doc, invAudiosCaso.servico, montarReservaFala));
+      corpo.appendChild(playerSlot);
+    } else if (doc.tipo === "audio") {
+      montarReservaFala();
+    }
+    corpo.appendChild(invRenderConteudoDoc(doc));
+    dlg.appendChild(corpo);
 
     if (invPartidaAtual && (invPartidaAtual.estado === "investigando" || invPartidaAtual.estado === "acusacao")) {
       const btnAnotar = el("button", "secondary");
@@ -10698,7 +10869,7 @@
     dlg.appendChild(acoes);
     dlg.onclose = () => {
       invDocAberto = null;
-      invPararFala();
+      invPararAudio();
       invTrack(null);
       if (vista === "vInvestigacao") invRender();
     };
@@ -11432,6 +11603,7 @@
   if ($("invVoltar")) {
     $("invVoltar").addEventListener("click", () => {
       if (invCasoAtual) {
+        invPararAudio();
         invCasoAtual = null;
         invPartidaAtual = null;
         invDossie = null;
