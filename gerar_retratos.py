@@ -59,7 +59,7 @@ def cloudflare(prompt, cfg, semente):
         sys.exit("Defina CF_ACCOUNT_ID e CF_API_TOKEN nas variáveis de ambiente.")
     modelo = os.environ.get("CF_MODELO", "@cf/black-forest-labs/flux-1-schnell")
     url = f"https://api.cloudflare.com/client/v4/accounts/{conta}/ai/run/{modelo}"
-    corpo, tipo = pedir(url, json.dumps({"prompt": prompt, "steps": 8, "seed": semente}).encode(),
+    corpo, tipo = pedir(url, json.dumps({"prompt": prompt, "steps": 8}).encode(),
                         {"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
     if tipo.startswith("image/"):
         return corpo, ".png" if "png" in tipo else ".jpg"
