@@ -9941,15 +9941,189 @@
   let invAudiosCasoId = null;
   let invAudiosCaso = null;
   let invAudioAtivo = null;
+  let invFalaAtiva = null;
+
+  const INV_VOZ_PREF = ["natural", "neural", "online", "google", "francisca", "antonio", "luciana"];
+  const INV_MESES_FALA = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+  function invEscolherVozPt() {
+    try {
+      if (!("speechSynthesis" in window)) return null;
+      const todas = window.speechSynthesis.getVoices() || [];
+      let pts = todas.filter(v => (v.lang || "").toLowerCase().startsWith("pt-br"));
+      if (!pts.length) pts = todas.filter(v => (v.lang || "").toLowerCase().startsWith("pt"));
+      if (!pts.length) return null;
+      try {
+        const salva = localStorage.getItem("lp-inv-voz-pt");
+        if (salva) {
+          const achada = pts.find(v => (v.voiceURI || v.name) === salva);
+          if (achada) return achada;
+        }
+      } catch (e) { }
+      const score = v => {
+        const nome = (v.name || "").toLowerCase();
+        const idx = INV_VOZ_PREF.findIndex(p => nome.includes(p));
+        return idx === -1 ? INV_VOZ_PREF.length : idx;
+      };
+      const melhor = pts.slice().sort((a, b) => score(a) - score(b))[0] || pts[0];
+      try {
+        if (melhor) localStorage.setItem("lp-inv-voz-pt", melhor.voiceURI || melhor.name || "");
+      } catch (e) { }
+      return melhor;
+    } catch (e) { return null; }
+  }
+
+  try {
+    if ("speechSynthesis" in window && typeof window.speechSynthesis.addEventListener === "function") {
+      window.speechSynthesis.addEventListener("voiceschanged", invEscolherVozPt);
+    }
+  } catch (e) { }
+
+  function invParaFala(texto) {
+    let t = String(texto || "").replace(/\u00a0/g, " ");
+    t = t.replace(/\b(\d{1,2})h(\d{2})\b/g, "$1:$2");
+    t = t.replace(/\b1h\b/g, "1 hora");
+    t = t.replace(/\b(\d{1,2})h\b/g, "$1 horas");
+    t = t.replace(/nº/gi, "número");
+    t = t.replace(/\b([A-Za-z0-9_]+)\.(mp3|wav|mp4|mov)\b/gi, "$1 ponto $2");
+    t = t.replace(/(^|[^A-Za-zÀ-ÿ])([A-ZÀ-Ý]{4,})(?![A-Za-zÀ-ÿ])/g, (_, pre, p) => pre + p.charAt(0) + p.slice(1).toLowerCase());
+    t = t.replace(/\b(DE|DA|DO|DAS|DOS)\b/g, m => m.toLowerCase());
+    t = t.replace(/\b(\d{1,2})\/(\d{1,2})\b(?!\/)/g, (m, d, mes) => {
+      const n = Number(mes);
+      return n >= 1 && n <= 12 ? `${Number(d)} de ${INV_MESES_FALA[n]}` : m;
+    });
+    t = t.replace(/ · /g, ", ").replace(/·/g, ",");
+    t = t.replace(/[“”"]/g, "");
+    return t.replace(/\s+/g, " ").trim();
+  }
+
+  function invQuebrarFrases(texto) {
+    const limpo = invParaFala(texto);
+    if (!limpo) return [];
+    return limpo.replace(/([.!?…;])\s+/g, "$1\n").split(/\n+/).map(s => s.trim()).filter(Boolean);
+  }
 
   function invPararAudio() {
     invPararFala();
+    if (invFalaAtiva) {
+      const f = invFalaAtiva;
+      invFalaAtiva = null;
+      f.tocando = false;
+      if (typeof f.sincronizar === "function") f.sincronizar();
+    }
     if (invAudioAtivo) {
       const ativo = invAudioAtivo;
       invAudioAtivo = null;
       try { ativo.audio.pause(); } catch (e) { }
       if (typeof ativo.sincronizar === "function") ativo.sincronizar();
     }
+  }
+
+  function invCriarPlayerFala(doc) {
+    const wrap = el("div", "inv-audio-wrap");
+    const bar = el("div", "inv-audio-player");
+
+    function montarSemVoz() {
+      bar.textContent = "";
+      bar.appendChild(el("p", "inv-audio-aviso", "Este aparelho não tem voz em português"));
+    }
+
+    function montarComVoz() {
+      bar.textContent = "";
+      const textoBruto = doc.texto || (doc.mensagens || []).map(m => `${m.de}: ${m.texto}`).join(". ");
+      const frases = invQuebrarFrases(textoBruto);
+      const estadoFala = { tocando: false, idx: 0, sincronizar: null };
+
+      const btnPlay = el("button", "inv-audio-play");
+      btnPlay.type = "button";
+      btnPlay.setAttribute("aria-label", "Tocar áudio");
+      btnPlay.appendChild(invIcone("play", 18));
+
+      const rotulo = el("span", "inv-audio-tempo", "Voz do aparelho");
+
+      function sincronizar() {
+        btnPlay.textContent = "";
+        btnPlay.appendChild(invIcone(estadoFala.tocando ? "pause" : "play", 18));
+        btnPlay.setAttribute("aria-label", estadoFala.tocando ? "Pausar áudio" : "Tocar áudio");
+      }
+      estadoFala.sincronizar = sincronizar;
+
+      function falarProxima() {
+        if (!estadoFala.tocando || invFalaAtiva !== estadoFala) return;
+        if (estadoFala.idx >= frases.length) {
+          estadoFala.tocando = false;
+          estadoFala.idx = 0;
+          invFalaAtiva = null;
+          sincronizar();
+          return;
+        }
+        const voz = invEscolherVozPt();
+        const u = new SpeechSynthesisUtterance(frases[estadoFala.idx]);
+        u.lang = (voz && voz.lang) || "pt-BR";
+        if (voz) u.voice = voz;
+        u.rate = 0.95;
+        u.pitch = 1;
+        u.onend = () => {
+          if (!estadoFala.tocando || invFalaAtiva !== estadoFala) return;
+          estadoFala.idx++;
+          falarProxima();
+        };
+        u.onerror = () => {
+          if (invFalaAtiva === estadoFala) invFalaAtiva = null;
+          estadoFala.tocando = false;
+          sincronizar();
+        };
+        try {
+          window.speechSynthesis.speak(u);
+        } catch (e) {
+          if (invFalaAtiva === estadoFala) invFalaAtiva = null;
+          estadoFala.tocando = false;
+          sincronizar();
+        }
+      }
+
+      btnPlay.addEventListener("click", () => {
+        if (!frases.length) return;
+        if (estadoFala.tocando) {
+          estadoFala.tocando = false;
+          if (invFalaAtiva === estadoFala) invFalaAtiva = null;
+          invPararFala();
+          sincronizar();
+          return;
+        }
+        invPararAudio();
+        estadoFala.tocando = true;
+        invFalaAtiva = estadoFala;
+        sincronizar();
+        falarProxima();
+      });
+
+      bar.append(btnPlay, rotulo);
+    }
+
+    if (invEscolherVozPt()) {
+      montarComVoz();
+    } else {
+      montarSemVoz();
+      try {
+        if ("speechSynthesis" in window && typeof window.speechSynthesis.addEventListener === "function") {
+          const aoMudarVozes = () => {
+            if (!wrap.isConnected) {
+              window.speechSynthesis.removeEventListener("voiceschanged", aoMudarVozes);
+              return;
+            }
+            if (invEscolherVozPt()) {
+              window.speechSynthesis.removeEventListener("voiceschanged", aoMudarVozes);
+              montarComVoz();
+            }
+          };
+          window.speechSynthesis.addEventListener("voiceschanged", aoMudarVozes);
+        }
+      } catch (e) { }
+    }
+
+    wrap.appendChild(bar);
+    return wrap;
   }
 
   async function invCarregarAudiosCaso(casoId) {
@@ -10810,20 +10984,9 @@
 
     function montarReservaFala() {
       playerSlot.textContent = "";
-      if (doc.tipo !== "audio" || !invTemVozPt()) return;
-      const btnOuvir = el("button", "secondary");
-      btnOuvir.type = "button";
-      btnOuvir.appendChild(invIcone("play", 16));
-      btnOuvir.appendChild(el("span", "", "Ouvir"));
-      btnOuvir.addEventListener("click", () => {
-        invPararAudio();
-        const textoFala = doc.texto || (doc.mensagens || []).map(m => `${m.de}: ${m.texto}`).join(". ");
-        if (!textoFala) return;
-        const u = new SpeechSynthesisUtterance(textoFala);
-        u.lang = "pt-BR";
-        window.speechSynthesis.speak(u);
-      });
-      acoes.prepend(btnOuvir);
+      if (doc.tipo !== "audio") return;
+      playerSlot.appendChild(invCriarPlayerFala(doc));
+      if (!playerSlot.parentNode) corpo.prepend(playerSlot);
     }
 
     if (temMp3) {
@@ -10831,6 +10994,7 @@
       corpo.appendChild(playerSlot);
     } else if (doc.tipo === "audio") {
       montarReservaFala();
+      corpo.appendChild(playerSlot);
     }
     corpo.appendChild(invRenderConteudoDoc(doc));
     dlg.appendChild(corpo);
