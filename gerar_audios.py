@@ -531,7 +531,7 @@ def ler_indice(caminho):
 
 async def principal(a):
     arquivos = a.sql or sorted(glob.glob("supabase/*.sql")) or sorted(glob.glob("*.sql"))
-    casos = {k: v for k, v in ler_casos(arquivos).items() if not k.startswith("teste")}
+    casos = {k: v for k, v in ler_casos(arquivos).items() if a.caso or not k.startswith("teste")}
     if a.caso:
         casos = {k: v for k, v in casos.items() if k == a.caso}
     if not casos:
