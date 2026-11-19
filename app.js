@@ -9781,6 +9781,13 @@
     audio: "Áudio", foto: "Foto"
   };
 
+  const INV_STATUS = [
+    ["todos", "Todos"],
+    ["disponiveis", "Disponíveis"],
+    ["andamento", "Em andamento"],
+    ["novos", "Não iniciados"],
+    ["concluidos", "Concluídos"]
+  ];
   let invCasos = [];
   let invPartidas = [];
   let invProntos = null;             // Set de IDs com retratos completos (null = não carregou ainda)
@@ -9788,6 +9795,9 @@
   let invFiltroSelo = "todos";
   let invFiltroFmt = "todos";
   let invFiltroDif = "todas";
+  let invFiltroStatus = "todos";
+  let invBusca = "";
+  const invNormTxt = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   (function invLerFiltrosSalvos() {
     try {
       const f = JSON.parse(localStorage.getItem("lp-inv-filtros") || "{}");
@@ -9795,6 +9805,7 @@
       if (invFiltroTema === "folclore" && f && INV_FILTRO_SELOS.some(x => x[0] === f.selo)) invFiltroSelo = f.selo;
       if (f && INV_FORMATOS.some(x => x[0] === f.fmt)) invFiltroFmt = f.fmt;
       if (f && INV_DIFS.some(x => x[0] === f.dif)) invFiltroDif = f.dif;
+      if (f && INV_STATUS.some(x => x[0] === f.status)) invFiltroStatus = f.status;
     } catch (e) {}
   })();
   function invSalvarFiltros() {
@@ -9803,7 +9814,8 @@
         tema: invFiltroTema,
         selo: invFiltroSelo,
         fmt: invFiltroFmt,
-        dif: invFiltroDif
+        dif: invFiltroDif,
+        status: invFiltroStatus
       }));
     } catch (e) {}
   }
@@ -10123,6 +10135,25 @@
     // Filtros
     const filtros = el("div", "inv-filtros");
 
+    // 0. Barra de pesquisa
+    const buscaWrap = el("div", "inv-busca-wrap");
+    const buscaIc = el("span", "inv-busca-ic");
+    buscaIc.appendChild(invIcone("search", 16));
+    const inpBusca = document.createElement("input");
+    inpBusca.type = "search";
+    inpBusca.name = "invBusca";
+    inpBusca.className = "inv-busca-input";
+    inpBusca.placeholder = "Buscar caso por título ou sinopse…";
+    inpBusca.value = invBusca;
+    inpBusca.setAttribute("aria-label", "Buscar caso");
+    const btnLimparBusca = el("button", "inv-busca-limpar");
+    btnLimparBusca.type = "button";
+    btnLimparBusca.setAttribute("aria-label", "Limpar busca");
+    btnLimparBusca.appendChild(invIcone("x", 16));
+    btnLimparBusca.hidden = !invBusca;
+    buscaWrap.append(buscaIc, inpBusca, btnLimparBusca);
+    filtros.appendChild(buscaWrap);
+
     // 1. Tipo (+ Selo quando Folclore)
     const bTipo = el("div", "inv-filtro-bloco");
     bTipo.appendChild(el("p", "inv-filtro-rotulo", "Tipo"));
@@ -10211,44 +10242,80 @@
     bDif.appendChild(segDif);
     filtros.appendChild(bDif);
 
-    // Lista filtrada e linha de Resultado
-    const filtrados = invCasos.filter(c => {
-      if (invFiltroTema !== "todos" && c.tema !== invFiltroTema) return false;
-      if (invFiltroTema === "folclore" && invFiltroSelo !== "todos" && c.selo !== invFiltroSelo) return false;
-      if (invFiltroFmt !== "todos" && c.formato !== invFiltroFmt) return false;
-      if (invFiltroDif !== "todas" && String(c.dificuldade) !== invFiltroDif) return false;
-      return true;
-    });
-
-    const temFiltro = invFiltroTema !== "todos" || invFiltroSelo !== "todos" || invFiltroFmt !== "todos" || invFiltroDif !== "todas";
-    const resLinha = el("div", "inv-resultado-linha");
-    resLinha.appendChild(el("span", "", `${filtrados.length} ${filtrados.length === 1 ? "caso" : "casos"}`));
-    if (temFiltro) {
-      const btnLimpar = el("button", "linkbtn", "Limpar filtros");
-      btnLimpar.type = "button";
-      btnLimpar.addEventListener("click", () => {
-        invFiltroTema = "todos";
-        invFiltroSelo = "todos";
-        invFiltroFmt = "todos";
-        invFiltroDif = "todas";
+    // 4. Situação
+    const bStatus = el("div", "inv-filtro-bloco");
+    bStatus.appendChild(el("p", "inv-filtro-rotulo", "Situação"));
+    const abasStatus = el("div", "inv-tema-abas");
+    abasStatus.setAttribute("role", "group");
+    abasStatus.setAttribute("aria-label", "Situação");
+    INV_STATUS.forEach(([val, rot]) => {
+      const b = el("button", "inv-tab-btn", rot);
+      b.type = "button";
+      b.setAttribute("aria-pressed", invFiltroStatus === val ? "true" : "false");
+      b.addEventListener("click", () => {
+        invFiltroStatus = val;
         invSalvarFiltros();
         invRender();
       });
-      resLinha.appendChild(btnLimpar);
-    }
+      abasStatus.appendChild(b);
+    });
+    bStatus.appendChild(abasStatus);
+    filtros.appendChild(bStatus);
+
+    const resLinha = el("div", "inv-resultado-linha");
     filtros.appendChild(resLinha);
     raiz.appendChild(filtros);
 
-    // Lista de casos
+    // Lista de casos (atualizada separadamente para não perder foco ao digitar)
     const lista = el("div", "inv-casos-lista");
+    raiz.appendChild(lista);
 
-    if (!filtrados.length) {
-      lista.appendChild(el("p", "inv-sub", "Nenhum caso encontrado com esses filtros."));
-      raiz.appendChild(lista);
-      return;
-    }
+    const renderLista = () => {
+      const q = invNormTxt(invBusca);
+      const filtrados = invCasos.filter(c => {
+        if (invFiltroTema !== "todos" && c.tema !== invFiltroTema) return false;
+        if (invFiltroTema === "folclore" && invFiltroSelo !== "todos" && c.selo !== invFiltroSelo) return false;
+        if (invFiltroFmt !== "todos" && c.formato !== invFiltroFmt) return false;
+        if (invFiltroDif !== "todas" && String(c.dificuldade) !== invFiltroDif) return false;
+        const p = invPartidas.find(x => x.caso === c.id);
+        const bloq = !p && !c.teste && invProntos !== null && !invProntos.has(c.id);
+        if (invFiltroStatus === "disponiveis" && bloq) return false;
+        if (invFiltroStatus === "andamento" && !(p && (p.estado === "envelope" || p.estado === "investigando" || p.estado === "acusacao"))) return false;
+        if (invFiltroStatus === "novos" && (p || bloq)) return false;
+        if (invFiltroStatus === "concluidos" && !(p && (p.estado === "concluido" || p.estado === "revelado"))) return false;
+        if (q) {
+          const hay = invNormTxt(c.titulo + " " + c.sinopse + " " + (INV_TEMA_NOME[c.tema] || ""));
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
 
-    filtrados.forEach(c => {
+      resLinha.textContent = "";
+      resLinha.appendChild(el("span", "", `${filtrados.length} ${filtrados.length === 1 ? "caso" : "casos"}`));
+      const temFiltro = invFiltroTema !== "todos" || invFiltroSelo !== "todos" || invFiltroFmt !== "todos" || invFiltroDif !== "todas" || invFiltroStatus !== "todos" || !!invBusca;
+      if (temFiltro) {
+        const btnLimpar = el("button", "linkbtn", "Limpar filtros");
+        btnLimpar.type = "button";
+        btnLimpar.addEventListener("click", () => {
+          invFiltroTema = "todos";
+          invFiltroSelo = "todos";
+          invFiltroFmt = "todos";
+          invFiltroDif = "todas";
+          invFiltroStatus = "todos";
+          invBusca = "";
+          invSalvarFiltros();
+          invRender();
+        });
+        resLinha.appendChild(btnLimpar);
+      }
+
+      lista.textContent = "";
+      if (!filtrados.length) {
+        lista.appendChild(el("p", "inv-sub", "Nenhum caso encontrado com esses filtros."));
+        return;
+      }
+
+      filtrados.forEach(c => {
       const p = invPartidas.find(x => x.caso === c.id);
       const bloqueado = !p && !c.teste && invProntos !== null && !invProntos.has(c.id);
       const card = el("div", "inv-caso-card" + (bloqueado ? " bloqueado" : ""));
@@ -10330,7 +10397,21 @@
       }
       lista.appendChild(card);
     });
-    raiz.appendChild(lista);
+    };
+
+    inpBusca.addEventListener("input", () => {
+      invBusca = inpBusca.value;
+      btnLimparBusca.hidden = !invBusca;
+      renderLista();
+    });
+    btnLimparBusca.addEventListener("click", () => {
+      invBusca = "";
+      inpBusca.value = "";
+      btnLimparBusca.hidden = true;
+      renderLista();
+      inpBusca.focus();
+    });
+    renderLista();
   }
 
   function invRenderCaso(raiz) {
@@ -10863,7 +10944,6 @@
       }
       lista.appendChild(card);
     });
-    raiz.appendChild(lista);
   }
 
   function invRenderAbaQuadro(raiz) {
@@ -10930,7 +11010,6 @@
       }
       lista.appendChild(card);
     });
-    raiz.appendChild(lista);
   }
 
   function invAbrirModalNota(nota, textoInicial) {

@@ -1438,6 +1438,11 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .inv-seg-barra{width:6px; height:3px; border-radius:var(--r-full); background:var(--line)}
 .inv-seg-barra.ativo{background:currentColor}
 .inv-resultado-linha{display:flex; align-items:center; justify-content:space-between; gap:var(--esp-2); font-size:var(--t-rotulo); color:var(--muted)}
+.inv-busca-wrap{position:relative; display:flex; align-items:center}
+.inv-busca-ic{position:absolute; left:12px; color:var(--muted); pointer-events:none; display:flex}
+.inv-busca-input{width:100%; background:var(--s1); border:1px solid var(--line); border-radius:var(--r-b); padding:9px 34px 9px 36px; color:var(--ink); font-family:var(--f-sans); font-size:var(--t-sec)}
+.inv-busca-input::placeholder{color:var(--muted)}
+.inv-busca-limpar{position:absolute; right:6px; background:transparent; border:0; color:var(--muted); padding:4px; cursor:pointer; display:flex; align-items:center; justify-content:center}
 .inv-chips-linha{display:flex; flex-wrap:wrap; gap:var(--esp-2); align-items:center}
 .inv-chip{background:var(--s1); border:1px solid var(--line); color:var(--muted); border-radius:var(--r-full); padding:4px 10px; font-size:var(--t-rotulo); cursor:pointer}
 .inv-chip[aria-pressed="true"]{background:var(--s2); color:var(--ink); border-color:var(--acc); font-weight:500}
