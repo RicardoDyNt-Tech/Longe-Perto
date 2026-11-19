@@ -1,0 +1,84 @@
+# Gera os áudios da Investigação e faz commit dos MP3 em casos/<caso>/audio/ na mesma branch.
+# Dispara quando um SQL de casos muda, ou pelo botão "Run workflow".
+# Só gera o que falta ou mudou. Gravações primeiro, depoimentos depois.
+# Secrets (Settings → Secrets and variables → Actions), conforme o serviço:
+#   ELEVENLABS_API_KEY  ·  SPEECHIFY_API_KEY
+# Opcionais, para escolher as vozes (ids separados por vírgula):
+#   ELEVEN_VOZES_F, ELEVEN_VOZES_M, SPEECHIFY_VOZES_F, SPEECHIFY_VOZES_M
+name: Audios
+
+on:
+  push:
+    paths: ["**/03*_*.sql"]
+  workflow_dispatch:
+    inputs:
+      servico:
+        description: "Serviço de voz"
+        type: choice
+        options: [elevenlabs, speechify, edge]
+        default: elevenlabs
+      caso:
+        description: "Caso (vazio = todos)"
+        required: false
+      depoimentos:
+        description: "Também os depoimentos, com voz por suspeito"
+        type: boolean
+        default: false
+      limite:
+        description: "No máximo quantos caracteres nesta rodada (vazio = 9000 na ElevenLabs, 400000 no Speechify; 0 = sem limite)"
+        required: false
+      forcar:
+        description: "Refazer mesmo o que não mudou"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: audios-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: edge-tts (só para o serviço edge)
+        if: ${{ inputs.servico == 'edge' }}
+        run: pip install --quiet "edge-tts==7.3.1"
+      - name: Gerar
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVEN_VOZES_F: ${{ secrets.ELEVEN_VOZES_F }}
+          ELEVEN_VOZES_M: ${{ secrets.ELEVEN_VOZES_M }}
+          SPEECHIFY_API_KEY: ${{ secrets.SPEECHIFY_API_KEY }}
+          SPEECHIFY_VOZES_F: ${{ secrets.SPEECHIFY_VOZES_F }}
+          SPEECHIFY_VOZES_M: ${{ secrets.SPEECHIFY_VOZES_M }}
+          SERVICO: ${{ inputs.servico || 'elevenlabs' }}
+          CASO: ${{ inputs.caso }}
+          DEPOIMENTOS: ${{ inputs.depoimentos }}
+          LIMITE: ${{ inputs.limite }}
+          FORCAR: ${{ inputs.forcar }}
+        run: |
+          sqls=$(grep -rl --include='*.sql' "caso_instalar(" . | sort)
+          args="--servico $SERVICO"
+          if [ -n "$LIMITE" ]; then args="$args --limite-caracteres $LIMITE"; fi
+          if [ -n "$CASO" ]; then args="$args --caso $CASO"; fi
+          if [ "$DEPOIMENTOS" = "true" ]; then args="$args --depoimentos"; fi
+          if [ "$FORCAR" = "true" ]; then args="$args --forcar"; fi
+          python gerar_audios.py --vozes --servico $SERVICO
+          python gerar_audios.py --sql $sqls $args
+      - name: Commit dos áudios
+        if: always()
+        run: |
+          git add casos/
+          if git diff --cached --quiet; then echo "Nada novo."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit -m "áudios: gerados pelo workflow"
+          git push
