@@ -16,7 +16,7 @@ on:
         description: "Serviço de voz"
         type: choice
         options: [elevenlabs, speechify, edge]
-        default: elevenlabs
+        default: speechify
       caso:
         description: "Caso (vazio = todos)"
         required: false
@@ -59,7 +59,7 @@ jobs:
           SPEECHIFY_API_KEY: ${{ secrets.SPEECHIFY_API_KEY }}
           SPEECHIFY_VOZES_F: ${{ secrets.SPEECHIFY_VOZES_F }}
           SPEECHIFY_VOZES_M: ${{ secrets.SPEECHIFY_VOZES_M }}
-          SERVICO: ${{ inputs.servico || 'elevenlabs' }}
+          SERVICO: ${{ inputs.servico || 'speechify' }}
           CASO: ${{ inputs.caso }}
           DEPOIMENTOS: ${{ inputs.depoimentos }}
           LIMITE: ${{ inputs.limite }}
