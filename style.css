@@ -1664,4 +1664,31 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .jogos-buzina-btn{min-height:54px; padding:12px 16px; border-radius:var(--r-b); background:var(--desafio); color:var(--on-color); font-weight:500; font-size:var(--t-corpo)}
 .jogos-objetivo-gaveta{display:flex; flex-direction:column; gap:var(--esp-2)}
 .jogos-sintonia-medidor{padding:8px 12px; border-radius:var(--r-b); border:1px solid var(--line); background:var(--s2); font-size:var(--t-sec); font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums}
+.jogos-grade-6{display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:4px; width:100%; max-width:340px; margin:0 auto}
+.jogos-cel-6{aspect-ratio:1 / 1; width:100%; min-width:0; padding:0; border-radius:var(--r-p); border:1px solid var(--line); background:var(--s2); color:var(--ink); font-size:var(--t-sec); font-weight:500; display:flex; align-items:center; justify-content:center}
+.jogos-cel-6.navio{background:var(--acc-soft); border-color:var(--acc)}
+.jogos-cel-6.agua{background:var(--bg); color:var(--muted)}
+.jogos-cel-6.acerto{background:var(--acc); border-color:var(--acc); color:var(--on-acc)}
+.jogos-cel-6.afundou{background:var(--desafio); border-color:var(--desafio); color:var(--on-color)}
+.jogos-batalha-rec-linha{display:flex; gap:var(--esp-2); align-items:center}
+.jogos-batalha-rec-linha input{flex:1; min-width:0}
+.jogos-recompensa-destaque{display:flex; flex-direction:column; gap:4px; padding:var(--esp-3); border-radius:var(--r-b); border:1px solid var(--acc); background:var(--acc-soft)}
+.jogos-grade-4{display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; width:100%}
+.jogos-cel-4{min-height:54px; padding:6px 4px; border-radius:var(--r-b); border:1px solid var(--line); background:var(--s2); color:var(--ink); font-size:var(--t-rotulo); font-weight:500; line-height:1.2; text-align:center; word-break:break-word; hyphens:auto; display:flex; align-items:center; justify-content:center}
+.jogos-cel-4.guia-casal{border:2px solid var(--ok)}
+.jogos-cel-4.guia-armadilha{border:2px solid var(--desafio)}
+.jogos-cel-4.revelada.tipo-casal{background:var(--acc-soft); border-color:var(--ok); color:var(--ink)}
+.jogos-cel-4.revelada.tipo-neutro{background:var(--bg); border-color:var(--line); color:var(--muted); opacity:.72}
+.jogos-cel-4.revelada.tipo-armadilha{background:var(--desafio); border-color:var(--desafio); color:var(--on-color)}
+.jogos-pista-form{display:grid; grid-template-columns:1fr 64px auto; gap:6px; align-items:center}
+.jogos-pista-form input{min-width:0}
+.jogos-exp-painel{display:flex; flex-direction:column; gap:var(--esp-2); padding:var(--esp-3); border-radius:var(--r-b); border:1px solid var(--line); background:var(--s2)}
+.jogos-exp-barras{display:flex; flex-direction:column; gap:8px}
+.jogos-exp-barra-item{display:flex; flex-direction:column; gap:4px}
+.jogos-exp-barra-cab{display:flex; justify-content:space-between; font-size:var(--t-rotulo); font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums}
+.jogos-exp-barra-item.critico .jogos-exp-barra-cab{color:var(--desafio)}
+.jogos-exp-trilha{width:100%; height:8px; border-radius:var(--r-full); background:var(--bg); border:1px solid var(--line); overflow:hidden}
+.jogos-exp-fill{height:100%; background:var(--acc); border-radius:var(--r-full)}
+.jogos-exp-barra-item.critico .jogos-exp-fill{background:var(--desafio)}
+.jogos-exp-dica{display:flex; flex-direction:column; gap:4px; padding:var(--esp-3); border-radius:var(--r-b); border:1px solid var(--acc); background:var(--acc-soft)}
 @media (min-width:600px){.jogos-grid,.jogos-duelo-grid{grid-template-columns:repeat(2, 1fr)}}

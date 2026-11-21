@@ -130,7 +130,7 @@ window.JOGOS_CATALOGO = [
     icone: "ship",
     onda: 3,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "expedicao",
@@ -142,7 +142,7 @@ window.JOGOS_CATALOGO = [
     icone: "compass",
     onda: 3,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "codigo-a-dois",
@@ -154,7 +154,7 @@ window.JOGOS_CATALOGO = [
     icone: "key-round",
     onda: 3,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "aventura-a-dois",
