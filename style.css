@@ -1646,4 +1646,22 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .jogos-duelo-btn{min-height:52px; padding:12px 14px; text-align:center}
 .jogos-notas-linha{display:grid; grid-template-columns:repeat(5, 1fr); gap:var(--esp-2)}
 .jogos-nota-btn{min-height:42px; padding:0; font-weight:500}
+.jogos-espectro-wrap{display:flex; flex-direction:column; gap:var(--esp-2)}
+.jogos-espectro-extremos{display:flex; justify-content:space-between; gap:var(--esp-2); font-size:var(--t-sec); font-weight:500; color:var(--ink)}
+.jogos-espectro-extremos span:last-child{text-align:right}
+.jogos-espectro-pista{position:relative; height:24px; border-radius:var(--r-full); border:1px solid var(--line); background:var(--s2); overflow:hidden}
+.jogos-espectro-zona{position:absolute; top:0; bottom:0; background:var(--acc-soft); border-left:1px solid var(--acc); border-right:1px solid var(--acc)}
+.jogos-espectro-alvo{position:absolute; top:2px; bottom:2px; width:3px; margin-left:-1.5px; background:var(--acc); border-radius:var(--r-full)}
+.jogos-espectro-ponteiro{position:absolute; top:3px; bottom:3px; width:6px; margin-left:-3px; background:var(--ink); border-radius:var(--r-full)}
+.jogos-espectro-range{width:100%; accent-color:var(--acc); cursor:pointer}
+.jogos-carta-leilao,.jogos-cenario-box{display:flex; flex-direction:column; gap:6px; padding:var(--esp-3); border-radius:var(--r-b); border:1px solid var(--line); background:var(--s2)}
+.jogos-detalhes{border-top:1px solid var(--line); padding-top:var(--esp-2); font-size:var(--t-sec); color:var(--muted)}
+.jogos-detalhes summary{cursor:pointer; font-weight:500; color:var(--ink)}
+.jogos-detalhes-corpo{display:flex; flex-direction:column; gap:6px; margin-top:var(--esp-2)}
+.jogos-lista-conquistas{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:2px}
+.jogos-tabu-carta{display:flex; flex-direction:column; gap:var(--esp-2); padding:var(--esp-3); border-radius:var(--r-b); border:1px solid var(--acc); background:var(--s2)}
+.jogos-tabu-proibidas{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px; color:var(--muted); font-size:var(--t-sec)}
+.jogos-buzina-btn{min-height:54px; padding:12px 16px; border-radius:var(--r-b); background:var(--desafio); color:var(--on-color); font-weight:500; font-size:var(--t-corpo)}
+.jogos-objetivo-gaveta{display:flex; flex-direction:column; gap:var(--esp-2)}
+.jogos-sintonia-medidor{padding:8px 12px; border-radius:var(--r-b); border:1px solid var(--line); background:var(--s2); font-size:var(--t-sec); font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums}
 @media (min-width:600px){.jogos-grid,.jogos-duelo-grid{grid-template-columns:repeat(2, 1fr)}}

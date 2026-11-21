@@ -70,7 +70,7 @@ window.JOGOS_CATALOGO = [
     icone: "radio",
     onda: 2,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "leilao-as-cegas",
@@ -82,7 +82,7 @@ window.JOGOS_CATALOGO = [
     icone: "gem",
     onda: 2,
     ousado: true,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "tabu-do-casal",
@@ -94,7 +94,7 @@ window.JOGOS_CATALOGO = [
     icone: "ban",
     onda: 2,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "cena-de-improviso",
@@ -106,7 +106,7 @@ window.JOGOS_CATALOGO = [
     icone: "drama",
     onda: 2,
     ousado: true,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "dilemas-as-cegas",
@@ -118,7 +118,7 @@ window.JOGOS_CATALOGO = [
     icone: "scale",
     onda: 2,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "batalha-naval",
