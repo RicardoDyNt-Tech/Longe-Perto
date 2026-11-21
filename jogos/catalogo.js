@@ -10,7 +10,7 @@ window.JOGOS_CATALOGO = [
     icone: "pencil",
     onda: 1,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "duelo-musical",
@@ -22,7 +22,7 @@ window.JOGOS_CATALOGO = [
     icone: "music-2",
     onda: 1,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "mata-mata",
@@ -34,7 +34,7 @@ window.JOGOS_CATALOGO = [
     icone: "swords",
     onda: 1,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "leitura-labial",
@@ -46,7 +46,7 @@ window.JOGOS_CATALOGO = [
     icone: "message-circle",
     onda: 1,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "caca-ao-objeto",
@@ -58,7 +58,7 @@ window.JOGOS_CATALOGO = [
     icone: "search",
     onda: 1,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "sintonizador",

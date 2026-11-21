@@ -11893,7 +11893,8 @@
       getEu: () => eu,
       getNomes: () => [nomeDe(0) || "Jogador 1", nomeDe(1) || "Jogador 2"],
       isJuntos: () => juntos(),
-      isParceiroOnline: () => !!parceiroOnline,
+      isParceiroOnline: () => !!(typeof presentes !== "undefined" && presentes && presentes.has(1 - eu)),
+      permitidoOusado: () => permitido("nivel", "picante") || permitido("nivel", "pesado"),
       icone,
       aviso,
       aoAbrir: () => {

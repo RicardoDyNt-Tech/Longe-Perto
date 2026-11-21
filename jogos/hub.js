@@ -25,7 +25,8 @@
     const nomes = typeof cfg.getNomes === "function" ? cfg.getNomes() : ["Jogador 1", "Jogador 2"];
     const juntos = typeof cfg.isJuntos === "function" ? !!cfg.isJuntos() : false;
     const online = typeof cfg.isParceiroOnline === "function" ? !!cfg.isParceiroOnline() : false;
-    return { sb, sala, eu, jogador: String(eu), nomes, juntos, online };
+    const permitidoOusado = typeof cfg.permitidoOusado === "function" ? !!cfg.permitidoOusado() : false;
+    return { sb, sala, eu, jogador: String(eu), nomes, juntos, online, permitidoOusado };
   }
 
   function notificar(msg) {
@@ -92,9 +93,10 @@
 
   function atualizarShell() {
     if (!refsShell || !partidaAtual) return;
-    const { nomes, online } = ctxDados();
+    const { eu, nomes, online } = ctxDados();
     refsShell.placar.textContent = formatarPlacar(partidaAtual.placar, nomes);
-    refsShell.presenca.textContent = online ? `${nomes[1]} online` : `${nomes[1]} offline`;
+    const outroNome = nomes[1 - eu] || "Parceiro";
+    refsShell.presenca.textContent = online ? `${outroNome} online` : `${outroNome} offline`;
     refsShell.presenca.classList.toggle("online", online);
     sincronizarCronometroLocal();
   }
