@@ -26,7 +26,8 @@
     const juntos = typeof cfg.isJuntos === "function" ? !!cfg.isJuntos() : false;
     const online = typeof cfg.isParceiroOnline === "function" ? !!cfg.isParceiroOnline() : false;
     const permitidoOusado = typeof cfg.permitidoOusado === "function" ? !!cfg.permitidoOusado() : false;
-    return { sb, sala, eu, jogador: String(eu), nomes, juntos, online, permitidoOusado };
+    const permitidoIa = typeof cfg.permitidoIa === "function" ? !!cfg.permitidoIa() : false;
+    return { sb, sala, eu, jogador: String(eu), nomes, juntos, online, permitidoOusado, permitidoIa };
   }
 
   function notificar(msg) {

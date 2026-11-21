@@ -166,7 +166,7 @@ window.JOGOS_CATALOGO = [
     icone: "map",
     onda: 4,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "sala-de-fuga",
@@ -178,7 +178,7 @@ window.JOGOS_CATALOGO = [
     icone: "lock",
     onda: 4,
     ousado: false,
-    disponivel: false
+    disponivel: true
   },
   {
     id: "cronica-interativa",
@@ -190,6 +190,6 @@ window.JOGOS_CATALOGO = [
     icone: "book-open",
     onda: 4,
     ousado: false,
-    disponivel: false
+    disponivel: true
   }
 ];

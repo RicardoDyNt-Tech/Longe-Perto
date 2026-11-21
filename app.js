@@ -11895,6 +11895,7 @@
       isJuntos: () => juntos(),
       isParceiroOnline: () => !!(typeof presentes !== "undefined" && presentes && presentes.has(1 - eu)),
       permitidoOusado: () => permitido("nivel", "picante") || permitido("nivel", "pesado"),
+      permitidoIa: () => permitido("ia"),
       icone,
       aviso,
       aoAbrir: () => {

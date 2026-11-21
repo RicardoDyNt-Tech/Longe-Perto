@@ -1640,6 +1640,7 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .jogos-musica-info{display:flex; flex-direction:column; gap:2px}
 .jogos-spotify-frame{border:0; border-radius:var(--r-b); width:100%}
 .jogos-opcao-musica{display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:2px; padding:10px 12px}
+.primary.jogos-opcao-musica .jogos-sub{color:var(--on-acc); opacity:.88}
 .jogos-revelacao-item{display:flex; flex-direction:column; gap:6px}
 .jogos-form-chave{display:flex; flex-direction:column; gap:var(--esp-2)}
 .jogos-duelo-grid{display:grid; grid-template-columns:1fr; gap:var(--esp-2)}
@@ -1691,4 +1692,17 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .jogos-exp-fill{height:100%; background:var(--acc); border-radius:var(--r-full)}
 .jogos-exp-barra-item.critico .jogos-exp-fill{background:var(--desafio)}
 .jogos-exp-dica{display:flex; flex-direction:column; gap:4px; padding:var(--esp-3); border-radius:var(--r-b); border:1px solid var(--acc); background:var(--acc-soft)}
+.jogos-narrativa{margin:0; font-family:var(--f-serif); font-size:var(--t-corpo); line-height:1.65; white-space:pre-wrap; color:var(--ink)}
+.jogos-fuga-topo-info{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--esp-2)}
+.jogos-fuga-painel,.jogos-fuga-manual{display:flex; flex-direction:column; gap:var(--esp-3); padding:var(--esp-3); border-radius:var(--r-b); border:1px solid var(--line); background:var(--s2)}
+.jogos-fuga-visor{text-align:center; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:var(--t-h1); font-weight:500; letter-spacing:.14em; padding:10px 12px; border-radius:var(--r-b); border:1px solid var(--line); background:var(--bg); color:var(--ink)}
+.jogos-fuga-teclado{display:grid; grid-template-columns:repeat(3, 1fr); gap:6px}
+.jogos-fuga-tecla{min-height:44px; padding:8px 4px; font-weight:500}
+.jogos-relogio-wrap{display:flex; flex-direction:column; align-items:center; gap:var(--esp-3)}
+.jogos-relogio-svg{width:136px; height:136px; fill:none; stroke:var(--ink); stroke-width:2; stroke-linecap:round}
+.jogos-relogio-svg .ponteiro-hora{stroke:var(--ink); stroke-width:3.5}
+.jogos-relogio-svg .ponteiro-min{stroke:var(--acc); stroke-width:2.5}
+.jogos-fuga-simb-btn{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:66px; padding:8px 4px; font-size:var(--t-rotulo)}
+.jogos-fuga-svg{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2; stroke-linejoin:round}
+.jogos-fuga-erro{margin:0; font-size:var(--t-sec); font-weight:500; color:var(--desafio)}
 @media (min-width:600px){.jogos-grid,.jogos-duelo-grid{grid-template-columns:repeat(2, 1fr)}}

@@ -2,7 +2,7 @@
 // Página (navegação): rede primeiro, cache só sem internet — assim uma versão nova aparece ao recarregar.
 // Demais arquivos do site: stale-while-revalidate. Os links do index.html levam ?v=N, então versão nova = URL nova.
 // Nada fora deste site (Supabase, CDN do supabase-js, fontes) passa pelo cache.
-const CACHE = "lp-v4-19";
+const CACHE = "lp-v4-20";
 const ARQUIVOS = [
   "./",
   "index.html",
@@ -23,6 +23,9 @@ const ARQUIVOS = [
   "jogos/batalha-naval.js",
   "jogos/codigo-a-dois.js",
   "jogos/expedicao.js",
+  "jogos/aventura-a-dois.js",
+  "jogos/sala-de-fuga.js",
+  "jogos/cronica-interativa.js",
   "conquistas.js",
   "config.js",
   "nativo.js",
