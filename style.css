@@ -1625,4 +1625,25 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .jogos-placar{font-variant-numeric:tabular-nums; font-weight:500; color:var(--ink)}
 .jogos-timer{display:inline-flex; align-items:center; gap:6px; align-self:flex-start; padding:4px 12px; border-radius:var(--r-full); border:1px solid var(--acc); background:var(--acc-soft); color:var(--ink); font-size:var(--t-sec); font-weight:500; font-variant-numeric:tabular-nums}
 .jogos-palco-corpo{display:flex; flex-direction:column; gap:var(--esp-3)}
-@media (min-width:600px){.jogos-grid{grid-template-columns:repeat(2, 1fr)}}
+.jogos-subcard{display:flex; flex-direction:column; gap:var(--esp-3); padding:var(--esp-4); border-radius:var(--r-c); border:1px solid var(--line); background:var(--s1)}
+.jogos-rodada-lbl{margin:0; font-size:var(--t-rotulo); font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
+.jogos-destaque{margin:0; font-family:var(--f-serif); font-size:var(--t-h2); font-weight:500; line-height:1.35; color:var(--ink)}
+.jogos-acoes-linha{display:flex; flex-wrap:wrap; gap:var(--esp-2)}
+.jogos-acoes-col{display:flex; flex-direction:column; gap:var(--esp-2)}
+.jogos-canvas-wrap{display:flex; justify-content:center; width:100%}
+.jogos-canvas{display:block; max-width:100%; border-radius:var(--r-c); border:1px solid var(--line); background:var(--s2); touch-action:none; cursor:crosshair}
+.jogos-canvas.somente-leitura{cursor:default}
+.jogos-canvas-ferr{display:flex; flex-wrap:wrap; align-items:center; gap:var(--esp-2)}
+.jogos-cor-btn{width:30px; height:30px; min-width:30px; min-height:30px; padding:0; border-radius:var(--r-full); border:2px solid var(--line)}
+.jogos-cor-btn[aria-pressed="true"]{border-color:var(--acc); transform:scale(1.1)}
+.jogos-musica-box{display:flex; flex-direction:column; gap:var(--esp-2); padding:var(--esp-3); border-radius:var(--r-b); border:1px solid var(--line); background:var(--s2)}
+.jogos-musica-info{display:flex; flex-direction:column; gap:2px}
+.jogos-spotify-frame{border:0; border-radius:var(--r-b); width:100%}
+.jogos-opcao-musica{display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:2px; padding:10px 12px}
+.jogos-revelacao-item{display:flex; flex-direction:column; gap:6px}
+.jogos-form-chave{display:flex; flex-direction:column; gap:var(--esp-2)}
+.jogos-duelo-grid{display:grid; grid-template-columns:1fr; gap:var(--esp-2)}
+.jogos-duelo-btn{min-height:52px; padding:12px 14px; text-align:center}
+.jogos-notas-linha{display:grid; grid-template-columns:repeat(5, 1fr); gap:var(--esp-2)}
+.jogos-nota-btn{min-height:42px; padding:0; font-weight:500}
+@media (min-width:600px){.jogos-grid,.jogos-duelo-grid{grid-template-columns:repeat(2, 1fr)}}

@@ -25,7 +25,8 @@
     const nomes = typeof cfg.getNomes === "function" ? cfg.getNomes() : ["Jogador 1", "Jogador 2"];
     const juntos = typeof cfg.isJuntos === "function" ? !!cfg.isJuntos() : false;
     const online = typeof cfg.isParceiroOnline === "function" ? !!cfg.isParceiroOnline() : false;
-    return { sb, sala, eu, jogador: String(eu), nomes, juntos, online };
+    const permitidoOusado = typeof cfg.permitidoOusado === "function" ? !!cfg.permitidoOusado() : false;
+    return { sb, sala, eu, jogador: String(eu), nomes, juntos, online, permitidoOusado };
   }
 
   function notificar(msg) {

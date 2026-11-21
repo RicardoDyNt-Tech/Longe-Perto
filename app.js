@@ -11894,6 +11894,7 @@
       getNomes: () => [nomeDe(0) || "Jogador 1", nomeDe(1) || "Jogador 2"],
       isJuntos: () => juntos(),
       isParceiroOnline: () => !!parceiroOnline,
+      permitidoOusado: () => permitido("nivel", "picante") || permitido("nivel", "pesado"),
       icone,
       aviso,
       aoAbrir: () => {
