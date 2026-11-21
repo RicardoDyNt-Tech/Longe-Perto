@@ -68,7 +68,7 @@
     "battery-low", "bed", "book-open", "bot", "briefcase", "cake", "calendar", "calendar-heart", "camera", "check",
     "chevron-left", "chevron-right", "clapperboard", "cloud-moon", "cloud-sun", "coffee", "crown", "dices", "door-open",
     "drama", "droplets", "eye", "eye-off", "feather", "film", "flame", "flask-conical", "flower-2", "frame", "frown",
-    "gem", "gift", "graduation-cap", "guitar", "hand-heart", "handshake", "heart", "heart-handshake", "history",
+    "gem", "gift", "gamepad-2", "graduation-cap", "guitar", "hand-heart", "handshake", "heart", "heart-handshake", "history",
     "hourglass", "house", "ice-cream-cone", "key-round", "lamp", "laugh", "leaf", "lightbulb", "link", "lock", "mail",
     "map", "map-pin", "martini", "meh", "message-circle", "message-circle-heart", "mic", "moon", "moon-star", "music",
     "music-2", "palette", "party-popper", "paw-print", "pencil", "phone", "plane", "popcorn", "receipt", "refresh-cw",
@@ -1598,6 +1598,7 @@
     invCasoAtual = null; invPartidaAtual = null; invDossie = null; invRelatorio = null; invNotas = [];
     invCarregarPrateleira();
     invAplicarVisibilidade();
+    jogosAplicarVisibilidade();
     history.replaceState(null, "", "?sala=" + c + (invModoTeste ? "&teste=1" : ""));
     $("lobby").hidden = true;
     $("jogo").hidden = false;
@@ -1660,6 +1661,7 @@
         aplicarLinhaConfig(p.new);
         conferirDono(c);   // ex.: "Gerar novo código" em outro aparelho
         invAplicarVisibilidade();
+        jogosAplicarVisibilidade();
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "investigacoes", filter: `sala=eq.${c}` }, p => {
         if (c === codigo) invReceberPartida(p.eventType, p.eventType === "DELETE" ? p.old : p.new);
@@ -2203,7 +2205,7 @@
   }
 
   // ---------- Casa do casal e presença ----------
-  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vChamadas", "vCardapio", "vRecados", "vInvestigacao"];
+  const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vChamadas", "vCardapio", "vRecados", "vInvestigacao", "vJogos"];
   const ABAS = { casa: "abaCasa", jogo: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
 
   function mostrarVista(nome) {
@@ -2239,9 +2241,12 @@
     if (nome === "vCardapio") abrirCardapio();
     if (nome === "vRecados") desenharRecados();
     if (nome === "vInvestigacao") invAbrirTela();
+    if (vista !== "vJogos" && window.JogosHub && window.JogosHub.partidaAtual) window.JogosHub.sairPartida(true);
+    if (nome === "vJogos") jogosAbrirTela();
     if (nome === "vHistorico") desenharHistCompanhia();
     if (nome === "casa") { setTimeout(desenharRecados, 0); invAtualizarResumoInicio(); }
     invAplicarVisibilidade();
+    jogosAplicarVisibilidade();
     tickContador();
     window.scrollTo(0, 0);
   }
@@ -5883,7 +5888,8 @@
     cardapio: { ativo: true },
     clausulas: { ativo: true },
     silencio: { ativo: true },
-    investigacao: { ativo: true }
+    investigacao: { ativo: true },
+    jogos: { ativo: true }
   };
   // merge profundo: o padrão preenche o que faltar (e o que vier com tipo errado)
   function mesclar(pad, x) {
@@ -6242,6 +6248,7 @@
     sm.appendChild(cfgModo("presencial", "Modo Juntos (presencial)"));
     sm.appendChild(cfgModo("silencio", "Desafio do silêncio (microfone, no modo Juntos)"));
     sm.appendChild(cfgModo("investigacao", "Investigação (mistério cooperativo)"));
+    sm.appendChild(cfgModo("jogos", "Jogos (prateleira de jogos rápidos e de noite inteira)"));
     sm.appendChild(cfgInterruptor("Contar chamada pela presença (os dois com a sala aberta)", config.chamadas.presenca, v => mudarConfig(c => { c.chamadas.presenca = v; }), "chamadas.presenca"));
     d.appendChild(sm);
 
@@ -8356,8 +8363,9 @@
         : `Você está sem bateria social até ${hojeISO(ate) === hojeISO() ? "" : "amanhã, "}${ate.toLocaleTimeString("pt-BR", { timeZone: "America/Bahia", hour: "2-digit", minute: "2-digit" })}. Tudo calmo por aqui.`;
     }
     // sem jogo para os dois enquanto alguém está sem bateria
-    if ((minha || dele) && (vista === "jogo" || vista === "vInvestigacao")) setTimeout(() => mostrarVista("casa"), 0);
+    if ((minha || dele) && (vista === "jogo" || vista === "vInvestigacao" || vista === "vJogos")) setTimeout(() => mostrarVista("casa"), 0);
     invAplicarVisibilidade();
+    jogosAplicarVisibilidade();
     desenharCuidado(e, dele);
     // expira sozinho
     clearTimeout(timerBateria);
@@ -11776,6 +11784,128 @@
         invRender();
       } else {
         mostrarVista(estado && estado.fixa ? "casa" : "jogo");
+      }
+    });
+  }
+
+  // ---------- Hub de Jogos ----------
+  let jogosFiltroRitmo = "todos";
+
+  function jogosAplicarVisibilidade() {
+    const semBateria = typeof bateriaAlguem === "function" && estado && bateriaAlguem(estado);
+    const ativo = permitido("jogos") && !semBateria;
+    if ($("atalhoJogos")) $("atalhoJogos").hidden = !ativo;
+    if (!ativo && vista === "vJogos") {
+      if (window.JogosHub && window.JogosHub.partidaAtual) window.JogosHub.sairPartida(true);
+      mostrarVista(estado && estado.fixa ? "casa" : "jogo");
+    } else if (ativo && vista === "vJogos" && $("tela-jogos") && !$("tela-jogos").hidden) {
+      jogosRenderPrateleira();
+    }
+  }
+
+  function jogosAbrirTela() {
+    if ($("jogos-palco")) $("jogos-palco").hidden = true;
+    if ($("tela-jogos")) $("tela-jogos").hidden = false;
+    if ($("jogosVoltarWrap")) $("jogosVoltarWrap").hidden = false;
+    jogosRenderPrateleira();
+  }
+
+  function jogosRenderPrateleira() {
+    const raiz = $("tela-jogos");
+    if (!raiz) return;
+    raiz.textContent = "";
+
+    const catalogo = Array.isArray(window.JOGOS_CATALOGO) ? window.JOGOS_CATALOGO : [];
+    const emJuntos = juntos();
+    const nRapidos = catalogo.filter(j => j.ritmo === "rapido").length;
+    const nNoite = catalogo.filter(j => j.ritmo === "noite").length;
+
+    const cab = el("div", "jogos-cab");
+    cab.appendChild(el("h1", "jogos-titulo", "Jogos"));
+    cab.appendChild(el("p", "jogos-sub", `${catalogo.length} jogos (${nRapidos} rápidos, ${nNoite} de noite inteira) · Modo atual: ${emJuntos ? "Juntos" : "Longe"}`));
+    raiz.appendChild(cab);
+
+    const filtros = el("div", "jogos-filtros");
+    filtros.setAttribute("role", "group");
+    filtros.setAttribute("aria-label", "Filtrar por ritmo");
+    [
+      ["todos", "Todos"],
+      ["rapido", "Rápidos na chamada"],
+      ["noite", "Noite inteira"]
+    ].forEach(([val, rot]) => {
+      const b = el("button", "jogos-chip", rot);
+      b.type = "button";
+      b.setAttribute("aria-pressed", jogosFiltroRitmo === val ? "true" : "false");
+      b.addEventListener("click", () => {
+        jogosFiltroRitmo = val;
+        jogosRenderPrateleira();
+      });
+      filtros.appendChild(b);
+    });
+    raiz.appendChild(filtros);
+
+    const lista = catalogo.filter(j => jogosFiltroRitmo === "todos" || j.ritmo === jogosFiltroRitmo);
+    const grid = el("div", "jogos-grid");
+    lista.forEach(j => {
+      const card = el("article", "jogos-card");
+      const topo = el("div", "jogos-card-topo");
+      const icBox = el("div", "jogos-card-ic");
+      icBox.appendChild(icone(j.icone, 20));
+      topo.appendChild(icBox);
+
+      const meta = el("div", "jogos-card-meta");
+      const tLinha = el("div", "jogos-card-titulo-linha");
+      tLinha.appendChild(el("h3", "jogos-card-titulo", j.titulo));
+      if (emJuntos && Array.isArray(j.modos) && j.modos.length === 1 && j.modos[0] === "longe") {
+        tLinha.appendChild(el("span", "jogos-selo jogos-selo-longe", "Ideal para Longe"));
+      }
+      meta.appendChild(tLinha);
+      meta.appendChild(el("p", "jogos-card-desc", j.descricao));
+      topo.appendChild(meta);
+      card.appendChild(topo);
+
+      const rodape = el("div", "jogos-card-rodape");
+      const info = el("div", "jogos-card-info");
+      info.appendChild(el("span", "", j.ritmo === "rapido" ? "Rápido" : "Noite inteira"));
+      info.appendChild(el("span", "", j.duracao));
+      rodape.appendChild(info);
+
+      if (j.disponivel) {
+        const btn = el("button", "primary jogos-jogar-btn", "Jogar");
+        btn.type = "button";
+        btn.addEventListener("click", () => {
+          if (window.JogosHub) window.JogosHub.abrirPartida(j.id, $("jogos-palco"));
+        });
+        rodape.appendChild(btn);
+      } else {
+        rodape.appendChild(el("span", "jogos-selo", "Em breve"));
+      }
+      card.appendChild(rodape);
+      grid.appendChild(card);
+    });
+    raiz.appendChild(grid);
+  }
+
+  if (window.JogosHub) {
+    window.JogosHub.configurar({
+      getSb: () => sb,
+      getSala: () => codigo,
+      getEu: () => eu,
+      getNomes: () => [nomeDe(0) || "Jogador 1", nomeDe(1) || "Jogador 2"],
+      isJuntos: () => juntos(),
+      isParceiroOnline: () => !!parceiroOnline,
+      icone,
+      aviso,
+      aoAbrir: () => {
+        if ($("tela-jogos")) $("tela-jogos").hidden = true;
+        if ($("jogosVoltarWrap")) $("jogosVoltarWrap").hidden = true;
+        if ($("jogos-palco")) $("jogos-palco").hidden = false;
+      },
+      aoSair: () => {
+        if ($("jogos-palco")) $("jogos-palco").hidden = true;
+        if ($("jogosVoltarWrap")) $("jogosVoltarWrap").hidden = false;
+        if ($("tela-jogos")) $("tela-jogos").hidden = false;
+        jogosRenderPrateleira();
       }
     });
   }

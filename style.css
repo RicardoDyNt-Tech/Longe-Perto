@@ -1592,3 +1592,37 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .avatar-ajuste-mascara{position:absolute; inset:0; border-radius:var(--r-full); border:2px solid var(--acc); pointer-events:none}
 .avatar-zoom-campo{width:100%; max-width:240px}
 .avatar-zoom-campo input[type=range]{width:100%; accent-color:var(--acc); padding:0}
+
+/* Hub de Jogos */
+.jogos-vista{padding-bottom:var(--esp-4)}
+.jogos-voltar-topo{margin-bottom:var(--esp-2)}
+.jogos-raiz{display:flex; flex-direction:column; gap:var(--esp-3)}
+.jogos-cab{display:flex; flex-direction:column; gap:4px}
+.jogos-titulo{font-family:var(--f-serif); font-size:var(--t-h1); font-weight:500; margin:0; line-height:1.2; color:var(--ink)}
+.jogos-sub{margin:0; font-size:var(--t-sec); color:var(--muted)}
+.jogos-filtros{display:flex; flex-wrap:wrap; gap:var(--esp-2)}
+.jogos-chip{min-height:34px; padding:6px 14px; border-radius:var(--r-full); border:1px solid var(--line); background:var(--s1); color:var(--muted); font-size:var(--t-sec); font-weight:500}
+.jogos-chip[aria-pressed="true"]{background:var(--acc-soft); border-color:var(--acc); color:var(--ink)}
+.jogos-grid{display:grid; grid-template-columns:1fr; gap:var(--esp-3)}
+.jogos-card{display:flex; flex-direction:column; gap:var(--esp-2); padding:var(--esp-4); border-radius:var(--r-c); border:1px solid var(--line); background:var(--s1)}
+.jogos-card-topo{display:flex; align-items:flex-start; gap:var(--esp-3)}
+.jogos-card-ic{flex:0 0 auto; width:38px; height:38px; border-radius:var(--r-b); background:var(--s2); border:1px solid var(--line); color:var(--acc); display:flex; align-items:center; justify-content:center}
+.jogos-card-meta{flex:1; min-width:0; display:flex; flex-direction:column; gap:4px}
+.jogos-card-titulo-linha{display:flex; align-items:center; flex-wrap:wrap; gap:6px}
+.jogos-card-titulo{font-family:var(--f-serif); font-size:var(--t-h2); font-weight:500; margin:0; line-height:1.25; color:var(--ink)}
+.jogos-card-desc{margin:0; font-size:var(--t-sec); color:var(--muted); line-height:1.45}
+.jogos-card-rodape{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--esp-2); padding-top:4px}
+.jogos-card-info{display:flex; align-items:center; flex-wrap:wrap; gap:var(--esp-2); font-size:var(--t-rotulo); color:var(--muted)}
+.jogos-selo{display:inline-flex; align-items:center; padding:3px 10px; border-radius:var(--r-full); border:1px solid var(--line); background:var(--s2); color:var(--muted); font-size:var(--t-rotulo); font-weight:500}
+.jogos-selo-longe{border-color:var(--acc); background:var(--acc-soft); color:var(--ink)}
+.jogos-jogar-btn{min-height:36px; padding:6px 16px}
+.jogos-palco{display:flex; flex-direction:column; gap:var(--esp-3)}
+.jogos-topo{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--esp-2); padding:10px 14px; border-radius:var(--r-b); border:1px solid var(--line); background:var(--s1)}
+.jogos-topo-titulo{font-family:var(--f-serif); font-size:var(--t-h2); font-weight:500; margin:0; color:var(--ink)}
+.jogos-topo-meta{display:flex; align-items:center; flex-wrap:wrap; gap:var(--esp-2); font-size:var(--t-rotulo); color:var(--muted)}
+.jogos-presenca{padding:2px 8px; border-radius:var(--r-full); border:1px solid var(--line); background:var(--s2)}
+.jogos-presenca.online{border-color:var(--ok); color:var(--ok)}
+.jogos-placar{font-variant-numeric:tabular-nums; font-weight:500; color:var(--ink)}
+.jogos-timer{display:inline-flex; align-items:center; gap:6px; align-self:flex-start; padding:4px 12px; border-radius:var(--r-full); border:1px solid var(--acc); background:var(--acc-soft); color:var(--ink); font-size:var(--t-sec); font-weight:500; font-variant-numeric:tabular-nums}
+.jogos-palco-corpo{display:flex; flex-direction:column; gap:var(--esp-3)}
+@media (min-width:600px){.jogos-grid{grid-template-columns:repeat(2, 1fr)}}
