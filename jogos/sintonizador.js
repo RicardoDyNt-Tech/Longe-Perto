@@ -36,6 +36,7 @@
   }
 
   function calcularPontos(dist) {
+    if (dist === 0) return { pts: 5, rotulo: "Alvo exato!" };
     if (dist <= 5) return { pts: 4, rotulo: "Na mosca!" };
     if (dist <= 12) return { pts: 3, rotulo: "Muito perto!" };
     if (dist <= 20) return { pts: 2, rotulo: "Perto!" };
