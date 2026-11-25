@@ -1,10 +1,13 @@
-// Jogo: Batalha Naval — Longe & Perto
+// Jogo: Batalha Naval 10x10 — Longe & Perto
 (function () {
+  const TAM = 10;
+  const COLUNAS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
   const NAVIOS_DEF = [
-    { id: "n3", nome: "Navio 3 casas", tam: 3 },
-    { id: "n2a", nome: "Navio 2 casas (A)", tam: 2 },
-    { id: "n2b", nome: "Navio 2 casas (B)", tam: 2 },
-    { id: "n1", nome: "Submarino 1 casa", tam: 1 }
+    { id: "porta-avioes", nome: "Porta-aviões", tam: 5 },
+    { id: "encouracado", nome: "Encouraçado", tam: 4 },
+    { id: "cruzador", nome: "Cruzador", tam: 3 },
+    { id: "submarino", nome: "Submarino", tam: 3 },
+    { id: "contratorpedeiro", nome: "Contratorpedeiro", tam: 2 }
   ];
 
   let raiz = null;
@@ -40,6 +43,12 @@
     return bancoSugestoes;
   }
 
+  function filtrarSugestoes(lista) {
+    const { juntos, permitidoOusado } = ctxJogo.dadosSala;
+    const modoAtual = juntos ? "juntos" : "longe";
+    return (lista || []).filter(x => (x.modo === "ambos" || x.modo === modoAtual) && (!!permitidoOusado || !x.ousado));
+  }
+
   function celulaChave(r, c) {
     return `${r},${c}`;
   }
@@ -61,7 +70,7 @@
     for (let i = 0; i < navio.tam; i++) {
       const nr = ori === "V" ? r + i : r;
       const nc = ori === "H" ? c + i : c;
-      if (nr < 0 || nr >= 6 || nc < 0 || nc >= 6) return false;
+      if (nr < 0 || nr >= TAM || nc < 0 || nc >= TAM) return false;
       const k = celulaChave(nr, nc);
       if (ocupadas.has(k)) return false;
       novas.push(k);
@@ -77,10 +86,10 @@
 
     for (let idx = 0; idx < frotaLocal.length; idx++) {
       let ok = false;
-      for (let t = 0; t < 120 && !ok; t++) {
+      for (let t = 0; t < 200 && !ok; t++) {
         const ori = Math.random() < 0.5 ? "H" : "V";
-        const r = Math.floor(Math.random() * 6);
-        const c = Math.floor(Math.random() * 6);
+        const r = Math.floor(Math.random() * TAM);
+        const c = Math.floor(Math.random() * TAM);
         ok = tentarPosicionar(idx, r, c, ori);
       }
     }
@@ -88,16 +97,32 @@
   }
 
   async function sugerirRecompensa(idx) {
-    const { sb, juntos, permitidoOusado } = ctxJogo.dadosSala;
-    const lista = await carregarSugestoes(sb);
-    const modoAtual = juntos ? "juntos" : "longe";
-    const pool = lista.filter(x => (x.modo === "ambos" || x.modo === modoAtual) && (!!permitidoOusado || !x.ousado));
+    const lista = await carregarSugestoes(ctxJogo.dadosSala.sb);
+    const pool = filtrarSugestoes(lista);
     if (!pool.length) {
       ctxJogo.aviso("Nenhuma sugestão disponível.");
       return;
     }
     const item = pool[Math.floor(Math.random() * pool.length)];
     frotaLocal[idx].recompensa = (item.dados && item.dados.texto) || "";
+    render();
+  }
+
+  async function sugerirTodas() {
+    const lista = await carregarSugestoes(ctxJogo.dadosSala.sb);
+    const pool = filtrarSugestoes(lista).slice();
+    if (!pool.length) {
+      ctxJogo.aviso("Nenhuma sugestão disponível.");
+      return;
+    }
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+    }
+    frotaLocal.forEach((n, idx) => {
+      const item = pool[idx % pool.length];
+      n.recompensa = (item && item.dados && item.dados.texto) || "";
+    });
     render();
   }
 
@@ -108,13 +133,14 @@
     const rodada = Number(p.rodada || 1);
 
     if (!frotaLocal || frotaLocal.some(n => (n.celulas || []).length !== n.tam)) {
-      ctxJogo.aviso("Posicione todos os 4 navios na grade 6x6 antes de continuar.");
+      ctxJogo.aviso("Posicione todos os 5 navios na grade 10x10 antes de continuar.");
       return;
     }
 
     const payload = {
       navios: frotaLocal.map(n => ({
         id: n.id,
+        nome: n.nome,
         tam: n.tam,
         celulas: n.celulas.slice(),
         recompensa: String(n.recompensa || "").trim() || "Recompensa combinada na hora"
@@ -125,12 +151,14 @@
     if (!ok) return;
 
     frotaRodada = rodada;
-    const patch = { [`pronto_${eu}`]: true };
+    const patch = { tamanho: TAM, [`pronto_${eu}`]: true };
     if (est[`pronto_${1 - eu}`]) {
       patch.fase = "batalha";
       patch.vez = 0;
       patch.disparos_0 = est.disparos_0 || {};
       patch.disparos_1 = est.disparos_1 || {};
+      patch.afundados_0 = Number(est.afundados_0 || 0);
+      patch.afundados_1 = Number(est.afundados_1 || 0);
       patch.recompensas = est.recompensas || [];
       patch.ultimo_afundado = null;
     }
@@ -168,11 +196,14 @@
       meusDisparos[cel] = resultado;
       const recompensas = Array.isArray(est.recompensas) ? est.recompensas.slice() : [];
       let ultimoAfundado = est.ultimo_afundado || null;
+      const chaveAfund = `afundados_${1 - eu}`;
+      let totalAfundadosAlvo = Number(est[chaveAfund] || 0);
 
       if (resultado === "afundou") {
         (Array.isArray(data.celulas) ? data.celulas : [cel]).forEach(c => {
           meusDisparos[c] = "afundou";
         });
+        totalAfundadosAlvo += 1;
         ultimoAfundado = {
           por: eu,
           recompensa: data.recompensa || "Recompensa combinada na hora"
@@ -181,7 +212,9 @@
       }
 
       const patch = {
+        tamanho: TAM,
         [chaveDisp]: meusDisparos,
+        [chaveAfund]: totalAfundadosAlvo,
         recompensas,
         ultimo_afundado: ultimoAfundado,
         vez: resultado === "agua" ? 1 - eu : eu
@@ -209,12 +242,15 @@
     aba = "atacar";
     await ctxJogo.salvarEstado(
       {
+        tamanho: TAM,
         fase: "preparacao",
         pronto_0: false,
         pronto_1: false,
         vez: 0,
         disparos_0: {},
         disparos_1: {},
+        afundados_0: 0,
+        afundados_1: 0,
         recompensas: [],
         ultimo_afundado: null,
         vencedor: null
@@ -223,16 +259,26 @@
     );
   }
 
+  async function garantirCompatibilidade10x10() {
+    if (!ctxJogo || !ctxJogo.partida) return;
+    const est = ctxJogo.partida.estado || {};
+    if (est.fase && Number(est.tamanho) !== TAM) {
+      await novaPartida();
+    }
+  }
+
   async function carregarMinhaFrota() {
     if (!ctxJogo || !ctxJogo.partida) return;
     const p = ctxJogo.partida;
+    const est = p.estado || {};
+    if (est.fase && Number(est.tamanho) !== TAM) return;
     const rodada = Number(p.rodada || 1);
     if (frotaRodada === rodada && frotaLocal) return;
     const salvo = await ctxJogo.lerMeuSegredo(rodada, "frota");
-    if (salvo && Array.isArray(salvo.navios) && salvo.navios.length) {
+    if (salvo && Array.isArray(salvo.navios) && salvo.navios.length === NAVIOS_DEF.length) {
       frotaLocal = salvo.navios.map((n, i) => ({
         id: n.id || NAVIOS_DEF[i].id,
-        nome: (NAVIOS_DEF[i] && NAVIOS_DEF[i].nome) || "Navio",
+        nome: n.nome || (NAVIOS_DEF[i] && NAVIOS_DEF[i].nome) || "Navio",
         tam: n.tam || (n.celulas || []).length,
         celulas: Array.isArray(n.celulas) ? n.celulas.slice() : [],
         recompensa: n.recompensa || ""
@@ -243,12 +289,16 @@
     }
   }
 
-  function renderGrade6x6(modo, mapaDisparos, minhasCelulas, podeClicar, aoClicar) {
-    const grid = el("div", "jogos-grade-6");
-    for (let r = 0; r < 6; r++) {
-      for (let c = 0; c < 6; c++) {
+  function renderGrade10x10(modo, mapaDisparos, minhasCelulas, podeClicar, aoClicar) {
+    const grid = el("div", "jogos-grade-10");
+    grid.appendChild(el("span", "jogos-coord-10", ""));
+    COLUNAS.forEach(col => grid.appendChild(el("span", "jogos-coord-10", col)));
+
+    for (let r = 0; r < TAM; r++) {
+      grid.appendChild(el("span", "jogos-coord-10", String(r + 1)));
+      for (let c = 0; c < TAM; c++) {
         const k = celulaChave(r, c);
-        const btn = el("button", "jogos-cel-6");
+        const btn = el("button", "jogos-cel-10");
         btn.type = "button";
         const estadoDisp = mapaDisparos && mapaDisparos[k];
         const temMeuNavio = minhasCelulas && minhasCelulas.has(k);
@@ -266,7 +316,7 @@
           btn.classList.add("navio");
         }
 
-        btn.setAttribute("aria-label", `Linha ${r + 1}, Coluna ${c + 1}`);
+        btn.setAttribute("aria-label", `${COLUNAS[c]}${r + 1}`);
         btn.disabled = !podeClicar || (modo === "atacar" && !!estadoDisp);
         if (podeClicar && typeof aoClicar === "function") {
           btn.addEventListener("click", () => aoClicar(r, c, k));
@@ -291,18 +341,18 @@
 
     if (fase === "preparacao") {
       const euPronto = !!est[`pronto_${eu}`];
-      card.appendChild(el("p", "jogos-rodada-lbl", `Preparação secreta · ${nomes[0]}: ${est.pronto_0 ? "pronto" : "posicionando"} · ${nomes[1]}: ${est.pronto_1 ? "pronto" : "posicionando"}`));
+      card.appendChild(el("p", "jogos-rodada-lbl", `Frota 10x10 · ${nomes[0]}: ${est.pronto_0 ? "pronto" : "posicionando"} · ${nomes[1]}: ${est.pronto_1 ? "pronto" : "posicionando"}`));
 
       const minhasCelulas = celulasOcupadas(-1);
       if (euPronto) {
-        card.appendChild(el("p", "jogos-sub", `Sua frota está escondida em segredo. Aguardando ${nomes[1 - eu]} finalizar.`));
-        card.appendChild(renderGrade6x6("prep", null, minhasCelulas, false));
+        card.appendChild(el("p", "jogos-sub", `Sua frota de 5 navios está escondida em segredo. Aguardando ${nomes[1 - eu]} finalizar.`));
+        card.appendChild(renderGrade10x10("prep", null, minhasCelulas, false));
       } else {
-        card.appendChild(el("p", "jogos-sub", "Selecione um navio abaixo e toque na grade 6x6 para posicioná-lo."));
+        card.appendChild(el("p", "jogos-sub", "Escolha um navio, gire se precisar e toque na célula inicial na grade 10x10."));
         const selWrap = el("div", "jogos-filtros");
         frotaLocal.forEach((n, idx) => {
           const ok = (n.celulas || []).length === n.tam;
-          const b = el("button", "jogos-chip", `${n.tam} casas${ok ? " (ok)" : ""}`);
+          const b = el("button", "jogos-chip", `${n.nome} (${n.tam})${ok ? " ok" : ""}`);
           b.type = "button";
           b.setAttribute("aria-pressed", navioSelIdx === idx ? "true" : "false");
           b.addEventListener("click", () => { navioSelIdx = idx; render(); });
@@ -311,7 +361,7 @@
         card.appendChild(selWrap);
 
         const ctrls = el("div", "jogos-acoes-linha");
-        const bGir = el("button", "secondary", `Direção: ${orientacao === "H" ? "Horizontal" : "Vertical"}`);
+        const bGir = el("button", "secondary", `Girar: ${orientacao === "H" ? "Horizontal" : "Vertical"}`);
         bGir.type = "button";
         bGir.addEventListener("click", () => { orientacao = orientacao === "H" ? "V" : "H"; render(); });
         const bAle = el("button", "secondary", "Posicionar aleatório");
@@ -320,7 +370,7 @@
         ctrls.append(bGir, bAle);
         card.appendChild(ctrls);
 
-        card.appendChild(renderGrade6x6("prep", null, minhasCelulas, true, (r, c) => {
+        card.appendChild(renderGrade10x10("prep", null, minhasCelulas, true, (r, c) => {
           if (!tentarPosicionar(navioSelIdx, r, c, orientacao)) {
             ctxJogo.aviso("Não cabe nessa posição. Tente outra célula ou gire o navio.");
             return;
@@ -331,12 +381,19 @@
         }));
 
         const recBox = el("div", "jogos-acoes-col");
-        recBox.appendChild(el("p", "jogos-rodada-lbl", "Recompensa ou prenda ao afundar cada navio"));
+        const recTopo = el("div", "jogos-fuga-topo-info");
+        recTopo.appendChild(el("p", "jogos-rodada-lbl", "Recompensa ou prenda de cada navio"));
+        const bSugTodas = el("button", "linkbtn", "Sugerir todas");
+        bSugTodas.type = "button";
+        bSugTodas.addEventListener("click", sugerirTodas);
+        recTopo.appendChild(bSugTodas);
+        recBox.appendChild(recTopo);
+
         frotaLocal.forEach((n, idx) => {
           const linha = el("div", "jogos-batalha-rec-linha");
           const inp = document.createElement("input");
           inp.type = "text";
-          inp.placeholder = `${n.nome}: recompensa secreta`;
+          inp.placeholder = `${n.nome} (${n.tam}): recompensa secreta`;
           inp.maxLength = 100;
           inp.value = n.recompensa || "";
           inp.addEventListener("input", () => { frotaLocal[idx].recompensa = inp.value; });
@@ -360,7 +417,12 @@
     if (fase === "batalha") {
       const vez = Number(est.vez || 0);
       const minhaVez = vez === eu;
+      const totalNavios = NAVIOS_DEF.length;
+      const restam0 = Math.max(0, totalNavios - Number(est.afundados_0 || 0));
+      const restam1 = Math.max(0, totalNavios - Number(est.afundados_1 || 0));
+
       card.appendChild(el("p", "jogos-rodada-lbl", minhaVez ? "Sua vez de disparar · Acertou, atira de novo" : `Vez de ${nomes[vez]} disparar`));
+      card.appendChild(el("p", "jogos-sub", `Restam: ${nomes[0]} (${restam0}/${totalNavios}) · ${nomes[1]} (${restam1}/${totalNavios})`));
 
       if (est.ultimo_afundado) {
         const dest = el("div", "jogos-recompensa-destaque");
@@ -384,11 +446,11 @@
 
       if (aba === "atacar") {
         const meusDisparos = est[`disparos_${eu}`] || {};
-        card.appendChild(renderGrade6x6("atacar", meusDisparos, null, minhaVez, (_, __, k) => disparar(k)));
+        card.appendChild(renderGrade10x10("atacar", meusDisparos, null, minhaVez, (_, __, k) => disparar(k)));
       } else {
         const disparosOutro = est[`disparos_${1 - eu}`] || {};
         const minhasCelulas = celulasOcupadas(-1);
-        card.appendChild(renderGrade6x6("frota", disparosOutro, minhasCelulas, false));
+        card.appendChild(renderGrade10x10("frota", disparosOutro, minhasCelulas, false));
       }
 
       const recs = Array.isArray(est.recompensas) ? est.recompensas : [];
@@ -432,6 +494,7 @@
       navioSelIdx = 0;
       frotaLocal = null;
       frotaRodada = 0;
+      await garantirCompatibilidade10x10();
       await carregarMinhaFrota();
       render();
     },
