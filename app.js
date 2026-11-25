@@ -64,7 +64,7 @@
 
   // Ícones do sistema (Lucide / Marca)
   const ICONES_CONHECIDOS = new Set([
-    "marca", "ponto-neutro", "alarm-clock", "angry", "arrow-down", "arrow-up", "arrow-up-right", "baby", "ban", "bath",
+    "marca", "ponto-neutro", "alarm-clock", "angry", "arrow-down", "arrow-left", "arrow-up", "arrow-up-right", "baby", "ban", "bath",
     "battery-low", "bed", "book-open", "bot", "briefcase", "cake", "calendar", "calendar-heart", "camera", "check",
     "chevron-left", "chevron-right", "clapperboard", "cloud-moon", "cloud-sun", "coffee", "crown", "dices", "door-open",
     "drama", "droplets", "eye", "eye-off", "feather", "film", "flame", "flask-conical", "flower-2", "frame", "frown",
@@ -2206,10 +2206,11 @@
 
   // ---------- Casa do casal e presença ----------
   const VISTAS_CASA = ["vDiario", "vCofre", "vEnvelopes", "vSemana", "vCapsulas", "vAlbum", "vConquistas", "vBaralho", "vMapa", "vHistoria", "vPote", "vAbra", "vDiarioCasal", "vPlaylist", "vHistorico", "vPerfil", "vMural", "vChamadas", "vCardapio", "vRecados", "vInvestigacao", "vJogos"];
-  const ABAS = { casa: "abaCasa", jogo: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
+  const ABAS = { casa: "abaCasa", jogo: "abaJogo", vJogos: "abaJogo", vHistorico: "abaHistorico", vPerfil: "abaPerfil" };
 
   function mostrarVista(nome) {
-    if (!(estado && estado.fixa) && nome !== "vInvestigacao") nome = "jogo";   // sala comum: só o jogo (e Investigação)
+    if (nome === "vJogos" && !permitido("jogos")) nome = "jogo";
+    if (!(estado && estado.fixa) && nome !== "vInvestigacao" && nome !== "vJogos") nome = "jogo";   // sala comum: só o jogo (e Investigação/Jogos)
     vista = nome;
     if (estado) conferirCelular(estado);
     if (estado) setTimeout(() => estado && desenharModosHoje(estado), 0);
@@ -2220,7 +2221,7 @@
     $("casaGrade").hidden = !(estado && estado.fixa) || nome !== "casa";
     VISTAS_CASA.forEach(v => { if ($(v)) $(v).hidden = v !== nome; });
     const aba = ABAS[nome] || "abaCasa";   // as vistas do "Mais" moram no Início
-    Object.values(ABAS).forEach(id => $(id).setAttribute("aria-current", id === aba ? "page" : "false"));
+    [...new Set(Object.values(ABAS))].forEach(id => $(id).setAttribute("aria-current", id === aba ? "page" : "false"));
     desenharNav();
     if (estado) desenharCasa(estado);
     if (nome === "vSemana") desenharSemana();
@@ -2241,7 +2242,7 @@
     if (nome === "vCardapio") abrirCardapio();
     if (nome === "vRecados") desenharRecados();
     if (nome === "vInvestigacao") invAbrirTela();
-    if (vista !== "vJogos" && window.JogosHub && window.JogosHub.partidaAtual) window.JogosHub.sairPartida(true);
+    if (window.JogosHub && window.JogosHub.partidaAtual) window.JogosHub.sairPartida(true);
     if (nome === "vJogos") jogosAbrirTela();
     if (nome === "vHistorico") desenharHistCompanhia();
     if (nome === "casa") { setTimeout(desenharRecados, 0); invAtualizarResumoInicio(); }
@@ -3641,7 +3642,7 @@
       if ($("pdResposta")) $("pdResposta").focus();
     });
     if ($("atalhoJogo")) $("atalhoJogo").addEventListener("click", () => {
-      if ($("abaJogo")) $("abaJogo").click();
+      mostrarVista("jogo");
     });
     if ($("atalhoCampanha")) $("atalhoCampanha").addEventListener("click", () => {
       if ($("campanhaAbrir")) $("campanhaAbrir").click();
@@ -11794,7 +11795,7 @@
   function jogosAplicarVisibilidade() {
     const semBateria = typeof bateriaAlguem === "function" && estado && bateriaAlguem(estado);
     const ativo = permitido("jogos") && !semBateria;
-    if ($("atalhoJogos")) $("atalhoJogos").hidden = !ativo;
+    if ($("jogoBtnVoltarJogos")) $("jogoBtnVoltarJogos").hidden = !ativo;
     if (!ativo && vista === "vJogos") {
       if (window.JogosHub && window.JogosHub.partidaAtual) window.JogosHub.sairPartida(true);
       mostrarVista(estado && estado.fixa ? "casa" : "jogo");
@@ -11843,6 +11844,34 @@
       filtros.appendChild(b);
     });
     raiz.appendChild(filtros);
+
+    if (jogosFiltroRitmo === "todos" || jogosFiltroRitmo === "noite") {
+      const vd = el("article", "jogos-card jogos-destaque-vd");
+      const topoVd = el("div", "jogos-card-topo");
+      const icVd = el("div", "jogos-card-ic");
+      icVd.appendChild(icone("dices", 20));
+      topoVd.appendChild(icVd);
+
+      const metaVd = el("div", "jogos-card-meta");
+      const tLinhaVd = el("div", "jogos-card-titulo-linha");
+      tLinhaVd.appendChild(el("h3", "jogos-card-titulo", "Verdade ou Desafio"));
+      tLinhaVd.appendChild(el("span", "jogos-selo jogos-selo-longe", "Principal"));
+      metaVd.appendChild(tLinhaVd);
+      metaVd.appendChild(el("p", "jogos-card-desc", "Roleta sincronizada, níveis, eventos especiais e modo Juntos."));
+      topoVd.appendChild(metaVd);
+      vd.appendChild(topoVd);
+
+      const rodapeVd = el("div", "jogos-card-rodape");
+      const infoVd = el("div", "jogos-card-info");
+      infoVd.appendChild(el("span", "", "Clássico da sala"));
+      rodapeVd.appendChild(infoVd);
+      const btnVd = el("button", "primary jogos-jogar-btn", "Jogar");
+      btnVd.type = "button";
+      btnVd.addEventListener("click", () => mostrarVista("jogo"));
+      rodapeVd.appendChild(btnVd);
+      vd.appendChild(rodapeVd);
+      raiz.appendChild(vd);
+    }
 
     const lista = catalogo.filter(j => jogosFiltroRitmo === "todos" || j.ritmo === jogosFiltroRitmo);
     const grid = el("div", "jogos-grid");

@@ -1605,6 +1605,8 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .jogos-chip[aria-pressed="true"]{background:var(--acc-soft); border-color:var(--acc); color:var(--ink)}
 .jogos-grid{display:grid; grid-template-columns:1fr; gap:var(--esp-3)}
 .jogos-card{display:flex; flex-direction:column; gap:var(--esp-2); padding:var(--esp-4); border-radius:var(--r-c); border:1px solid var(--line); background:var(--s1)}
+.jogos-destaque-vd{border-color:var(--acc); background:var(--acc-soft)}
+.jogos-voltar-vd{display:inline-flex; align-items:center; gap:6px; margin-right:auto}
 .jogos-card-topo{display:flex; align-items:flex-start; gap:var(--esp-3)}
 .jogos-card-ic{flex:0 0 auto; width:38px; height:38px; border-radius:var(--r-b); background:var(--s2); border:1px solid var(--line); color:var(--acc); display:flex; align-items:center; justify-content:center}
 .jogos-card-meta{flex:1; min-width:0; display:flex; flex-direction:column; gap:4px}

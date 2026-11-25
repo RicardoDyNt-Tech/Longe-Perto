@@ -265,11 +265,6 @@
               <span class="lista-txt"><span class="lista-titulo">Investigação</span><span class="lista-info" id="inicioInvInfo">Mistério cooperativo para dois</span></span>
               <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
             </button>
-            <button type="button" class="lista-linha" data-abre="vJogos" id="atalhoJogos">
-              <span class="lista-ic"><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#gamepad-2"/></svg></span>
-              <span class="lista-txt"><span class="lista-titulo">Jogos</span><span class="lista-info" id="inicioJogosInfo">16 jogos rápidos e de noite inteira</span></span>
-              <svg class="icone icone-16 lista-seta" aria-hidden="true"><use href="icones.svg#chevron-right"/></svg>
-            </button>
           </div>
         </section>
 
@@ -892,6 +887,7 @@
 
     <div id="telaJogo">
     <div class="inv-atalho-jogo-wrap" id="jogoBtnInvWrap">
+      <button type="button" class="linkbtn voltar jogos-voltar-vd" data-abre="vJogos" id="jogoBtnVoltarJogos"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#arrow-left"/></svg> Voltar aos jogos</button>
       <button type="button" class="secondary inv-atalho-jogo" data-abre="vInvestigacao" id="jogoBtnInvestigacao"><svg class="icone icone-16" aria-hidden="true"><use href="icones.svg#search"/></svg> Investigação</button>
     </div>
     <div class="faixa-humor" id="faixaHumor" hidden role="status">
@@ -1322,7 +1318,7 @@
     <nav class="nav-baixo" id="navBaixo" aria-label="Seções da sala">
       <div class="nav-in">
         <button type="button" data-abre="casa" id="abaCasa"><svg class="icone icone-24 ic" aria-hidden="true"><use href="icones.svg#house"/></svg>Início</button>
-        <button type="button" data-abre="jogo" id="abaJogo"><svg class="icone icone-24 ic" aria-hidden="true"><use href="icones.svg#dices"/></svg>Jogo</button>
+        <button type="button" data-abre="vJogos" id="abaJogo"><svg class="icone icone-24 ic" aria-hidden="true"><use href="icones.svg#dices"/></svg>Jogo</button>
         <button type="button" data-abre="vHistorico" id="abaHistorico"><svg class="icone icone-24 ic" aria-hidden="true"><use href="icones.svg#history"/></svg>Histórico</button>
         <button type="button" data-abre="vPerfil" id="abaPerfil"><svg class="icone icone-24 ic" aria-hidden="true"><use href="icones.svg#user"/></svg>Perfil</button>
         <button type="button" class="nav-recolher" id="navRecolher" aria-label="Recolher a barra" hidden><svg class="icone icone-20" aria-hidden="true"><use href="icones.svg#arrow-down"/></svg></button>
