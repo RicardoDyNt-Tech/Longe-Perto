@@ -1709,4 +1709,27 @@ body.cam-direita .sala-topo .contador-mini, body.cam-esquerda .sala-topo .contad
 .jogos-fuga-simb-btn{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:66px; padding:8px 4px; font-size:var(--t-rotulo)}
 .jogos-fuga-svg{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2; stroke-linejoin:round}
 .jogos-fuga-erro{margin:0; font-size:var(--t-sec); font-weight:500; color:var(--desafio)}
+.jogos-sint-bloco{display:flex; flex-direction:column; gap:var(--esp-2)}
+.jogos-sint-rotulo{margin:0; font-size:var(--t-rotulo); font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.05em}
+.jogos-sint-duracao{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:var(--esp-2)}
+.jogos-sint-dur-btn{width:100%; padding:6px 8px; text-align:center; white-space:nowrap}
+.jogos-sint-baralho{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--esp-2); font-size:var(--t-rotulo); color:var(--muted)}
+.jogos-sint-contador{font-variant-numeric:tabular-nums}
+.jogos-sint-reembaralhar{font-size:var(--t-rotulo); padding:0; min-height:0; width:auto}
+.jogos-sint-gaveta-corpo{gap:var(--esp-3)}
+.jogos-sint-form{display:flex; flex-direction:column; gap:var(--esp-2)}
+.jogos-sint-form input{width:100%; min-width:0}
+.jogos-sint-ia{display:flex; flex-direction:column; gap:var(--esp-2); padding-top:var(--esp-2); border-top:1px solid var(--line)}
+.jogos-sint-ia-cota{margin:0; font-size:var(--t-rotulo); color:var(--muted); font-variant-numeric:tabular-nums}
+.jogos-sint-ia-rec{display:flex; flex-direction:column; gap:4px; padding:var(--esp-2); border-radius:var(--r-b); border:1px solid var(--line); background:var(--s2)}
+.jogos-sint-lista{display:flex; flex-direction:column; gap:var(--esp-2)}
+.jogos-sint-item{display:flex; align-items:center; justify-content:space-between; gap:var(--esp-2); padding:8px 10px; border-radius:var(--r-b); border:1px solid var(--line); background:var(--s2)}
+.jogos-sint-item-txt{display:flex; align-items:center; flex-wrap:wrap; gap:6px; min-width:0; flex:1}
+.jogos-sint-item-par{font-size:var(--t-sec); color:var(--ink); word-break:break-word}
+.jogos-sint-rem{font-size:var(--t-rotulo); color:var(--muted); padding:0; min-height:0; width:auto; flex-shrink:0}
+.jogos-sint-resumo{border-color:var(--acc)}
+.jogos-sint-metricas{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--esp-2)}
+.jogos-sint-metrica{display:flex; flex-direction:column; gap:4px; padding:var(--esp-3); border-radius:var(--r-b); border:1px solid var(--line); background:var(--s2)}
+.jogos-sint-metrica-val{font-family:var(--f-serif); font-size:var(--t-h2); font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums}
+.jogos-sint-metrica-lbl{font-size:var(--t-rotulo); color:var(--muted)}
 @media (min-width:600px){.jogos-grid,.jogos-duelo-grid{grid-template-columns:repeat(2, 1fr)}}
