@@ -171,4 +171,4 @@ insert into public.jogos_conteudo (jogo_id, categoria, modo, ousado, dados) valu
   ('sintonizador', 'ousado', 'ambos', true, '{"esquerda": "Elogio discreto", "direita": "Confissão sem filtro"}'),
   ('sintonizador', 'ousado', 'ambos', true, '{"esquerda": "Abraço apertado", "direita": "Não deixar sair da cama"}'),
   ('sintonizador', 'ousado', 'ambos', true, '{"esquerda": "Seguir o combinado", "direita": "Quebrar a rotina a dois"}')
-on conflict (jogo_id, dados) do nothing;
+on conflict do nothing;
